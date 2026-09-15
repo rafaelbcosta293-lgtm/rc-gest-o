@@ -18,14 +18,22 @@ export default async function Home() {
           <p className="text-zinc-600 dark:text-zinc-400">
             Sessão iniciada como <strong>{user.email}</strong>
           </p>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="rounded-full border border-black/10 px-5 py-2.5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+          <div className="flex items-center gap-3">
+            <Link
+              href="/painel"
+              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
             >
-              Terminar sessão
-            </button>
-          </form>
+              Ir para o painel
+            </Link>
+            <form action={logout}>
+              <button
+                type="submit"
+                className="rounded-full border border-black/10 px-5 py-2.5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+              >
+                Terminar sessão
+              </button>
+            </form>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 sm:flex-row">

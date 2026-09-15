@@ -1,6 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Páginas que qualquer visitante pode ver sem ter sessão iniciada.
+// Tudo o resto (ex.: /painel) exige login.
+const PUBLIC_PATHS = ['/', '/login', '/registo']
+
+function isPublicPath(pathname: string) {
+  return PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/auth')
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -31,7 +39,15 @@ export async function updateSession(request: NextRequest) {
 
   // Renova a sessão se estiver expirada. Necessário para os
   // Server Components conseguirem ler os cookies de autenticação.
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
 
   return supabaseResponse
 }

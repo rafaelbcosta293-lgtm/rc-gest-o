@@ -17,33 +17,28 @@ export default async function NovoTreinoPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
-  if (!estudio) {
+  const [estudio, { data: cliente }, { data: pts }, catalogo, { data: ultima }] =
+    await Promise.all([
+      getEstudioPorSlug(supabase, slug),
+      supabase
+        .from('clientes')
+        .select('id, nome, pt_principal_id, estudio_id')
+        .eq('id', clienteId)
+        .maybeSingle(),
+      supabase.from('perfis').select('id, nome').order('nome'),
+      getCatalogoExercicios(supabase),
+      supabase
+        .from('sessoes')
+        .select('data, nota_proxima')
+        .eq('cliente_id', clienteId)
+        .order('data', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ])
+
+  if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
   }
-
-  const { data: cliente } = await supabase
-    .from('clientes')
-    .select('id, nome, pt_principal_id')
-    .eq('id', clienteId)
-    .eq('estudio_id', estudio.id)
-    .maybeSingle()
-
-  if (!cliente) {
-    notFound()
-  }
-
-  const [{ data: pts }, catalogo, { data: ultima }] = await Promise.all([
-    supabase.from('perfis').select('id, nome').order('nome'),
-    getCatalogoExercicios(supabase),
-    supabase
-      .from('sessoes')
-      .select('data, nota_proxima')
-      .eq('cliente_id', clienteId)
-      .order('data', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ])
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">

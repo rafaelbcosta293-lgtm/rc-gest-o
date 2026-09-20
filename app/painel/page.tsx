@@ -6,17 +6,16 @@ import { corEstudio } from '@/lib/data/constantes'
 
 export default async function PainelPage() {
   const supabase = await createClient()
-  const { data: userData } = await supabase.auth.getUser()
+
+  const [{ data: userData }, estudios, { data: clientes }] = await Promise.all([
+    supabase.auth.getUser(),
+    getEstudios(supabase),
+    supabase.from('clientes').select('estudio_id, estado'),
+  ])
 
   if (!userData.user) {
     redirect('/login')
   }
-
-  const estudios = await getEstudios(supabase)
-
-  const { data: clientes } = await supabase
-    .from('clientes')
-    .select('estudio_id, estado')
 
   const contagem = (estudioId: number) =>
     (clientes ?? []).filter((c) => c.estudio_id === estudioId && c.estado === 'Ativo').length

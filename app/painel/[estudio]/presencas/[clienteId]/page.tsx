@@ -5,6 +5,7 @@ import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { PRESENCAS } from '@/lib/data/constantes'
 import { treinosPrevistos, MESES, fmt } from '@/lib/data/presencas'
 import { marcarPresenca, apagarPresenca } from '../actions'
+import SubmitButton from '@/components/SubmitButton'
 
 export default async function PresencasClientePage({
   params,
@@ -21,30 +22,27 @@ export default async function PresencasClientePage({
   const hoje = agora.toISOString().slice(0, 10)
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
-  if (!estudio) {
-    notFound()
-  }
-
-  const { data: cliente } = await supabase
-    .from('clientes')
-    .select('id, nome, frequencia_semanal')
-    .eq('id', clienteId)
-    .eq('estudio_id', estudio.id)
-    .maybeSingle()
-
-  if (!cliente) {
-    notFound()
-  }
-
   const prefixo = `${ano}-${String(mes).padStart(2, '0')}`
-  const { data: presencasData } = await supabase
-    .from('presencas')
-    .select('id, data, estado, nota, pt:perfis!pt_id(nome)')
-    .eq('cliente_id', clienteId)
-    .gte('data', `${prefixo}-01`)
-    .lt('data', `${prefixo}-32`)
-    .order('data', { ascending: false })
+
+  const [estudio, { data: cliente }, { data: presencasData }] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    supabase
+      .from('clientes')
+      .select('id, nome, frequencia_semanal, estudio_id')
+      .eq('id', clienteId)
+      .maybeSingle(),
+    supabase
+      .from('presencas')
+      .select('id, data, estado, nota, pt:perfis!pt_id(nome)')
+      .eq('cliente_id', clienteId)
+      .gte('data', `${prefixo}-01`)
+      .lt('data', `${prefixo}-32`)
+      .order('data', { ascending: false }),
+  ])
+
+  if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
+    notFound()
+  }
 
   type PresencaComPt = {
     id: string
@@ -148,12 +146,12 @@ export default async function PresencasClientePage({
             className="w-full rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
           />
         </div>
-        <button
-          type="submit"
+        <SubmitButton
+          pendingText="A registar…"
           className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
         >
           Registar
-        </button>
+        </SubmitButton>
       </form>
       <p className="mt-2 text-xs text-zinc-500">
         Só pode existir um registo por dia — marcar de novo substitui o anterior desse dia.
@@ -195,13 +193,13 @@ export default async function PresencasClientePage({
                 <input type="hidden" name="estudio_slug" value={slug} />
                 <input type="hidden" name="cliente_id" value={clienteId} />
                 <input type="hidden" name="id" value={p.id} />
-                <button
-                  type="submit"
-                  className="ml-auto text-lg text-zinc-400 hover:text-red-600"
+                <SubmitButton
+                  pendingText="…"
                   aria-label="Apagar"
+                  className="ml-auto text-lg text-zinc-400 hover:text-red-600"
                 >
                   ×
-                </button>
+                </SubmitButton>
               </form>
             </div>
           )

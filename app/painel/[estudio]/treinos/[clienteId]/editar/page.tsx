@@ -16,23 +16,15 @@ export default async function EditarClientePage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
-  if (!estudio) {
+  const [estudio, { data: cliente }, { data: pts }] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle(),
+    supabase.from('perfis').select('id, nome').order('nome'),
+  ])
+
+  if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
   }
-
-  const { data: cliente } = await supabase
-    .from('clientes')
-    .select('*')
-    .eq('id', clienteId)
-    .eq('estudio_id', estudio.id)
-    .maybeSingle()
-
-  if (!cliente) {
-    notFound()
-  }
-
-  const { data: pts } = await supabase.from('perfis').select('id, nome').order('nome')
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">

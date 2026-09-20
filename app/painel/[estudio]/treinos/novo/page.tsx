@@ -16,12 +16,13 @@ export default async function NovoClientePage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
+  const [estudio, { data: pts }] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    supabase.from('perfis').select('id, nome').order('nome'),
+  ])
   if (!estudio) {
     notFound()
   }
-
-  const { data: pts } = await supabase.from('perfis').select('id, nome').order('nome')
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">

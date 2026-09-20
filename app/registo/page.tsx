@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signup } from './actions'
+import SubmitButton from '@/components/SubmitButton'
 
 export default async function RegistoPage({
   searchParams,
@@ -109,12 +110,12 @@ export default async function RegistoPage({
             />
           </div>
 
-          <button
-            type="submit"
+          <SubmitButton
+            pendingText="A criar conta…"
             className="mt-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
           >
             Criar conta
-          </button>
+          </SubmitButton>
         </form>
 
         <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">

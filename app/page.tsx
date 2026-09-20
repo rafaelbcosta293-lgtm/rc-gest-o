@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { logout } from './login/actions'
+import SubmitButton from '@/components/SubmitButton'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -26,12 +27,12 @@ export default async function Home() {
               Ir para o painel
             </Link>
             <form action={logout}>
-              <button
-                type="submit"
+              <SubmitButton
+                pendingText="A terminar sessão…"
                 className="rounded-full border border-black/10 px-5 py-2.5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
               >
                 Terminar sessão
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </div>

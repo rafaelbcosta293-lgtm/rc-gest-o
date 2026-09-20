@@ -1,4 +1,5 @@
 import { updatePassword } from './actions'
+import SubmitButton from '@/components/SubmitButton'
 
 export default async function AtualizarPasswordPage({
   searchParams,
@@ -60,12 +61,12 @@ export default async function AtualizarPasswordPage({
             />
           </div>
 
-          <button
-            type="submit"
+          <SubmitButton
+            pendingText="A guardar…"
             className="mt-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
           >
             Guardar palavra-passe
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </div>

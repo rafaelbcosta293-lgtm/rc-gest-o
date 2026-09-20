@@ -18,38 +18,25 @@ export default async function EditarTreinoPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
-  if (!estudio) {
-    notFound()
-  }
-
-  const { data: cliente } = await supabase
-    .from('clientes')
-    .select('id, nome')
-    .eq('id', clienteId)
-    .eq('estudio_id', estudio.id)
-    .maybeSingle()
-
-  const { data: sessao } = await supabase
-    .from('sessoes')
-    .select('*')
-    .eq('id', sessaoId)
-    .eq('cliente_id', clienteId)
-    .maybeSingle()
-
-  if (!cliente || !sessao) {
-    notFound()
-  }
-
-  const [{ data: pts }, catalogo, { data: exerciciosSessao }] = await Promise.all([
+  const [
+    estudio,
+    { data: cliente },
+    { data: sessao },
+    { data: pts },
+    catalogo,
+    { data: exerciciosSessao },
+  ] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    supabase.from('clientes').select('id, nome, estudio_id').eq('id', clienteId).maybeSingle(),
+    supabase.from('sessoes').select('*').eq('id', sessaoId).eq('cliente_id', clienteId).maybeSingle(),
     supabase.from('perfis').select('id, nome').order('nome'),
     getCatalogoExercicios(supabase),
-    supabase
-      .from('sessao_exercicios')
-      .select('*')
-      .eq('sessao_id', sessaoId)
-      .order('ordem'),
+    supabase.from('sessao_exercicios').select('*').eq('sessao_id', sessaoId).order('ordem'),
   ])
+
+  if (!estudio || !cliente || !sessao || cliente.estudio_id !== estudio.id) {
+    notFound()
+  }
 
   const exercicios: LinhaExercicio[] = (exerciciosSessao ?? []).map((e) => ({
     key: e.id,

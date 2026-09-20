@@ -5,6 +5,7 @@ import { BLOCOS, BLOCO_COR, CORREU } from '@/lib/data/constantes'
 import type { BlocoTipo } from '@/lib/data/constantes'
 import type { CatalogoExercicios, ItemCatalogo } from '@/lib/data/catalogo'
 import ExercicioPicker from './ExercicioPicker'
+import SubmitButton from '@/components/SubmitButton'
 
 export type LinhaExercicio = {
   key: string
@@ -320,13 +321,13 @@ export default function TreinoForm({
       </div>
 
       <div className="flex justify-end gap-3">
-        <button
-          type="submit"
+        <SubmitButton
           disabled={!podeGuardar}
-          className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-[#ccc]"
+          pendingText="A guardar treino…"
+          className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
         >
           Guardar treino
-        </button>
+        </SubmitButton>
       </div>
       {!podeGuardar && (
         <p className="text-right text-xs text-zinc-500">

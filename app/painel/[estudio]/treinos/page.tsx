@@ -24,32 +24,31 @@ export default async function TreinosPage({
     notFound()
   }
 
+  // Uma única consulta: traz os clientes e, para cada um, apenas a
+  // data do treino mais recente (embutido), em vez de duas consultas
+  // separadas (clientes, depois sessões).
   let query = supabase
     .from('clientes')
-    .select('id, nome, objetivo, alerta')
+    .select('id, nome, objetivo, alerta, sessoes(data)')
     .eq('estudio_id', estudio.id)
     .eq('estado', 'Ativo')
     .order('nome')
+    .order('data', { referencedTable: 'sessoes', ascending: false })
+    .limit(1, { referencedTable: 'sessoes' })
 
   if (q) {
     query = query.ilike('nome', `%${q}%`)
   }
 
-  const { data: clientes } = await query
-
-  const ids = (clientes ?? []).map((c) => c.id)
-  const { data: sessoes } = ids.length
-    ? await supabase
-        .from('sessoes')
-        .select('cliente_id, data')
-        .in('cliente_id', ids)
-        .order('data', { ascending: false })
-    : { data: [] }
-
-  const ultimaPorCliente = new Map<string, string>()
-  for (const s of sessoes ?? []) {
-    if (!ultimaPorCliente.has(s.cliente_id)) ultimaPorCliente.set(s.cliente_id, s.data)
+  const { data: clientesData } = await query
+  type ClienteComUltimoTreino = {
+    id: string
+    nome: string
+    objetivo: string | null
+    alerta: string
+    sessoes: { data: string }[]
   }
+  const clientes = (clientesData ?? []) as unknown as ClienteComUltimoTreino[]
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -66,7 +65,7 @@ export default async function TreinosPage({
             Treinos
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {estudio.nome} · {(clientes ?? []).length} clientes ativos
+            {estudio.nome} · {clientes.length} clientes ativos
           </p>
         </div>
         <Link
@@ -88,9 +87,9 @@ export default async function TreinosPage({
       </form>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {(clientes ?? []).map((c) => {
+        {clientes.map((c) => {
           const a = ALERTAS[c.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
-          const ultima = ultimaPorCliente.get(c.id)
+          const ultima = c.sessoes?.[0]?.data
           return (
             <Link
               key={c.id}
@@ -133,7 +132,7 @@ export default async function TreinosPage({
         })}
       </div>
 
-      {(clientes ?? []).length === 0 && (
+      {clientes.length === 0 && (
         <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
           {q ? 'Nenhum cliente com esse nome.' : 'Ainda não há clientes neste estúdio.'}
         </div>

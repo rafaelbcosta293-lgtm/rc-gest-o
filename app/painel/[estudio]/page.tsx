@@ -11,26 +11,23 @@ export default async function EstudioPage({
 }) {
   const { estudio: slug } = await params
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
+
+  const [estudio, { data: userData }] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    supabase.auth.getUser(),
+  ])
   if (!estudio) {
     notFound()
   }
 
-  const { data: userData } = await supabase.auth.getUser()
-  const { data: perfil } = userData.user
-    ? await supabase
-        .from('perfis')
-        .select('papel')
-        .eq('id', userData.user.id)
-        .maybeSingle()
-    : { data: null }
+  const [{ data: perfil }, { data: clientes }] = await Promise.all([
+    userData.user
+      ? supabase.from('perfis').select('papel').eq('id', userData.user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.from('clientes').select('estado').eq('estudio_id', estudio.id),
+  ])
 
   const ehGestao = perfil?.papel === 'admin' || perfil?.papel === 'studio_manager'
-
-  const { data: clientes } = await supabase
-    .from('clientes')
-    .select('estado')
-    .eq('estudio_id', estudio.id)
 
   const ativos = (clientes ?? []).filter((c) => c.estado === 'Ativo').length
 

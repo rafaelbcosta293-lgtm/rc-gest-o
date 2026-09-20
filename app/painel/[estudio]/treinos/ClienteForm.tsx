@@ -1,5 +1,6 @@
 import { ALERTAS } from '@/lib/data/constantes'
 import type { Cliente, Perfil } from '@/lib/supabase/database.types'
+import SubmitButton from '@/components/SubmitButton'
 
 const inputCls =
   'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
@@ -224,12 +225,12 @@ export default function ClienteForm({
         />
       </div>
 
-      <button
-        type="submit"
+      <SubmitButton
+        pendingText="A guardar…"
         className="mt-2 self-start rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
       >
         {cliente ? 'Guardar alterações' : 'Criar cliente'}
-      </button>
+      </SubmitButton>
     </form>
   )
 }

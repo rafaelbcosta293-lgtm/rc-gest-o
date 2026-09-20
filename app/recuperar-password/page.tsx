@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { requestPasswordReset } from './actions'
+import SubmitButton from '@/components/SubmitButton'
 
 export default async function RecuperarPasswordPage({
   searchParams,
@@ -42,12 +43,12 @@ export default async function RecuperarPasswordPage({
             />
           </div>
 
-          <button
-            type="submit"
+          <SubmitButton
+            pendingText="A enviar…"
             className="mt-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
           >
             Enviar link
-          </button>
+          </SubmitButton>
         </form>
 
         <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { login } from './actions'
+import SubmitButton from '@/components/SubmitButton'
 
 export default async function LoginPage({
   searchParams,
@@ -67,12 +68,12 @@ export default async function LoginPage({
             />
           </div>
 
-          <button
-            type="submit"
+          <SubmitButton
+            pendingText="A entrar…"
             className="mt-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
           >
             Entrar
-          </button>
+          </SubmitButton>
         </form>
 
         <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">

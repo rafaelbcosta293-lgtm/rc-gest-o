@@ -28,27 +28,24 @@ export default async function FichaClientePage({
   const { estudio: slug, clienteId } = await params
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
-  if (!estudio) {
+
+  // As três consultas não dependem umas das outras (a de sessões só
+  // precisa do clienteId do URL), por isso correm em paralelo em vez
+  // de à vez — a página fica pronta no tempo da mais lenta, não na
+  // soma de todas.
+  const [estudio, { data: cliente }, { data: sessoesData }] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle(),
+    supabase
+      .from('sessoes')
+      .select('id, data, foco, correu, nota_proxima, pt:perfis!pt_id(nome), sessao_exercicios(count)')
+      .eq('cliente_id', clienteId)
+      .order('data', { ascending: false }),
+  ])
+
+  if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
   }
-
-  const { data: cliente } = await supabase
-    .from('clientes')
-    .select('*')
-    .eq('id', clienteId)
-    .eq('estudio_id', estudio.id)
-    .maybeSingle()
-
-  if (!cliente) {
-    notFound()
-  }
-
-  const { data: sessoesData } = await supabase
-    .from('sessoes')
-    .select('id, data, foco, correu, nota_proxima, pt:perfis!pt_id(nome), sessao_exercicios(count)')
-    .eq('cliente_id', clienteId)
-    .order('data', { ascending: false })
 
   const lista = (sessoesData ?? []) as unknown as SessaoComExtras[]
   const ultima = lista[0]

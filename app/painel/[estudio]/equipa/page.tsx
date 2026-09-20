@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { alternarAcesso } from './actions'
+import SubmitButton from '@/components/SubmitButton'
 
 export default async function EquipaPage({
   params,
@@ -11,15 +12,14 @@ export default async function EquipaPage({
 }) {
   const { estudio: slug } = await params
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
+
+  const [estudio, { data: perfis }] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    supabase.from('perfis').select('id, nome, papel, ativo').order('nome'),
+  ])
   if (!estudio) {
     notFound()
   }
-
-  const { data: perfis } = await supabase
-    .from('perfis')
-    .select('id, nome, papel, ativo')
-    .order('nome')
 
   const { data: acessos } = await supabase
     .from('perfis_estudios')
@@ -65,8 +65,8 @@ export default async function EquipaPage({
                 <input type="hidden" name="estudio_id" value={estudio.id} />
                 <input type="hidden" name="perfil_id" value={p.id} />
                 <input type="hidden" name="tem_acesso" value={temAcesso ? '1' : '0'} />
-                <button
-                  type="submit"
+                <SubmitButton
+                  pendingText="A atualizar…"
                   className={`rounded-full px-4 py-1.5 text-xs font-medium ${
                     temAcesso
                       ? 'border border-black/10 text-zinc-700 hover:bg-black/[.04] dark:border-white/10 dark:text-zinc-300'
@@ -74,7 +74,7 @@ export default async function EquipaPage({
                   }`}
                 >
                   {temAcesso ? 'Remover acesso' : 'Dar acesso'}
-                </button>
+                </SubmitButton>
               </form>
             </div>
           )

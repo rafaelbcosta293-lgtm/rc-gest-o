@@ -46,7 +46,7 @@ export default async function FichaClientePage({
 
   const { data: sessoesData } = await supabase
     .from('sessoes')
-    .select('id, data, foco, correu, nota_proxima, pt:perfis(nome), sessao_exercicios(count)')
+    .select('id, data, foco, correu, nota_proxima, pt:perfis!pt_id(nome), sessao_exercicios(count)')
     .eq('cliente_id', clienteId)
     .order('data', { ascending: false })
 

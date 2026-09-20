@@ -11,11 +11,11 @@ export default async function PresencasClientePage({
   searchParams,
 }: {
   params: Promise<{ estudio: string; clienteId: string }>
-  searchParams: Promise<{ ano?: string; mes?: string }>
+  searchParams: Promise<{ ano?: string; mes?: string; error?: string }>
 }) {
   const { estudio: slug, clienteId } = await params
   const agora = new Date()
-  const { ano: anoParam, mes: mesParam } = await searchParams
+  const { ano: anoParam, mes: mesParam, error } = await searchParams
   const ano = anoParam ? Number(anoParam) : agora.getFullYear()
   const mes = mesParam ? Number(mesParam) : agora.getMonth() + 1
   const hoje = agora.toISOString().slice(0, 10)
@@ -102,6 +102,12 @@ export default async function PresencasClientePage({
           <span className="text-xs text-zinc-600 dark:text-zinc-400">avisadas</span>
         </div>
       </div>
+
+      {error && (
+        <p className="mt-6 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          {error}
+        </p>
+      )}
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
         Marcar presença

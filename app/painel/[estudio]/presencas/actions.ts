@@ -16,9 +16,18 @@ export async function marcarPresenca(formData: FormData) {
 
   // Um só registo de presença por cliente e por dia: substitui o que
   // já existisse (manual ou ligado a um treino) por este novo registo.
-  await supabase.from('presencas').delete().match({ cliente_id: clienteId, data })
+  const { error: erroApagar } = await supabase
+    .from('presencas')
+    .delete()
+    .match({ cliente_id: clienteId, data })
 
-  await supabase.from('presencas').insert({
+  if (erroApagar) {
+    redirect(
+      `/painel/${estudioSlug}/presencas/${clienteId}?error=${encodeURIComponent(erroApagar.message)}`
+    )
+  }
+
+  const { error: erroInserir } = await supabase.from('presencas').insert({
     cliente_id: clienteId,
     data,
     estado,
@@ -26,7 +35,14 @@ export async function marcarPresenca(formData: FormData) {
     nota,
   })
 
+  if (erroInserir) {
+    redirect(
+      `/painel/${estudioSlug}/presencas/${clienteId}?error=${encodeURIComponent(erroInserir.message)}`
+    )
+  }
+
   revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/presencas`)
   redirect(`/painel/${estudioSlug}/presencas/${clienteId}`)
 }
 
@@ -36,8 +52,15 @@ export async function apagarPresenca(formData: FormData) {
   const id = formData.get('id') as string
 
   const supabase = await createClient()
-  await supabase.from('presencas').delete().eq('id', id)
+  const { error } = await supabase.from('presencas').delete().eq('id', id)
+
+  if (error) {
+    redirect(
+      `/painel/${estudioSlug}/presencas/${clienteId}?error=${encodeURIComponent(error.message)}`
+    )
+  }
 
   revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/presencas`)
   redirect(`/painel/${estudioSlug}/presencas/${clienteId}`)
 }

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 // Páginas que qualquer visitante pode ver sem ter sessão iniciada.
 // Tudo o resto (ex.: /painel) exige login.
-const PUBLIC_PATHS = ['/', '/login', '/registo']
+const PUBLIC_PATHS = ['/', '/login', '/registo', '/recuperar-password']
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/auth')

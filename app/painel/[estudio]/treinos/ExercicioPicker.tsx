@@ -1,26 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { CATEGORIAS, TODOS_EX } from '@/lib/data/exercicios'
+import type { CatalogoExercicios, ItemCatalogo } from '@/lib/data/catalogo'
 
 export default function ExercicioPicker({
   aberto,
   fechar,
   escolher,
+  catalogo,
 }: {
   aberto: boolean
   fechar: () => void
-  escolher: (nome: string) => void
+  escolher: (item: ItemCatalogo) => void
+  catalogo: CatalogoExercicios
 }) {
-  const [catId, setCatId] = useState<number | null>(null)
+  const [catId, setCatId] = useState<string | null>(null)
   const [q, setQ] = useState('')
 
   if (!aberto) return null
 
-  const lista = q.trim()
-    ? TODOS_EX.filter((e) => e.nome.toLowerCase().includes(q.toLowerCase()))
+  const lista: ItemCatalogo[] = q.trim()
+    ? catalogo.todos.filter((e) => e.nome.toLowerCase().includes(q.toLowerCase()))
     : catId
-      ? (CATEGORIAS.find((c) => c.id === catId)?.ex ?? []).map((nome) => ({ nome }))
+      ? (catalogo.porCategoria[catId] ?? [])
       : []
 
   return (
@@ -58,39 +60,43 @@ export default function ExercicioPicker({
               Grupos musculares
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {CATEGORIAS.filter((c) => c.parte === 'A').map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setCatId(catId === c.id ? null : c.id)}
-                  className={`rounded-md border px-3 py-1.5 text-xs ${
-                    catId === c.id
-                      ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
-                      : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-800'
-                  }`}
-                >
-                  {c.nome}
-                </button>
-              ))}
+              {catalogo.categorias
+                .filter((c) => c.parte === 'A')
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setCatId(catId === c.id ? null : c.id)}
+                    className={`rounded-md border px-3 py-1.5 text-xs ${
+                      catId === c.id
+                        ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                        : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-800'
+                    }`}
+                  >
+                    {c.nome}
+                  </button>
+                ))}
             </div>
             <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
               Tipo de treino
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {CATEGORIAS.filter((c) => c.parte === 'B').map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setCatId(catId === c.id ? null : c.id)}
-                  className={`rounded-md border px-3 py-1.5 text-xs ${
-                    catId === c.id
-                      ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
-                      : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-800'
-                  }`}
-                >
-                  {c.nome}
-                </button>
-              ))}
+              {catalogo.categorias
+                .filter((c) => c.parte === 'B')
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setCatId(catId === c.id ? null : c.id)}
+                    className={`rounded-md border px-3 py-1.5 text-xs ${
+                      catId === c.id
+                        ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                        : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-800'
+                    }`}
+                  >
+                    {c.nome}
+                  </button>
+                ))}
             </div>
           </>
         )}
@@ -105,10 +111,10 @@ export default function ExercicioPicker({
           )}
           {lista.map((e) => (
             <button
-              key={e.nome}
+              key={e.id}
               type="button"
               onClick={() => {
-                escolher(e.nome)
+                escolher(e)
                 fechar()
               }}
               className="rounded-md border border-black/10 bg-white px-3 py-2.5 text-left text-sm hover:border-teal-500 hover:bg-teal-50 dark:border-white/10 dark:bg-zinc-800 dark:hover:bg-teal-950"

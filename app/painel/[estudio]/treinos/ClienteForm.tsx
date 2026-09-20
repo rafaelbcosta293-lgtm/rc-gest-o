@@ -1,26 +1,29 @@
 import { ALERTAS } from '@/lib/data/constantes'
-import type { Cliente, Profile } from '@/lib/supabase/database.types'
+import type { Cliente, Perfil } from '@/lib/supabase/database.types'
 
 const inputCls =
   'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
 const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
 export default function ClienteForm({
-  estudio,
+  estudioSlug,
+  estudioId,
   cliente,
   pts,
   action,
   error,
 }: {
-  estudio: string
+  estudioSlug: string
+  estudioId: number
   cliente?: Cliente
-  pts: Pick<Profile, 'id' | 'nome'>[]
+  pts: Pick<Perfil, 'id' | 'nome'>[]
   action: (formData: FormData) => void
   error?: string
 }) {
   return (
     <form action={action} className="mt-6 flex flex-col gap-4">
-      <input type="hidden" name="estudio" value={estudio} />
+      <input type="hidden" name="estudio_slug" value={estudioSlug} />
+      <input type="hidden" name="estudio_id" value={estudioId} />
       {cliente && <input type="hidden" name="id" value={cliente.id} />}
 
       {error && (
@@ -56,6 +59,19 @@ export default function ClienteForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
+          <label htmlFor="email" className={labelCls}>
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            defaultValue={cliente?.email ?? ''}
+            className={inputCls}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="objetivo" className={labelCls}>
             Objetivo
           </label>
@@ -69,13 +85,13 @@ export default function ClienteForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="frequencia" className={labelCls}>
+          <label htmlFor="frequencia_semanal" className={labelCls}>
             Treinos por semana
           </label>
           <select
-            id="frequencia"
-            name="frequencia"
-            defaultValue={cliente?.frequencia ?? ''}
+            id="frequencia_semanal"
+            name="frequencia_semanal"
+            defaultValue={cliente?.frequencia_semanal ?? ''}
             className={inputCls}
           >
             <option value="">—</option>
@@ -101,10 +117,15 @@ export default function ClienteForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="pt" className={labelCls}>
+          <label htmlFor="pt_principal_id" className={labelCls}>
             PT principal
           </label>
-          <select id="pt" name="pt" defaultValue={cliente?.pt ?? ''} className={inputCls}>
+          <select
+            id="pt_principal_id"
+            name="pt_principal_id"
+            defaultValue={cliente?.pt_principal_id ?? ''}
+            className={inputCls}
+          >
             <option value="">—</option>
             {pts.map((p) => (
               <option key={p.id} value={p.id}>
@@ -133,13 +154,13 @@ export default function ClienteForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="detalhe" className={labelCls}>
+          <label htmlFor="alerta_detalhe" className={labelCls}>
             Detalhe do alerta
           </label>
           <input
-            id="detalhe"
-            name="detalhe"
-            defaultValue={cliente?.detalhe ?? ''}
+            id="alerta_detalhe"
+            name="alerta_detalhe"
+            defaultValue={cliente?.alerta_detalhe ?? ''}
             placeholder="ex.: ombro direito — evitar press"
             className={inputCls}
           />
@@ -183,10 +204,24 @@ export default function ClienteForm({
               className={inputCls}
             >
               <option value="Ativo">Ativo</option>
+              <option value="Suspenso">Suspenso</option>
               <option value="Ex-cliente">Ex-cliente</option>
             </select>
           </div>
         )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="notas" className={labelCls}>
+          Notas gerais
+        </label>
+        <textarea
+          id="notas"
+          name="notas"
+          rows={2}
+          defaultValue={cliente?.notas ?? ''}
+          className={inputCls}
+        />
       </div>
 
       <button

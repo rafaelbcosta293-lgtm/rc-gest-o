@@ -1,12 +1,14 @@
-export const ESTUDIOS = [
-  { id: 'fatima', nome: 'Fátima', cor: '#0E9594', bg: '#DDF3F2' },
-  { id: 'leiria', nome: 'Leiria', cor: '#ED7D31', bg: '#FDEBDD' },
-] as const
+// Cores por estúdio, só para a interface (a lista de estúdios em si vem
+// da base de dados, tabela "estudios"). Um estúdio novo que não esteja
+// aqui usa a cor por omissão.
+const CORES_ESTUDIO: Record<string, { cor: string; bg: string }> = {
+  fatima: { cor: '#0E9594', bg: '#DDF3F2' },
+  leiria: { cor: '#ED7D31', bg: '#FDEBDD' },
+}
+const COR_ESTUDIO_OMISSAO = { cor: '#5B3FA0', bg: '#E9E5F7' }
 
-export type EstudioId = (typeof ESTUDIOS)[number]['id']
-
-export function estudioDe(id: string) {
-  return ESTUDIOS.find((e) => e.id === id) ?? ESTUDIOS[0]
+export function corEstudio(slug: string) {
+  return CORES_ESTUDIO[slug] ?? COR_ESTUDIO_OMISSAO
 }
 
 export const ALERTAS = {
@@ -26,8 +28,6 @@ export const CORREU = {
   Difícil: { bg: '#FDEBDD', tx: '#9A4A0F' },
   Interrompido: { bg: '#FBE4E4', tx: '#B3261E' },
 } as const
-
-export type CorreuTipo = keyof typeof CORREU
 
 export const BLOCOS = ['Aquecimento', 'Principal', 'Acessório', 'Final'] as const
 export type BlocoTipo = (typeof BLOCOS)[number]

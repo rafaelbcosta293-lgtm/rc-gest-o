@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { ALERTAS, CORREU, ESTUDIOS } from '@/lib/data/constantes'
-import type { Sessao } from '@/lib/supabase/database.types'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { ALERTAS, CORREU } from '@/lib/data/constantes'
 
 function fmt(iso: string | null) {
   if (!iso) return '—'
@@ -10,43 +10,54 @@ function fmt(iso: string | null) {
   return `${d}/${m}/${a}`
 }
 
+type SessaoComExtras = {
+  id: string
+  data: string
+  foco: string | null
+  correu: string | null
+  nota_proxima: string
+  pt: { nome: string } | null
+  sessao_exercicios: { count: number }[]
+}
+
 export default async function FichaClientePage({
   params,
 }: {
   params: Promise<{ estudio: string; clienteId: string }>
 }) {
-  const { estudio, clienteId } = await params
-  if (!ESTUDIOS.some((e) => e.id === estudio)) {
-    notFound()
-  }
+  const { estudio: slug, clienteId } = await params
 
   const supabase = await createClient()
+  const estudio = await getEstudioPorSlug(supabase, slug)
+  if (!estudio) {
+    notFound()
+  }
 
   const { data: cliente } = await supabase
     .from('clientes')
     .select('*')
     .eq('id', clienteId)
-    .eq('estudio', estudio)
+    .eq('estudio_id', estudio.id)
     .maybeSingle()
 
   if (!cliente) {
     notFound()
   }
 
-  const { data: sessoes } = await supabase
+  const { data: sessoesData } = await supabase
     .from('sessoes')
-    .select('*, pt:profiles(nome)')
+    .select('id, data, foco, correu, nota_proxima, pt:perfis(nome), sessao_exercicios(count)')
     .eq('cliente_id', clienteId)
     .order('data', { ascending: false })
 
-  const lista = (sessoes ?? []) as unknown as (Sessao & { pt: { nome: string } | null })[]
+  const lista = (sessoesData ?? []) as unknown as SessaoComExtras[]
   const ultima = lista[0]
   const a = ALERTAS[cliente.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
-        href={`/painel/${estudio}/treinos`}
+        href={`/painel/${slug}/treinos`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
       >
         ← Treinos
@@ -65,13 +76,13 @@ export default async function FichaClientePage({
         </div>
         <div className="flex gap-2">
           <Link
-            href={`/painel/${estudio}/treinos/${clienteId}/editar`}
+            href={`/painel/${slug}/treinos/${clienteId}/editar`}
             className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
           >
             Editar ficha
           </Link>
           <Link
-            href={`/painel/${estudio}/treinos/${clienteId}/treino/novo`}
+            href={`/painel/${slug}/treinos/${clienteId}/treino/novo`}
             className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
           >
             Planear treino
@@ -85,7 +96,7 @@ export default async function FichaClientePage({
           style={{ background: a.bg, color: a.tx }}
         >
           <strong>{a.label}</strong>
-          {cliente.detalhe && <span> — {cliente.detalhe}</span>}
+          {cliente.alerta_detalhe && <span> — {cliente.alerta_detalhe}</span>}
         </div>
         {cliente.evento && (
           <div className="bg-purple-50 px-4 py-2 text-xs text-purple-700 dark:bg-purple-950 dark:text-purple-300">
@@ -126,10 +137,11 @@ export default async function FichaClientePage({
           const cc = s.correu
             ? (CORREU[s.correu as keyof typeof CORREU] ?? { bg: '#F2F5FA', tx: '#6B7688' })
             : { bg: '#F2F5FA', tx: '#6B7688' }
+          const numExercicios = s.sessao_exercicios?.[0]?.count ?? 0
           return (
             <Link
               key={s.id}
-              href={`/painel/${estudio}/treinos/${clienteId}/treino/${s.id}`}
+              href={`/painel/${slug}/treinos/${clienteId}/treino/${s.id}`}
               className="flex gap-4 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
             >
               <div className="min-w-[70px] pt-0.5 text-xs text-zinc-500">
@@ -155,9 +167,9 @@ export default async function FichaClientePage({
                     ⚑ {s.nota_proxima}
                   </p>
                 )}
-                {s.exercicios?.length > 0 && (
+                {numExercicios > 0 && (
                   <p className="mt-1 text-xs text-zinc-500">
-                    {s.exercicios.length} exercícios
+                    {numExercicios} exercícios
                   </p>
                 )}
               </div>

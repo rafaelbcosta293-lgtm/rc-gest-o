@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { ESTUDIOS } from '@/lib/data/constantes'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { criarCliente } from '../actions'
 import ClienteForm from '../ClienteForm'
 
@@ -12,19 +12,21 @@ export default async function NovoClientePage({
   params: Promise<{ estudio: string }>
   searchParams: Promise<{ error?: string }>
 }) {
-  const { estudio } = await params
-  if (!ESTUDIOS.some((e) => e.id === estudio)) {
-    notFound()
-  }
+  const { estudio: slug } = await params
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const { data: pts } = await supabase.from('profiles').select('id, nome').order('nome')
+  const estudio = await getEstudioPorSlug(supabase, slug)
+  if (!estudio) {
+    notFound()
+  }
+
+  const { data: pts } = await supabase.from('perfis').select('id, nome').order('nome')
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
-        href={`/painel/${estudio}/treinos`}
+        href={`/painel/${slug}/treinos`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
       >
         ← Treinos
@@ -34,7 +36,13 @@ export default async function NovoClientePage({
         Novo cliente
       </h1>
 
-      <ClienteForm estudio={estudio} pts={pts ?? []} action={criarCliente} error={error} />
+      <ClienteForm
+        estudioSlug={slug}
+        estudioId={estudio.id}
+        pts={pts ?? []}
+        action={criarCliente}
+        error={error}
+      />
     </div>
   )
 }

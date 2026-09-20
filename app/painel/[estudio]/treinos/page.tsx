@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { ALERTAS, ESTUDIOS, estudioDe } from '@/lib/data/constantes'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { ALERTAS } from '@/lib/data/constantes'
 
 function diasDesde(iso: string) {
   return Math.round((Date.now() - new Date(iso).getTime()) / 86400000)
@@ -14,18 +15,19 @@ export default async function TreinosPage({
   params: Promise<{ estudio: string }>
   searchParams: Promise<{ q?: string }>
 }) {
-  const { estudio } = await params
-  if (!ESTUDIOS.some((e) => e.id === estudio)) {
-    notFound()
-  }
+  const { estudio: slug } = await params
   const { q } = await searchParams
 
   const supabase = await createClient()
+  const estudio = await getEstudioPorSlug(supabase, slug)
+  if (!estudio) {
+    notFound()
+  }
 
   let query = supabase
     .from('clientes')
     .select('id, nome, objetivo, alerta')
-    .eq('estudio', estudio)
+    .eq('estudio_id', estudio.id)
     .eq('estado', 'Ativo')
     .order('nome')
 
@@ -52,7 +54,7 @@ export default async function TreinosPage({
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
-        href={`/painel/${estudio}`}
+        href={`/painel/${slug}`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
       >
         ← Voltar
@@ -64,11 +66,11 @@ export default async function TreinosPage({
             Treinos
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {estudioDe(estudio).nome} · {(clientes ?? []).length} clientes ativos
+            {estudio.nome} · {(clientes ?? []).length} clientes ativos
           </p>
         </div>
         <Link
-          href={`/painel/${estudio}/treinos/novo`}
+          href={`/painel/${slug}/treinos/novo`}
           className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
         >
           + Cliente
@@ -81,7 +83,7 @@ export default async function TreinosPage({
           name="q"
           defaultValue={q}
           placeholder="Procurar cliente…"
-          className="w-full rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
+          className="w-full rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
         />
       </form>
 
@@ -92,7 +94,7 @@ export default async function TreinosPage({
           return (
             <Link
               key={c.id}
-              href={`/painel/${estudio}/treinos/${c.id}`}
+              href={`/painel/${slug}/treinos/${c.id}`}
               className="rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
             >
               <div className="flex items-center gap-2">

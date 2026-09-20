@@ -2,14 +2,28 @@
 
 import { useState } from 'react'
 import { BLOCOS, BLOCO_COR, CORREU } from '@/lib/data/constantes'
-import type { ExercicioSessao, Sessao } from '@/lib/supabase/database.types'
+import type { BlocoTipo } from '@/lib/data/constantes'
+import type { CatalogoExercicios, ItemCatalogo } from '@/lib/data/catalogo'
 import ExercicioPicker from './ExercicioPicker'
 
-function linhaVazia(bloco: ExercicioSessao['bloco'] = 'Aquecimento'): ExercicioSessao {
+export type LinhaExercicio = {
+  key: string
+  bloco: BlocoTipo
+  exercicio_id: string | null
+  exercicio_nome: string
+  series: string
+  reps: string
+  carga: string
+  descanso: string
+  nota: string
+}
+
+function linhaVazia(bloco: BlocoTipo = 'Aquecimento'): LinhaExercicio {
   return {
-    id: crypto.randomUUID(),
+    key: crypto.randomUUID(),
     bloco,
-    nome: '',
+    exercicio_id: null,
+    exercicio_nome: '',
     series: '',
     reps: '',
     carga: '',
@@ -18,41 +32,63 @@ function linhaVazia(bloco: ExercicioSessao['bloco'] = 'Aquecimento'): ExercicioS
   }
 }
 
+export type TreinoInicial = {
+  id?: string
+  data: string
+  pt_id: string | null
+  foco: string | null
+  correu: string | null
+  tipo_nota: string | null
+  nota_proxima: string
+  exercicios: LinhaExercicio[]
+}
+
 export default function TreinoForm({
-  estudio,
+  estudioSlug,
+  estudioId,
   clienteId,
   pts,
   ptPredefinido,
-  sessao,
+  inicial,
+  catalogo,
   action,
   error,
 }: {
-  estudio: string
+  estudioSlug: string
+  estudioId: number
   clienteId: string
   pts: { id: string; nome: string }[]
-  ptPredefinido?: string
-  sessao?: Sessao
+  ptPredefinido?: string | null
+  inicial?: TreinoInicial
+  catalogo: CatalogoExercicios
   action: (formData: FormData) => void
   error?: string
 }) {
-  const [data, setData] = useState(sessao?.data ?? new Date().toISOString().slice(0, 10))
-  const [pt, setPt] = useState(sessao?.pt ?? ptPredefinido ?? pts[0]?.id ?? '')
-  const [foco, setFoco] = useState(sessao?.foco ?? '')
-  const [correu, setCorreu] = useState(sessao?.correu ?? 'Bem')
-  const [tipoNota, setTipoNota] = useState(sessao?.tipo_nota ?? 'Normal')
-  const [notaProxima, setNotaProxima] = useState(sessao?.nota_proxima ?? '')
-  const [exercicios, setExercicios] = useState<ExercicioSessao[]>(
-    sessao?.exercicios?.length ? sessao.exercicios : [linhaVazia()]
+  const [data, setData] = useState(inicial?.data ?? new Date().toISOString().slice(0, 10))
+  const [pt, setPt] = useState(inicial?.pt_id ?? ptPredefinido ?? pts[0]?.id ?? '')
+  const [foco, setFoco] = useState(inicial?.foco ?? '')
+  const [correu, setCorreu] = useState(inicial?.correu ?? 'Bem')
+  const [tipoNota, setTipoNota] = useState(inicial?.tipo_nota ?? 'Normal')
+  const [notaProxima, setNotaProxima] = useState(inicial?.nota_proxima ?? '')
+  const [exercicios, setExercicios] = useState<LinhaExercicio[]>(
+    inicial?.exercicios?.length ? inicial.exercicios : [linhaVazia()]
   )
   const [seletorPara, setSeletorPara] = useState<string | null>(null)
 
-  const atualizarLinha = (id: string, campo: keyof ExercicioSessao, valor: string) => {
-    setExercicios((linhas) => linhas.map((l) => (l.id === id ? { ...l, [campo]: valor } : l)))
+  const atualizarLinha = (key: string, campo: keyof LinhaExercicio, valor: string) => {
+    setExercicios((linhas) => linhas.map((l) => (l.key === key ? { ...l, [campo]: valor } : l)))
   }
-  const removerLinha = (id: string) => {
-    setExercicios((linhas) => linhas.filter((l) => l.id !== id))
+  const escolherExercicio = (key: string, item: ItemCatalogo) => {
+    setExercicios((linhas) =>
+      linhas.map((l) =>
+        l.key === key ? { ...l, exercicio_id: item.id, exercicio_nome: item.nome } : l
+      )
+    )
   }
-  const adicionarLinha = (bloco: ExercicioSessao['bloco']) => {
+  const removerLinha = (key: string) => {
+    setExercicios((linhas) => linhas.filter((l) => l.key !== key))
+  }
+  const adicionarLinha = (bloco: BlocoTipo) => {
     setExercicios((linhas) => [...linhas, linhaVazia(bloco)])
   }
 
@@ -60,12 +96,30 @@ export default function TreinoForm({
   const inputCls =
     'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
 
+  const exerciciosParaGravar = exercicios.map((l, i) => ({
+    ordem: i,
+    bloco: l.bloco,
+    exercicio_id: l.exercicio_id,
+    exercicio_nome: l.exercicio_nome,
+    series: l.series,
+    reps: l.reps,
+    carga: l.carga,
+    descanso: l.descanso,
+    nota: l.nota,
+  }))
+
   return (
     <form action={action} className="mt-6 flex flex-col gap-6">
-      <input type="hidden" name="estudio" value={estudio} />
+      <input type="hidden" name="estudio_slug" value={estudioSlug} />
+      <input type="hidden" name="estudio_id" value={estudioId} />
       <input type="hidden" name="cliente_id" value={clienteId} />
-      {sessao && <input type="hidden" name="id" value={sessao.id} />}
-      <input type="hidden" name="exercicios" value={JSON.stringify(exercicios)} readOnly />
+      {inicial?.id && <input type="hidden" name="id" value={inicial.id} />}
+      <input
+        type="hidden"
+        name="exercicios"
+        value={JSON.stringify(exerciciosParaGravar)}
+        readOnly
+      />
 
       {error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -86,7 +140,7 @@ export default function TreinoForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">PT</label>
-          <select name="pt" value={pt} onChange={(e) => setPt(e.target.value)} className={inputCls}>
+          <select name="pt_id" value={pt} onChange={(e) => setPt(e.target.value)} className={inputCls}>
             {pts.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nome}
@@ -113,14 +167,12 @@ export default function TreinoForm({
         <div className="mt-2 flex flex-col gap-2">
           {exercicios.map((linha) => (
             <div
-              key={linha.id}
+              key={linha.key}
               className="grid grid-cols-2 gap-2 rounded-lg border border-black/10 p-3 sm:grid-cols-[110px_1fr_auto] dark:border-white/10"
             >
               <select
                 value={linha.bloco}
-                onChange={(e) =>
-                  atualizarLinha(linha.id, 'bloco', e.target.value as ExercicioSessao['bloco'])
-                }
+                onChange={(e) => atualizarLinha(linha.key, 'bloco', e.target.value)}
                 style={{ color: BLOCO_COR[linha.bloco] }}
                 className="rounded-md border border-black/10 px-2 py-1.5 text-xs font-semibold dark:border-white/10 dark:bg-zinc-900"
               >
@@ -132,18 +184,18 @@ export default function TreinoForm({
               </select>
               <button
                 type="button"
-                onClick={() => setSeletorPara(linha.id)}
+                onClick={() => setSeletorPara(linha.key)}
                 className={`rounded-md border px-3 py-1.5 text-left text-sm ${
-                  linha.nome
+                  linha.exercicio_nome
                     ? 'border-black/10 dark:border-white/10'
                     : 'border-dashed border-black/20 text-zinc-500 dark:border-white/20'
                 }`}
               >
-                {linha.nome || 'Escolher exercício…'}
+                {linha.exercicio_nome || 'Escolher exercício…'}
               </button>
               <button
                 type="button"
-                onClick={() => removerLinha(linha.id)}
+                onClick={() => removerLinha(linha.key)}
                 className="justify-self-end rounded-md px-2 text-lg text-zinc-400 hover:text-red-600"
                 aria-label="Remover linha"
               >
@@ -151,31 +203,31 @@ export default function TreinoForm({
               </button>
               <input
                 value={linha.series}
-                onChange={(e) => atualizarLinha(linha.id, 'series', e.target.value)}
+                onChange={(e) => atualizarLinha(linha.key, 'series', e.target.value)}
                 placeholder="Séries"
                 className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
               />
               <input
                 value={linha.reps}
-                onChange={(e) => atualizarLinha(linha.id, 'reps', e.target.value)}
+                onChange={(e) => atualizarLinha(linha.key, 'reps', e.target.value)}
                 placeholder="Reps"
                 className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
               />
               <input
                 value={linha.carga}
-                onChange={(e) => atualizarLinha(linha.id, 'carga', e.target.value)}
+                onChange={(e) => atualizarLinha(linha.key, 'carga', e.target.value)}
                 placeholder="Carga"
                 className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
               />
               <input
                 value={linha.descanso}
-                onChange={(e) => atualizarLinha(linha.id, 'descanso', e.target.value)}
+                onChange={(e) => atualizarLinha(linha.key, 'descanso', e.target.value)}
                 placeholder="Descanso"
                 className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
               />
               <input
                 value={linha.nota}
-                onChange={(e) => atualizarLinha(linha.id, 'nota', e.target.value)}
+                onChange={(e) => atualizarLinha(linha.key, 'nota', e.target.value)}
                 placeholder="Nota"
                 className="col-span-2 rounded-md border border-black/10 px-2 py-1.5 text-xs sm:col-span-3 dark:border-white/10 dark:bg-zinc-900"
               />
@@ -201,8 +253,9 @@ export default function TreinoForm({
       <ExercicioPicker
         aberto={seletorPara !== null}
         fechar={() => setSeletorPara(null)}
-        escolher={(nome) => {
-          if (seletorPara) atualizarLinha(seletorPara, 'nome', nome)
+        catalogo={catalogo}
+        escolher={(item) => {
+          if (seletorPara) escolherExercicio(seletorPara, item)
         }}
       />
 
@@ -218,7 +271,7 @@ export default function TreinoForm({
             <select
               name="correu"
               value={correu ?? 'Bem'}
-              onChange={(e) => setCorreu(e.target.value as typeof correu)}
+              onChange={(e) => setCorreu(e.target.value)}
               className={inputCls}
             >
               {Object.keys(CORREU).map((k) => (

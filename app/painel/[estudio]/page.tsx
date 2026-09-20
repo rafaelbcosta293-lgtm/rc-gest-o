@@ -1,24 +1,36 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { ESTUDIOS, MODULOS, estudioDe } from '@/lib/data/constantes'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { MODULOS } from '@/lib/data/constantes'
 
 export default async function EstudioPage({
   params,
 }: {
   params: Promise<{ estudio: string }>
 }) {
-  const { estudio } = await params
-  if (!ESTUDIOS.some((e) => e.id === estudio)) {
+  const { estudio: slug } = await params
+  const supabase = await createClient()
+  const estudio = await getEstudioPorSlug(supabase, slug)
+  if (!estudio) {
     notFound()
   }
-  const info = estudioDe(estudio)
 
-  const supabase = await createClient()
+  const { data: userData } = await supabase.auth.getUser()
+  const { data: perfil } = userData.user
+    ? await supabase
+        .from('perfis')
+        .select('papel')
+        .eq('id', userData.user.id)
+        .maybeSingle()
+    : { data: null }
+
+  const ehGestao = perfil?.papel === 'admin' || perfil?.papel === 'studio_manager'
+
   const { data: clientes } = await supabase
     .from('clientes')
     .select('estado')
-    .eq('estudio', estudio)
+    .eq('estudio_id', estudio.id)
 
   const ativos = (clientes ?? []).filter((c) => c.estado === 'Ativo').length
 
@@ -27,18 +39,28 @@ export default async function EstudioPage({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
-            Estúdio de {info.nome}
+            Estúdio de {estudio.nome}
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Escolhe a área onde queres trabalhar.
           </p>
         </div>
-        <Link
-          href="/painel"
-          className="text-sm font-medium text-zinc-600 underline dark:text-zinc-400"
-        >
-          ⇄ Mudar estúdio
-        </Link>
+        <div className="flex items-center gap-4">
+          {ehGestao && (
+            <Link
+              href={`/painel/${slug}/equipa`}
+              className="text-sm font-medium text-zinc-600 underline dark:text-zinc-400"
+            >
+              Equipa
+            </Link>
+          )}
+          <Link
+            href="/painel"
+            className="text-sm font-medium text-zinc-600 underline dark:text-zinc-400"
+          >
+            ⇄ Mudar estúdio
+          </Link>
+        </div>
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -46,7 +68,7 @@ export default async function EstudioPage({
           m.pronto ? (
             <Link
               key={m.id}
-              href={`/painel/${estudio}/${m.id}`}
+              href={`/painel/${slug}/${m.id}`}
               className="rounded-xl border border-black/10 bg-white p-5 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
             >
               <span className="text-2xl">{m.icone}</span>

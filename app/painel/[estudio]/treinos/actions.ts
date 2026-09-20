@@ -3,7 +3,6 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import type { AlertaTipo } from '@/lib/data/constantes'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -14,41 +13,46 @@ function campoOuNull(formData: FormData, nome: string) {
 function camposComuns(formData: FormData) {
   return {
     nome: formData.get('nome') as string,
-    pt: campoOuNull(formData, 'pt'),
+    telefone: campoOuNull(formData, 'telefone'),
+    email: campoOuNull(formData, 'email'),
     objetivo: campoOuNull(formData, 'objetivo'),
-    frequencia: formData.get('frequencia') ? Number(formData.get('frequencia')) : null,
-    alerta: (formData.get('alerta') as AlertaTipo) || 'Nenhum',
-    detalhe: campoOuNull(formData, 'detalhe'),
+    frequencia_semanal: formData.get('frequencia_semanal')
+      ? Number(formData.get('frequencia_semanal'))
+      : null,
+    pt_principal_id: campoOuNull(formData, 'pt_principal_id'),
+    alerta: (formData.get('alerta') as string) || 'Nenhum',
+    alerta_detalhe: campoOuNull(formData, 'alerta_detalhe'),
     evento: campoOuNull(formData, 'evento'),
     evento_data: campoOuNull(formData, 'evento_data'),
     nascimento: campoOuNull(formData, 'nascimento'),
-    telefone: campoOuNull(formData, 'telefone'),
+    notas: campoOuNull(formData, 'notas'),
   }
 }
 
 export async function criarCliente(formData: FormData) {
-  const estudio = formData.get('estudio') as string
+  const estudioSlug = formData.get('estudio_slug') as string
+  const estudioId = Number(formData.get('estudio_id'))
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('clientes')
-    .insert({ ...camposComuns(formData), estudio })
+    .insert({ ...camposComuns(formData), estudio_id: estudioId })
     .select('id')
     .single()
 
   if (error || !data) {
     redirect(
-      `/painel/${estudio}/treinos/novo?error=${encodeURIComponent('Não foi possível criar o cliente.')}`
+      `/painel/${estudioSlug}/treinos/novo?error=${encodeURIComponent('Não foi possível criar o cliente.')}`
     )
   }
 
-  revalidatePath(`/painel/${estudio}/treinos`)
-  redirect(`/painel/${estudio}/treinos/${data.id}`)
+  revalidatePath(`/painel/${estudioSlug}/treinos`)
+  redirect(`/painel/${estudioSlug}/treinos/${data.id}`)
 }
 
 export async function atualizarCliente(formData: FormData) {
   const id = formData.get('id') as string
-  const estudio = formData.get('estudio') as string
+  const estudioSlug = formData.get('estudio_slug') as string
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -61,11 +65,11 @@ export async function atualizarCliente(formData: FormData) {
 
   if (error) {
     redirect(
-      `/painel/${estudio}/treinos/${id}/editar?error=${encodeURIComponent('Não foi possível guardar as alterações.')}`
+      `/painel/${estudioSlug}/treinos/${id}/editar?error=${encodeURIComponent('Não foi possível guardar as alterações.')}`
     )
   }
 
-  revalidatePath(`/painel/${estudio}/treinos`)
-  revalidatePath(`/painel/${estudio}/treinos/${id}`)
-  redirect(`/painel/${estudio}/treinos/${id}`)
+  revalidatePath(`/painel/${estudioSlug}/treinos`)
+  revalidatePath(`/painel/${estudioSlug}/treinos/${id}`)
+  redirect(`/painel/${estudioSlug}/treinos/${id}`)
 }

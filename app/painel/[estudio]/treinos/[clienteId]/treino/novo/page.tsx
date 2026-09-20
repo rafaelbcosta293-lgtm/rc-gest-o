@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { ESTUDIOS } from '@/lib/data/constantes'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getCatalogoExercicios } from '@/lib/data/catalogo'
 import { criarSessao } from '../actions'
 import TreinoForm from '../../../TreinoForm'
 
@@ -12,38 +13,42 @@ export default async function NovoTreinoPage({
   params: Promise<{ estudio: string; clienteId: string }>
   searchParams: Promise<{ error?: string }>
 }) {
-  const { estudio, clienteId } = await params
-  if (!ESTUDIOS.some((e) => e.id === estudio)) {
-    notFound()
-  }
+  const { estudio: slug, clienteId } = await params
   const { error } = await searchParams
 
   const supabase = await createClient()
+  const estudio = await getEstudioPorSlug(supabase, slug)
+  if (!estudio) {
+    notFound()
+  }
 
   const { data: cliente } = await supabase
     .from('clientes')
-    .select('id, nome, pt')
+    .select('id, nome, pt_principal_id')
     .eq('id', clienteId)
-    .eq('estudio', estudio)
+    .eq('estudio_id', estudio.id)
     .maybeSingle()
 
   if (!cliente) {
     notFound()
   }
 
-  const { data: pts } = await supabase.from('profiles').select('id, nome').order('nome')
-  const { data: ultima } = await supabase
-    .from('sessoes')
-    .select('data, pt, nota_proxima')
-    .eq('cliente_id', clienteId)
-    .order('data', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const [{ data: pts }, catalogo, { data: ultima }] = await Promise.all([
+    supabase.from('perfis').select('id, nome').order('nome'),
+    getCatalogoExercicios(supabase),
+    supabase
+      .from('sessoes')
+      .select('data, nota_proxima')
+      .eq('cliente_id', clienteId)
+      .order('data', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <Link
-        href={`/painel/${estudio}/treinos/${clienteId}`}
+        href={`/painel/${slug}/treinos/${clienteId}`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
       >
         ← {cliente.nome}
@@ -65,10 +70,12 @@ export default async function NovoTreinoPage({
       )}
 
       <TreinoForm
-        estudio={estudio}
+        estudioSlug={slug}
+        estudioId={estudio.id}
         clienteId={clienteId}
         pts={pts ?? []}
-        ptPredefinido={cliente.pt ?? undefined}
+        ptPredefinido={cliente.pt_principal_id}
+        catalogo={catalogo}
         action={criarSessao}
         error={error}
       />

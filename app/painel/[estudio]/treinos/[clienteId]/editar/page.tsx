@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { ESTUDIOS } from '@/lib/data/constantes'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { atualizarCliente } from '../../actions'
 import ClienteForm from '../../ClienteForm'
 
@@ -12,31 +12,32 @@ export default async function EditarClientePage({
   params: Promise<{ estudio: string; clienteId: string }>
   searchParams: Promise<{ error?: string }>
 }) {
-  const { estudio, clienteId } = await params
-  if (!ESTUDIOS.some((e) => e.id === estudio)) {
-    notFound()
-  }
+  const { estudio: slug, clienteId } = await params
   const { error } = await searchParams
 
   const supabase = await createClient()
+  const estudio = await getEstudioPorSlug(supabase, slug)
+  if (!estudio) {
+    notFound()
+  }
 
   const { data: cliente } = await supabase
     .from('clientes')
     .select('*')
     .eq('id', clienteId)
-    .eq('estudio', estudio)
+    .eq('estudio_id', estudio.id)
     .maybeSingle()
 
   if (!cliente) {
     notFound()
   }
 
-  const { data: pts } = await supabase.from('profiles').select('id, nome').order('nome')
+  const { data: pts } = await supabase.from('perfis').select('id, nome').order('nome')
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
-        href={`/painel/${estudio}/treinos/${clienteId}`}
+        href={`/painel/${slug}/treinos/${clienteId}`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
       >
         ← {cliente.nome}
@@ -47,7 +48,8 @@ export default async function EditarClientePage({
       </h1>
 
       <ClienteForm
-        estudio={estudio}
+        estudioSlug={slug}
+        estudioId={estudio.id}
         cliente={cliente}
         pts={pts ?? []}
         action={atualizarCliente}

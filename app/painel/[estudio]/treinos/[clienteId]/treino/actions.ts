@@ -34,6 +34,28 @@ function lerExercicios(formData: FormData): LinhaParaGravar[] {
   }
 }
 
+async function marcarPresencaDoTreino(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sessaoId: string,
+  clienteId: string,
+  data: string,
+  ptId: string | null
+) {
+  // Um treino registado conta sempre como presença. Remove qualquer
+  // registo anterior ligado a este treino (caso a data tenha mudado)
+  // e qualquer registo manual já existente nesse novo dia, para nunca
+  // haver mais do que uma presença por cliente e por dia.
+  await supabase.from('presencas').delete().eq('sessao_id', sessaoId)
+  await supabase.from('presencas').delete().match({ cliente_id: clienteId, data })
+  await supabase.from('presencas').insert({
+    cliente_id: clienteId,
+    data,
+    estado: 'Presente',
+    pt_id: ptId,
+    sessao_id: sessaoId,
+  })
+}
+
 export async function criarSessao(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
@@ -79,7 +101,16 @@ export async function criarSessao(formData: FormData) {
     )
   }
 
+  await marcarPresencaDoTreino(
+    supabase,
+    sessao.id,
+    clienteId,
+    formData.get('data') as string,
+    (formData.get('pt_id') as string) || null
+  )
+
   revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)
   redirect(`/painel/${estudioSlug}/treinos/${clienteId}`)
 }
 
@@ -127,6 +158,15 @@ export async function atualizarSessao(formData: FormData) {
     )
   }
 
+  await marcarPresencaDoTreino(
+    supabase,
+    id,
+    clienteId,
+    formData.get('data') as string,
+    (formData.get('pt_id') as string) || null
+  )
+
   revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)
   redirect(`/painel/${estudioSlug}/treinos/${clienteId}`)
 }

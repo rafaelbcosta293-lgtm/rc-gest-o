@@ -29,6 +29,13 @@ export const CORREU = {
   Interrompido: { bg: '#FBE4E4', tx: '#B3261E' },
 } as const
 
+export const PRESENCAS = {
+  Presente: { bg: '#E3F3EA', tx: '#1E7145' },
+  Faltou: { bg: '#FBE4E4', tx: '#B3261E' },
+  'Faltou (avisou)': { bg: '#FDEBDD', tx: '#9A4A0F' },
+  Remarcado: { bg: '#E1EEF9', tx: '#1F6FB2' },
+} as const
+
 export const BLOCOS = ['Aquecimento', 'Principal', 'Acessório', 'Final'] as const
 export type BlocoTipo = (typeof BLOCOS)[number]
 
@@ -41,7 +48,7 @@ export const BLOCO_COR: Record<BlocoTipo, string> = {
 
 export const MODULOS = [
   { id: 'treinos', nome: 'Treinos', icone: '🏋️', desc: 'Planos, histórico e notas entre PTs', pronto: true },
-  { id: 'presencas', nome: 'Presenças', icone: '✅', desc: 'Quem treinou e quem faltou', pronto: false },
+  { id: 'presencas', nome: 'Presenças', icone: '✅', desc: 'Quem treinou e quem faltou', pronto: true },
   { id: 'avaliacoes', nome: 'Avaliações', icone: '📏', desc: 'Avaliações, reavaliações e evolução', pronto: false },
   { id: 'leads', nome: 'Leads', icone: '📣', desc: 'Contactos, origem e seguimento', pronto: false },
   { id: 'pagamentos', nome: 'Pagamentos', icone: '💳', desc: 'Quem tem o pagamento em dia', pronto: false },

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { traduzErroSupabase } from '@/lib/supabase/auth-errors'
 
 export async function signup(formData: FormData) {
+  const nome = formData.get('nome') as string
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const confirmPassword = formData.get('confirmPassword') as string
@@ -23,6 +24,7 @@ export async function signup(formData: FormData) {
     email,
     password,
     options: {
+      data: { nome },
       emailRedirectTo: `${origin}/auth/confirm`,
     },
   })

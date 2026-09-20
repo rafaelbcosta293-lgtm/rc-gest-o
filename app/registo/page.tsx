@@ -41,6 +41,23 @@ export default async function RegistoPage({
         <form className="mt-6 flex flex-col gap-4" action={signup}>
           <div className="flex flex-col gap-1.5">
             <label
+              htmlFor="nome"
+              className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            >
+              Nome
+            </label>
+            <input
+              id="nome"
+              name="nome"
+              type="text"
+              required
+              autoComplete="name"
+              className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label
               htmlFor="email"
               className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
             >

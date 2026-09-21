@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { login } from './actions'
 import SubmitButton from '@/components/SubmitButton'
+import PasswordInput from '@/components/PasswordInput'
 
 export default async function LoginPage({
   searchParams,
@@ -51,22 +52,12 @@ export default async function LoginPage({
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="password"
-              className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
-            >
-              Palavra-passe
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
-            />
-          </div>
+          <PasswordInput
+            id="password"
+            name="password"
+            label="Palavra-passe"
+            autoComplete="current-password"
+          />
 
           <SubmitButton
             pendingText="A entrar…"

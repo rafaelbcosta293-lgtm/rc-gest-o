@@ -1,5 +1,6 @@
 import { updatePassword } from './actions'
 import SubmitButton from '@/components/SubmitButton'
+import PasswordInput from '@/components/PasswordInput'
 
 export default async function AtualizarPasswordPage({
   searchParams,
@@ -25,41 +26,21 @@ export default async function AtualizarPasswordPage({
         )}
 
         <form className="mt-6 flex flex-col gap-4" action={updatePassword}>
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="password"
-              className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
-            >
-              Nova palavra-passe
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              autoComplete="new-password"
-              className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
-            />
-          </div>
+          <PasswordInput
+            id="password"
+            name="password"
+            label="Nova palavra-passe"
+            autoComplete="new-password"
+            minLength={6}
+          />
 
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="confirmPassword"
-              className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
-            >
-              Confirmar palavra-passe
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              required
-              minLength={6}
-              autoComplete="new-password"
-              className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
-            />
-          </div>
+          <PasswordInput
+            id="confirmPassword"
+            name="confirmPassword"
+            label="Confirmar palavra-passe"
+            autoComplete="new-password"
+            minLength={6}
+          />
 
           <SubmitButton
             pendingText="A guardar…"

@@ -1,21 +1,44 @@
-import Link from 'next/link'
+'use client'
+
+import { Fragment, useState, useTransition } from 'react'
 import { BLOCOS_HORARIO, DIAS_SEMANA } from '@/lib/data/horarios'
 import { fmt } from '@/lib/data/presencas'
-import SubmitButton from '@/components/SubmitButton'
 import type { Perfil } from '@/lib/supabase/database.types'
 
 export type SlotPt = { pt_id: string; nome: string }
+export type CorPt = { bg: string; tx: string }
+
+const CINZA_OMISSAO: CorPt = { bg: '#F2F5FA', tx: '#6B7688' }
+
+function corDoPt(corPorPt: Record<string, CorPt> | undefined, ptId: string): CorPt {
+  return corPorPt?.[ptId] ?? CINZA_OMISSAO
+}
 
 export function chaveSlot(data: string, hora: number, minuto: number) {
   return `${data}_${hora}_${minuto}`
 }
 
+function Insignia({ nome, cor }: { nome: string; cor: CorPt }) {
+  return (
+    <span
+      className="truncate rounded px-1 py-0.5 text-[10px] font-medium"
+      style={{ background: cor.bg, color: cor.tx }}
+    >
+      {nome}
+    </span>
+  )
+}
+
 type PropsComuns = {
   dias: string[]
   slots: Map<string, SlotPt[]>
+  corPorPt?: Record<string, CorPt>
 }
 
 type PropsSoLeitura = PropsComuns & { editavel?: false }
+
+type AtribuicaoSlot = { data: string; hora: number; minuto: number; pt_ids: string[] }
+type ResultadoGuardar = { ok: true } | { error: string }
 
 type PropsEditavel = PropsComuns & {
   editavel: true
@@ -23,160 +46,216 @@ type PropsEditavel = PropsComuns & {
   estudioSlug: string
   estudioId: number
   semana: string
-  editar?: string
-  action: (formData: FormData) => void
+  guardar: (input: {
+    estudioSlug: string
+    estudioId: number
+    semana: string
+    atribuicoes: AtribuicaoSlot[]
+  }) => Promise<ResultadoGuardar>
 }
 
 export default function GrelhaHorarios(props: PropsSoLeitura | PropsEditavel) {
-  const { dias } = props
+  return props.editavel ? <GrelhaEditavel {...props} /> : <GrelhaSoLeitura {...props} />
+}
 
+function Cabecalho({ dias }: { dias: string[] }) {
+  return (
+    <>
+      <div className="bg-zinc-50 p-1.5 dark:bg-zinc-900" />
+      {dias.map((d, i) => (
+        <div
+          key={d}
+          className="bg-zinc-50 p-1.5 text-center font-medium text-black dark:bg-zinc-900 dark:text-zinc-50"
+        >
+          {DIAS_SEMANA[i].slice(0, 3)}
+          <br />
+          <span className="font-normal text-zinc-500">{fmt(d)}</span>
+        </div>
+      ))}
+    </>
+  )
+}
+
+function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
   return (
     <div className="overflow-x-auto">
       <div
         className="grid min-w-[760px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-xs dark:border-white/10 dark:bg-white/10"
         style={{ gridTemplateColumns: '64px repeat(7, 1fr)' }}
       >
-        <div className="bg-zinc-50 p-1.5 dark:bg-zinc-900" />
-        {dias.map((d, i) => (
-          <div
-            key={d}
-            className="bg-zinc-50 p-1.5 text-center font-medium text-black dark:bg-zinc-900 dark:text-zinc-50"
-          >
-            {DIAS_SEMANA[i].slice(0, 3)}
-            <br />
-            <span className="font-normal text-zinc-500">{fmt(d)}</span>
-          </div>
+        <Cabecalho dias={dias} />
+        {BLOCOS_HORARIO.map((bloco) => (
+          <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
+            <div className="flex items-center bg-white p-1.5 text-zinc-500 dark:bg-zinc-950">
+              {bloco.label}
+            </div>
+            {dias.map((dia) => {
+              const atual = slots.get(chaveSlot(dia, bloco.hora, bloco.minuto)) ?? []
+              return (
+                <div
+                  key={dia}
+                  className="flex min-h-[2.25rem] flex-col justify-center gap-0.5 bg-white p-1 text-[11px] leading-tight dark:bg-zinc-950"
+                >
+                  {atual.length === 0 ? (
+                    <span className="text-center text-zinc-300 dark:text-zinc-700">—</span>
+                  ) : (
+                    atual.map((s) => (
+                      <Insignia key={s.pt_id} nome={s.nome} cor={corDoPt(corPorPt, s.pt_id)} />
+                    ))
+                  )}
+                </div>
+              )
+            })}
+          </Fragment>
         ))}
-
-        {BLOCOS_HORARIO.map((bloco) =>
-          props.editavel ? (
-            <LinhaEditavel key={`${bloco.hora}-${bloco.minuto}`} bloco={bloco} {...props} />
-          ) : (
-            <LinhaSoLeitura key={`${bloco.hora}-${bloco.minuto}`} bloco={bloco} {...props} />
-          )
-        )}
       </div>
     </div>
   )
 }
 
-function LinhaSoLeitura({
-  bloco,
-  dias,
-  slots,
-}: PropsSoLeitura & { bloco: { hora: number; minuto: number; label: string } }) {
-  return (
-    <>
-      <div className="flex items-center bg-white p-1.5 text-zinc-500 dark:bg-zinc-950">
-        {bloco.label}
-      </div>
-      {dias.map((dia) => {
-        const atual = slots.get(chaveSlot(dia, bloco.hora, bloco.minuto)) ?? []
-        return (
-          <div
-            key={dia}
-            className="flex min-h-[2.25rem] flex-col justify-center gap-0.5 bg-white p-1 text-[11px] leading-tight dark:bg-zinc-950"
-          >
-            {atual.length === 0 ? (
-              <span className="text-center text-zinc-300 dark:text-zinc-700">—</span>
-            ) : (
-              atual.map((s) => (
-                <span key={s.pt_id} className="truncate text-teal-700 dark:text-teal-400">
-                  {s.nome}
-                </span>
-              ))
-            )}
-          </div>
-        )
-      })}
-    </>
-  )
+function estadoInicialDeSlots(slots: Map<string, SlotPt[]>): Record<string, string[]> {
+  const estado: Record<string, string[]> = {}
+  for (const [chave, lista] of slots) {
+    estado[chave] = lista.map((s) => s.pt_id)
+  }
+  return estado
 }
 
-function LinhaEditavel({
-  bloco,
+function GrelhaEditavel({
   dias,
   slots,
+  corPorPt,
   pts,
   estudioSlug,
   estudioId,
   semana,
-  editar,
-  action,
-}: PropsEditavel & { bloco: { hora: number; minuto: number; label: string } }) {
+  guardar,
+}: PropsEditavel) {
+  const [atribuicoes, setAtribuicoes] = useState<Record<string, string[]>>(() =>
+    estadoInicialDeSlots(slots)
+  )
+  const [abertaChave, setAbertaChave] = useState<string | null>(null)
+  const [alterado, setAlterado] = useState(false)
+  const [estadoGuardar, setEstadoGuardar] = useState<'idle' | 'guardado' | 'erro'>('idle')
+  const [aGuardar, iniciarGuardar] = useTransition()
+  const ptsPorId = new Map(pts.map((p) => [p.id, p.nome]))
+
+  const alternarPt = (chave: string, ptId: string) => {
+    setAtribuicoes((atual) => {
+      const lista = atual[chave] ?? []
+      const nova = lista.includes(ptId) ? lista.filter((id) => id !== ptId) : [...lista, ptId]
+      return { ...atual, [chave]: nova }
+    })
+    setAlterado(true)
+    setEstadoGuardar('idle')
+  }
+
+  const guardarAlteracoes = () => {
+    const atribuicoesParaEnviar: AtribuicaoSlot[] = Object.entries(atribuicoes)
+      .filter(([, ptIds]) => ptIds.length > 0)
+      .map(([chave, ptIds]) => {
+        const [data, horaStr, minutoStr] = chave.split('_')
+        return { data, hora: Number(horaStr), minuto: Number(minutoStr), pt_ids: ptIds }
+      })
+
+    iniciarGuardar(async () => {
+      const resultado = await guardar({
+        estudioSlug,
+        estudioId,
+        semana,
+        atribuicoes: atribuicoesParaEnviar,
+      })
+      setEstadoGuardar('error' in resultado ? 'erro' : 'guardado')
+      if (!('error' in resultado)) setAlterado(false)
+    })
+  }
+
   return (
-    <>
-      <div className="flex items-center bg-white p-1.5 text-zinc-500 dark:bg-zinc-950">
-        {bloco.label}
+    <div>
+      <div className="overflow-x-auto">
+        <div
+          className="grid min-w-[760px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-xs dark:border-white/10 dark:bg-white/10"
+          style={{ gridTemplateColumns: '64px repeat(7, 1fr)' }}
+        >
+          <Cabecalho dias={dias} />
+          {BLOCOS_HORARIO.map((bloco) => (
+            <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
+              <div className="flex items-center bg-white p-1.5 text-zinc-500 dark:bg-zinc-950">
+                {bloco.label}
+              </div>
+              {dias.map((dia) => {
+                const chave = chaveSlot(dia, bloco.hora, bloco.minuto)
+                const ptIdsAtuais = atribuicoes[chave] ?? []
+                const aberta = abertaChave === chave
+
+                if (aberta) {
+                  return (
+                    <div
+                      key={dia}
+                      className="flex max-h-32 flex-col gap-0.5 overflow-y-auto bg-teal-50 p-1 dark:bg-teal-950"
+                    >
+                      {pts.map((p) => (
+                        <label key={p.id} className="flex items-center gap-1 text-[11px]">
+                          <input
+                            type="checkbox"
+                            checked={ptIdsAtuais.includes(p.id)}
+                            onChange={() => alternarPt(chave, p.id)}
+                          />
+                          <span className="truncate">{p.nome}</span>
+                        </label>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setAbertaChave(null)}
+                        className="mt-0.5 self-start text-[10px] text-zinc-500 underline"
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                  )
+                }
+
+                return (
+                  <button
+                    key={dia}
+                    type="button"
+                    onClick={() => setAbertaChave(chave)}
+                    className="flex min-h-[2.25rem] flex-col justify-center gap-0.5 bg-white p-1 text-[11px] leading-tight hover:bg-black/[.03] dark:bg-zinc-950 dark:hover:bg-white/[.06]"
+                  >
+                    {ptIdsAtuais.length === 0 ? (
+                      <span className="text-center text-zinc-300 dark:text-zinc-700">+</span>
+                    ) : (
+                      ptIdsAtuais.map((id) => (
+                        <Insignia key={id} nome={ptsPorId.get(id) ?? '—'} cor={corDoPt(corPorPt, id)} />
+                      ))
+                    )}
+                  </button>
+                )
+              })}
+            </Fragment>
+          ))}
+        </div>
       </div>
-      {dias.map((dia) => {
-        const chave = chaveSlot(dia, bloco.hora, bloco.minuto)
-        const atual = slots.get(chave) ?? []
-        const aEditar = editar === chave
 
-        if (aEditar) {
-          const idsAtuais = new Set(atual.map((s) => s.pt_id))
-          return (
-            <form
-              key={dia}
-              action={action}
-              className="flex flex-col gap-1 bg-teal-50 p-1.5 dark:bg-teal-950"
-            >
-              <input type="hidden" name="estudio_slug" value={estudioSlug} />
-              <input type="hidden" name="estudio_id" value={estudioId} />
-              <input type="hidden" name="semana" value={semana} />
-              <input type="hidden" name="data" value={dia} />
-              <input type="hidden" name="hora" value={bloco.hora} />
-              <input type="hidden" name="minuto" value={bloco.minuto} />
-              <div className="flex max-h-28 flex-col gap-0.5 overflow-y-auto rounded border border-black/10 bg-white p-1 dark:border-white/10 dark:bg-zinc-900">
-                {pts.map((p) => (
-                  <label key={p.id} className="flex items-center gap-1 text-[11px]">
-                    <input
-                      type="checkbox"
-                      name="pt_ids"
-                      value={p.id}
-                      defaultChecked={idsAtuais.has(p.id)}
-                    />
-                    <span className="truncate">{p.nome}</span>
-                  </label>
-                ))}
-              </div>
-              <div className="mt-0.5 flex items-center justify-between gap-1">
-                <SubmitButton
-                  pendingText="…"
-                  className="rounded bg-foreground px-2 py-0.5 text-[11px] font-medium text-background"
-                >
-                  Guardar
-                </SubmitButton>
-                <Link
-                  href={`/painel/${estudioSlug}/coordenacao?semana=${semana}`}
-                  className="text-[11px] text-zinc-500 underline"
-                >
-                  Cancelar
-                </Link>
-              </div>
-            </form>
-          )
-        }
-
-        return (
-          <Link
-            key={dia}
-            href={`/painel/${estudioSlug}/coordenacao?semana=${semana}&editar=${chave}`}
-            className="flex min-h-[2.25rem] flex-col justify-center gap-0.5 bg-white p-1 text-[11px] leading-tight hover:bg-black/[.03] dark:bg-zinc-950 dark:hover:bg-white/[.06]"
-          >
-            {atual.length === 0 ? (
-              <span className="text-center text-zinc-300 dark:text-zinc-700">+</span>
-            ) : (
-              atual.map((s) => (
-                <span key={s.pt_id} className="truncate text-teal-700 dark:text-teal-400">
-                  {s.nome}
-                </span>
-              ))
-            )}
-          </Link>
-        )
-      })}
-    </>
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={guardarAlteracoes}
+          disabled={aGuardar}
+          className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-[#ccc]"
+        >
+          {aGuardar ? 'A guardar…' : 'Guardar alterações'}
+        </button>
+        {estadoGuardar === 'guardado' && (
+          <span className="text-xs text-teal-700 dark:text-teal-400">Guardado ✓</span>
+        )}
+        {estadoGuardar === 'erro' && (
+          <span className="text-xs text-red-600">Não foi possível guardar — tenta outra vez.</span>
+        )}
+        {estadoGuardar === 'idle' && alterado && (
+          <span className="text-xs text-amber-600">Há alterações por guardar.</span>
+        )}
+      </div>
+    </div>
   )
 }

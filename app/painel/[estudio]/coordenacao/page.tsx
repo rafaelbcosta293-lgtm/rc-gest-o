@@ -4,12 +4,13 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt, MESES } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
-import { registarHoras, atualizarHoras, guardarSlot, criarInstrutor } from './actions'
+import { registarHoras, atualizarHoras, guardarSemana, criarInstrutor } from './actions'
 import { alternarAcesso } from '../equipa/actions'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { corInstrutor } from '@/lib/data/constantes'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
-import GrelhaHorarios, { chaveSlot, type SlotPt } from '@/components/GrelhaHorarios'
+import GrelhaHorarios, { chaveSlot, type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import type {
   EstadoPagamento,
   LeadParada,
@@ -30,10 +31,10 @@ export default async function CoordenacaoPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ semana?: string; editar?: string; mes?: string; error?: string }>
+  searchParams: Promise<{ semana?: string; mes?: string; error?: string }>
 }) {
   const { estudio: slug } = await params
-  const { semana: semanaParam, editar, mes: mesParam, error } = await searchParams
+  const { semana: semanaParam, mes: mesParam, error } = await searchParams
   const agora = new Date()
   const hoje = agora.toISOString().slice(0, 10)
   const inicioSemana = inicioDaSemana(semanaParam ?? hoje)
@@ -128,10 +129,10 @@ export default async function CoordenacaoPage({
   // Resumo de horas planeadas nesta semana (cada bloco = meia hora) —
   // diferente do registo de horas trabalhadas mais abaixo, serve só para
   // conferir a escala que acabou de ser montada.
-  const horasEscalaPorPt = new Map<string, { nome: string; horas: number }>()
+  const horasEscalaPorPt = new Map<string, { id: string; nome: string; horas: number }>()
   for (const t of escalaSemana) {
     if (!t.pt) continue
-    const atual = horasEscalaPorPt.get(t.pt.id) ?? { nome: t.pt.nome, horas: 0 }
+    const atual = horasEscalaPorPt.get(t.pt.id) ?? { id: t.pt.id, nome: t.pt.nome, horas: 0 }
     atual.horas += 0.5
     horasEscalaPorPt.set(t.pt.id, atual)
   }
@@ -139,6 +140,11 @@ export default async function CoordenacaoPage({
 
   const perfis = (perfisData ?? []) as Pick<Perfil, 'id' | 'nome' | 'papel' | 'ativo'>[]
   const idsComAcesso = new Set(listaPts.map((p) => p.id))
+  // Uma cor por instrutor, pela ordem alfabética já devolvida por
+  // getEquipaDoEstudio — usada na grelha e nos resumos ao lado dela.
+  const corPorPt: Record<string, CorPt> = Object.fromEntries(
+    listaPts.map((p, i) => [p.id, corInstrutor(i)])
+  )
 
   const resumoPorPt = new Map<
     string,
@@ -187,13 +193,27 @@ export default async function CoordenacaoPage({
           {escalaHoje.length === 0 ? (
             <p className="mt-1 text-sm text-zinc-400">Sem turnos marcados.</p>
           ) : (
-            <ul className="mt-1 flex flex-col gap-0.5 text-sm text-black dark:text-zinc-50">
-              {escalaHoje.map((e, i) => (
-                <li key={i}>
-                  {String(e.hora).padStart(2, '0')}:{String(e.minuto).padStart(2, '0')} —{' '}
-                  {e.pt?.nome ?? '—'}
-                </li>
-              ))}
+            <ul className="mt-1 flex flex-col gap-1 text-sm text-black dark:text-zinc-50">
+              {escalaHoje.map((e, i) => {
+                const cor = e.pt ? corPorPt[e.pt.id] : undefined
+                return (
+                  <li key={i} className="flex items-center gap-1.5">
+                    <span className="text-zinc-500">
+                      {String(e.hora).padStart(2, '0')}:{String(e.minuto).padStart(2, '0')}
+                    </span>
+                    {cor ? (
+                      <span
+                        className="rounded px-1.5 py-0.5 text-xs font-medium"
+                        style={{ background: cor.bg, color: cor.tx }}
+                      >
+                        {e.pt?.nome}
+                      </span>
+                    ) : (
+                      <span>{e.pt?.nome ?? '—'}</span>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           )}
           <Link
@@ -230,81 +250,6 @@ export default async function CoordenacaoPage({
         </div>
       </div>
 
-      <TituloSeccao cor="roxo">Instrutores</TituloSeccao>
-      <p className="mt-1 text-xs text-zinc-500">
-        Só quem tem acesso aqui aparece para escolher no planeamento da semana.
-      </p>
-
-      <form
-        action={criarInstrutor}
-        className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-black/20 p-3 dark:border-white/20"
-      >
-        <input type="hidden" name="estudio_slug" value={slug} />
-        <input type="hidden" name="estudio_id" value={estudio.id} />
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-zinc-500">Nome</label>
-          <input name="nome" required className={inputCls} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-zinc-500">Email</label>
-          <input name="email" type="email" required className={inputCls} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-zinc-500">Telefone (opcional)</label>
-          <input name="telefone" className={inputCls} />
-        </div>
-        <SubmitButton
-          pendingText="A criar…"
-          className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background"
-        >
-          Criar instrutor
-        </SubmitButton>
-      </form>
-      <p className="mt-1.5 text-xs text-zinc-500">
-        Cria já a ficha com acesso a este estúdio. Se um dia quiser entrar na app, usa
-        &quot;Esqueci-me da password&quot; com este email.
-      </p>
-
-      <div className="mt-3 flex flex-col gap-2">
-        {perfis.map((p) => {
-          const temAcesso = idsComAcesso.has(p.id)
-          return (
-            <div
-              key={p.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm dark:border-white/10 dark:bg-zinc-950"
-            >
-              <div>
-                <span className="font-medium text-black dark:text-zinc-50">{p.nome}</span>
-                <span className="ml-2 text-xs text-zinc-500">
-                  {p.papel}
-                  {!p.ativo && ' · inativo'}
-                </span>
-              </div>
-              <form action={alternarAcesso}>
-                <input type="hidden" name="estudio_slug" value={slug} />
-                <input type="hidden" name="estudio_id" value={estudio.id} />
-                <input type="hidden" name="perfil_id" value={p.id} />
-                <input type="hidden" name="tem_acesso" value={temAcesso ? '1' : '0'} />
-                <input type="hidden" name="destino" value="coordenacao" />
-                <SubmitButton
-                  pendingText="…"
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                    temAcesso
-                      ? 'border border-black/10 text-zinc-700 hover:bg-black/[.04] dark:border-white/10 dark:text-zinc-300'
-                      : 'bg-foreground text-background'
-                  }`}
-                >
-                  {temAcesso ? 'Remover' : 'Adicionar'}
-                </SubmitButton>
-              </form>
-            </div>
-          )
-        })}
-        {perfis.length === 0 && (
-          <p className="text-sm text-zinc-500">Ainda não há ninguém registado.</p>
-        )}
-      </div>
-
       <TituloSeccao cor="azul" id="planeamento">
         Planeamento da semana
       </TituloSeccao>
@@ -331,15 +276,16 @@ export default async function CoordenacaoPage({
       </p>
       <div className="mt-4">
         <GrelhaHorarios
+          key={inicioSemana}
           editavel
           dias={diasSemana}
           slots={slots}
+          corPorPt={corPorPt}
           pts={listaPts}
           estudioSlug={slug}
           estudioId={estudio.id}
           semana={inicioSemana}
-          editar={editar}
-          action={guardarSlot}
+          guardar={guardarSemana}
         />
       </div>
 
@@ -349,11 +295,16 @@ export default async function CoordenacaoPage({
       <div className="mt-1.5 flex flex-wrap gap-2">
         {resumoEscalaSemana.map((r) => (
           <div
-            key={r.nome}
-            className="rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-950"
+            key={r.id}
+            className="flex items-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-950"
           >
-            <span className="font-medium text-black dark:text-zinc-50">{r.nome}</span>
-            <span className="ml-1.5 text-zinc-500">{r.horas}h</span>
+            <span
+              className="rounded px-1.5 py-0.5 font-medium"
+              style={{ background: corPorPt[r.id]?.bg, color: corPorPt[r.id]?.tx }}
+            >
+              {r.nome}
+            </span>
+            <span className="text-zinc-500">{r.horas}h</span>
           </div>
         ))}
         {resumoEscalaSemana.length === 0 && (
@@ -539,6 +490,90 @@ export default async function CoordenacaoPage({
           Ainda não há registos de horas.
         </div>
       )}
+
+      <details className="mt-10 rounded-xl border border-black/10 dark:border-white/10">
+        <summary className="flex cursor-pointer items-center gap-1.5 p-4 text-xs font-semibold uppercase tracking-wider text-[#5B3FA0]">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#5B3FA0]" />
+          Instrutores
+        </summary>
+        <div className="border-t border-black/10 p-4 dark:border-white/10">
+          <p className="text-xs text-zinc-500">
+            Só quem tem acesso aqui aparece para escolher no planeamento da semana.
+          </p>
+
+          <form
+            action={criarInstrutor}
+            className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-black/20 p-3 dark:border-white/20"
+          >
+            <input type="hidden" name="estudio_slug" value={slug} />
+            <input type="hidden" name="estudio_id" value={estudio.id} />
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-zinc-500">Nome</label>
+              <input name="nome" required className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-zinc-500">Email</label>
+              <input name="email" type="email" required className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-zinc-500">Telefone (opcional)</label>
+              <input name="telefone" className={inputCls} />
+            </div>
+            <SubmitButton
+              pendingText="A criar…"
+              className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background"
+            >
+              Criar instrutor
+            </SubmitButton>
+          </form>
+          <p className="mt-1.5 text-xs text-zinc-500">
+            Cria já a ficha com acesso a este estúdio. Se um dia quiser entrar na app, usa
+            &quot;Esqueci-me da password&quot; com este email.
+          </p>
+
+          <div className="mt-3 flex flex-col gap-2">
+            {perfis.map((p) => {
+              const temAcesso = idsComAcesso.has(p.id)
+              const cor = corPorPt[p.id]
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm dark:border-white/10 dark:bg-zinc-950"
+                >
+                  <div className="flex items-center gap-2">
+                    {cor && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cor.tx }} />}
+                    <span className="font-medium text-black dark:text-zinc-50">{p.nome}</span>
+                    <span className="text-xs text-zinc-500">
+                      {p.papel}
+                      {!p.ativo && ' · inativo'}
+                    </span>
+                  </div>
+                  <form action={alternarAcesso}>
+                    <input type="hidden" name="estudio_slug" value={slug} />
+                    <input type="hidden" name="estudio_id" value={estudio.id} />
+                    <input type="hidden" name="perfil_id" value={p.id} />
+                    <input type="hidden" name="tem_acesso" value={temAcesso ? '1' : '0'} />
+                    <input type="hidden" name="destino" value="coordenacao" />
+                    <SubmitButton
+                      pendingText="…"
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                        temAcesso
+                          ? 'border border-black/10 text-zinc-700 hover:bg-black/[.04] dark:border-white/10 dark:text-zinc-300'
+                          : 'bg-foreground text-background'
+                      }`}
+                    >
+                      {temAcesso ? 'Remover' : 'Adicionar'}
+                    </SubmitButton>
+                  </form>
+                </div>
+              )
+            })}
+            {perfis.length === 0 && (
+              <p className="text-sm text-zinc-500">Ainda não há ninguém registado.</p>
+            )}
+          </div>
+        </div>
+      </details>
     </div>
   )
 }

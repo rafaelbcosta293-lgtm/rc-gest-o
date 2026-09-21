@@ -56,6 +56,24 @@ export const ESTADOS_LEAD = {
 
 export const TIPOS_CONTACTO = ['Telefone', 'WhatsApp', 'Email', 'Presencial', 'Mensagem redes'] as const
 
+// Uma cor por instrutor (por ordem alfabética, atribuída pela posição na
+// lista) — para se identificar quem trabalha quando só de olhar para a
+// grelha de horários, sem ter de ler cada nome.
+const PALETA_INSTRUTORES = [
+  { bg: '#DDF3F2', tx: '#0E9594' },
+  { bg: '#E9E5F7', tx: '#5B3FA0' },
+  { bg: '#E1EEF9', tx: '#1F6FB2' },
+  { bg: '#FDEBDD', tx: '#9A4A0F' },
+  { bg: '#FFF4DE', tx: '#9C6B00' },
+  { bg: '#E3F3EA', tx: '#1E7145' },
+  { bg: '#FBE4E4', tx: '#B3261E' },
+  { bg: '#F2F5FA', tx: '#3D4759' },
+] as const
+
+export function corInstrutor(indice: number) {
+  return PALETA_INSTRUTORES[indice % PALETA_INSTRUTORES.length]
+}
+
 export const BLOCOS = ['Aquecimento', 'Principal', 'Acessório', 'Final'] as const
 export type BlocoTipo = (typeof BLOCOS)[number]
 

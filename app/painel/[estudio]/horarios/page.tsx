@@ -5,8 +5,9 @@ import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { criarAusencia, apagarAusencia } from './actions'
+import { corInstrutor } from '@/lib/data/constantes'
 import SubmitButton from '@/components/SubmitButton'
-import GrelhaHorarios, { chaveSlot, type SlotPt } from '@/components/GrelhaHorarios'
+import GrelhaHorarios, { chaveSlot, type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import type { Ausencia } from '@/lib/supabase/database.types'
 
 export default async function HorariosPage({
@@ -53,6 +54,11 @@ export default async function HorariosPage({
 
   const ausencias = (ausenciasData ?? []) as Ausencia[]
   const ptsPorId = new Map(listaPts.map((p) => [p.id, p.nome]))
+  // Mesma cor por instrutor que aparece em Coordenação (mesma ordem
+  // alfabética de getEquipaDoEstudio), para se reconhecer quem é quem.
+  const corPorPt: Record<string, CorPt> = Object.fromEntries(
+    listaPts.map((p, i) => [p.id, corInstrutor(i)])
+  )
 
   const slots = new Map<string, SlotPt[]>()
   for (const t of (turnosData ?? []) as unknown as {
@@ -110,7 +116,7 @@ export default async function HorariosPage({
       </p>
 
       <div className="mt-4">
-        <GrelhaHorarios dias={dias} slots={slots} />
+        <GrelhaHorarios dias={dias} slots={slots} corPorPt={corPorPt} />
       </div>
 
       <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-zinc-500">

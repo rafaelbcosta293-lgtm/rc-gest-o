@@ -1,9 +1,10 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { somarDias } from '@/lib/data/horarios'
+import { redirect } from 'next/navigation'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -11,46 +12,48 @@ function campoOuNull(formData: FormData, nome: string) {
   return v.trim()
 }
 
-// Guarda um bloco da escala (dia + hora + minuto) de uma só vez: apaga
-// quem lá estava e volta a inserir só os PTs escolhidos agora (sem limite
-// próprio — quem decide quantos cabem no mesmo horário é a base de
-// dados). Mais simples e mais seguro do que tentar calcular o que mudou.
-export async function guardarSlot(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
-  const estudioId = Number(formData.get('estudio_id'))
-  const semana = formData.get('semana') as string
-  const data = formData.get('data') as string
-  const hora = Number(formData.get('hora'))
-  const minuto = Number(formData.get('minuto'))
-  const supabase = await createClient()
+type AtribuicaoSlot = { data: string; hora: number; minuto: number; pt_ids: string[] }
 
-  const ptIds = [...new Set(formData.getAll('pt_ids').map(String).filter(Boolean))]
+// Chamado diretamente da grelha (sem <form>/redirect): substitui a
+// escala inteira dessa semana pelo que foi montado no ecrã, de uma só
+// vez — em vez de gravar bloco a bloco (o que obrigava a recarregar a
+// página, perder a posição do scroll, a cada alteração).
+export async function guardarSemana(input: {
+  estudioSlug: string
+  estudioId: number
+  semana: string
+  atribuicoes: AtribuicaoSlot[]
+}): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const fimExclusivo = somarDias(input.semana, 7)
 
   const { error: erroApagar } = await supabase
     .from('escalas')
     .delete()
-    .match({ estudio_id: estudioId, data, hora, minuto })
+    .eq('estudio_id', input.estudioId)
+    .gte('data', input.semana)
+    .lt('data', fimExclusivo)
 
-  if (erroApagar) {
-    redirect(
-      `/painel/${estudioSlug}/coordenacao?semana=${semana}&error=${encodeURIComponent(erroApagar.message)}`
-    )
+  if (erroApagar) return { error: erroApagar.message }
+
+  const linhas = input.atribuicoes.flatMap((s) =>
+    s.pt_ids.map((pt_id) => ({
+      estudio_id: input.estudioId,
+      data: s.data,
+      hora: s.hora,
+      minuto: s.minuto,
+      pt_id,
+    }))
+  )
+
+  if (linhas.length > 0) {
+    const { error: erroInserir } = await supabase.from('escalas').insert(linhas)
+    if (erroInserir) return { error: erroInserir.message }
   }
 
-  if (ptIds.length > 0) {
-    const { error: erroInserir } = await supabase.from('escalas').insert(
-      ptIds.map((pt_id) => ({ estudio_id: estudioId, data, hora, minuto, pt_id }))
-    )
-    if (erroInserir) {
-      redirect(
-        `/painel/${estudioSlug}/coordenacao?semana=${semana}&error=${encodeURIComponent(erroInserir.message)}`
-      )
-    }
-  }
-
-  revalidatePath(`/painel/${estudioSlug}/coordenacao`)
-  revalidatePath(`/painel/${estudioSlug}/horarios`)
-  redirect(`/painel/${estudioSlug}/coordenacao?semana=${semana}`)
+  revalidatePath(`/painel/${input.estudioSlug}/coordenacao`)
+  revalidatePath(`/painel/${input.estudioSlug}/horarios`)
+  return { ok: true }
 }
 
 // Cria a conta e a ficha do instrutor de uma vez (sem ele ter de se

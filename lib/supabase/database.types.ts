@@ -221,6 +221,26 @@ export type EstadoPagamento = {
   em_dia: boolean
 }
 
+export type ConfigLinha = {
+  chave: string
+  valor: string | null
+}
+
+export type LeadParada = Lead & {
+  ultimo_contacto: string | null
+  dias_sem_contacto: number
+}
+
+export type ReavaliacaoPendente = {
+  cliente_id: string
+  estudio_id: number
+  nome: string
+  ultima_avaliacao: string | null
+  proxima_reavaliacao: string | null
+  dias_para_reavaliar: number | null
+  precisa_atencao: boolean
+}
+
 export type Avaliacao = {
   id: string
   cliente_id: string

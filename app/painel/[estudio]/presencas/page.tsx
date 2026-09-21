@@ -2,7 +2,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { treinosPrevistos, intervaloMes, MESES } from '@/lib/data/presencas'
+import { treinosPrevistos, intervaloMes, MESES, iniciais } from '@/lib/data/presencas'
+import { corInstrutor } from '@/lib/data/constantes'
+import AnelProgresso from '@/components/AnelProgresso'
 
 export default async function PresencasPage({
   params,
@@ -91,39 +93,60 @@ export default async function PresencasPage({
         </Link>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2">
-        {(clientes ?? []).map((c) => {
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {(clientes ?? []).map((c, indice) => {
           const s = statsPorCliente.get(c.id) ?? { feitos: 0, faltas: 0, avisadas: 0 }
           const prev = treinosPrevistos(c.frequencia_semanal, ano, mes)
           const alvo = prev?.arredondado
           const pct = alvo ? Math.min(100, Math.round((s.feitos / alvo) * 100)) : null
+          const cor = corInstrutor(indice)
           return (
             <Link
               key={c.id}
               href={`/painel/${slug}/presencas/${c.id}?ano=${ano}&mes=${mes}`}
-              className="rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+              className="flex items-center gap-4 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 hover:shadow-sm dark:border-white/10 dark:bg-zinc-950"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <strong className="text-sm text-black dark:text-zinc-50">{c.nome}</strong>
-                <span className="text-xs text-zinc-500">
-                  {c.frequencia_semanal ? `${c.frequencia_semanal}×/semana` : 'sem frequência'}
-                </span>
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                style={{ background: cor.bg, color: cor.tx }}
+              >
+                {iniciais(c.nome)}
               </div>
-              {alvo !== null && alvo !== undefined && (
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                  <div
-                    className="h-full rounded-full bg-teal-600"
-                    style={{ width: `${pct ?? 0}%` }}
-                  />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-x-2">
+                  <strong className="truncate text-sm text-black dark:text-zinc-50">
+                    {c.nome}
+                  </strong>
+                  <span className="shrink-0 text-xs text-zinc-500">
+                    {c.frequencia_semanal ? `${c.frequencia_semanal}×/semana` : 'sem frequência'}
+                  </span>
                 </div>
-              )}
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-600 dark:text-zinc-400">
-                <span>
-                  {s.feitos} {alvo !== null ? `de ${alvo}` : ''} treinos
-                </span>
-                {s.faltas > 0 && <span className="text-red-600">{s.faltas} faltas</span>}
-                {s.avisadas > 0 && <span className="text-amber-600">{s.avisadas} avisadas</span>}
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {s.feitos}{alvo != null ? ` de ${alvo}` : ''} treinos
+                  </span>
+                  {s.faltas > 0 && (
+                    <span className="rounded-full bg-red-50 px-2 py-0.5 font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
+                      {s.faltas} faltas
+                    </span>
+                  )}
+                  {s.avisadas > 0 && (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                      {s.avisadas} avisadas
+                    </span>
+                  )}
+                </div>
               </div>
+              {alvo != null && (
+                <AnelProgresso
+                  percent={pct ?? 0}
+                  color={(pct ?? 0) >= 100 ? '#1E7145' : '#0E9594'}
+                >
+                  <span className="text-xs font-semibold text-black dark:text-zinc-50">
+                    {pct}%
+                  </span>
+                </AnelProgresso>
+              )}
             </Link>
           )
         })}

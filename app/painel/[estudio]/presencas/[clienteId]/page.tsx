@@ -3,7 +3,15 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { PRESENCAS } from '@/lib/data/constantes'
-import { treinosPrevistos, intervaloMes, MESES, fmt } from '@/lib/data/presencas'
+import {
+  treinosPrevistos,
+  intervaloMes,
+  MESES,
+  fmt,
+  diasDoMes,
+  offsetPrimeiroDia,
+  DIAS_SEMANA,
+} from '@/lib/data/presencas'
 import { marcarPresenca, apagarPresenca } from '../actions'
 import SubmitButton from '@/components/SubmitButton'
 
@@ -62,6 +70,10 @@ export default async function PresencasClientePage({
   const avisadas = lista.filter((p) => p.estado === 'Faltou (avisou)').length
   const prev = treinosPrevistos(cliente.frequencia_semanal, ano, mes)
 
+  const porDia = new Map(lista.map((p) => [p.data, p]))
+  const dias = diasDoMes(ano, mes)
+  const offset = offsetPrimeiroDia(ano, mes)
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
@@ -103,6 +115,46 @@ export default async function PresencasClientePage({
             {avisadas}
           </strong>
           <span className="text-xs text-zinc-600 dark:text-zinc-400">avisadas</span>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-zinc-400">
+          {DIAS_SEMANA.map((d) => (
+            <span key={d}>{d}</span>
+          ))}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {Array.from({ length: offset }).map((_, i) => (
+            <div key={`pad-${i}`} />
+          ))}
+          {dias.map((iso) => {
+            const p = porDia.get(iso)
+            const st = p ? (PRESENCAS[p.estado as keyof typeof PRESENCAS] ?? null) : null
+            const numero = Number(iso.slice(8, 10))
+            return (
+              <div
+                key={iso}
+                title={p ? `${p.estado}${p.nota ? ' · ' + p.nota : ''}` : undefined}
+                className={`flex aspect-square items-center justify-center rounded-lg text-xs font-medium ${
+                  iso === hoje ? 'ring-2 ring-teal-600 ring-offset-1 dark:ring-offset-zinc-950' : ''
+                }`}
+                style={st ? { background: st.bg, color: st.tx } : undefined}
+              >
+                <span className={!st ? 'text-zinc-300 dark:text-zinc-700' : undefined}>
+                  {numero}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-zinc-500">
+          {Object.entries(PRESENCAS).map(([k, v]) => (
+            <span key={k} className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: v.tx }} />
+              {k}
+            </span>
+          ))}
         </div>
       </div>
 

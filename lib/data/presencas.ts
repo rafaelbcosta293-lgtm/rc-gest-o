@@ -32,3 +32,25 @@ export function fmt(iso: string | null) {
   const [a, m, d] = iso.split('-')
   return `${d}/${m}/${a}`
 }
+
+export function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/)
+  const primeiras = partes.length > 1 ? [partes[0], partes[partes.length - 1]] : [partes[0]]
+  return primeiras.map((p) => p[0]?.toUpperCase() ?? '').join('')
+}
+
+export const DIAS_SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+
+export function diasDoMes(ano: number, mes: number): string[] {
+  const total = new Date(ano, mes, 0).getDate()
+  return Array.from(
+    { length: total },
+    (_, i) => `${ano}-${String(mes).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`
+  )
+}
+
+// Semana a começar à segunda-feira: 0 = Seg … 6 = Dom.
+export function offsetPrimeiroDia(ano: number, mes: number): number {
+  const diaSemana = new Date(ano, mes - 1, 1).getDay()
+  return (diaSemana + 6) % 7
+}

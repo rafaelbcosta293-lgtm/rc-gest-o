@@ -12,16 +12,32 @@ export async function alternarAcesso(formData: FormData) {
 
   const supabase = await createClient()
 
-  if (temAcesso) {
-    await supabase
-      .from('perfis_estudios')
-      .delete()
-      .eq('estudio_id', estudioId)
-      .eq('perfil_id', perfilId)
-  } else {
-    await supabase
-      .from('perfis_estudios')
-      .insert({ estudio_id: estudioId, perfil_id: perfilId })
+  const { error } = temAcesso
+    ? await supabase
+        .from('perfis_estudios')
+        .delete()
+        .eq('estudio_id', estudioId)
+        .eq('perfil_id', perfilId)
+    : await supabase.from('perfis_estudios').insert({ estudio_id: estudioId, perfil_id: perfilId })
+
+  if (error) {
+    redirect(`/painel/${slug}/equipa?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${slug}/equipa`)
+  redirect(`/painel/${slug}/equipa`)
+}
+
+export async function mudarPapel(formData: FormData) {
+  const slug = formData.get('estudio_slug') as string
+  const perfilId = formData.get('perfil_id') as string
+  const papel = formData.get('papel') as string
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('perfis').update({ papel }).eq('id', perfilId)
+
+  if (error) {
+    redirect(`/painel/${slug}/equipa?error=${encodeURIComponent(error.message)}`)
   }
 
   revalidatePath(`/painel/${slug}/equipa`)

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { getCatalogoExercicios } from '@/lib/data/catalogo'
 import { atualizarSessao } from '../actions'
 import TreinoForm, { type LinhaExercicio } from '../../../TreinoForm'
@@ -18,25 +18,25 @@ export default async function EditarTreinoPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const [
-    estudio,
-    { data: cliente },
-    { data: sessao },
-    { data: pts },
-    catalogo,
-    { data: exerciciosSessao },
-  ] = await Promise.all([
-    getEstudioPorSlug(supabase, slug),
-    supabase.from('clientes').select('id, nome, estudio_id').eq('id', clienteId).maybeSingle(),
-    supabase.from('sessoes').select('*').eq('id', sessaoId).eq('cliente_id', clienteId).maybeSingle(),
-    supabase.from('perfis').select('id, nome').order('nome'),
-    getCatalogoExercicios(supabase),
-    supabase.from('sessao_exercicios').select('*').eq('sessao_id', sessaoId).order('ordem'),
-  ])
+  const [estudio, { data: cliente }, { data: sessao }, catalogo, { data: exerciciosSessao }] =
+    await Promise.all([
+      getEstudioPorSlug(supabase, slug),
+      supabase.from('clientes').select('id, nome, estudio_id').eq('id', clienteId).maybeSingle(),
+      supabase
+        .from('sessoes')
+        .select('*')
+        .eq('id', sessaoId)
+        .eq('cliente_id', clienteId)
+        .maybeSingle(),
+      getCatalogoExercicios(supabase),
+      supabase.from('sessao_exercicios').select('*').eq('sessao_id', sessaoId).order('ordem'),
+    ])
 
   if (!estudio || !cliente || !sessao || cliente.estudio_id !== estudio.id) {
     notFound()
   }
+
+  const pts = await getEquipaDoEstudio(supabase, estudio.id)
 
   const exercicios: LinhaExercicio[] = (exerciciosSessao ?? []).map((e) => ({
     key: e.id,
@@ -67,7 +67,7 @@ export default async function EditarTreinoPage({
         estudioSlug={slug}
         estudioId={estudio.id}
         clienteId={clienteId}
-        pts={pts ?? []}
+        pts={pts}
         catalogo={catalogo}
         inicial={{
           id: sessao.id,

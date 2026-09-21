@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { criarCliente } from '../actions'
 import ClienteForm from '../ClienteForm'
 
@@ -16,13 +16,11 @@ export default async function NovoClientePage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const [estudio, { data: pts }] = await Promise.all([
-    getEstudioPorSlug(supabase, slug),
-    supabase.from('perfis').select('id, nome').order('nome'),
-  ])
+  const estudio = await getEstudioPorSlug(supabase, slug)
   if (!estudio) {
     notFound()
   }
+  const pts = await getEquipaDoEstudio(supabase, estudio.id)
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -40,7 +38,7 @@ export default async function NovoClientePage({
       <ClienteForm
         estudioSlug={slug}
         estudioId={estudio.id}
-        pts={pts ?? []}
+        pts={pts}
         action={criarCliente}
         error={error}
       />

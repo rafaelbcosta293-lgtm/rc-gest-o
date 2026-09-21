@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { atualizarAvaliacao } from '../../../actions'
 import AvaliacaoForm from '../../../AvaliacaoForm'
 
@@ -16,7 +16,7 @@ export default async function EditarAvaliacaoPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const [estudio, { data: cliente }, { data: avaliacao }, { data: pts }] = await Promise.all([
+  const [estudio, { data: cliente }, { data: avaliacao }] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
     supabase.from('clientes').select('id, nome, estudio_id').eq('id', clienteId).maybeSingle(),
     supabase
@@ -25,12 +25,13 @@ export default async function EditarAvaliacaoPage({
       .eq('id', avaliacaoId)
       .eq('cliente_id', clienteId)
       .maybeSingle(),
-    supabase.from('perfis').select('id, nome').order('nome'),
   ])
 
   if (!estudio || !cliente || !avaliacao || cliente.estudio_id !== estudio.id) {
     notFound()
   }
+
+  const pts = await getEquipaDoEstudio(supabase, estudio.id)
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -49,7 +50,7 @@ export default async function EditarAvaliacaoPage({
       <AvaliacaoForm
         estudioSlug={slug}
         clienteId={clienteId}
-        pts={pts ?? []}
+        pts={pts}
         avaliacao={avaliacao}
         action={atualizarAvaliacao}
         error={error}

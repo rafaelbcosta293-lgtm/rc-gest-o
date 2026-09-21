@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { atualizarCliente } from '../../actions'
 import ClienteForm from '../../ClienteForm'
 
@@ -16,15 +16,16 @@ export default async function EditarClientePage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const [estudio, { data: cliente }, { data: pts }] = await Promise.all([
+  const [estudio, { data: cliente }] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
     supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle(),
-    supabase.from('perfis').select('id, nome').order('nome'),
   ])
 
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
   }
+
+  const pts = await getEquipaDoEstudio(supabase, estudio.id)
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -43,7 +44,7 @@ export default async function EditarClientePage({
         estudioSlug={slug}
         estudioId={estudio.id}
         cliente={cliente}
-        pts={pts ?? []}
+        pts={pts}
         action={atualizarCliente}
         error={error}
       />

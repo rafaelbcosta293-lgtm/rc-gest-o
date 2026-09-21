@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { ESTADOS_LEAD, TIPOS_CONTACTO } from '@/lib/data/constantes'
 import { fmt } from '@/lib/data/presencas'
 import { adicionarContacto, atualizarLead, converterEmCliente } from '../actions'
@@ -20,11 +20,10 @@ export default async function LeadPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const [estudio, { data: lead }, { data: pts }, { data: contactosData, error: erroContactos }] =
+  const [estudio, { data: lead }, { data: contactosData, error: erroContactos }] =
     await Promise.all([
       getEstudioPorSlug(supabase, slug),
       supabase.from('leads').select('*').eq('id', leadId).maybeSingle(),
-      supabase.from('perfis').select('id, nome').order('nome'),
       supabase
         .from('lead_contactos')
         .select('*, feito:perfis!feito_por(nome)')
@@ -40,6 +39,8 @@ export default async function LeadPage({
   if (erroContactos) {
     throw new Error(erroContactos.message)
   }
+
+  const pts = await getEquipaDoEstudio(supabase, estudio.id)
 
   const contactos = (contactosData ?? []) as unknown as (LeadContacto & {
     feito: { nome: string } | null
@@ -135,7 +136,7 @@ export default async function LeadPage({
       <LeadForm
         estudioSlug={slug}
         estudioId={estudio.id}
-        pts={pts ?? []}
+        pts={pts}
         lead={lead}
         action={atualizarLead}
       />

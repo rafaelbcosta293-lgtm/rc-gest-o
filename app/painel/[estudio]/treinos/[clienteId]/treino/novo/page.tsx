@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { getCatalogoExercicios } from '@/lib/data/catalogo'
 import { criarSessao } from '../actions'
 import TreinoForm from '../../../TreinoForm'
@@ -17,28 +17,28 @@ export default async function NovoTreinoPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const [estudio, { data: cliente }, { data: pts }, catalogo, { data: ultima }] =
-    await Promise.all([
-      getEstudioPorSlug(supabase, slug),
-      supabase
-        .from('clientes')
-        .select('id, nome, pt_principal_id, estudio_id')
-        .eq('id', clienteId)
-        .maybeSingle(),
-      supabase.from('perfis').select('id, nome').order('nome'),
-      getCatalogoExercicios(supabase),
-      supabase
-        .from('sessoes')
-        .select('data, nota_proxima')
-        .eq('cliente_id', clienteId)
-        .order('data', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ])
+  const [estudio, { data: cliente }, catalogo, { data: ultima }] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    supabase
+      .from('clientes')
+      .select('id, nome, pt_principal_id, estudio_id')
+      .eq('id', clienteId)
+      .maybeSingle(),
+    getCatalogoExercicios(supabase),
+    supabase
+      .from('sessoes')
+      .select('data, nota_proxima')
+      .eq('cliente_id', clienteId)
+      .order('data', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
 
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
   }
+
+  const pts = await getEquipaDoEstudio(supabase, estudio.id)
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -68,7 +68,7 @@ export default async function NovoTreinoPage({
         estudioSlug={slug}
         estudioId={estudio.id}
         clienteId={clienteId}
-        pts={pts ?? []}
+        pts={pts}
         ptPredefinido={cliente.pt_principal_id}
         catalogo={catalogo}
         action={criarSessao}

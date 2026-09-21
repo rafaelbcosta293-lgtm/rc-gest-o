@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import {
   BLOCOS_HORARIO,
@@ -44,7 +44,7 @@ export default async function HorariosPage({
 
   const [
     { data: turnosData, error: erroTurnos },
-    { data: pts },
+    listaPts,
     { data: ausenciasData, error: erroAusencias },
   ] = await Promise.all([
     supabase
@@ -54,7 +54,7 @@ export default async function HorariosPage({
       .gte('data', inicio)
       .lt('data', fimExclusivo)
       .order('criado_em'),
-    supabase.from('perfis').select('id, nome').order('nome'),
+    getEquipaDoEstudio(supabase, estudio.id),
     supabase.from('ausencias').select('*').gte('fim', hoje).order('inicio').limit(20),
   ])
 
@@ -63,7 +63,6 @@ export default async function HorariosPage({
   }
 
   const ausencias = (ausenciasData ?? []) as Ausencia[]
-  const listaPts = (pts ?? []) as Pick<Perfil, 'id' | 'nome'>[]
   const ptsPorId = new Map(listaPts.map((p) => [p.id, p.nome]))
 
   const slots = new Map<string, SlotPt[]>()

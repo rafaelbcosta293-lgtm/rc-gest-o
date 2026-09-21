@@ -56,6 +56,8 @@ export const ESTADOS_LEAD = {
 
 export const TIPOS_CONTACTO = ['Telefone', 'WhatsApp', 'Email', 'Presencial', 'Mensagem redes'] as const
 
+export const RECORRENCIAS = ['Diária', 'Semanal', 'Mensal', 'Anual'] as const
+
 // Uma cor por instrutor (por ordem alfabética, atribuída pela posição na
 // lista) — para se identificar quem trabalha quando só de olhar para a
 // grelha de horários, sem ter de ler cada nome.

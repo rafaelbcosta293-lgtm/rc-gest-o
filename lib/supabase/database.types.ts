@@ -92,10 +92,14 @@ export type ExercicioCatalogo = {
 
 export type TipoOperacao = 'Abertura' | 'Fecho'
 
+export type RecorrenciaTarefa = 'Diária' | 'Semanal' | 'Mensal' | 'Anual'
+
 export type TarefaDiaria = {
   id: string
   estudio_id: number
   titulo: string
+  recorrencia: RecorrenciaTarefa
+  proxima_data: string
   ativa: boolean
   ordem: number
   criado_por: string | null

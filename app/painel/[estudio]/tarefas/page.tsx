@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { fmt } from '@/lib/data/presencas'
+import { RECORRENCIAS } from '@/lib/data/constantes'
 import { criarTarefa, removerTarefa, marcarFeita, desfazerFeita } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import type { TarefaDiaria, TarefaDiariaConcluida } from '@/lib/supabase/database.types'
@@ -55,9 +57,21 @@ export default async function TarefasPage({
   if (erroFeitas) {
     throw new Error(erroFeitas.message)
   }
-  const feitas = (feitasData ?? []) as unknown as ConcluidaComNome[]
-  const feitaPorTarefa = new Map(feitas.map((f) => [f.tarefa_id, f]))
-  const totalFeitas = feitas.length
+  const feitasHoje = (feitasData ?? []) as unknown as ConcluidaComNome[]
+  const feitaPorTarefa = new Map(feitasHoje.map((f) => [f.tarefa_id, f]))
+
+  // "Hoje" = por fazer (já venceu a próxima ocorrência) + o que já foi
+  // feito hoje (mesmo que "proxima_data" já tenha avançado para a
+  // próxima vez). "Próximas" = o resto, só para se ver o que aí vem.
+  const pendentes = tarefas.filter((t) => t.proxima_data <= hoje && !feitaPorTarefa.has(t.id))
+  const idsHoje = new Set([...pendentes.map((t) => t.id), ...feitaPorTarefa.keys()])
+  const listaHoje = tarefas.filter((t) => idsHoje.has(t.id))
+  const futuras = tarefas
+    .filter((t) => !idsHoje.has(t.id))
+    .sort((a, b) => a.proxima_data.localeCompare(b.proxima_data))
+
+  const totalHoje = listaHoje.length
+  const totalFeitas = feitasHoje.length
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10">
@@ -74,26 +88,26 @@ export default async function TarefasPage({
             Tarefas diárias
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {estudio.nome} · {totalFeitas} de {tarefas.length} feitas hoje
+            {estudio.nome} · {totalFeitas} de {totalHoje} feitas hoje
           </p>
         </div>
       </div>
 
-      {tarefas.length > 0 && (
+      {totalHoje > 0 && (
         <>
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
             <div
               className="h-full rounded-full bg-teal-600"
-              style={{ width: `${Math.round((totalFeitas / tarefas.length) * 100)}%` }}
+              style={{ width: `${Math.round((totalFeitas / totalHoje) * 100)}%` }}
             />
           </div>
-          {totalFeitas >= tarefas.length ? (
+          {totalFeitas >= totalHoje ? (
             <p className="mt-3 rounded-lg bg-teal-50 px-3 py-2 text-sm font-medium text-teal-800 dark:bg-teal-950 dark:text-teal-200">
               ✓ Todas as tarefas de hoje estão feitas.
             </p>
           ) : (
             <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-              Faltam {tarefas.length - totalFeitas} de {tarefas.length} tarefas hoje.
+              Faltam {totalHoje - totalFeitas} de {totalHoje} tarefas hoje.
             </p>
           )}
         </>
@@ -106,15 +120,26 @@ export default async function TarefasPage({
       )}
 
       {ehGestao && (
-        <form action={criarTarefa} className="mt-6 flex gap-2">
+        <form action={criarTarefa} className="mt-6 flex flex-wrap gap-2">
           <input type="hidden" name="estudio_slug" value={slug} />
           <input type="hidden" name="estudio_id" value={estudio.id} />
           <input
             name="titulo"
             required
             placeholder="Nova tarefa… ex.: repor gel de banho"
-            className="flex-1 rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+            className="min-w-[180px] flex-1 rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
           />
+          <select
+            name="recorrencia"
+            defaultValue="Diária"
+            className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+          >
+            {RECORRENCIAS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
           <SubmitButton
             pendingText="…"
             className="shrink-0 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"
@@ -125,7 +150,7 @@ export default async function TarefasPage({
       )}
 
       <div className="mt-6 flex flex-col gap-2">
-        {tarefas.map((t) => {
+        {listaHoje.map((t) => {
           const feita = feitaPorTarefa.get(t.id)
           return (
             <div
@@ -140,6 +165,7 @@ export default async function TarefasPage({
                 <form action={desfazerFeita}>
                   <input type="hidden" name="estudio_slug" value={slug} />
                   <input type="hidden" name="id" value={feita.id} />
+                  <input type="hidden" name="tarefa_id" value={t.id} />
                   <SubmitButton
                     pendingText="…"
                     aria-label="Desmarcar"
@@ -152,7 +178,7 @@ export default async function TarefasPage({
                 <form action={marcarFeita}>
                   <input type="hidden" name="estudio_slug" value={slug} />
                   <input type="hidden" name="tarefa_id" value={t.id} />
-                  <input type="hidden" name="data" value={hoje} />
+                  <input type="hidden" name="recorrencia" value={t.recorrencia} />
                   <SubmitButton
                     pendingText="…"
                     aria-label="Marcar como feita"
@@ -168,6 +194,11 @@ export default async function TarefasPage({
                   className={`truncate text-sm ${feita ? 'text-teal-800 line-through dark:text-teal-300' : 'text-black dark:text-zinc-50'}`}
                 >
                   {t.titulo}
+                  {t.recorrencia !== 'Diária' && (
+                    <span className="ml-1.5 text-xs font-normal text-zinc-400">
+                      · {t.recorrencia.toLowerCase()}
+                    </span>
+                  )}
                 </p>
                 {feita && (
                   <p className="text-xs text-teal-700 dark:text-teal-400">
@@ -194,12 +225,35 @@ export default async function TarefasPage({
         })}
       </div>
 
-      {tarefas.length === 0 && (
+      {listaHoje.length === 0 && (
         <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
-          {ehGestao
-            ? 'Ainda não há tarefas — acrescenta a primeira acima.'
-            : 'Ainda não há tarefas diárias configuradas.'}
+          {tarefas.length === 0
+            ? ehGestao
+              ? 'Ainda não há tarefas — acrescenta a primeira acima.'
+              : 'Ainda não há tarefas diárias configuradas.'
+            : 'Nada para fazer hoje — as próximas tarefas aparecem em baixo.'}
         </div>
+      )}
+
+      {futuras.length > 0 && (
+        <>
+          <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Próximas tarefas
+          </h2>
+          <div className="mt-2 flex flex-col gap-1.5">
+            {futuras.map((t) => (
+              <div
+                key={t.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-black/10 px-3 py-2 text-sm text-zinc-500 dark:border-white/10"
+              >
+                <span>{t.titulo}</span>
+                <span className="shrink-0 text-xs">
+                  {t.recorrencia} · {fmt(t.proxima_data)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

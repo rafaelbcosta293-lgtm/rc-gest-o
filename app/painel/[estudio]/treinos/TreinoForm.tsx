@@ -57,6 +57,34 @@ const ROTULO_ESTADO: Record<EstadoLinha, string> = {
   erro: 'não guardou — tenta outra vez',
 }
 
+// Legenda por cima de cada campo — sem isto, depois de preenchido já não
+// dá para saber se "12" é séries, reps ou carga (o placeholder desaparece
+// assim que se escreve).
+function CampoLinha({
+  label,
+  value,
+  onChange,
+  className = '',
+}: {
+  label: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  className?: string
+}) {
+  return (
+    <div className={`flex flex-col gap-0.5 ${className}`}>
+      <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={onChange}
+        className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+      />
+    </div>
+  )
+}
+
 type ValoresSugeridos = { series: string; reps: string; carga: string; descanso: string }
 
 export default function TreinoForm({
@@ -260,35 +288,35 @@ export default function TreinoForm({
                 </div>
 
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <input
+                  <CampoLinha
+                    label="Séries"
                     value={linha.series}
                     onChange={aoMudarCampo(linha, indice, 'series')}
-                    placeholder="Séries"
-                    className="w-20 min-w-0 flex-1 rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                    className="w-20 min-w-0 flex-1"
                   />
-                  <input
+                  <CampoLinha
+                    label="Reps"
                     value={linha.reps}
                     onChange={aoMudarCampo(linha, indice, 'reps')}
-                    placeholder="Reps"
-                    className="w-20 min-w-0 flex-1 rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                    className="w-20 min-w-0 flex-1"
                   />
-                  <input
+                  <CampoLinha
+                    label="Carga"
                     value={linha.carga}
                     onChange={aoMudarCampo(linha, indice, 'carga')}
-                    placeholder="Carga"
-                    className="w-20 min-w-0 flex-1 rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                    className="w-20 min-w-0 flex-1"
                   />
-                  <input
+                  <CampoLinha
+                    label="Descanso"
                     value={linha.descanso}
                     onChange={aoMudarCampo(linha, indice, 'descanso')}
-                    placeholder="Descanso"
-                    className="w-20 min-w-0 flex-1 rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                    className="w-20 min-w-0 flex-1"
                   />
-                  <input
+                  <CampoLinha
+                    label="Nota"
                     value={linha.nota}
                     onChange={aoMudarCampo(linha, indice, 'nota')}
-                    placeholder="Nota"
-                    className="min-w-[120px] flex-[2] rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                    className="min-w-[120px] flex-[2]"
                   />
                 </div>
                 {estado && (

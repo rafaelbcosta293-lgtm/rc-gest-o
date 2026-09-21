@@ -189,6 +189,38 @@ export type Ausencia = {
   nota: string | null
 }
 
+export type Plano = {
+  id: string
+  nome: string
+  valor: number
+  sessoes_por_semana: number | null
+  ativo: boolean
+}
+
+export type Pagamento = {
+  id: string
+  cliente_id: string
+  plano_id: string | null
+  valor: number
+  metodo: string | null
+  data_pagamento: string
+  valido_ate: string
+  inclui_inscricao: boolean
+  inclui_seguro: boolean
+  inclui_reativacao: boolean
+  nota: string | null
+  registado_por: string | null
+  criado_em: string
+}
+
+export type EstadoPagamento = {
+  cliente_id: string
+  estudio_id: number
+  nome: string
+  valido_ate: string | null
+  em_dia: boolean
+}
+
 export type Avaliacao = {
   id: string
   cliente_id: string

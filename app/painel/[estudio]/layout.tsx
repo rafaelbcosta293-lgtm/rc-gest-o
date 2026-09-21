@@ -1,8 +1,16 @@
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
 import { MODULOS } from '@/lib/data/constantes'
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
+
+  const supabase = await createClient()
+  const { data: userData } = await supabase.auth.getUser()
+  const { data: perfil } = userData.user
+    ? await supabase.from('perfis').select('papel').eq('id', userData.user.id).maybeSingle()
+    : { data: null }
+  const ehAdmin = perfil?.papel === 'admin'
 
   return (
     <div className="flex min-h-full flex-col">
@@ -18,7 +26,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           </Link>
           <span className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
           {MODULOS.map((m) =>
-            m.pronto ? (
+            m.pronto && (!m.restrito || ehAdmin) ? (
               <Link
                 key={m.id}
                 href={`/painel/${slug}/${m.id}`}
@@ -31,8 +39,8 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             ) : (
               <span
                 key={m.id}
-                title={`${m.nome} — brevemente`}
-                aria-label={`${m.nome} (brevemente)`}
+                title={m.pronto ? `${m.nome} — só para administradores` : `${m.nome} — brevemente`}
+                aria-label={m.pronto ? `${m.nome} (só para administradores)` : `${m.nome} (brevemente)`}
                 className="cursor-not-allowed rounded-md px-2 py-1.5 text-lg opacity-30"
               >
                 {m.icone}

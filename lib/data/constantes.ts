@@ -57,15 +57,24 @@ export const BLOCO_COR: Record<BlocoTipo, string> = {
   Final: '#1E7145',
 }
 
-export const MODULOS = [
+type Modulo = {
+  id: string
+  nome: string
+  icone: string
+  desc: string
+  pronto: boolean
+  restrito?: 'admin'
+}
+
+export const MODULOS: Modulo[] = [
   { id: 'treinos', nome: 'Treinos', icone: '🏋️', desc: 'Planos, histórico e notas entre PTs', pronto: true },
   { id: 'presencas', nome: 'Presenças', icone: '✅', desc: 'Quem treinou e quem faltou', pronto: true },
   { id: 'avaliacoes', nome: 'Avaliações', icone: '📏', desc: 'Avaliações, reavaliações e evolução', pronto: true },
   { id: 'leads', nome: 'Leads', icone: '📣', desc: 'Contactos, origem e seguimento', pronto: true },
-  { id: 'pagamentos', nome: 'Pagamentos', icone: '💳', desc: 'Quem tem o pagamento em dia', pronto: false },
+  { id: 'pagamentos', nome: 'Pagamentos', icone: '💳', desc: 'Quem tem o pagamento em dia', pronto: true, restrito: 'admin' },
   { id: 'aniversarios', nome: 'Aniversários', icone: '🎂', desc: 'Mensagens de parabéns', pronto: false },
   { id: 'checklist', nome: 'Abertura / Fecho', icone: '🔑', desc: 'Checklist diária do estúdio', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: '🕗', desc: 'Escala da semana e ausências da equipa', pronto: true },
   { id: 'coordenacao', nome: 'Coordenação', icone: '🗂️', desc: 'Escalas, controlos e o que está pendente', pronto: false },
   { id: 'admin', nome: 'Administração', icone: '🔒', desc: 'Financeiro e alertas de gestão', pronto: false },
-] as const
+]

@@ -28,6 +28,7 @@ export default async function EstudioPage({
   ])
 
   const ehGestao = perfil?.papel === 'admin' || perfil?.papel === 'studio_manager'
+  const ehAdmin = perfil?.papel === 'admin'
 
   const ativos = (clientes ?? []).filter((c) => c.estado === 'Ativo').length
 
@@ -62,7 +63,7 @@ export default async function EstudioPage({
 
       <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
         {MODULOS.map((m) =>
-          m.pronto ? (
+          m.pronto && (!m.restrito || ehAdmin) ? (
             <Link
               key={m.id}
               href={`/painel/${slug}/${m.id}`}
@@ -89,7 +90,9 @@ export default async function EstudioPage({
                 {m.nome}
               </h2>
               <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{m.desc}</p>
-              <p className="mt-3 text-xs font-medium text-zinc-400">Brevemente</p>
+              <p className="mt-3 text-xs font-medium text-zinc-400">
+                {m.pronto ? 'Só para administradores' : 'Brevemente'}
+              </p>
             </div>
           )
         )}

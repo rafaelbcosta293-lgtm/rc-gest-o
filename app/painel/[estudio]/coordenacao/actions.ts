@@ -12,8 +12,9 @@ function campoOuNull(formData: FormData, nome: string) {
 }
 
 // Guarda um bloco da escala (dia + hora + minuto) de uma só vez: apaga
-// quem lá estava e volta a inserir só os PTs escolhidos agora (até 3).
-// Mais simples e mais seguro do que tentar calcular o que mudou.
+// quem lá estava e volta a inserir só os PTs escolhidos agora (sem limite
+// próprio — quem decide quantos cabem no mesmo horário é a base de
+// dados). Mais simples e mais seguro do que tentar calcular o que mudou.
 export async function guardarSlot(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
@@ -23,11 +24,7 @@ export async function guardarSlot(formData: FormData) {
   const minuto = Number(formData.get('minuto'))
   const supabase = await createClient()
 
-  const ptIds = [
-    formData.get('pt_id_1') as string,
-    formData.get('pt_id_2') as string,
-    formData.get('pt_id_3') as string,
-  ].filter((v, i, arr) => v && arr.indexOf(v) === i)
+  const ptIds = [...new Set(formData.getAll('pt_ids').map(String).filter(Boolean))]
 
   const { error: erroApagar } = await supabase
     .from('escalas')

@@ -125,6 +125,18 @@ export default async function CoordenacaoPage({
     slots.set(chave, lista)
   }
 
+  // Resumo de horas planeadas nesta semana (cada bloco = meia hora) —
+  // diferente do registo de horas trabalhadas mais abaixo, serve só para
+  // conferir a escala que acabou de ser montada.
+  const horasEscalaPorPt = new Map<string, { nome: string; horas: number }>()
+  for (const t of escalaSemana) {
+    if (!t.pt) continue
+    const atual = horasEscalaPorPt.get(t.pt.id) ?? { nome: t.pt.nome, horas: 0 }
+    atual.horas += 0.5
+    horasEscalaPorPt.set(t.pt.id, atual)
+  }
+  const resumoEscalaSemana = [...horasEscalaPorPt.values()].sort((a, b) => b.horas - a.horas)
+
   const perfis = (perfisData ?? []) as Pick<Perfil, 'id' | 'nome' | 'papel' | 'ativo'>[]
   const idsComAcesso = new Set(listaPts.map((p) => p.id))
 
@@ -314,8 +326,8 @@ export default async function CoordenacaoPage({
         </Link>
       </div>
       <p className="mt-2 text-xs text-zinc-500">
-        Clica num horário para marcar ou mudar quem trabalha (até 3 pessoas em simultâneo). A
-        equipa vê esta escala em &quot;Horários&quot;, só para consulta.
+        Clica num horário para marcar quem trabalha nesse bloco — podes escolher mais do que uma
+        pessoa. A equipa vê esta escala em &quot;Horários&quot;, só para consulta.
       </p>
       <div className="mt-4">
         <GrelhaHorarios
@@ -329,6 +341,24 @@ export default async function CoordenacaoPage({
           editar={editar}
           action={guardarSlot}
         />
+      </div>
+
+      <h3 className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+        Horas planeadas esta semana
+      </h3>
+      <div className="mt-1.5 flex flex-wrap gap-2">
+        {resumoEscalaSemana.map((r) => (
+          <div
+            key={r.nome}
+            className="rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-950"
+          >
+            <span className="font-medium text-black dark:text-zinc-50">{r.nome}</span>
+            <span className="ml-1.5 text-zinc-500">{r.horas}h</span>
+          </div>
+        ))}
+        {resumoEscalaSemana.length === 0 && (
+          <p className="text-sm text-zinc-500">Sem turnos marcados esta semana.</p>
+        )}
       </div>
 
       <TituloSeccao cor="ambar">Pendências</TituloSeccao>

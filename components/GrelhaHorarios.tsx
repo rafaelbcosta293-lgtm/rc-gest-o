@@ -115,7 +115,7 @@ function LinhaEditavel({
         const aEditar = editar === chave
 
         if (aEditar) {
-          const opcoes = [0, 1, 2].map((i) => atual[i]?.pt_id ?? '')
+          const idsAtuais = new Set(atual.map((s) => s.pt_id))
           return (
             <form
               key={dia}
@@ -128,21 +128,19 @@ function LinhaEditavel({
               <input type="hidden" name="data" value={dia} />
               <input type="hidden" name="hora" value={bloco.hora} />
               <input type="hidden" name="minuto" value={bloco.minuto} />
-              {opcoes.map((v, i) => (
-                <select
-                  key={i}
-                  name={`pt_id_${i + 1}`}
-                  defaultValue={v}
-                  className="w-full rounded border border-black/10 bg-white px-1 py-0.5 text-[11px] dark:border-white/10 dark:bg-zinc-900"
-                >
-                  <option value="">—</option>
-                  {pts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
-              ))}
+              <div className="flex max-h-28 flex-col gap-0.5 overflow-y-auto rounded border border-black/10 bg-white p-1 dark:border-white/10 dark:bg-zinc-900">
+                {pts.map((p) => (
+                  <label key={p.id} className="flex items-center gap-1 text-[11px]">
+                    <input
+                      type="checkbox"
+                      name="pt_ids"
+                      value={p.id}
+                      defaultChecked={idsAtuais.has(p.id)}
+                    />
+                    <span className="truncate">{p.nome}</span>
+                  </label>
+                ))}
+              </div>
               <div className="mt-0.5 flex items-center justify-between gap-1">
                 <SubmitButton
                   pendingText="…"

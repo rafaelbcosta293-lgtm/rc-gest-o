@@ -89,3 +89,24 @@ export type ExercicioCatalogo = {
   notas: string | null
   ativo: boolean
 }
+
+export type Avaliacao = {
+  id: string
+  cliente_id: string
+  pt_id: string | null
+  data: string
+  peso_kg: number | null
+  altura_cm: number | null
+  massa_gorda_pct: number | null
+  massa_gorda_kg: number | null
+  massa_muscular_kg: number | null
+  massa_magra_kg: number | null
+  gordura_visceral: number | null
+  hidratacao_pct: number | null
+  metabolismo_kcal: number | null
+  imc: number | null
+  proxima_reavaliacao: string | null
+  nota: string | null
+  validada_por: string | null
+  criado_em: string
+}

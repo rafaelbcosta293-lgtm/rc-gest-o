@@ -49,7 +49,7 @@ export const BLOCO_COR: Record<BlocoTipo, string> = {
 export const MODULOS = [
   { id: 'treinos', nome: 'Treinos', icone: '🏋️', desc: 'Planos, histórico e notas entre PTs', pronto: true },
   { id: 'presencas', nome: 'Presenças', icone: '✅', desc: 'Quem treinou e quem faltou', pronto: true },
-  { id: 'avaliacoes', nome: 'Avaliações', icone: '📏', desc: 'Avaliações, reavaliações e evolução', pronto: false },
+  { id: 'avaliacoes', nome: 'Avaliações', icone: '📏', desc: 'Avaliações, reavaliações e evolução', pronto: true },
   { id: 'leads', nome: 'Leads', icone: '📣', desc: 'Contactos, origem e seguimento', pronto: false },
   { id: 'pagamentos', nome: 'Pagamentos', icone: '💳', desc: 'Quem tem o pagamento em dia', pronto: false },
   { id: 'aniversarios', nome: 'Aniversários', icone: '🎂', desc: 'Mensagens de parabéns', pronto: false },

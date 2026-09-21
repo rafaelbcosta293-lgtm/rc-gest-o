@@ -2,14 +2,16 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
-import { fmt } from '@/lib/data/presencas'
+import { fmt, MESES } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { registarHoras, atualizarHoras, guardarSlot } from './actions'
+import { alternarAcesso } from '../equipa/actions'
 import SubmitButton from '@/components/SubmitButton'
 import GrelhaHorarios, { chaveSlot, type SlotPt } from '@/components/GrelhaHorarios'
 import type {
   EstadoPagamento,
   LeadParada,
+  Perfil,
   ReavaliacaoPendente,
   RegistoPt,
 } from '@/lib/supabase/database.types'
@@ -26,16 +28,28 @@ export default async function CoordenacaoPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ semana?: string; editar?: string; error?: string }>
+  searchParams: Promise<{ semana?: string; editar?: string; mes?: string; error?: string }>
 }) {
   const { estudio: slug } = await params
-  const { semana: semanaParam, editar, error } = await searchParams
-  const hoje = new Date().toISOString().slice(0, 10)
+  const { semana: semanaParam, editar, mes: mesParam, error } = await searchParams
+  const agora = new Date()
+  const hoje = agora.toISOString().slice(0, 10)
   const inicioSemana = inicioDaSemana(semanaParam ?? hoje)
   const diasSemana = diasDaSemana(inicioSemana)
   const fimSemanaExclusivo = somarDias(inicioSemana, 7)
   const semanaAnterior = somarDias(inicioSemana, -7)
   const semanaSeguinte = somarDias(inicioSemana, 7)
+
+  const ano = mesParam ? Number(mesParam.slice(0, 4)) : agora.getFullYear()
+  const mes = mesParam ? Number(mesParam.slice(5, 7)) : agora.getMonth() + 1
+  const inicioMes = `${ano}-${String(mes).padStart(2, '0')}-01`
+  const fimMesExclusivo = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, '0')}-01`
+  const mesAnteriorAno = mes === 1 ? ano - 1 : ano
+  const mesAnteriorMes = mes === 1 ? 12 : mes - 1
+  const mesSeguinteAno = mes === 12 ? ano + 1 : ano
+  const mesSeguinteMes = mes === 12 ? 1 : mes + 1
+  const mesAnteriorParam = `${mesAnteriorAno}-${String(mesAnteriorMes).padStart(2, '0')}`
+  const mesSeguinteParam = `${mesSeguinteAno}-${String(mesSeguinteMes).padStart(2, '0')}`
 
   const supabase = await createClient()
   const estudio = await getEstudioPorSlug(supabase, slug)
@@ -52,6 +66,7 @@ export default async function CoordenacaoPage({
   const [
     { data: escalaSemanaData, error: erroEscala },
     listaPts,
+    { data: perfisData },
     { data: checklistHojeData },
     { data: leadsParadasData },
     { data: reavaliacoesData },
@@ -66,6 +81,7 @@ export default async function CoordenacaoPage({
       .lt('data', fimSemanaExclusivo)
       .order('criado_em'),
     getEquipaDoEstudio(supabase, estudio.id),
+    supabase.from('perfis').select('id, nome, papel, ativo').order('nome'),
     supabase
       .from('checklist_registos')
       .select('tipo, concluidos, total')
@@ -86,8 +102,9 @@ export default async function CoordenacaoPage({
       .from('registos_pt')
       .select('*, pt:perfis!pt_id(nome)')
       .eq('estudio_id', estudio.id)
-      .order('data', { ascending: false })
-      .limit(30),
+      .gte('data', inicioMes)
+      .lt('data', fimMesExclusivo)
+      .order('data', { ascending: false }),
   ])
 
   if (erroEscala || erroRegistos) {
@@ -110,6 +127,27 @@ export default async function CoordenacaoPage({
     lista.push({ pt_id: t.pt.id, nome: t.pt.nome })
     slots.set(chave, lista)
   }
+
+  const perfis = (perfisData ?? []) as Pick<Perfil, 'id' | 'nome' | 'papel' | 'ativo'>[]
+  const idsComAcesso = new Set(listaPts.map((p) => p.id))
+
+  const resumoPorPt = new Map<
+    string,
+    { nome: string; horas: number; treinos_40: number; treinos_60: number }
+  >()
+  for (const r of registos) {
+    const atual = resumoPorPt.get(r.pt_id) ?? {
+      nome: r.pt?.nome ?? '—',
+      horas: 0,
+      treinos_40: 0,
+      treinos_60: 0,
+    }
+    atual.horas += r.horas
+    atual.treinos_40 += r.treinos_40
+    atual.treinos_60 += r.treinos_60
+    resumoPorPt.set(r.pt_id, atual)
+  }
+  const resumoHoras = [...resumoPorPt.values()].sort((a, b) => b.horas - a.horas)
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -183,6 +221,52 @@ export default async function CoordenacaoPage({
             abrir checklist
           </Link>
         </div>
+      </div>
+
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        Instrutores
+      </h2>
+      <p className="mt-1 text-xs text-zinc-500">
+        Só quem tem acesso aqui aparece para escolher no planeamento da semana.
+      </p>
+      <div className="mt-2 flex flex-col gap-2">
+        {perfis.map((p) => {
+          const temAcesso = idsComAcesso.has(p.id)
+          return (
+            <div
+              key={p.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm dark:border-white/10 dark:bg-zinc-950"
+            >
+              <div>
+                <span className="font-medium text-black dark:text-zinc-50">{p.nome}</span>
+                <span className="ml-2 text-xs text-zinc-500">
+                  {p.papel}
+                  {!p.ativo && ' · inativo'}
+                </span>
+              </div>
+              <form action={alternarAcesso}>
+                <input type="hidden" name="estudio_slug" value={slug} />
+                <input type="hidden" name="estudio_id" value={estudio.id} />
+                <input type="hidden" name="perfil_id" value={p.id} />
+                <input type="hidden" name="tem_acesso" value={temAcesso ? '1' : '0'} />
+                <input type="hidden" name="destino" value="coordenacao" />
+                <SubmitButton
+                  pendingText="…"
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                    temAcesso
+                      ? 'border border-black/10 text-zinc-700 hover:bg-black/[.04] dark:border-white/10 dark:text-zinc-300'
+                      : 'bg-foreground text-background'
+                  }`}
+                >
+                  {temAcesso ? 'Remover' : 'Adicionar'}
+                </SubmitButton>
+              </form>
+            </div>
+          )
+        })}
+        {perfis.length === 0 && (
+          <p className="text-sm text-zinc-500">Ainda não há ninguém registado.</p>
+        )}
       </div>
 
       <h2
@@ -272,8 +356,46 @@ export default async function CoordenacaoPage({
       </div>
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Registar horas
+        Horas da equipa
       </h2>
+      <div className="mt-2 flex items-center gap-3">
+        <Link
+          href={`/painel/${slug}/coordenacao?mes=${mesAnteriorParam}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          ←
+        </Link>
+        <span className="text-sm font-medium">
+          {MESES[mes - 1]} {ano}
+        </span>
+        <Link
+          href={`/painel/${slug}/coordenacao?mes=${mesSeguinteParam}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          →
+        </Link>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-2">
+        {resumoHoras.map((r) => (
+          <div
+            key={r.nome}
+            className="flex items-center justify-between rounded-lg border border-black/10 bg-white p-3 text-sm dark:border-white/10 dark:bg-zinc-950"
+          >
+            <span className="font-medium text-black dark:text-zinc-50">{r.nome}</span>
+            <span className="text-xs text-zinc-600 dark:text-zinc-400">
+              {r.horas}h total · {r.treinos_40}×40min · {r.treinos_60}×60min
+            </span>
+          </div>
+        ))}
+        {resumoHoras.length === 0 && (
+          <p className="text-sm text-zinc-500">Sem registos de horas neste mês.</p>
+        )}
+      </div>
+
+      <h3 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        Registar horas
+      </h3>
       <form action={registarHoras} className="mt-2 flex flex-wrap items-end gap-2">
         <input type="hidden" name="estudio_slug" value={slug} />
         <input type="hidden" name="estudio_id" value={estudio.id} />

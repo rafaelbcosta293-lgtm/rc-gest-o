@@ -3,14 +3,14 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt, MESES } from '@/lib/data/presencas'
-import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
+import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
 import { registarHoras, atualizarHoras, guardarSemana, criarInstrutor } from './actions'
 import { alternarAcesso } from '../equipa/actions'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { corInstrutor } from '@/lib/data/constantes'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
-import GrelhaHorarios, { chaveSlot, type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
+import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import type {
   EstadoPagamento,
   LeadParada,

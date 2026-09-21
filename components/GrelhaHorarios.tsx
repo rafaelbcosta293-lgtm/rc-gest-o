@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useState, useTransition } from 'react'
-import { BLOCOS_HORARIO, DIAS_SEMANA } from '@/lib/data/horarios'
+import { BLOCOS_HORARIO, DIAS_SEMANA, chaveSlot } from '@/lib/data/horarios'
 import { fmt } from '@/lib/data/presencas'
 import type { Perfil } from '@/lib/supabase/database.types'
 
@@ -12,10 +12,6 @@ const CINZA_OMISSAO: CorPt = { bg: '#F2F5FA', tx: '#6B7688' }
 
 function corDoPt(corPorPt: Record<string, CorPt> | undefined, ptId: string): CorPt {
   return corPorPt?.[ptId] ?? CINZA_OMISSAO
-}
-
-export function chaveSlot(data: string, hora: number, minuto: number) {
-  return `${data}_${hora}_${minuto}`
 }
 
 function Insignia({ nome, cor }: { nome: string; cor: CorPt }) {

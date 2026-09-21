@@ -17,6 +17,14 @@ export function chaveBloco(hora: number, minuto: number) {
   return `${hora}-${minuto}`
 }
 
+// Usada tanto por Server Components (para montar o objeto "slots") como
+// pelo GrelhaHorarios ("use client") — tem de viver num ficheiro sem
+// "use client", senão o servidor não pode chamá-la diretamente (só pode
+// renderizá-la ou passá-la como prop).
+export function chaveSlot(data: string, hora: number, minuto: number) {
+  return `${data}_${hora}_${minuto}`
+}
+
 export function inicioDaSemana(dataISO: string): string {
   const d = new Date(`${dataISO}T00:00:00`)
   const dow = d.getDay() // 0 = domingo

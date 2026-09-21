@@ -3,11 +3,11 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
-import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
+import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
 import { criarAusencia, apagarAusencia } from './actions'
 import { corInstrutor } from '@/lib/data/constantes'
 import SubmitButton from '@/components/SubmitButton'
-import GrelhaHorarios, { chaveSlot, type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
+import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import type { Ausencia } from '@/lib/supabase/database.types'
 
 export default async function HorariosPage({

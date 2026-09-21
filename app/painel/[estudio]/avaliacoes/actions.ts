@@ -31,6 +31,8 @@ function camposComuns(formData: FormData) {
     gordura_visceral: numeroOuNull(formData, 'gordura_visceral'),
     hidratacao_pct: numeroOuNull(formData, 'hidratacao_pct'),
     metabolismo_kcal: numeroOuNull(formData, 'metabolismo_kcal'),
+    idade_metabolica: numeroOuNull(formData, 'idade_metabolica'),
+    densidade_ossea: numeroOuNull(formData, 'densidade_ossea'),
     proxima_reavaliacao: campoOuNull(formData, 'proxima_reavaliacao'),
     nota: campoOuNull(formData, 'nota'),
   }

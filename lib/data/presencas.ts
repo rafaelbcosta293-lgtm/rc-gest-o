@@ -13,6 +13,17 @@ export function treinosPrevistos(
   }
 }
 
+// Quantos treinos um plano "dá direito a" entre duas datas — usado em
+// Pagamentos para comparar com os treinos realmente realizados no
+// período pago, em vez do mês de calendário (ver treinosPrevistos).
+export function treinosNoPeriodo(porSemana: number | null, inicioISO: string, fimISO: string): number | null {
+  if (!porSemana) return null
+  const inicio = new Date(`${inicioISO}T00:00:00`)
+  const fim = new Date(`${fimISO}T00:00:00`)
+  const dias = Math.max(0, (fim.getTime() - inicio.getTime()) / 86400000)
+  return Math.round(porSemana * (dias / 7))
+}
+
 export function intervaloMes(ano: number, mes: number): { inicio: string; fimExclusivo: string } {
   const proxAno = mes === 12 ? ano + 1 : ano
   const proxMes = mes === 12 ? 1 : mes + 1

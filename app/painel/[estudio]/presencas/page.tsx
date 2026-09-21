@@ -93,7 +93,7 @@ export default async function PresencasPage({
         </Link>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mt-6 flex flex-col overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
         {(clientes ?? []).map((c, indice) => {
           const s = statsPorCliente.get(c.id) ?? { feitos: 0, faltas: 0, avisadas: 0 }
           const prev = treinosPrevistos(c.frequencia_semanal, ano, mes)
@@ -104,7 +104,9 @@ export default async function PresencasPage({
             <Link
               key={c.id}
               href={`/painel/${slug}/presencas/${c.id}?ano=${ano}&mes=${mes}`}
-              className="flex items-center gap-4 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 hover:shadow-sm dark:border-white/10 dark:bg-zinc-950"
+              className={`flex items-center gap-4 bg-white px-4 py-3 transition-colors hover:bg-black/[.02] dark:bg-zinc-950 dark:hover:bg-white/[.05] ${
+                indice > 0 ? 'border-t border-black/10 dark:border-white/10' : ''
+              }`}
             >
               <div
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"

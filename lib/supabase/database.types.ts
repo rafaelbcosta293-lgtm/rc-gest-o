@@ -297,6 +297,8 @@ export type Avaliacao = {
   gordura_visceral: number | null
   hidratacao_pct: number | null
   metabolismo_kcal: number | null
+  idade_metabolica: number | null
+  densidade_ossea: number | null
   imc: number | null
   proxima_reavaliacao: string | null
   nota: string | null

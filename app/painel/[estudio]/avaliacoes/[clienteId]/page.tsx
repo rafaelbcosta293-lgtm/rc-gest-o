@@ -110,9 +110,27 @@ export default async function AvaliacoesClientePage({
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
             <strong className="block text-lg text-black dark:text-zinc-50">
+              {atual.massa_gorda_kg ?? '—'}
+            </strong>
+            <span className="text-xs text-zinc-600 dark:text-zinc-400">massa gorda (kg)</span>
+          </div>
+          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
+            <strong className="block text-lg text-black dark:text-zinc-50">
               {atual.imc ?? '—'}
             </strong>
             <span className="text-xs text-zinc-600 dark:text-zinc-400">IMC</span>
+          </div>
+          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
+            <strong className="block text-lg text-black dark:text-zinc-50">
+              {atual.idade_metabolica ?? '—'}
+            </strong>
+            <span className="text-xs text-zinc-600 dark:text-zinc-400">idade metabólica</span>
+          </div>
+          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
+            <strong className="block text-lg text-black dark:text-zinc-50">
+              {atual.densidade_ossea ?? '—'}
+            </strong>
+            <span className="text-xs text-zinc-600 dark:text-zinc-400">densidade óssea (kg)</span>
           </div>
         </div>
       )}

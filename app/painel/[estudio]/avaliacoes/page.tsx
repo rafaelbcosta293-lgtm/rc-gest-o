@@ -7,7 +7,13 @@ import { fmt } from '@/lib/data/presencas'
 type ClienteComUltimaAvaliacao = {
   id: string
   nome: string
-  avaliacoes: { data: string; proxima_reavaliacao: string | null }[]
+  avaliacoes: {
+    data: string
+    proxima_reavaliacao: string | null
+    peso_kg: number | null
+    imc: number | null
+    massa_gorda_pct: number | null
+  }[]
 }
 
 export default async function AvaliacoesPage({
@@ -27,7 +33,7 @@ export default async function AvaliacoesPage({
   // mais recente (embutida), tal como já fazemos em Treinos.
   const { data: clientesData, error } = await supabase
     .from('clientes')
-    .select('id, nome, avaliacoes(data, proxima_reavaliacao)')
+    .select('id, nome, avaliacoes(data, proxima_reavaliacao, peso_kg, imc, massa_gorda_pct)')
     .eq('estudio_id', estudio.id)
     .eq('estado', 'Ativo')
     .order('nome')
@@ -67,19 +73,28 @@ export default async function AvaliacoesPage({
             <Link
               key={c.id}
               href={`/painel/${slug}/avaliacoes/${c.id}`}
-              className="flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+              className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
             >
-              <span className="font-medium text-black dark:text-zinc-50">{c.nome}</span>
-              <div className="flex items-center gap-2">
-                {reavaliacaoAtrasada && (
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                    Reavaliação prevista
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium text-black dark:text-zinc-50">{c.nome}</span>
+                <div className="flex items-center gap-2">
+                  {reavaliacaoAtrasada && (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                      Reavaliação prevista
+                    </span>
+                  )}
+                  <span className="text-xs text-zinc-500">
+                    {ultima ? `última em ${fmt(ultima.data)}` : 'sem avaliações'}
                   </span>
-                )}
-                <span className="text-xs text-zinc-500">
-                  {ultima ? `última em ${fmt(ultima.data)}` : 'sem avaliações'}
-                </span>
+                </div>
               </div>
+              {ultima && (
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+                  <span>{ultima.peso_kg != null ? `${ultima.peso_kg} kg` : 'sem peso'}</span>
+                  {ultima.imc != null && <span>· IMC {ultima.imc}</span>}
+                  {ultima.massa_gorda_pct != null && <span>· {ultima.massa_gorda_pct}% gordura</span>}
+                </div>
+              )}
             </Link>
           )
         })}

@@ -132,6 +132,17 @@ export default function AvaliacaoForm({
           step="1"
           defaultValue={avaliacao?.metabolismo_kcal}
         />
+        <Campo
+          id="idade_metabolica"
+          label="Idade metabólica (anos)"
+          step="1"
+          defaultValue={avaliacao?.idade_metabolica}
+        />
+        <Campo
+          id="densidade_ossea"
+          label="Densidade óssea (kg)"
+          defaultValue={avaliacao?.densidade_ossea}
+        />
       </div>
       <p className="text-xs text-zinc-500">
         O IMC e a massa gorda/magra em kg são calculados sozinhos a partir do

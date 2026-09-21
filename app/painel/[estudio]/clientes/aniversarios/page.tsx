@@ -2,9 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { idadeEm, fmtDiaMes, preencherMensagem, proximoAniversario } from '@/lib/data/aniversarios'
 import { fmt, MESES } from '@/lib/data/presencas'
-import { marcarEnviado, desfazerEnvio } from './actions'
+import { marcarEnviado, desfazerEnvio, guardarConfigAniversario } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import CopiarTexto from '@/components/CopiarTexto'
 import type { EnvioAniversario } from '@/lib/supabase/database.types'
@@ -130,10 +131,11 @@ export default async function AniversariosPage({
   const mesCal = mesParam ? Number(mesParam.slice(5, 7)) : agora.getMonth() + 1
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
+  const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
   if (!estudio) {
     notFound()
   }
+  const { ehGestao } = papeisDaSessao(sessao)
 
   const [
     { data: clientesData, error: erroClientes },
@@ -326,6 +328,59 @@ export default async function AniversariosPage({
         </div>
       )}
       </>
+      )}
+
+      {ehGestao && (
+        <details className="mt-10 rounded-xl border border-black/10 dark:border-white/10">
+          <summary className="flex cursor-pointer items-center gap-1.5 p-4 text-xs font-semibold uppercase tracking-wider text-[#5B3FA0]">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#5B3FA0]" />
+            Editar mensagens
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-black/10 p-4 dark:border-white/10">
+            <p className="text-xs text-zinc-500">
+              Usa <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{'{nome}'}</code> onde
+              quiseres que apareça o nome da pessoa.
+            </p>
+            <form action={guardarConfigAniversario} className="flex flex-col gap-1.5">
+              <input type="hidden" name="estudio_slug" value={slug} />
+              <input type="hidden" name="chave" value="msg_aniversario" />
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                Mensagem para clientes ativos
+              </label>
+              <textarea
+                name="valor"
+                defaultValue={msgAtiva}
+                rows={3}
+                className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+              />
+              <SubmitButton
+                pendingText="…"
+                className="self-start rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
+              >
+                Guardar
+              </SubmitButton>
+            </form>
+            <form action={guardarConfigAniversario} className="flex flex-col gap-1.5">
+              <input type="hidden" name="estudio_slug" value={slug} />
+              <input type="hidden" name="chave" value="msg_aniversario_ex" />
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                Mensagem para ex-clientes
+              </label>
+              <textarea
+                name="valor"
+                defaultValue={msgExCliente}
+                rows={3}
+                className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+              />
+              <SubmitButton
+                pendingText="…"
+                className="self-start rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
+              >
+                Guardar
+              </SubmitButton>
+            </form>
+          </div>
+        </details>
       )}
     </div>
   )

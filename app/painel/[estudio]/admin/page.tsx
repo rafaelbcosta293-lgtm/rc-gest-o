@@ -2,29 +2,56 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { fmt } from '@/lib/data/presencas'
-import { guardarConfig, criarPlano, atualizarPlano } from './actions'
+import { fmt, MESES } from '@/lib/data/presencas'
+import { inicioDaSemana, somarDias } from '@/lib/data/horarios'
+import { guardarConfig } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
 import type {
+  Cliente,
   ConfigLinha,
+  Lead,
   LeadParada,
-  Plano,
+  EstadoPagamento,
   ReavaliacaoPendente,
 } from '@/lib/supabase/database.types'
 
 const inputCls =
   'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
 
+// Config que serve para gerar as mensagens de aniversário — deixou de
+// aparecer aqui (editável agora em Clientes → Aniversários) para a
+// Administração ficar só com dados de gestão do negócio.
+const CHAVES_ANIVERSARIO = ['msg_aniversario', 'msg_aniversario_ex']
+
+type ClienteResumo = Pick<Cliente, 'id' | 'estado' | 'inicio_contrato'>
+type LeadResumo = Pick<Lead, 'estado' | 'entrada' | 'fecho_em' | 'visita_data'>
+type RegistoSemana = { horas: number; pt: { nome: string } | null }
+
 export default async function AdminPage({
   params,
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; mes?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error } = await searchParams
+  const { error, mes: mesParam } = await searchParams
+  const agora = new Date()
+  const hoje = agora.toISOString().slice(0, 10)
+  const ano = mesParam ? Number(mesParam.slice(0, 4)) : agora.getFullYear()
+  const mes = mesParam ? Number(mesParam.slice(5, 7)) : agora.getMonth() + 1
+  const inicioMes = `${ano}-${String(mes).padStart(2, '0')}-01`
+  const fimMesExclusivo = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, '0')}-01`
+  const mesAnteriorAno = mes === 1 ? ano - 1 : ano
+  const mesAnteriorMes = mes === 1 ? 12 : mes - 1
+  const mesSeguinteAno = mes === 12 ? ano + 1 : ano
+  const mesSeguinteMes = mes === 12 ? 1 : mes + 1
+  const mesAnteriorParam = `${mesAnteriorAno}-${String(mesAnteriorMes).padStart(2, '0')}`
+  const mesSeguinteParam = `${mesSeguinteAno}-${String(mesSeguinteMes).padStart(2, '0')}`
+
+  const inicioSemana = inicioDaSemana(hoje)
+  const fimSemanaExclusivo = somarDias(inicioSemana, 7)
 
   const supabase = await createClient()
   const estudio = await getEstudioPorSlug(supabase, slug)
@@ -33,10 +60,13 @@ export default async function AdminPage({
   }
 
   const [
-    { data: leadsParadasData, error: erroLeads },
+    { data: leadsParadasData, error: erroLeadsParadas },
     { data: reavaliacoesData, error: erroReavaliacoes },
-    { data: planosData, error: erroPlanos },
+    { data: pagamentosAtrasadosData, error: erroPagamentos },
     { data: configData, error: erroConfig },
+    { data: clientesData, error: erroClientes },
+    { data: leadsData, error: erroLeadsTodas },
+    { data: registosSemanaData, error: erroRegistosSemana },
   ] = await Promise.all([
     supabase
       .from('v_leads_paradas')
@@ -49,18 +79,92 @@ export default async function AdminPage({
       .eq('estudio_id', estudio.id)
       .eq('precisa_atencao', true)
       .order('dias_para_reavaliar', { ascending: true, nullsFirst: true }),
-    supabase.from('planos').select('*').order('valor'),
+    supabase
+      .from('v_estado_pagamento')
+      .select('*')
+      .eq('estudio_id', estudio.id)
+      .eq('em_dia', false)
+      .order('nome'),
     supabase.from('config').select('*').order('chave'),
+    supabase.from('clientes').select('id, estado, inicio_contrato').eq('estudio_id', estudio.id),
+    supabase.from('leads').select('estado, entrada, fecho_em, visita_data').eq('estudio_id', estudio.id),
+    supabase
+      .from('registos_pt')
+      .select('horas, pt:perfis!pt_id(nome)')
+      .eq('estudio_id', estudio.id)
+      .gte('data', inicioSemana)
+      .lt('data', fimSemanaExclusivo),
   ])
 
-  if (erroLeads || erroReavaliacoes || erroPlanos || erroConfig) {
-    throw new Error((erroLeads ?? erroReavaliacoes ?? erroPlanos ?? erroConfig)!.message)
+  if (
+    erroLeadsParadas ||
+    erroReavaliacoes ||
+    erroPagamentos ||
+    erroConfig ||
+    erroClientes ||
+    erroLeadsTodas ||
+    erroRegistosSemana
+  ) {
+    throw new Error(
+      (erroLeadsParadas ??
+        erroReavaliacoes ??
+        erroPagamentos ??
+        erroConfig ??
+        erroClientes ??
+        erroLeadsTodas ??
+        erroRegistosSemana)!.message
+    )
   }
 
   const leadsParadas = (leadsParadasData ?? []) as LeadParada[]
   const reavaliacoes = (reavaliacoesData ?? []) as ReavaliacaoPendente[]
-  const planos = (planosData ?? []) as Plano[]
-  const config = (configData ?? []) as ConfigLinha[]
+  const pagamentosAtrasados = (pagamentosAtrasadosData ?? []) as EstadoPagamento[]
+  const config = ((configData ?? []) as ConfigLinha[]).filter(
+    (c) => !CHAVES_ANIVERSARIO.includes(c.chave)
+  )
+
+  const clientes = (clientesData ?? []) as ClienteResumo[]
+  const clientesAtivos = clientes.filter((c) => c.estado === 'Ativo').length
+  const clientesSuspensos = clientes.filter((c) => c.estado === 'Suspenso').length
+  const clientesInativos = clientes.filter((c) => c.estado === 'Ex-cliente').length
+  const novosClientes = clientes.filter(
+    (c) => c.inicio_contrato && c.inicio_contrato >= inicioMes && c.inicio_contrato < fimMesExclusivo
+  ).length
+
+  const leads = (leadsData ?? []) as LeadResumo[]
+  const leadsNovas = leads.filter((l) => l.entrada >= inicioMes && l.entrada < fimMesExclusivo).length
+  const leadsConvertidas = leads.filter(
+    (l) => l.estado === 'Convertido' && l.fecho_em && l.fecho_em >= inicioMes && l.fecho_em < fimMesExclusivo
+  ).length
+  const sessoesAgendadas = leads.filter(
+    (l) => l.visita_data && l.visita_data >= hoje && l.estado !== 'Perdido' && l.estado !== 'Convertido'
+  ).length
+
+  const idsClientes = clientes.map((c) => c.id)
+  const { data: pagamentosMesData, error: erroPagamentosMes } = idsClientes.length
+    ? await supabase
+        .from('pagamentos')
+        .select('valor')
+        .in('cliente_id', idsClientes)
+        .gte('data_pagamento', inicioMes)
+        .lt('data_pagamento', fimMesExclusivo)
+    : { data: [], error: null }
+  if (erroPagamentosMes) {
+    throw new Error(erroPagamentosMes.message)
+  }
+  const receitaMes = (pagamentosMesData ?? []).reduce((soma, p) => soma + Number(p.valor), 0)
+
+  const registosSemana = (registosSemanaData ?? []) as unknown as RegistoSemana[]
+  const horasPorPt = new Map<string, number>()
+  for (const r of registosSemana) {
+    const nome = r.pt?.nome ?? '—'
+    horasPorPt.set(nome, (horasPorPt.get(nome) ?? 0) + r.horas)
+  }
+  const horasEquipa = [...horasPorPt.entries()]
+    .map(([nome, horas]) => ({ nome, horas }))
+    .sort((a, b) => b.horas - a.horas)
+
+  const totalPendencias = leadsParadas.length + reavaliacoes.length + pagamentosAtrasados.length
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -75,7 +179,7 @@ export default async function AdminPage({
         Administração
       </h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        {estudio.nome} · alertas de gestão, planos e definições do negócio.
+        {estudio.nome} · dados do negócio, pendências e definições.
       </p>
 
       {error && (
@@ -84,119 +188,146 @@ export default async function AdminPage({
         </p>
       )}
 
-      <TituloSeccao cor="ambar">Leads paradas ({leadsParadas.length})</TituloSeccao>
-      {leadsParadas.length === 0 ? (
-        <p className="mt-2 text-sm text-zinc-500">Nenhuma — todos os leads ativos em dia.</p>
-      ) : (
-        <div className="mt-2 flex flex-col gap-2">
-          {leadsParadas.map((l) => (
-            <Link
-              key={l.id}
-              href={`/painel/${slug}/leads/${l.id}`}
-              className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
-            >
-              <span className="font-medium text-black dark:text-zinc-50">
-                {l.nome} <span className="text-xs text-zinc-500">· {l.estado}</span>
-              </span>
-              <span className="text-xs text-amber-700 dark:text-amber-300">
-                {l.dias_sem_contacto} dias sem contacto
-              </span>
-            </Link>
-          ))}
+      <TituloSeccao cor="azul">Este mês</TituloSeccao>
+      <div className="mt-2 flex items-center gap-3">
+        <Link
+          href={`/painel/${slug}/admin?mes=${mesAnteriorParam}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          ←
+        </Link>
+        <span className="text-sm font-medium">
+          {MESES[mes - 1]} {ano}
+        </span>
+        <Link
+          href={`/painel/${slug}/admin?mes=${mesSeguinteParam}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          →
+        </Link>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+          <strong className="block text-2xl text-black dark:text-zinc-50">{leadsNovas}</strong>
+          <span className="text-xs text-zinc-500">leads novas</span>
         </div>
-      )}
-
-      <TituloSeccao cor="ambar">Reavaliações pendentes ({reavaliacoes.length})</TituloSeccao>
-      {reavaliacoes.length === 0 ? (
-        <p className="mt-2 text-sm text-zinc-500">Nenhuma — reavaliações todas em dia.</p>
-      ) : (
-        <div className="mt-2 flex flex-col gap-2">
-          {reavaliacoes.map((r) => (
-            <Link
-              key={r.cliente_id}
-              href={`/painel/${slug}/avaliacoes/${r.cliente_id}`}
-              className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
-            >
-              <span className="font-medium text-black dark:text-zinc-50">{r.nome}</span>
-              <span className="text-xs text-amber-700 dark:text-amber-300">
-                {r.ultima_avaliacao ? `última em ${fmt(r.ultima_avaliacao)}` : 'nunca avaliado'}
-                {r.dias_para_reavaliar !== null &&
-                  ` · ${r.dias_para_reavaliar <= 0 ? 'vencida' : `${r.dias_para_reavaliar} dias`}`}
-              </span>
-            </Link>
-          ))}
+        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+          <strong className="block text-2xl text-teal-700 dark:text-teal-400">
+            {leadsConvertidas}
+          </strong>
+          <span className="text-xs text-zinc-500">convertidas</span>
         </div>
-      )}
-
-      <TituloSeccao cor="verde">Planos</TituloSeccao>
-      <div className="mt-2 flex flex-col gap-2">
-        {planos.map((p) => (
-          <form
-            key={p.id}
-            action={atualizarPlano}
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
-          >
-            <input type="hidden" name="estudio_slug" value={slug} />
-            <input type="hidden" name="id" value={p.id} />
-            <input
-              name="nome"
-              defaultValue={p.nome}
-              className={`${inputCls} flex-1 basis-40`}
-            />
-            <input
-              name="valor"
-              type="number"
-              step="0.01"
-              defaultValue={p.valor}
-              className={`${inputCls} w-24`}
-            />
-            <input
-              name="sessoes_por_semana"
-              type="number"
-              placeholder="sessões/sem"
-              defaultValue={p.sessoes_por_semana ?? ''}
-              className={`${inputCls} w-28`}
-            />
-            <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-              <input type="checkbox" name="ativo" defaultChecked={p.ativo} /> ativo
-            </label>
-            <SubmitButton
-              pendingText="…"
-              className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
-            >
-              Guardar
-            </SubmitButton>
-          </form>
-        ))}
+        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+          <strong className="block text-2xl text-black dark:text-zinc-50">{novosClientes}</strong>
+          <span className="text-xs text-zinc-500">novos clientes</span>
+        </div>
+        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+          <strong className="block text-2xl text-black dark:text-zinc-50">
+            €{receitaMes.toFixed(0)}
+          </strong>
+          <span className="text-xs text-zinc-500">receita</span>
+        </div>
       </div>
 
-      <form
-        action={criarPlano}
-        className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-black/20 p-3 dark:border-white/20"
+      <TituloSeccao cor="teal">Agora</TituloSeccao>
+      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+          <strong className="block text-2xl text-teal-700 dark:text-teal-400">
+            {clientesAtivos}
+          </strong>
+          <span className="text-xs text-zinc-500">clientes ativos</span>
+        </div>
+        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+          <strong className="block text-2xl text-amber-700 dark:text-amber-400">
+            {clientesSuspensos}
+          </strong>
+          <span className="text-xs text-zinc-500">suspensos</span>
+        </div>
+        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+          <strong className="block text-2xl text-zinc-500">{clientesInativos}</strong>
+          <span className="text-xs text-zinc-500">inativos</span>
+        </div>
+        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+          <strong className="block text-2xl text-[#5B3FA0]">{sessoesAgendadas}</strong>
+          <span className="text-xs text-zinc-500">sessões experimentais agendadas</span>
+        </div>
+      </div>
+
+      <TituloSeccao cor="verde">Horas da equipa esta semana</TituloSeccao>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {horasEquipa.map((h) => (
+          <div
+            key={h.nome}
+            className="flex items-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-950"
+          >
+            <span className="font-medium text-black dark:text-zinc-50">{h.nome}</span>
+            <span className="text-zinc-500">{h.horas}h</span>
+          </div>
+        ))}
+        {horasEquipa.length === 0 && (
+          <p className="text-sm text-zinc-500">Sem registos de horas esta semana.</p>
+        )}
+      </div>
+
+      <TituloSeccao cor="ambar">Pendências ({totalPendencias})</TituloSeccao>
+      <div className="mt-2 flex flex-col gap-2">
+        {leadsParadas.map((l) => (
+          <Link
+            key={`lead-${l.id}`}
+            href={`/painel/${slug}/leads/${l.id}`}
+            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+          >
+            <span className="font-medium text-black dark:text-zinc-50">
+              {l.nome} <span className="text-xs text-zinc-500">· lead parada</span>
+            </span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              {l.dias_sem_contacto} dias sem contacto
+            </span>
+          </Link>
+        ))}
+        {reavaliacoes.map((r) => (
+          <Link
+            key={`reav-${r.cliente_id}`}
+            href={`/painel/${slug}/avaliacoes/${r.cliente_id}`}
+            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+          >
+            <span className="font-medium text-black dark:text-zinc-50">
+              {r.nome} <span className="text-xs text-zinc-500">· reavaliação</span>
+            </span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              {r.ultima_avaliacao ? `última em ${fmt(r.ultima_avaliacao)}` : 'nunca avaliado'}
+            </span>
+          </Link>
+        ))}
+        {pagamentosAtrasados.map((p) => (
+          <Link
+            key={`pag-${p.cliente_id}`}
+            href={`/painel/${slug}/pagamentos/${p.cliente_id}`}
+            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+          >
+            <span className="font-medium text-black dark:text-zinc-50">
+              {p.nome} <span className="text-xs text-zinc-500">· pagamento</span>
+            </span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              {p.valido_ate ? `venceu em ${fmt(p.valido_ate)}` : 'sem pagamentos'}
+            </span>
+          </Link>
+        ))}
+        {totalPendencias === 0 && (
+          <p className="text-sm text-zinc-500">Nada pendente — tudo em dia.</p>
+        )}
+      </div>
+
+      <TituloSeccao cor="roxo">Serviços / Produtos</TituloSeccao>
+      <Link
+        href={`/painel/${slug}/admin/servicos`}
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
       >
-        <input type="hidden" name="estudio_slug" value={slug} />
-        <input name="nome" required placeholder="Nome do plano" className={`${inputCls} flex-1 basis-40`} />
-        <input
-          name="valor"
-          type="number"
-          step="0.01"
-          required
-          placeholder="Valor (€)"
-          className={`${inputCls} w-24`}
-        />
-        <input
-          name="sessoes_por_semana"
-          type="number"
-          placeholder="sessões/sem"
-          className={`${inputCls} w-28`}
-        />
-        <SubmitButton
-          pendingText="A criar…"
-          className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background"
-        >
-          + Plano
-        </SubmitButton>
-      </form>
+        <span className="text-sm text-black dark:text-zinc-50">
+          Gerir valores, planos e serviços
+        </span>
+        <span className="text-sm text-zinc-400">→</span>
+      </Link>
 
       <TituloSeccao cor="neutro">Definições do negócio</TituloSeccao>
       <div className="mt-2 flex flex-col gap-2">

@@ -39,3 +39,19 @@ export async function desfazerEnvio(formData: FormData) {
   revalidatePath(`/painel/${estudioSlug}/clientes/aniversarios`)
   redirect(`/painel/${estudioSlug}/clientes/aniversarios`)
 }
+
+export async function guardarConfigAniversario(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const chave = formData.get('chave') as string
+  const valor = (formData.get('valor') as string) || null
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('config').update({ valor }).eq('chave', chave)
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/clientes/aniversarios?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/clientes/aniversarios`)
+  redirect(`/painel/${estudioSlug}/clientes/aniversarios`)
+}

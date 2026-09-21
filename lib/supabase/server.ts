@@ -1,7 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 
-export async function createClient() {
+// Envolvido em cache() para que, dentro do mesmo pedido, o layout e a
+// página (e quaisquer componentes entre eles) partilhem a mesma
+// instância — sem isto, cada chamada isolada arriscava repetir consultas
+// (ex.: "quem sou eu") que já tinham sido feitas mais acima na árvore.
+export const createClient = cache(async () => {
   const cookieStore = await cookies()
 
   return createServerClient(
@@ -25,4 +30,4 @@ export async function createClient() {
       },
     }
   )
-}
+})

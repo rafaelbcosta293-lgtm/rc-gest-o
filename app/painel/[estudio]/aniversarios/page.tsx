@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { idadeEm, fmtDiaMes, preencherMensagem, proximoAniversario } from '@/lib/data/aniversarios'
-import { fmt } from '@/lib/data/presencas'
+import { fmt, MESES } from '@/lib/data/presencas'
 import { marcarEnviado, desfazerEnvio } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import CopiarTexto from '@/components/CopiarTexto'
@@ -16,17 +16,116 @@ type ClienteAniversario = {
   estado: string
 }
 
+const DIAS_SEMANA_CURTOS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+
+// Segunda = 0 … Domingo = 6, para alinhar com o resto da app (Horários).
+function diaSemanaSegundaPrimeiro(data: Date) {
+  return (data.getDay() + 6) % 7
+}
+
+function Calendario({
+  slug,
+  ano,
+  mes,
+  porDia,
+  hoje,
+}: {
+  slug: string
+  ano: number
+  mes: number
+  porDia: Map<number, { nome: string; idade: number }[]>
+  hoje: Date
+}) {
+  const diasNoMes = new Date(ano, mes, 0).getDate()
+  const offset = diaSemanaSegundaPrimeiro(new Date(ano, mes - 1, 1))
+  const celulas: (number | null)[] = [
+    ...Array.from({ length: offset }, () => null),
+    ...Array.from({ length: diasNoMes }, (_, i) => i + 1),
+  ]
+  while (celulas.length % 7 !== 0) celulas.push(null)
+
+  const ehHoje = (dia: number) =>
+    hoje.getFullYear() === ano && hoje.getMonth() + 1 === mes && hoje.getDate() === dia
+
+  const anoAnterior = mes === 1 ? ano - 1 : ano
+  const mesAnteriorNum = mes === 1 ? 12 : mes - 1
+  const anoSeguinte = mes === 12 ? ano + 1 : ano
+  const mesSeguinteNum = mes === 12 ? 1 : mes + 1
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href={`/painel/${slug}/aniversarios?vista=calendario&mes=${anoAnterior}-${String(mesAnteriorNum).padStart(2, '0')}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          ← {MESES[mesAnteriorNum - 1].slice(0, 3)}
+        </Link>
+        <strong className="text-sm text-black dark:text-zinc-50">
+          {MESES[mes - 1]} {ano}
+        </strong>
+        <Link
+          href={`/painel/${slug}/aniversarios?vista=calendario&mes=${anoSeguinte}-${String(mesSeguinteNum).padStart(2, '0')}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          {MESES[mesSeguinteNum - 1].slice(0, 3)} →
+        </Link>
+      </div>
+
+      <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-zinc-500">
+        {DIAS_SEMANA_CURTOS.map((d) => (
+          <div key={d}>{d}</div>
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {celulas.map((dia, i) => (
+          <div
+            key={i}
+            className={`min-h-[72px] rounded-md border p-1 text-left align-top ${
+              dia === null
+                ? 'border-transparent'
+                : ehHoje(dia)
+                  ? 'border-teal-400 bg-teal-50 dark:bg-teal-950'
+                  : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-950'
+            }`}
+          >
+            {dia !== null && (
+              <>
+                <span className="text-[11px] text-zinc-400">{dia}</span>
+                <div className="mt-0.5 flex flex-col gap-0.5">
+                  {(porDia.get(dia) ?? []).map((c) => (
+                    <span
+                      key={c.nome}
+                      className="truncate rounded bg-amber-50 px-1 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                      title={`${c.nome} · faz ${c.idade} anos`}
+                    >
+                      🎂 {c.nome}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default async function AniversariosPage({
   params,
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; vista?: string; mes?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error } = await searchParams
+  const { error, vista, mes: mesParam } = await searchParams
   const agora = new Date()
   const anoAtual = agora.getFullYear()
+  const vistaCalendario = vista === 'calendario'
+  const anoCal = mesParam ? Number(mesParam.slice(0, 4)) : agora.getFullYear()
+  const mesCal = mesParam ? Number(mesParam.slice(5, 7)) : agora.getMonth() + 1
 
   const supabase = await createClient()
   const estudio = await getEstudioPorSlug(supabase, slug)
@@ -79,8 +178,18 @@ export default async function AniversariosPage({
     })
     .sort((a, b) => a.dias - b.dias)
 
+  const porDia = new Map<number, { nome: string; idade: number }[]>()
+  for (const c of clientes) {
+    const [anoNasc, mesNasc, diaNasc] = c.nascimento.split('-').map(Number)
+    if (mesNasc !== mesCal) continue
+    const idade = anoCal - anoNasc
+    const lista = porDia.get(diaNasc) ?? []
+    lista.push({ nome: c.nome, idade })
+    porDia.set(diaNasc, lista)
+  }
+
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-3xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
@@ -96,12 +205,41 @@ export default async function AniversariosPage({
         cada pessoa e marca como enviado.
       </p>
 
+      <div className="mt-4 flex gap-1.5">
+        <Link
+          href={`/painel/${slug}/aniversarios`}
+          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
+            !vistaCalendario
+              ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+              : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+          }`}
+        >
+          Lista
+        </Link>
+        <Link
+          href={`/painel/${slug}/aniversarios?vista=calendario`}
+          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
+            vistaCalendario
+              ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+              : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+          }`}
+        >
+          Calendário
+        </Link>
+      </div>
+
+      {vistaCalendario && (
+        <Calendario slug={slug} ano={anoCal} mes={mesCal} porDia={porDia} hoje={agora} />
+      )}
+
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {error}
         </p>
       )}
 
+      {!vistaCalendario && (
+      <>
       <div className="mt-6 flex flex-col gap-3">
         {lista.map(({ cliente, dataProximo, dias, idade, mensagem, envio }) => (
           <div
@@ -184,6 +322,8 @@ export default async function AniversariosPage({
         <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
           Nenhum cliente com data de nascimento registada.
         </div>
+      )}
+      </>
       )}
     </div>
   )

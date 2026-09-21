@@ -6,6 +6,7 @@ import { fmt, MESES } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { registarHoras, atualizarHoras, guardarSlot, criarInstrutor } from './actions'
 import { alternarAcesso } from '../equipa/actions'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import SubmitButton from '@/components/SubmitButton'
 import GrelhaHorarios, { chaveSlot, type SlotPt } from '@/components/GrelhaHorarios'
 import type {
@@ -52,16 +53,11 @@ export default async function CoordenacaoPage({
   const mesSeguinteParam = `${mesSeguinteAno}-${String(mesSeguinteMes).padStart(2, '0')}`
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
+  const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
   if (!estudio) {
     notFound()
   }
-
-  const { data: userData } = await supabase.auth.getUser()
-  const { data: perfilAtual } = userData.user
-    ? await supabase.from('perfis').select('papel').eq('id', userData.user.id).maybeSingle()
-    : { data: null }
-  const ehGestao = perfilAtual?.papel === 'admin' || perfilAtual?.papel === 'studio_manager'
+  const { ehGestao } = papeisDaSessao(sessao)
 
   const [
     { data: escalaSemanaData, error: erroEscala },
@@ -460,7 +456,7 @@ export default async function CoordenacaoPage({
 
       <div className="mt-3 flex flex-col gap-2">
         {registos.map((r) => {
-          const podeEditar = ehGestao || r.pt_id === userData.user?.id
+          const podeEditar = ehGestao || r.pt_id === sessao.userId
           return (
             <form
               key={r.id}

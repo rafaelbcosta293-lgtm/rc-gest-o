@@ -51,7 +51,7 @@ export default function TreinoForm({
   pts,
   ptPredefinido,
   inicial,
-  catalogo,
+  catalogo: catalogoInicial,
   action,
   error,
 }: {
@@ -65,6 +65,7 @@ export default function TreinoForm({
   action: (formData: FormData) => void
   error?: string
 }) {
+  const [catalogo, setCatalogo] = useState(catalogoInicial)
   const [data, setData] = useState(inicial?.data ?? new Date().toISOString().slice(0, 10))
   const [pt, setPt] = useState(inicial?.pt_id ?? ptPredefinido ?? pts[0]?.id ?? '')
   const [foco, setFoco] = useState(inicial?.foco ?? '')
@@ -91,6 +92,20 @@ export default function TreinoForm({
   }
   const adicionarLinha = (bloco: BlocoTipo) => {
     setExercicios((linhas) => [...linhas, linhaVazia(bloco)])
+  }
+  const aoCriarExercicio = (item: ItemCatalogo, categoriaId: string | null) => {
+    setCatalogo((atual) => ({
+      ...atual,
+      todos: [...atual.todos, item].sort((a, b) => a.nome.localeCompare(b.nome)),
+      porCategoria: categoriaId
+        ? {
+            ...atual.porCategoria,
+            [categoriaId]: [...(atual.porCategoria[categoriaId] ?? []), item].sort((a, b) =>
+              a.nome.localeCompare(b.nome)
+            ),
+          }
+        : atual.porCategoria,
+    }))
   }
 
   const podeGuardar = notaProxima.trim().length > 0
@@ -169,69 +184,74 @@ export default function TreinoForm({
           {exercicios.map((linha) => (
             <div
               key={linha.key}
-              className="grid grid-cols-2 gap-2 rounded-lg border border-black/10 p-3 sm:grid-cols-[110px_1fr_auto] dark:border-white/10"
+              className="rounded-lg border border-black/10 p-3 dark:border-white/10"
             >
-              <select
-                value={linha.bloco}
-                onChange={(e) => atualizarLinha(linha.key, 'bloco', e.target.value)}
-                style={{ color: BLOCO_COR[linha.bloco] }}
-                className="rounded-md border border-black/10 px-2 py-1.5 text-xs font-semibold dark:border-white/10 dark:bg-zinc-900"
-              >
-                {BLOCOS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => setSeletorPara(linha.key)}
-                className={`rounded-md border px-3 py-1.5 text-left text-sm ${
-                  linha.exercicio_nome
-                    ? 'border-black/10 dark:border-white/10'
-                    : 'border-dashed border-black/20 text-zinc-500 dark:border-white/20'
-                }`}
-              >
-                {linha.exercicio_nome || 'Escolher exercício…'}
-              </button>
-              <button
-                type="button"
-                onClick={() => removerLinha(linha.key)}
-                className="justify-self-end rounded-md px-2 text-lg text-zinc-400 hover:text-red-600"
-                aria-label="Remover linha"
-              >
-                ×
-              </button>
-              <input
-                value={linha.series}
-                onChange={(e) => atualizarLinha(linha.key, 'series', e.target.value)}
-                placeholder="Séries"
-                className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
-              />
-              <input
-                value={linha.reps}
-                onChange={(e) => atualizarLinha(linha.key, 'reps', e.target.value)}
-                placeholder="Reps"
-                className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
-              />
-              <input
-                value={linha.carga}
-                onChange={(e) => atualizarLinha(linha.key, 'carga', e.target.value)}
-                placeholder="Carga"
-                className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
-              />
-              <input
-                value={linha.descanso}
-                onChange={(e) => atualizarLinha(linha.key, 'descanso', e.target.value)}
-                placeholder="Descanso"
-                className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
-              />
-              <input
-                value={linha.nota}
-                onChange={(e) => atualizarLinha(linha.key, 'nota', e.target.value)}
-                placeholder="Nota"
-                className="col-span-2 rounded-md border border-black/10 px-2 py-1.5 text-xs sm:col-span-3 dark:border-white/10 dark:bg-zinc-900"
-              />
+              <div className="flex items-center gap-2">
+                <select
+                  value={linha.bloco}
+                  onChange={(e) => atualizarLinha(linha.key, 'bloco', e.target.value)}
+                  style={{ color: BLOCO_COR[linha.bloco] }}
+                  className="w-[110px] shrink-0 rounded-md border border-black/10 px-2 py-1.5 text-xs font-semibold dark:border-white/10 dark:bg-zinc-900"
+                >
+                  {BLOCOS.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setSeletorPara(linha.key)}
+                  className={`flex-1 rounded-md border px-3 py-1.5 text-left text-sm ${
+                    linha.exercicio_nome
+                      ? 'border-black/10 dark:border-white/10'
+                      : 'border-dashed border-black/20 text-zinc-500 dark:border-white/20'
+                  }`}
+                >
+                  {linha.exercicio_nome || 'Escolher exercício…'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removerLinha(linha.key)}
+                  className="shrink-0 rounded-md px-2 text-lg text-zinc-400 hover:text-red-600"
+                  aria-label="Remover linha"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                <input
+                  value={linha.series}
+                  onChange={(e) => atualizarLinha(linha.key, 'series', e.target.value)}
+                  placeholder="Séries"
+                  className="w-20 min-w-0 flex-1 rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                />
+                <input
+                  value={linha.reps}
+                  onChange={(e) => atualizarLinha(linha.key, 'reps', e.target.value)}
+                  placeholder="Reps"
+                  className="w-20 min-w-0 flex-1 rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                />
+                <input
+                  value={linha.carga}
+                  onChange={(e) => atualizarLinha(linha.key, 'carga', e.target.value)}
+                  placeholder="Carga"
+                  className="w-20 min-w-0 flex-1 rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                />
+                <input
+                  value={linha.descanso}
+                  onChange={(e) => atualizarLinha(linha.key, 'descanso', e.target.value)}
+                  placeholder="Descanso"
+                  className="w-20 min-w-0 flex-1 rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                />
+                <input
+                  value={linha.nota}
+                  onChange={(e) => atualizarLinha(linha.key, 'nota', e.target.value)}
+                  placeholder="Nota"
+                  className="min-w-[120px] flex-[2] rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                />
+              </div>
             </div>
           ))}
         </div>
@@ -255,6 +275,7 @@ export default function TreinoForm({
         aberto={seletorPara !== null}
         fechar={() => setSeletorPara(null)}
         catalogo={catalogo}
+        criado={aoCriarExercicio}
         escolher={(item) => {
           if (seletorPara) escolherExercicio(seletorPara, item)
         }}

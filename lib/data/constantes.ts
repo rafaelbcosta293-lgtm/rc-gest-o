@@ -36,6 +36,15 @@ export const PRESENCAS = {
   Remarcado: { bg: '#E1EEF9', tx: '#1F6FB2' },
 } as const
 
+// "Ex-cliente" na base de dados é mostrado como "Inativo" na interface —
+// mais claro para quem não mexeu na ficha. Não existe ainda um estado
+// "Pendente" na base de dados (só Ativo / Suspenso / Ex-cliente).
+export const ESTADOS_CLIENTE = {
+  Ativo: { bg: '#E3F3EA', tx: '#1E7145', label: 'Ativo' },
+  Suspenso: { bg: '#FFF4DE', tx: '#9C6B00', label: 'Suspenso' },
+  'Ex-cliente': { bg: '#F2F5FA', tx: '#6B7688', label: 'Inativo' },
+} as const
+
 export const ESTADOS_LEAD = {
   Novo: { bg: '#E1EEF9', tx: '#1F6FB2' },
   Contactado: { bg: '#FFF4DE', tx: '#9C6B00' },
@@ -67,6 +76,7 @@ type Modulo = {
 }
 
 export const MODULOS: Modulo[] = [
+  { id: 'clientes', nome: 'Clientes', icone: '📁', desc: 'Ficha completa de cada cliente, tudo num só sítio', pronto: true },
   { id: 'treinos', nome: 'Treinos', icone: '🏋️', desc: 'Planos, histórico e notas entre PTs', pronto: true },
   { id: 'presencas', nome: 'Presenças', icone: '✅', desc: 'Quem treinou e quem faltou', pronto: true },
   { id: 'avaliacoes', nome: 'Avaliações', icone: '📏', desc: 'Avaliações, reavaliações e evolução', pronto: true },

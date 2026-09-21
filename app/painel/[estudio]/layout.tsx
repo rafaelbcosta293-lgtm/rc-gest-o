@@ -1,17 +1,12 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { MODULOS } from '@/lib/data/constantes'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
 
-  const supabase = await createClient()
-  const { data: userData } = await supabase.auth.getUser()
-  const { data: perfil } = userData.user
-    ? await supabase.from('perfis').select('papel').eq('id', userData.user.id).maybeSingle()
-    : { data: null }
-  const ehAdmin = perfil?.papel === 'admin'
-  const ehGestao = ehAdmin || perfil?.papel === 'studio_manager'
+  const sessao = await getSessaoAtual()
+  const { ehAdmin, ehGestao } = papeisDaSessao(sessao)
 
   const podeAceder = (m: (typeof MODULOS)[number]) =>
     m.pronto && (!m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao))

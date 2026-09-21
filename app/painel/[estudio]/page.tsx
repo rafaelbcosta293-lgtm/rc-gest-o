@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { MODULOS } from '@/lib/data/constantes'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 
 export default async function EstudioPage({
   params,
@@ -12,23 +13,17 @@ export default async function EstudioPage({
   const { estudio: slug } = await params
   const supabase = await createClient()
 
-  const [estudio, { data: userData }] = await Promise.all([
-    getEstudioPorSlug(supabase, slug),
-    supabase.auth.getUser(),
-  ])
+  const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
   if (!estudio) {
     notFound()
   }
 
-  const [{ data: perfil }, { data: clientes }] = await Promise.all([
-    userData.user
-      ? supabase.from('perfis').select('papel').eq('id', userData.user.id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    supabase.from('clientes').select('estado').eq('estudio_id', estudio.id),
-  ])
+  const { data: clientes } = await supabase
+    .from('clientes')
+    .select('estado')
+    .eq('estudio_id', estudio.id)
 
-  const ehGestao = perfil?.papel === 'admin' || perfil?.papel === 'studio_manager'
-  const ehAdmin = perfil?.papel === 'admin'
+  const { ehAdmin, ehGestao } = papeisDaSessao(sessao)
   const podeAceder = (m: (typeof MODULOS)[number]) =>
     m.pronto && (!m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao))
 

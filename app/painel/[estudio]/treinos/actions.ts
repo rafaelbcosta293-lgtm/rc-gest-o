@@ -73,3 +73,38 @@ export async function atualizarCliente(formData: FormData) {
   revalidatePath(`/painel/${estudioSlug}/treinos/${id}`)
   redirect(`/painel/${estudioSlug}/treinos/${id}`)
 }
+
+// Chamado diretamente do seletor de exercícios (sem <form>/redirect):
+// devolve o exercício criado para o formulário do treino o poder
+// selecionar de imediato, sem sair da página nem perder o que já lá
+// estava escrito.
+type ResultadoExercicioRapido = { error: string } | { exercicio: { id: string; nome: string } }
+
+export async function criarExercicioRapido(
+  nome: string,
+  categoriaId: string | null
+): Promise<ResultadoExercicioRapido> {
+  const nomeLimpo = nome.trim()
+  if (!nomeLimpo) {
+    return { error: 'Escreve o nome do exercício.' }
+  }
+
+  const supabase = await createClient()
+  const { data: exercicio, error } = await supabase
+    .from('exercicios')
+    .insert({ nome: nomeLimpo })
+    .select('id, nome')
+    .single()
+
+  if (error || !exercicio) {
+    return { error: 'Não foi possível criar o exercício.' }
+  }
+
+  if (categoriaId) {
+    await supabase
+      .from('exercicios_categorias')
+      .insert({ exercicio_id: exercicio.id, categoria_id: categoriaId })
+  }
+
+  return { exercicio }
+}

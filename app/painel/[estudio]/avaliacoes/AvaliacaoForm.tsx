@@ -110,16 +110,10 @@ export default function AvaliacaoForm({
           defaultValue={avaliacao?.massa_gorda_pct}
         />
         <Campo
-          id="massa_gorda_kg"
-          label="Massa gorda (kg)"
-          defaultValue={avaliacao?.massa_gorda_kg}
-        />
-        <Campo
           id="massa_muscular_kg"
           label="Massa muscular (kg)"
           defaultValue={avaliacao?.massa_muscular_kg}
         />
-        <Campo id="massa_magra_kg" label="Massa magra (kg)" defaultValue={avaliacao?.massa_magra_kg} />
         <Campo
           id="gordura_visceral"
           label="Gordura visceral"
@@ -134,7 +128,8 @@ export default function AvaliacaoForm({
         />
       </div>
       <p className="text-xs text-zinc-500">
-        O IMC é calculado sozinho a partir do peso e da altura, quando preenchidos.
+        O IMC e a massa gorda/magra em kg são calculados sozinhos a partir do
+        peso, da altura e da massa gorda (%), quando preenchidos.
       </p>
 
       <div className="flex flex-col gap-1.5">

@@ -17,25 +17,20 @@ function numeroOuNull(formData: FormData, nome: string) {
   return Number.isFinite(n) ? n : null
 }
 
+// massa_gorda_kg, massa_magra_kg e imc não entram aqui: são colunas
+// calculadas automaticamente pela base de dados a partir do peso, da
+// altura e da massa gorda (%) — enviar um valor para elas dá erro.
 function camposComuns(formData: FormData) {
-  const peso_kg = numeroOuNull(formData, 'peso_kg')
-  const altura_cm = numeroOuNull(formData, 'altura_cm')
-  const altura_m = altura_cm ? altura_cm / 100 : null
-  const imc = peso_kg && altura_m ? Math.round((peso_kg / (altura_m * altura_m)) * 10) / 10 : null
-
   return {
     data: formData.get('data') as string,
     pt_id: campoOuNull(formData, 'pt_id'),
-    peso_kg,
-    altura_cm,
+    peso_kg: numeroOuNull(formData, 'peso_kg'),
+    altura_cm: numeroOuNull(formData, 'altura_cm'),
     massa_gorda_pct: numeroOuNull(formData, 'massa_gorda_pct'),
-    massa_gorda_kg: numeroOuNull(formData, 'massa_gorda_kg'),
     massa_muscular_kg: numeroOuNull(formData, 'massa_muscular_kg'),
-    massa_magra_kg: numeroOuNull(formData, 'massa_magra_kg'),
     gordura_visceral: numeroOuNull(formData, 'gordura_visceral'),
     hidratacao_pct: numeroOuNull(formData, 'hidratacao_pct'),
     metabolismo_kcal: numeroOuNull(formData, 'metabolismo_kcal'),
-    imc,
     proxima_reavaliacao: campoOuNull(formData, 'proxima_reavaliacao'),
     nota: campoOuNull(formData, 'nota'),
   }

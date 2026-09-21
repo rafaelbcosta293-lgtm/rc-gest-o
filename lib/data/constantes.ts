@@ -36,6 +36,17 @@ export const PRESENCAS = {
   Remarcado: { bg: '#E1EEF9', tx: '#1F6FB2' },
 } as const
 
+export const ESTADOS_LEAD = {
+  Novo: { bg: '#E1EEF9', tx: '#1F6FB2' },
+  Contactado: { bg: '#FFF4DE', tx: '#9C6B00' },
+  'Visita marcada': { bg: '#E9E5F7', tx: '#5B3FA0' },
+  'Visita feita': { bg: '#DDF3F2', tx: '#0E9594' },
+  Convertido: { bg: '#E3F3EA', tx: '#1E7145' },
+  Perdido: { bg: '#FBE4E4', tx: '#B3261E' },
+} as const
+
+export const TIPOS_CONTACTO = ['Telefone', 'WhatsApp', 'Email', 'Presencial', 'Mensagem redes'] as const
+
 export const BLOCOS = ['Aquecimento', 'Principal', 'Acessório', 'Final'] as const
 export type BlocoTipo = (typeof BLOCOS)[number]
 
@@ -50,7 +61,7 @@ export const MODULOS = [
   { id: 'treinos', nome: 'Treinos', icone: '🏋️', desc: 'Planos, histórico e notas entre PTs', pronto: true },
   { id: 'presencas', nome: 'Presenças', icone: '✅', desc: 'Quem treinou e quem faltou', pronto: true },
   { id: 'avaliacoes', nome: 'Avaliações', icone: '📏', desc: 'Avaliações, reavaliações e evolução', pronto: true },
-  { id: 'leads', nome: 'Leads', icone: '📣', desc: 'Contactos, origem e seguimento', pronto: false },
+  { id: 'leads', nome: 'Leads', icone: '📣', desc: 'Contactos, origem e seguimento', pronto: true },
   { id: 'pagamentos', nome: 'Pagamentos', icone: '💳', desc: 'Quem tem o pagamento em dia', pronto: false },
   { id: 'aniversarios', nome: 'Aniversários', icone: '🎂', desc: 'Mensagens de parabéns', pronto: false },
   { id: 'checklist', nome: 'Abertura / Fecho', icone: '🔑', desc: 'Checklist diária do estúdio', pronto: true },

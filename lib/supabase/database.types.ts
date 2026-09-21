@@ -122,6 +122,52 @@ export type ChecklistResposta = {
   ok: boolean
 }
 
+export type EstadoLead =
+  | 'Novo'
+  | 'Contactado'
+  | 'Visita marcada'
+  | 'Visita feita'
+  | 'Convertido'
+  | 'Perdido'
+
+export type TipoContacto = 'Telefone' | 'WhatsApp' | 'Email' | 'Presencial' | 'Mensagem redes'
+
+export type Lead = {
+  id: string
+  estudio_id: number
+  nome: string
+  telefone: string | null
+  email: string | null
+  origem: string | null
+  objetivo: string | null
+  interesse: string | null
+  disponibilidade: string | null
+  estado: EstadoLead
+  responsavel_id: string | null
+  entrada: string
+  proximo_contacto: string | null
+  visita_data: string | null
+  visita_hora: string | null
+  visita_marcada_em: string | null
+  fecho_em: string | null
+  valor_potencial: number | null
+  motivo_perda: string | null
+  cliente_id: string | null
+  nota: string | null
+  criado_em: string
+}
+
+export type LeadContacto = {
+  id: string
+  lead_id: string
+  data: string
+  tipo: TipoContacto
+  resultado: string
+  nota: string | null
+  feito_por: string | null
+  criado_em: string
+}
+
 export type Avaliacao = {
   id: string
   cliente_id: string

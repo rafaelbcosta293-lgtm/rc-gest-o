@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt, MESES } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
-import { registarHoras, atualizarHoras, guardarSlot } from './actions'
+import { registarHoras, atualizarHoras, guardarSlot, criarInstrutor } from './actions'
 import { alternarAcesso } from '../equipa/actions'
 import SubmitButton from '@/components/SubmitButton'
 import GrelhaHorarios, { chaveSlot, type SlotPt } from '@/components/GrelhaHorarios'
@@ -229,7 +229,38 @@ export default async function CoordenacaoPage({
       <p className="mt-1 text-xs text-zinc-500">
         Só quem tem acesso aqui aparece para escolher no planeamento da semana.
       </p>
-      <div className="mt-2 flex flex-col gap-2">
+
+      <form
+        action={criarInstrutor}
+        className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-black/20 p-3 dark:border-white/20"
+      >
+        <input type="hidden" name="estudio_slug" value={slug} />
+        <input type="hidden" name="estudio_id" value={estudio.id} />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-500">Nome</label>
+          <input name="nome" required className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-500">Email</label>
+          <input name="email" type="email" required className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-500">Telefone (opcional)</label>
+          <input name="telefone" className={inputCls} />
+        </div>
+        <SubmitButton
+          pendingText="A criar…"
+          className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background"
+        >
+          Criar instrutor
+        </SubmitButton>
+      </form>
+      <p className="mt-1.5 text-xs text-zinc-500">
+        Cria já a ficha com acesso a este estúdio. Se um dia quiser entrar na app, usa
+        &quot;Esqueci-me da password&quot; com este email.
+      </p>
+
+      <div className="mt-3 flex flex-col gap-2">
         {perfis.map((p) => {
           const temAcesso = idsComAcesso.has(p.id)
           return (

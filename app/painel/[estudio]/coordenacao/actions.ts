@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -53,6 +54,57 @@ export async function guardarSlot(formData: FormData) {
   revalidatePath(`/painel/${estudioSlug}/coordenacao`)
   revalidatePath(`/painel/${estudioSlug}/horarios`)
   redirect(`/painel/${estudioSlug}/coordenacao?semana=${semana}`)
+}
+
+// Cria a conta e a ficha do instrutor de uma vez (sem ele ter de se
+// registar sozinho) e já lhe dá acesso a este estúdio. Usa a chave de
+// administrador porque criar contas não é algo que uma conta normal
+// tenha permissão para fazer. Fica com uma password aleatória que
+// ninguém fica a saber — se um dia quiser entrar na app, usa
+// "Esqueci-me da password" com o email que aqui ficou registado.
+export async function criarInstrutor(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const estudioId = Number(formData.get('estudio_id'))
+  const nome = formData.get('nome') as string
+  const email = formData.get('email') as string
+  const telefone = campoOuNull(formData, 'telefone')
+
+  let admin
+  try {
+    admin = createAdminClient()
+  } catch (e) {
+    redirect(
+      `/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent((e as Error).message)}`
+    )
+  }
+
+  const { data: criado, error: erroCriar } = await admin.auth.admin.createUser({
+    email,
+    password: crypto.randomUUID(),
+    email_confirm: true,
+    user_metadata: { nome },
+  })
+
+  if (erroCriar || !criado.user) {
+    redirect(
+      `/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent(erroCriar?.message ?? 'Não foi possível criar o instrutor.')}`
+    )
+  }
+
+  if (telefone) {
+    await admin.from('perfis').update({ telefone }).eq('id', criado.user.id)
+  }
+
+  const { error: erroAcesso } = await admin
+    .from('perfis_estudios')
+    .insert({ estudio_id: estudioId, perfil_id: criado.user.id })
+
+  if (erroAcesso) {
+    redirect(`/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent(erroAcesso.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/coordenacao`)
+  redirect(`/painel/${estudioSlug}/coordenacao`)
 }
 
 export async function registarHoras(formData: FormData) {

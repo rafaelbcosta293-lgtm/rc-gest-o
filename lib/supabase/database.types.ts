@@ -168,6 +168,26 @@ export type LeadContacto = {
   criado_em: string
 }
 
+export type Escala = {
+  id: string
+  estudio_id: number
+  data: string
+  hora: number
+  pt_id: string
+  criado_em: string
+}
+
+export type TipoAusencia = 'Férias' | 'Baixa' | 'Formação' | 'Outra'
+
+export type Ausencia = {
+  id: string
+  pt_id: string
+  inicio: string
+  fim: string
+  tipo: TipoAusencia
+  nota: string | null
+}
+
 export type Avaliacao = {
   id: string
   cliente_id: string

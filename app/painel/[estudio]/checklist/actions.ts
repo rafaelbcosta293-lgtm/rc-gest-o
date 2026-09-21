@@ -100,6 +100,76 @@ export async function alternarItem(formData: FormData) {
   redirect(`/painel/${estudioSlug}/checklist/${registoId}`)
 }
 
+// Gestão dos itens do modelo (Abertura/Fecho) — não afeta checklists já
+// iniciadas, porque as respostas guardam o texto do item na altura, sem
+// ligação direta ao modelo.
+export async function criarItemModelo(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const tipo = formData.get('tipo') as string
+  const secao = (formData.get('secao') as string)?.trim() || 'Geral'
+  const item = (formData.get('item') as string)?.trim()
+  const supabase = await createClient()
+
+  if (!item) {
+    redirect(`/painel/${estudioSlug}/checklist`)
+  }
+
+  const { count } = await supabase
+    .from('checklist_modelo')
+    .select('id', { count: 'exact', head: true })
+    .eq('tipo', tipo)
+
+  const { error } = await supabase.from('checklist_modelo').insert({
+    tipo,
+    secao,
+    item,
+    ordem: count ?? 0,
+  })
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/checklist?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/checklist`)
+  redirect(`/painel/${estudioSlug}/checklist`)
+}
+
+export async function atualizarItemModelo(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const secao = (formData.get('secao') as string)?.trim() || 'Geral'
+  const item = (formData.get('item') as string)?.trim()
+  const supabase = await createClient()
+
+  if (!item) {
+    redirect(`/painel/${estudioSlug}/checklist?error=${encodeURIComponent('O item não pode ficar em branco.')}`)
+  }
+
+  const { error } = await supabase.from('checklist_modelo').update({ secao, item }).eq('id', id)
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/checklist?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/checklist`)
+  redirect(`/painel/${estudioSlug}/checklist`)
+}
+
+export async function removerItemModelo(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('checklist_modelo').update({ ativo: false }).eq('id', id)
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/checklist?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/checklist`)
+  redirect(`/painel/${estudioSlug}/checklist`)
+}
+
 export async function guardarOcorrencia(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const registoId = formData.get('registo_id') as string

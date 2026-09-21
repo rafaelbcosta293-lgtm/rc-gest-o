@@ -131,6 +131,21 @@ export async function registarHoras(formData: FormData) {
   redirect(`/painel/${estudioSlug}/coordenacao`)
 }
 
+export async function apagarHoras(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('registos_pt').delete().eq('id', id)
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/coordenacao`)
+  redirect(`/painel/${estudioSlug}/coordenacao`)
+}
+
 export async function atualizarHoras(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string

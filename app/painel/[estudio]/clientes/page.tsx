@@ -137,8 +137,8 @@ export default async function ClientesPage({
         />
       </form>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {clientes.map((c) => {
+      <div className="mt-4 flex flex-col overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
+        {clientes.map((c, i) => {
           const est = ESTADOS_CLIENTE[c.estado] ?? ESTADOS_CLIENTE.Ativo
           const a = ALERTAS[c.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
           const meses = mesesAtivo(c.inicio_contrato, c.saiu_em)
@@ -148,34 +148,31 @@ export default async function ClientesPage({
             <Link
               key={c.id}
               href={`/painel/${slug}/clientes/${c.id}`}
-              className="rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+              className={`flex flex-wrap items-center gap-x-4 gap-y-1 bg-white px-4 py-3 text-sm transition-colors hover:bg-black/[.02] dark:bg-zinc-950 dark:hover:bg-white/[.05] ${
+                i > 0 ? 'border-t border-black/10 dark:border-white/10' : ''
+              }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.dot }} />
-                  <span className="font-medium text-black dark:text-zinc-50">{c.nome}</span>
-                </div>
-                <span
-                  className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
-                  style={{ background: est.bg, color: est.tx }}
-                >
-                  {est.label}
-                </span>
-              </div>
-              <p className="mt-2 text-xs text-zinc-500">
+              <span className="flex min-w-[160px] flex-1 items-center gap-2">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.dot }} />
+                <span className="truncate font-medium text-black dark:text-zinc-50">{c.nome}</span>
+              </span>
+              <span
+                className="w-24 shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-medium"
+                style={{ background: est.bg, color: est.tx }}
+              >
+                {est.label}
+              </span>
+              <span className="w-36 shrink-0 text-xs text-zinc-500">
                 {meses !== null ? `${meses} ${meses === 1 ? 'mês' : 'meses'} de contrato` : 'sem data de início'}
-                {aniversario && (
-                  <>
-                    {' '}
-                    · 🎂{' '}
-                    {aniversario.dias === 0
-                      ? 'faz anos hoje'
-                      : aniversario.dias <= 30
-                        ? `faz anos em ${aniversario.dias}d`
-                        : `faz anos em ${aniversario.data.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}`}
-                  </>
-                )}
-              </p>
+              </span>
+              <span className="w-40 shrink-0 text-xs text-zinc-500">
+                {aniversario &&
+                  (aniversario.dias === 0
+                    ? '🎂 faz anos hoje'
+                    : aniversario.dias <= 30
+                      ? `🎂 em ${aniversario.dias}d`
+                      : `🎂 ${aniversario.data.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}`)}
+              </span>
             </Link>
           )
         })}

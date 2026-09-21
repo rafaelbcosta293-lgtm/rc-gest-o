@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt, MESES } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
-import { registarHoras, atualizarHoras, guardarSemana, criarInstrutor } from './actions'
+import { registarHoras, atualizarHoras, apagarHoras, guardarSemana, criarInstrutor } from './actions'
 import { alternarAcesso } from '../equipa/actions'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { corInstrutor } from '@/lib/data/constantes'
@@ -394,51 +394,63 @@ export default async function CoordenacaoPage({
         {registos.map((r) => {
           const podeEditar = ehGestao || r.pt_id === sessao.userId
           return (
-            <form
+            <div
               key={r.id}
-              action={atualizarHoras}
               className="flex flex-wrap items-center gap-2 rounded-lg border border-black/10 bg-white p-2.5 text-sm dark:border-white/10 dark:bg-zinc-950"
             >
-              <input type="hidden" name="estudio_slug" value={slug} />
-              <input type="hidden" name="id" value={r.id} />
               <span className="w-20 text-xs text-zinc-500">{fmt(r.data)}</span>
               <span className="w-28 font-medium text-black dark:text-zinc-50">
                 {r.pt?.nome ?? '—'}
               </span>
               {podeEditar ? (
                 <>
-                  <input
-                    type="number"
-                    step="0.5"
-                    name="horas"
-                    defaultValue={r.horas}
-                    className={`${inputCls} w-16`}
-                  />
-                  <input
-                    type="number"
-                    name="treinos_40"
-                    defaultValue={r.treinos_40}
-                    title="Treinos 40 min"
-                    className={`${inputCls} w-14`}
-                  />
-                  <input
-                    type="number"
-                    name="treinos_60"
-                    defaultValue={r.treinos_60}
-                    title="Treinos 60 min"
-                    className={`${inputCls} w-14`}
-                  />
-                  <input
-                    name="nota"
-                    defaultValue={r.nota ?? ''}
-                    className={`${inputCls} flex-1`}
-                  />
-                  <SubmitButton
-                    pendingText="…"
-                    className="rounded-md border border-black/10 px-2 py-1 text-xs dark:border-white/10"
-                  >
-                    Guardar
-                  </SubmitButton>
+                  <form action={atualizarHoras} className="flex flex-1 flex-wrap items-center gap-2">
+                    <input type="hidden" name="estudio_slug" value={slug} />
+                    <input type="hidden" name="id" value={r.id} />
+                    <input
+                      type="number"
+                      step="0.5"
+                      name="horas"
+                      defaultValue={r.horas}
+                      className={`${inputCls} w-16`}
+                    />
+                    <input
+                      type="number"
+                      name="treinos_40"
+                      defaultValue={r.treinos_40}
+                      title="Treinos 40 min"
+                      className={`${inputCls} w-14`}
+                    />
+                    <input
+                      type="number"
+                      name="treinos_60"
+                      defaultValue={r.treinos_60}
+                      title="Treinos 60 min"
+                      className={`${inputCls} w-14`}
+                    />
+                    <input
+                      name="nota"
+                      defaultValue={r.nota ?? ''}
+                      className={`${inputCls} flex-1`}
+                    />
+                    <SubmitButton
+                      pendingText="…"
+                      className="rounded-md border border-black/10 px-2 py-1 text-xs dark:border-white/10"
+                    >
+                      Guardar
+                    </SubmitButton>
+                  </form>
+                  <form action={apagarHoras}>
+                    <input type="hidden" name="estudio_slug" value={slug} />
+                    <input type="hidden" name="id" value={r.id} />
+                    <SubmitButton
+                      pendingText="…"
+                      aria-label="Apagar registo"
+                      className="text-lg text-zinc-400 hover:text-red-600"
+                    >
+                      ×
+                    </SubmitButton>
+                  </form>
                 </>
               ) : (
                 <span className="text-xs text-zinc-500">
@@ -446,7 +458,7 @@ export default async function CoordenacaoPage({
                   {r.nota && ` · ${r.nota}`}
                 </span>
               )}
-            </form>
+            </div>
           )
         })}
       </div>

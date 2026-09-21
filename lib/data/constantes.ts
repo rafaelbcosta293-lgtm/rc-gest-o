@@ -53,7 +53,7 @@ export const MODULOS = [
   { id: 'leads', nome: 'Leads', icone: '📣', desc: 'Contactos, origem e seguimento', pronto: false },
   { id: 'pagamentos', nome: 'Pagamentos', icone: '💳', desc: 'Quem tem o pagamento em dia', pronto: false },
   { id: 'aniversarios', nome: 'Aniversários', icone: '🎂', desc: 'Mensagens de parabéns', pronto: false },
-  { id: 'checklist', nome: 'Abertura / Fecho', icone: '🔑', desc: 'Checklist diária do estúdio', pronto: false },
+  { id: 'checklist', nome: 'Abertura / Fecho', icone: '🔑', desc: 'Checklist diária do estúdio', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: '🕗', desc: 'Escala da semana e fecho do dia', pronto: false },
   { id: 'coordenacao', nome: 'Coordenação', icone: '🗂️', desc: 'Escalas, controlos e o que está pendente', pronto: false },
   { id: 'admin', nome: 'Administração', icone: '🔒', desc: 'Financeiro e alertas de gestão', pronto: false },

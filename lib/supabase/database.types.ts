@@ -90,6 +90,38 @@ export type ExercicioCatalogo = {
   ativo: boolean
 }
 
+export type TipoOperacao = 'Abertura' | 'Fecho'
+
+export type ChecklistModelo = {
+  id: string
+  tipo: TipoOperacao
+  secao: string
+  item: string
+  ordem: number
+  ativo: boolean
+}
+
+export type ChecklistRegisto = {
+  id: string
+  estudio_id: number
+  tipo: TipoOperacao
+  data: string
+  hora: string
+  pt_id: string | null
+  concluidos: number
+  total: number
+  ocorrencia: string | null
+  criado_em: string
+}
+
+export type ChecklistResposta = {
+  id: string
+  registo_id: string
+  secao: string
+  item: string
+  ok: boolean
+}
+
 export type Avaliacao = {
   id: string
   cliente_id: string

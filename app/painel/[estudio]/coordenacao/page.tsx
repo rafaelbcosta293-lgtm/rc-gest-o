@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
-import { registarHoras, atualizarHoras } from './actions'
+import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
+import { registarHoras, atualizarHoras, guardarSlot } from './actions'
 import SubmitButton from '@/components/SubmitButton'
+import GrelhaHorarios, { chaveSlot, type SlotPt } from '@/components/GrelhaHorarios'
 import type {
   EstadoPagamento,
   LeadParada,
@@ -15,7 +17,7 @@ import type {
 const inputCls =
   'rounded-md border border-black/10 px-2 py-1.5 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
 
-type EscalaHoje = { hora: number; minuto: number; pt: { nome: string } | null }
+type TurnoSemana = { data: string; hora: number; minuto: number; pt: { id: string; nome: string } | null }
 type ChecklistHoje = { tipo: string; concluidos: number; total: number }
 type RegistoPtComPt = RegistoPt & { pt: { nome: string } | null }
 
@@ -24,11 +26,16 @@ export default async function CoordenacaoPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ semana?: string; editar?: string; error?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error } = await searchParams
+  const { semana: semanaParam, editar, error } = await searchParams
   const hoje = new Date().toISOString().slice(0, 10)
+  const inicioSemana = inicioDaSemana(semanaParam ?? hoje)
+  const diasSemana = diasDaSemana(inicioSemana)
+  const fimSemanaExclusivo = somarDias(inicioSemana, 7)
+  const semanaAnterior = somarDias(inicioSemana, -7)
+  const semanaSeguinte = somarDias(inicioSemana, 7)
 
   const supabase = await createClient()
   const estudio = await getEstudioPorSlug(supabase, slug)
@@ -43,7 +50,8 @@ export default async function CoordenacaoPage({
   const ehGestao = perfilAtual?.papel === 'admin' || perfilAtual?.papel === 'studio_manager'
 
   const [
-    { data: escalaHojeData },
+    { data: escalaSemanaData, error: erroEscala },
+    listaPts,
     { data: checklistHojeData },
     { data: leadsParadasData },
     { data: reavaliacoesData },
@@ -52,10 +60,12 @@ export default async function CoordenacaoPage({
   ] = await Promise.all([
     supabase
       .from('escalas')
-      .select('hora, minuto, pt:perfis!pt_id(nome)')
+      .select('data, hora, minuto, pt:perfis!pt_id(id, nome)')
       .eq('estudio_id', estudio.id)
-      .eq('data', hoje)
-      .order('hora'),
+      .gte('data', inicioSemana)
+      .lt('data', fimSemanaExclusivo)
+      .order('criado_em'),
+    getEquipaDoEstudio(supabase, estudio.id),
     supabase
       .from('checklist_registos')
       .select('tipo, concluidos, total')
@@ -80,19 +90,29 @@ export default async function CoordenacaoPage({
       .limit(30),
   ])
 
-  if (erroRegistos) {
-    throw new Error(erroRegistos.message)
+  if (erroEscala || erroRegistos) {
+    throw new Error((erroEscala ?? erroRegistos)!.message)
   }
 
-  const escalaHoje = (escalaHojeData ?? []) as unknown as EscalaHoje[]
+  const escalaSemana = (escalaSemanaData ?? []) as unknown as TurnoSemana[]
+  const escalaHoje = escalaSemana.filter((t) => t.data === hoje).sort((a, b) => a.hora - b.hora)
   const checklistHoje = (checklistHojeData ?? []) as ChecklistHoje[]
   const leadsParadas = (leadsParadasData ?? []) as LeadParada[]
   const reavaliacoes = (reavaliacoesData ?? []) as ReavaliacaoPendente[]
   const pagamentosAtrasados = (pagamentosData ?? []) as EstadoPagamento[]
   const registos = (registosData ?? []) as unknown as RegistoPtComPt[]
 
+  const slots = new Map<string, SlotPt[]>()
+  for (const t of escalaSemana) {
+    if (!t.pt) continue
+    const chave = chaveSlot(t.data, t.hora, t.minuto)
+    const lista = slots.get(chave) ?? []
+    lista.push({ pt_id: t.pt.id, nome: t.pt.nome })
+    slots.set(chave, lista)
+  }
+
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
@@ -132,10 +152,10 @@ export default async function CoordenacaoPage({
             </ul>
           )}
           <Link
-            href={`/painel/${slug}/horarios`}
+            href="#planeamento"
             className="mt-2 inline-block text-xs text-zinc-500 underline"
           >
-            ver semana
+            planear semana
           </Link>
         </div>
 
@@ -163,6 +183,47 @@ export default async function CoordenacaoPage({
             abrir checklist
           </Link>
         </div>
+      </div>
+
+      <h2
+        id="planeamento"
+        className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500"
+      >
+        Planeamento da semana
+      </h2>
+      <div className="mt-2 flex items-center gap-3">
+        <Link
+          href={`/painel/${slug}/coordenacao?semana=${semanaAnterior}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          ←
+        </Link>
+        <span className="text-sm font-medium">
+          {fmt(diasSemana[0])} – {fmt(diasSemana[6])}
+        </span>
+        <Link
+          href={`/painel/${slug}/coordenacao?semana=${semanaSeguinte}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          →
+        </Link>
+      </div>
+      <p className="mt-2 text-xs text-zinc-500">
+        Clica num horário para marcar ou mudar quem trabalha (até 3 pessoas em simultâneo). A
+        equipa vê esta escala em &quot;Horários&quot;, só para consulta.
+      </p>
+      <div className="mt-4">
+        <GrelhaHorarios
+          editavel
+          dias={diasSemana}
+          slots={slots}
+          pts={listaPts}
+          estudioSlug={slug}
+          estudioId={estudio.id}
+          semana={inicioSemana}
+          editar={editar}
+          action={guardarSlot}
+        />
       </div>
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-amber-600">

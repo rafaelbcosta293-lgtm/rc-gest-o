@@ -3,32 +3,21 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
-import {
-  BLOCOS_HORARIO,
-  DIAS_SEMANA,
-  diasDaSemana,
-  inicioDaSemana,
-  somarDias,
-} from '@/lib/data/horarios'
-import { guardarSlot, criarAusencia, apagarAusencia } from './actions'
+import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
+import { criarAusencia, apagarAusencia } from './actions'
 import SubmitButton from '@/components/SubmitButton'
-import type { Ausencia, Perfil } from '@/lib/supabase/database.types'
-
-type SlotPt = { pt_id: string; nome: string }
-
-function chaveSlot(data: string, hora: number, minuto: number) {
-  return `${data}_${hora}_${minuto}`
-}
+import GrelhaHorarios, { chaveSlot, type SlotPt } from '@/components/GrelhaHorarios'
+import type { Ausencia } from '@/lib/supabase/database.types'
 
 export default async function HorariosPage({
   params,
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ semana?: string; editar?: string; error?: string }>
+  searchParams: Promise<{ semana?: string; error?: string }>
 }) {
   const { estudio: slug } = await params
-  const { semana: semanaParam, editar, error } = await searchParams
+  const { semana: semanaParam, error } = await searchParams
   const hoje = new Date().toISOString().slice(0, 10)
   const inicio = inicioDaSemana(semanaParam ?? hoje)
   const dias = diasDaSemana(inicio)
@@ -117,40 +106,11 @@ export default async function HorariosPage({
         </Link>
       </div>
       <p className="mt-2 text-xs text-zinc-500">
-        Clica num horário para marcar ou mudar quem trabalha (até 3 pessoas em simultâneo).
+        Só para consulta — a escala é planeada em Coordenação.
       </p>
 
-      <div className="mt-4 overflow-x-auto">
-        <div
-          className="grid min-w-[760px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-xs dark:border-white/10 dark:bg-white/10"
-          style={{ gridTemplateColumns: '64px repeat(7, 1fr)' }}
-        >
-          <div className="bg-zinc-50 p-1.5 dark:bg-zinc-900" />
-          {dias.map((d, i) => (
-            <div
-              key={d}
-              className="bg-zinc-50 p-1.5 text-center font-medium text-black dark:bg-zinc-900 dark:text-zinc-50"
-            >
-              {DIAS_SEMANA[i].slice(0, 3)}
-              <br />
-              <span className="font-normal text-zinc-500">{fmt(d)}</span>
-            </div>
-          ))}
-
-          {BLOCOS_HORARIO.map((bloco) => (
-            <FragmentoLinha
-              key={`${bloco.hora}-${bloco.minuto}`}
-              bloco={bloco}
-              dias={dias}
-              slots={slots}
-              pts={listaPts}
-              estudioSlug={slug}
-              estudioId={estudio.id}
-              semana={inicio}
-              editar={editar}
-            />
-          ))}
-        </div>
+      <div className="mt-4">
+        <GrelhaHorarios dias={dias} slots={slots} />
       </div>
 
       <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -260,103 +220,5 @@ export default async function HorariosPage({
         ))}
       </div>
     </div>
-  )
-}
-
-function FragmentoLinha({
-  bloco,
-  dias,
-  slots,
-  pts,
-  estudioSlug,
-  estudioId,
-  semana,
-  editar,
-}: {
-  bloco: { hora: number; minuto: number; label: string }
-  dias: string[]
-  slots: Map<string, SlotPt[]>
-  pts: Pick<Perfil, 'id' | 'nome'>[]
-  estudioSlug: string
-  estudioId: number
-  semana: string
-  editar?: string
-}) {
-  return (
-    <>
-      <div className="flex items-center bg-white p-1.5 text-zinc-500 dark:bg-zinc-950">
-        {bloco.label}
-      </div>
-      {dias.map((dia) => {
-        const chave = chaveSlot(dia, bloco.hora, bloco.minuto)
-        const atual = slots.get(chave) ?? []
-        const aEditar = editar === chave
-
-        if (aEditar) {
-          const opcoes = [0, 1, 2].map((i) => atual[i]?.pt_id ?? '')
-          return (
-            <form
-              key={dia}
-              action={guardarSlot}
-              className="flex flex-col gap-1 bg-teal-50 p-1.5 dark:bg-teal-950"
-            >
-              <input type="hidden" name="estudio_slug" value={estudioSlug} />
-              <input type="hidden" name="estudio_id" value={estudioId} />
-              <input type="hidden" name="semana" value={semana} />
-              <input type="hidden" name="data" value={dia} />
-              <input type="hidden" name="hora" value={bloco.hora} />
-              <input type="hidden" name="minuto" value={bloco.minuto} />
-              {opcoes.map((v, i) => (
-                <select
-                  key={i}
-                  name={`pt_id_${i + 1}`}
-                  defaultValue={v}
-                  className="w-full rounded border border-black/10 bg-white px-1 py-0.5 text-[11px] dark:border-white/10 dark:bg-zinc-900"
-                >
-                  <option value="">—</option>
-                  {pts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
-              ))}
-              <div className="mt-0.5 flex items-center justify-between gap-1">
-                <SubmitButton
-                  pendingText="…"
-                  className="rounded bg-foreground px-2 py-0.5 text-[11px] font-medium text-background"
-                >
-                  Guardar
-                </SubmitButton>
-                <Link
-                  href={`/painel/${estudioSlug}/horarios?semana=${semana}`}
-                  className="text-[11px] text-zinc-500 underline"
-                >
-                  Cancelar
-                </Link>
-              </div>
-            </form>
-          )
-        }
-
-        return (
-          <Link
-            key={dia}
-            href={`/painel/${estudioSlug}/horarios?semana=${semana}&editar=${chave}`}
-            className="flex min-h-[2.25rem] flex-col justify-center gap-0.5 bg-white p-1 text-[11px] leading-tight hover:bg-black/[.03] dark:bg-zinc-950 dark:hover:bg-white/[.06]"
-          >
-            {atual.length === 0 ? (
-              <span className="text-center text-zinc-300 dark:text-zinc-700">+</span>
-            ) : (
-              atual.map((s) => (
-                <span key={s.pt_id} className="truncate text-teal-700 dark:text-teal-400">
-                  {s.nome}
-                </span>
-              ))
-            )}
-          </Link>
-        )
-      })}
-    </>
   )
 }

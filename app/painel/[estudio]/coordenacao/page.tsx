@@ -117,13 +117,15 @@ export default async function CoordenacaoPage({
   const pagamentosAtrasados = (pagamentosData ?? []) as EstadoPagamento[]
   const registos = (registosData ?? []) as unknown as RegistoPtComPt[]
 
-  const slots = new Map<string, SlotPt[]>()
+  // Objeto simples (não Map) porque isto atravessa a fronteira
+  // servidor → cliente como propriedade de GrelhaHorarios.
+  const slots: Record<string, SlotPt[]> = {}
   for (const t of escalaSemana) {
     if (!t.pt) continue
     const chave = chaveSlot(t.data, t.hora, t.minuto)
-    const lista = slots.get(chave) ?? []
+    const lista = slots[chave] ?? []
     lista.push({ pt_id: t.pt.id, nome: t.pt.nome })
-    slots.set(chave, lista)
+    slots[chave] = lista
   }
 
   // Resumo de horas planeadas nesta semana (cada bloco = meia hora) —

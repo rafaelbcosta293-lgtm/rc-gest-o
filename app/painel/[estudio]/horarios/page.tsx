@@ -60,7 +60,9 @@ export default async function HorariosPage({
     listaPts.map((p, i) => [p.id, corInstrutor(i)])
   )
 
-  const slots = new Map<string, SlotPt[]>()
+  // Objeto simples (não Map) porque isto atravessa a fronteira
+  // servidor → cliente como propriedade de GrelhaHorarios.
+  const slots: Record<string, SlotPt[]> = {}
   for (const t of (turnosData ?? []) as unknown as {
     data: string
     hora: number
@@ -69,9 +71,9 @@ export default async function HorariosPage({
   }[]) {
     if (!t.pt) continue
     const chave = chaveSlot(t.data, t.hora, t.minuto)
-    const lista = slots.get(chave) ?? []
+    const lista = slots[chave] ?? []
     lista.push({ pt_id: t.pt.id, nome: t.pt.nome })
-    slots.set(chave, lista)
+    slots[chave] = lista
   }
 
   return (

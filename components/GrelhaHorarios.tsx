@@ -31,7 +31,7 @@ function Insignia({ nome, cor }: { nome: string; cor: CorPt }) {
 
 type PropsComuns = {
   dias: string[]
-  slots: Map<string, SlotPt[]>
+  slots: Record<string, SlotPt[]>
   corPorPt?: Record<string, CorPt>
 }
 
@@ -90,7 +90,7 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
               {bloco.label}
             </div>
             {dias.map((dia) => {
-              const atual = slots.get(chaveSlot(dia, bloco.hora, bloco.minuto)) ?? []
+              const atual = slots[chaveSlot(dia, bloco.hora, bloco.minuto)] ?? []
               return (
                 <div
                   key={dia}
@@ -113,9 +113,9 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
   )
 }
 
-function estadoInicialDeSlots(slots: Map<string, SlotPt[]>): Record<string, string[]> {
+function estadoInicialDeSlots(slots: Record<string, SlotPt[]>): Record<string, string[]> {
   const estado: Record<string, string[]> = {}
-  for (const [chave, lista] of slots) {
+  for (const [chave, lista] of Object.entries(slots)) {
     estado[chave] = lista.map((s) => s.pt_id)
   }
   return estado

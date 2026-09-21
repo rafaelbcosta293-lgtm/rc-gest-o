@@ -13,6 +13,15 @@ export function treinosPrevistos(
   }
 }
 
+export function intervaloMes(ano: number, mes: number): { inicio: string; fimExclusivo: string } {
+  const proxAno = mes === 12 ? ano + 1 : ano
+  const proxMes = mes === 12 ? 1 : mes + 1
+  return {
+    inicio: `${ano}-${String(mes).padStart(2, '0')}-01`,
+    fimExclusivo: `${proxAno}-${String(proxMes).padStart(2, '0')}-01`,
+  }
+}
+
 export const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',

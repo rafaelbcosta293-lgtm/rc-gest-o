@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { PRESENCAS } from '@/lib/data/constantes'
-import { treinosPrevistos, MESES, fmt } from '@/lib/data/presencas'
+import { treinosPrevistos, intervaloMes, MESES, fmt } from '@/lib/data/presencas'
 import { marcarPresenca, apagarPresenca } from '../actions'
 import SubmitButton from '@/components/SubmitButton'
 
@@ -22,26 +22,31 @@ export default async function PresencasClientePage({
   const hoje = agora.toISOString().slice(0, 10)
 
   const supabase = await createClient()
-  const prefixo = `${ano}-${String(mes).padStart(2, '0')}`
+  const { inicio, fimExclusivo } = intervaloMes(ano, mes)
 
-  const [estudio, { data: cliente }, { data: presencasData }] = await Promise.all([
-    getEstudioPorSlug(supabase, slug),
-    supabase
-      .from('clientes')
-      .select('id, nome, frequencia_semanal, estudio_id')
-      .eq('id', clienteId)
-      .maybeSingle(),
-    supabase
-      .from('presencas')
-      .select('id, data, estado, nota, pt:perfis!pt_id(nome)')
-      .eq('cliente_id', clienteId)
-      .gte('data', `${prefixo}-01`)
-      .lt('data', `${prefixo}-32`)
-      .order('data', { ascending: false }),
-  ])
+  const [estudio, { data: cliente }, { data: presencasData, error: erroPresencas }] =
+    await Promise.all([
+      getEstudioPorSlug(supabase, slug),
+      supabase
+        .from('clientes')
+        .select('id, nome, frequencia_semanal, estudio_id')
+        .eq('id', clienteId)
+        .maybeSingle(),
+      supabase
+        .from('presencas')
+        .select('id, data, estado, nota, pt:perfis!pt_id(nome)')
+        .eq('cliente_id', clienteId)
+        .gte('data', inicio)
+        .lt('data', fimExclusivo)
+        .order('data', { ascending: false }),
+    ])
 
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
+  }
+
+  if (erroPresencas) {
+    throw new Error(erroPresencas.message)
   }
 
   type PresencaComPt = {

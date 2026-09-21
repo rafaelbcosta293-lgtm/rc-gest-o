@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { treinosPrevistos, MESES } from '@/lib/data/presencas'
+import { treinosPrevistos, intervaloMes, MESES } from '@/lib/data/presencas'
 
 export default async function PresencasPage({
   params,
@@ -31,15 +31,19 @@ export default async function PresencasPage({
     .order('nome')
 
   const ids = (clientes ?? []).map((c) => c.id)
-  const prefixo = `${ano}-${String(mes).padStart(2, '0')}`
-  const { data: presencas } = ids.length
+  const { inicio, fimExclusivo } = intervaloMes(ano, mes)
+  const { data: presencas, error: erroPresencas } = ids.length
     ? await supabase
         .from('presencas')
         .select('cliente_id, estado')
         .in('cliente_id', ids)
-        .gte('data', `${prefixo}-01`)
-        .lt('data', `${prefixo}-32`)
-    : { data: [] }
+        .gte('data', inicio)
+        .lt('data', fimExclusivo)
+    : { data: [], error: null }
+
+  if (erroPresencas) {
+    throw new Error(erroPresencas.message)
+  }
 
   const statsPorCliente = new Map<string, { feitos: number; faltas: number; avisadas: number }>()
   for (const p of presencas ?? []) {

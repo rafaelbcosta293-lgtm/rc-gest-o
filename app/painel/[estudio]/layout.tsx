@@ -55,11 +55,9 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
 
       {/* Computador: menu lateral fixo, com nomes por extenso */}
       <aside className="hidden shrink-0 border-black/10 md:sticky md:top-0 md:flex md:h-screen md:w-60 md:flex-col md:border-r dark:border-white/10">
-        <Link href="/painel" className="flex items-center gap-2 px-5 py-6">
-          {/* Substituir por <img src="/logo.png" alt="..." className="h-8 w-auto" /> assim que houver logótipo */}
-          <span className="text-base font-semibold text-black dark:text-zinc-50">
-            RC Gestão
-          </span>
+        <Link href="/painel" className="flex items-center px-5 py-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-10 w-auto" />
         </Link>
         <nav className="flex flex-col gap-0.5 px-3">
           {MODULOS.map((m) =>

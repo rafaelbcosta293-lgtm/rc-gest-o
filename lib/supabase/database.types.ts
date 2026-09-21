@@ -241,6 +241,18 @@ export type ReavaliacaoPendente = {
   precisa_atencao: boolean
 }
 
+export type RegistoPt = {
+  id: string
+  pt_id: string
+  estudio_id: number
+  data: string
+  horas: number
+  treinos_40: number
+  treinos_60: number
+  nota: string | null
+  criado_em: string
+}
+
 export type Avaliacao = {
   id: string
   cliente_id: string

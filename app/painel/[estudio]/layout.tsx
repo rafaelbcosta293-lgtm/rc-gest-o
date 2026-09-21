@@ -11,10 +11,14 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
     ? await supabase.from('perfis').select('papel').eq('id', userData.user.id).maybeSingle()
     : { data: null }
   const ehAdmin = perfil?.papel === 'admin'
+  const ehGestao = ehAdmin || perfil?.papel === 'studio_manager'
 
-  const podeAceder = (m: (typeof MODULOS)[number]) => m.pronto && (!m.restrito || ehAdmin)
+  const podeAceder = (m: (typeof MODULOS)[number]) =>
+    m.pronto && (!m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao))
   const tituloBloqueado = (m: (typeof MODULOS)[number]) =>
-    m.pronto ? `${m.nome} — só para administradores` : `${m.nome} — brevemente`
+    !m.pronto
+      ? `${m.nome} — brevemente`
+      : `${m.nome} — só para ${m.restrito === 'admin' ? 'administradores' : 'gestão'}`
 
   return (
     <div className="flex min-h-full flex-col md:flex-row">

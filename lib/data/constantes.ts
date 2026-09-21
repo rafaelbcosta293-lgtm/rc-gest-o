@@ -63,7 +63,7 @@ type Modulo = {
   icone: string
   desc: string
   pronto: boolean
-  restrito?: 'admin'
+  restrito?: 'admin' | 'gestao'
 }
 
 export const MODULOS: Modulo[] = [
@@ -75,6 +75,6 @@ export const MODULOS: Modulo[] = [
   { id: 'aniversarios', nome: 'Aniversários', icone: '🎂', desc: 'Mensagens de parabéns', pronto: false },
   { id: 'checklist', nome: 'Abertura / Fecho', icone: '🔑', desc: 'Checklist diária do estúdio', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: '🕗', desc: 'Escala da semana e ausências da equipa', pronto: true },
-  { id: 'coordenacao', nome: 'Coordenação', icone: '🗂️', desc: 'Escalas, controlos e o que está pendente', pronto: false },
+  { id: 'coordenacao', nome: 'Coordenação', icone: '🗂️', desc: 'Escalas, controlos e o que está pendente', pronto: true, restrito: 'gestao' },
   { id: 'admin', nome: 'Administração', icone: '🔒', desc: 'Financeiro e alertas de gestão', pronto: true, restrito: 'admin' },
 ]

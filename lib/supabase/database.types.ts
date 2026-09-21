@@ -253,6 +253,14 @@ export type RegistoPt = {
   criado_em: string
 }
 
+export type EnvioAniversario = {
+  id: string
+  cliente_id: string
+  ano: number
+  enviado_em: string
+  enviado_por: string | null
+}
+
 export type Avaliacao = {
   id: string
   cliente_id: string

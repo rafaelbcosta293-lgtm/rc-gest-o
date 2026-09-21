@@ -1,6 +1,18 @@
 export const DIAS_SEMANA = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
 
-export const HORAS = Array.from({ length: 17 }, (_, i) => i + 6) // 6h às 22h
+// Blocos de meia em meia hora, das 6h às 22h.
+export const BLOCOS_HORARIO: { hora: number; minuto: number; label: string }[] = Array.from(
+  { length: 33 },
+  (_, i) => {
+    const hora = 6 + Math.floor(i / 2)
+    const minuto = i % 2 === 0 ? 0 : 30
+    return { hora, minuto, label: `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}` }
+  }
+)
+
+export function chaveBloco(hora: number, minuto: number) {
+  return `${hora}-${minuto}`
+}
 
 export function inicioDaSemana(dataISO: string): string {
   const d = new Date(`${dataISO}T00:00:00`)

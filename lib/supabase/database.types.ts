@@ -173,6 +173,7 @@ export type Escala = {
   estudio_id: number
   data: string
   hora: number
+  minuto: number
   pt_id: string
   criado_em: string
 }

@@ -3,16 +3,21 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
-import { DIAS_SEMANA, HORAS, diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
-import { criarTurno, apagarTurno, criarAusencia, apagarAusencia } from './actions'
+import {
+  BLOCOS_HORARIO,
+  DIAS_SEMANA,
+  diasDaSemana,
+  inicioDaSemana,
+  somarDias,
+} from '@/lib/data/horarios'
+import { guardarSlot, criarAusencia, apagarAusencia } from './actions'
 import SubmitButton from '@/components/SubmitButton'
-import type { Ausencia } from '@/lib/supabase/database.types'
+import type { Ausencia, Perfil } from '@/lib/supabase/database.types'
 
-type TurnoComPt = {
-  id: string
-  data: string
-  hora: number
-  pt: { nome: string } | null
+type SlotPt = { pt_id: string; nome: string }
+
+function chaveSlot(data: string, hora: number, minuto: number) {
+  return `${data}_${hora}_${minuto}`
 }
 
 export default async function HorariosPage({
@@ -20,10 +25,10 @@ export default async function HorariosPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ semana?: string; error?: string }>
+  searchParams: Promise<{ semana?: string; editar?: string; error?: string }>
 }) {
   const { estudio: slug } = await params
-  const { semana: semanaParam, error } = await searchParams
+  const { semana: semanaParam, editar, error } = await searchParams
   const hoje = new Date().toISOString().slice(0, 10)
   const inicio = inicioDaSemana(semanaParam ?? hoje)
   const dias = diasDaSemana(inicio)
@@ -44,37 +49,39 @@ export default async function HorariosPage({
   ] = await Promise.all([
     supabase
       .from('escalas')
-      .select('id, data, hora, pt:perfis!pt_id(nome)')
+      .select('data, hora, minuto, pt:perfis!pt_id(id, nome)')
       .eq('estudio_id', estudio.id)
       .gte('data', inicio)
       .lt('data', fimExclusivo)
-      .order('hora'),
+      .order('criado_em'),
     supabase.from('perfis').select('id, nome').order('nome'),
-    supabase
-      .from('ausencias')
-      .select('*')
-      .gte('fim', hoje)
-      .order('inicio')
-      .limit(20),
+    supabase.from('ausencias').select('*').gte('fim', hoje).order('inicio').limit(20),
   ])
 
   if (erroTurnos || erroAusencias) {
     throw new Error((erroTurnos ?? erroAusencias)!.message)
   }
 
-  const turnos = (turnosData ?? []) as unknown as TurnoComPt[]
   const ausencias = (ausenciasData ?? []) as Ausencia[]
-  const ptsPorId = new Map((pts ?? []).map((p) => [p.id, p.nome]))
+  const listaPts = (pts ?? []) as Pick<Perfil, 'id' | 'nome'>[]
+  const ptsPorId = new Map(listaPts.map((p) => [p.id, p.nome]))
 
-  const porDia = new Map<string, TurnoComPt[]>()
-  for (const t of turnos) {
-    const lista = porDia.get(t.data) ?? []
-    lista.push(t)
-    porDia.set(t.data, lista)
+  const slots = new Map<string, SlotPt[]>()
+  for (const t of (turnosData ?? []) as unknown as {
+    data: string
+    hora: number
+    minuto: number
+    pt: { id: string; nome: string } | null
+  }[]) {
+    if (!t.pt) continue
+    const chave = chaveSlot(t.data, t.hora, t.minuto)
+    const lista = slots.get(chave) ?? []
+    lista.push({ pt_id: t.pt.id, nome: t.pt.nome })
+    slots.set(chave, lista)
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
@@ -110,94 +117,41 @@ export default async function HorariosPage({
           →
         </Link>
       </div>
+      <p className="mt-2 text-xs text-zinc-500">
+        Clica num horário para marcar ou mudar quem trabalha (até 3 pessoas em simultâneo).
+      </p>
 
-      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Adicionar turno
-      </h2>
-      <form action={criarTurno} className="mt-2 flex flex-wrap items-end gap-3">
-        <input type="hidden" name="estudio_slug" value={slug} />
-        <input type="hidden" name="estudio_id" value={estudio.id} />
-        <input type="hidden" name="semana" value={inicio} />
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Dia</label>
-          <select
-            name="data"
-            defaultValue={dias[0]}
-            className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
-          >
-            {dias.map((d, i) => (
-              <option key={d} value={d}>
-                {DIAS_SEMANA[i]} · {fmt(d)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Hora</label>
-          <select
-            name="hora"
-            defaultValue={9}
-            className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
-          >
-            {HORAS.map((h) => (
-              <option key={h} value={h}>
-                {h}h
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">PT</label>
-          <select
-            name="pt_id"
-            className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
-          >
-            {(pts ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-        </div>
-        <SubmitButton
-          pendingText="A adicionar…"
-          className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+      <div className="mt-4 overflow-x-auto">
+        <div
+          className="grid min-w-[760px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-xs dark:border-white/10 dark:bg-white/10"
+          style={{ gridTemplateColumns: '64px repeat(7, 1fr)' }}
         >
-          + Turno
-        </SubmitButton>
-      </form>
-
-      <div className="mt-6 flex flex-col gap-4">
-        {dias.map((d, i) => {
-          const turnosDoDia = (porDia.get(d) ?? []).slice().sort((a, b) => a.hora - b.hora)
-          return (
-            <div key={d}>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                {DIAS_SEMANA[i]} · {fmt(d)}
-              </h3>
-              {turnosDoDia.length === 0 ? (
-                <p className="mt-1.5 text-sm text-zinc-400">Sem turnos marcados.</p>
-              ) : (
-                <div className="mt-1.5 flex flex-wrap gap-2">
-                  {turnosDoDia.map((t) => (
-                    <form key={t.id} action={apagarTurno} className="inline-block">
-                      <input type="hidden" name="estudio_slug" value={slug} />
-                      <input type="hidden" name="semana" value={inicio} />
-                      <input type="hidden" name="id" value={t.id} />
-                      <SubmitButton
-                        pendingText="…"
-                        title="Clica para apagar"
-                        className="rounded-full border border-black/10 px-3 py-1 text-xs dark:border-white/10 dark:bg-zinc-900"
-                      >
-                        {t.hora}h — {t.pt?.nome ?? '—'} ×
-                      </SubmitButton>
-                    </form>
-                  ))}
-                </div>
-              )}
+          <div className="bg-zinc-50 p-1.5 dark:bg-zinc-900" />
+          {dias.map((d, i) => (
+            <div
+              key={d}
+              className="bg-zinc-50 p-1.5 text-center font-medium text-black dark:bg-zinc-900 dark:text-zinc-50"
+            >
+              {DIAS_SEMANA[i].slice(0, 3)}
+              <br />
+              <span className="font-normal text-zinc-500">{fmt(d)}</span>
             </div>
-          )
-        })}
+          ))}
+
+          {BLOCOS_HORARIO.map((bloco) => (
+            <FragmentoLinha
+              key={`${bloco.hora}-${bloco.minuto}`}
+              bloco={bloco}
+              dias={dias}
+              slots={slots}
+              pts={listaPts}
+              estudioSlug={slug}
+              estudioId={estudio.id}
+              semana={inicio}
+              editar={editar}
+            />
+          ))}
+        </div>
       </div>
 
       <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -212,7 +166,7 @@ export default async function HorariosPage({
             name="pt_id"
             className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
           >
-            {(pts ?? []).map((p) => (
+            {listaPts.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nome}
               </option>
@@ -307,5 +261,103 @@ export default async function HorariosPage({
         ))}
       </div>
     </div>
+  )
+}
+
+function FragmentoLinha({
+  bloco,
+  dias,
+  slots,
+  pts,
+  estudioSlug,
+  estudioId,
+  semana,
+  editar,
+}: {
+  bloco: { hora: number; minuto: number; label: string }
+  dias: string[]
+  slots: Map<string, SlotPt[]>
+  pts: Pick<Perfil, 'id' | 'nome'>[]
+  estudioSlug: string
+  estudioId: number
+  semana: string
+  editar?: string
+}) {
+  return (
+    <>
+      <div className="flex items-center bg-white p-1.5 text-zinc-500 dark:bg-zinc-950">
+        {bloco.label}
+      </div>
+      {dias.map((dia) => {
+        const chave = chaveSlot(dia, bloco.hora, bloco.minuto)
+        const atual = slots.get(chave) ?? []
+        const aEditar = editar === chave
+
+        if (aEditar) {
+          const opcoes = [0, 1, 2].map((i) => atual[i]?.pt_id ?? '')
+          return (
+            <form
+              key={dia}
+              action={guardarSlot}
+              className="flex flex-col gap-1 bg-teal-50 p-1.5 dark:bg-teal-950"
+            >
+              <input type="hidden" name="estudio_slug" value={estudioSlug} />
+              <input type="hidden" name="estudio_id" value={estudioId} />
+              <input type="hidden" name="semana" value={semana} />
+              <input type="hidden" name="data" value={dia} />
+              <input type="hidden" name="hora" value={bloco.hora} />
+              <input type="hidden" name="minuto" value={bloco.minuto} />
+              {opcoes.map((v, i) => (
+                <select
+                  key={i}
+                  name={`pt_id_${i + 1}`}
+                  defaultValue={v}
+                  className="w-full rounded border border-black/10 bg-white px-1 py-0.5 text-[11px] dark:border-white/10 dark:bg-zinc-900"
+                >
+                  <option value="">—</option>
+                  {pts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome}
+                    </option>
+                  ))}
+                </select>
+              ))}
+              <div className="mt-0.5 flex items-center justify-between gap-1">
+                <SubmitButton
+                  pendingText="…"
+                  className="rounded bg-foreground px-2 py-0.5 text-[11px] font-medium text-background"
+                >
+                  Guardar
+                </SubmitButton>
+                <Link
+                  href={`/painel/${estudioSlug}/horarios?semana=${semana}`}
+                  className="text-[11px] text-zinc-500 underline"
+                >
+                  Cancelar
+                </Link>
+              </div>
+            </form>
+          )
+        }
+
+        return (
+          <Link
+            key={dia}
+            href={`/painel/${estudioSlug}/horarios?semana=${semana}&editar=${chave}`}
+            className="flex min-h-[2.25rem] flex-col justify-center gap-0.5 bg-white p-1 text-[11px] leading-tight hover:bg-black/[.03] dark:bg-zinc-950 dark:hover:bg-white/[.06]"
+          >
+            {atual.length === 0 ? (
+              <span className="text-center text-zinc-300 dark:text-zinc-700">+</span>
+            ) : (
+              atual.map((s) => (
+                <span key={s.pt_id} className="truncate text-teal-700 dark:text-teal-400">
+                  {s.nome}
+                </span>
+              ))
+            )}
+          </Link>
+        )
+      })}
+    </>
   )
 }

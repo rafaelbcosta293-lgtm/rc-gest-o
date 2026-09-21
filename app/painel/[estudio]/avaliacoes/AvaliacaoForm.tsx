@@ -41,6 +41,7 @@ export default function AvaliacaoForm({
   clienteId,
   pts,
   avaliacao,
+  alturaSugerida,
   action,
   error,
 }: {
@@ -48,6 +49,7 @@ export default function AvaliacaoForm({
   clienteId: string
   pts: Pick<Perfil, 'id' | 'nome'>[]
   avaliacao?: Avaliacao
+  alturaSugerida?: number | null
   action: (formData: FormData) => void
   error?: string
 }) {
@@ -103,7 +105,11 @@ export default function AvaliacaoForm({
       </h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Campo id="peso_kg" label="Peso (kg)" defaultValue={avaliacao?.peso_kg} />
-        <Campo id="altura_cm" label="Altura (cm)" defaultValue={avaliacao?.altura_cm} />
+        <Campo
+          id="altura_cm"
+          label="Altura (cm)"
+          defaultValue={avaliacao?.altura_cm ?? alturaSugerida}
+        />
         <Campo
           id="massa_gorda_pct"
           label="Massa gorda (%)"

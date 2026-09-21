@@ -10,12 +10,14 @@ export default function ExercicioPicker({
   escolher,
   criado,
   catalogo,
+  maisUsados = [],
 }: {
   aberto: boolean
   fechar: () => void
   escolher: (item: ItemCatalogo) => void
   criado: (item: ItemCatalogo, categoriaId: string | null) => void
   catalogo: CatalogoExercicios
+  maisUsados?: ItemCatalogo[]
 }) {
   const [catId, setCatId] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -113,6 +115,28 @@ export default function ExercicioPicker({
 
         {!q.trim() && (
           <>
+            {maisUsados.length > 0 && (
+              <>
+                <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Mais usados com este cliente
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {maisUsados.map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => {
+                        escolher(e)
+                        fechar()
+                      }}
+                      className="rounded-md border border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-800 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-200"
+                    >
+                      {e.nome}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
               Grupos musculares
             </div>

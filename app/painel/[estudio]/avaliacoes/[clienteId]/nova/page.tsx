@@ -16,9 +16,18 @@ export default async function NovaAvaliacaoPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const [estudio, { data: cliente }] = await Promise.all([
+  const [estudio, { data: cliente }, { data: ultima }] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
     supabase.from('clientes').select('id, nome, estudio_id').eq('id', clienteId).maybeSingle(),
+    // A altura raramente muda — poupa-se sempre a reescrever a cada
+    // avaliação nova, ao contrário do peso/composição corporal.
+    supabase
+      .from('avaliacoes')
+      .select('altura_cm')
+      .eq('cliente_id', clienteId)
+      .order('data', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
@@ -45,6 +54,7 @@ export default async function NovaAvaliacaoPage({
         estudioSlug={slug}
         clienteId={clienteId}
         pts={pts}
+        alturaSugerida={ultima?.altura_cm ?? null}
         action={criarAvaliacao}
         error={error}
       />

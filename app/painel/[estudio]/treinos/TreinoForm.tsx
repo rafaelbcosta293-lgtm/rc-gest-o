@@ -57,6 +57,8 @@ const ROTULO_ESTADO: Record<EstadoLinha, string> = {
   erro: 'não guardou — tenta outra vez',
 }
 
+type ValoresSugeridos = { series: string; reps: string; carga: string; descanso: string }
+
 export default function TreinoForm({
   estudioSlug,
   estudioId,
@@ -64,6 +66,8 @@ export default function TreinoForm({
   pts,
   inicial,
   catalogo: catalogoInicial,
+  ultimosValores = {},
+  maisUsados = [],
   action,
   error,
 }: {
@@ -73,6 +77,8 @@ export default function TreinoForm({
   pts: { id: string; nome: string }[]
   inicial: TreinoInicial
   catalogo: CatalogoExercicios
+  ultimosValores?: Record<string, ValoresSugeridos>
+  maisUsados?: ItemCatalogo[]
   action: (formData: FormData) => void
   error?: string
 }) {
@@ -145,7 +151,18 @@ export default function TreinoForm({
   const escolherExercicio = (item: ItemCatalogo) => {
     const indice = exercicios.findIndex((l) => l.key === seletorPara)
     if (indice === -1) return
-    const atualizada = { ...exercicios[indice], exercicio_id: item.id, exercicio_nome: item.nome }
+    const linhaAtual = exercicios[indice]
+    // Só sugere os valores da última vez se a linha ainda estiver em
+    // branco — nunca substitui o que o PT já tenha escrito à mão.
+    const semValoresAinda =
+      !linhaAtual.series && !linhaAtual.reps && !linhaAtual.carga && !linhaAtual.descanso
+    const sugestao = semValoresAinda ? ultimosValores[item.id] : undefined
+    const atualizada = {
+      ...linhaAtual,
+      exercicio_id: item.id,
+      exercicio_nome: item.nome,
+      ...sugestao,
+    }
     setExercicios((linhas) => linhas.map((l) => (l.key === atualizada.key ? atualizada : l)))
     clearTimeout(timers.current[atualizada.key])
     guardarLinha(atualizada, indice)
@@ -305,6 +322,7 @@ export default function TreinoForm({
         aberto={seletorPara !== null}
         fechar={() => setSeletorPara(null)}
         catalogo={catalogo}
+        maisUsados={maisUsados}
         criado={aoCriarExercicio}
         escolher={(item) => {
           escolherExercicio(item)

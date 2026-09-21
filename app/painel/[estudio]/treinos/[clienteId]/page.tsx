@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { ALERTAS, CORREU } from '@/lib/data/constantes'
+import { iniciarTreino } from './treino/actions'
+import SubmitButton from '@/components/SubmitButton'
 
 function fmt(iso: string | null) {
   if (!iso) return '—'
@@ -78,12 +80,18 @@ export default async function FichaClientePage({
           >
             Editar ficha
           </Link>
-          <Link
-            href={`/painel/${slug}/treinos/${clienteId}/treino/novo`}
-            className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-          >
-            Planear treino
-          </Link>
+          <form action={iniciarTreino}>
+            <input type="hidden" name="estudio_slug" value={slug} />
+            <input type="hidden" name="estudio_id" value={estudio.id} />
+            <input type="hidden" name="cliente_id" value={clienteId} />
+            <input type="hidden" name="pt_id" value={cliente.pt_principal_id ?? ''} />
+            <SubmitButton
+              pendingText="A iniciar…"
+              className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+            >
+              Planear treino
+            </SubmitButton>
+          </form>
         </div>
       </div>
 

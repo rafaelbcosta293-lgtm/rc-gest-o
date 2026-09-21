@@ -40,6 +40,7 @@ export default async function EditarTreinoPage({
 
   const exercicios: LinhaExercicio[] = (exerciciosSessao ?? []).map((e) => ({
     key: e.id,
+    id: e.id,
     bloco: e.bloco as BlocoTipo,
     exercicio_id: e.exercicio_id,
     exercicio_nome: e.exercicio_nome,

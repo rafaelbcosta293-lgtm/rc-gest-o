@@ -8,6 +8,7 @@ import { registarHoras, atualizarHoras, guardarSlot, criarInstrutor } from './ac
 import { alternarAcesso } from '../equipa/actions'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import SubmitButton from '@/components/SubmitButton'
+import TituloSeccao from '@/components/TituloSeccao'
 import GrelhaHorarios, { chaveSlot, type SlotPt } from '@/components/GrelhaHorarios'
 import type {
   EstadoPagamento,
@@ -167,9 +168,7 @@ export default async function CoordenacaoPage({
         </p>
       )}
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Hoje
-      </h2>
+      <TituloSeccao cor="teal">Hoje</TituloSeccao>
       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
           <h3 className="text-xs font-semibold text-zinc-500">Escala</h3>
@@ -219,9 +218,7 @@ export default async function CoordenacaoPage({
         </div>
       </div>
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Instrutores
-      </h2>
+      <TituloSeccao cor="roxo">Instrutores</TituloSeccao>
       <p className="mt-1 text-xs text-zinc-500">
         Só quem tem acesso aqui aparece para escolher no planeamento da semana.
       </p>
@@ -296,12 +293,9 @@ export default async function CoordenacaoPage({
         )}
       </div>
 
-      <h2
-        id="planeamento"
-        className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500"
-      >
+      <TituloSeccao cor="azul" id="planeamento">
         Planeamento da semana
-      </h2>
+      </TituloSeccao>
       <div className="mt-2 flex items-center gap-3">
         <Link
           href={`/painel/${slug}/coordenacao?semana=${semanaAnterior}`}
@@ -337,9 +331,7 @@ export default async function CoordenacaoPage({
         />
       </div>
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-amber-600">
-        Pendências
-      </h2>
+      <TituloSeccao cor="ambar">Pendências</TituloSeccao>
       <div className="mt-2 flex flex-col gap-2">
         {leadsParadas.map((l) => (
           <Link
@@ -382,9 +374,7 @@ export default async function CoordenacaoPage({
         )}
       </div>
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Horas da equipa
-      </h2>
+      <TituloSeccao cor="verde">Horas da equipa</TituloSeccao>
       <div className="mt-2 flex items-center gap-3">
         <Link
           href={`/painel/${slug}/coordenacao?mes=${mesAnteriorParam}`}

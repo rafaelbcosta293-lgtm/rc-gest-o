@@ -5,6 +5,7 @@ import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import { guardarConfig, criarPlano, atualizarPlano } from './actions'
 import SubmitButton from '@/components/SubmitButton'
+import TituloSeccao from '@/components/TituloSeccao'
 import type {
   ConfigLinha,
   LeadParada,
@@ -83,9 +84,7 @@ export default async function AdminPage({
         </p>
       )}
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-amber-600">
-        Leads paradas ({leadsParadas.length})
-      </h2>
+      <TituloSeccao cor="ambar">Leads paradas ({leadsParadas.length})</TituloSeccao>
       {leadsParadas.length === 0 ? (
         <p className="mt-2 text-sm text-zinc-500">Nenhuma — todos os leads ativos em dia.</p>
       ) : (
@@ -107,9 +106,7 @@ export default async function AdminPage({
         </div>
       )}
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-amber-600">
-        Reavaliações pendentes ({reavaliacoes.length})
-      </h2>
+      <TituloSeccao cor="ambar">Reavaliações pendentes ({reavaliacoes.length})</TituloSeccao>
       {reavaliacoes.length === 0 ? (
         <p className="mt-2 text-sm text-zinc-500">Nenhuma — reavaliações todas em dia.</p>
       ) : (
@@ -131,9 +128,7 @@ export default async function AdminPage({
         </div>
       )}
 
-      <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Planos
-      </h2>
+      <TituloSeccao cor="verde">Planos</TituloSeccao>
       <div className="mt-2 flex flex-col gap-2">
         {planos.map((p) => (
           <form
@@ -203,9 +198,7 @@ export default async function AdminPage({
         </SubmitButton>
       </form>
 
-      <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Definições do negócio
-      </h2>
+      <TituloSeccao cor="neutro">Definições do negócio</TituloSeccao>
       <div className="mt-2 flex flex-col gap-2">
         {config.map((c) => (
           <form

@@ -110,7 +110,6 @@ export default async function CoordenacaoPage({
   }
 
   const escalaSemana = (escalaSemanaData ?? []) as unknown as TurnoSemana[]
-  const escalaHoje = escalaSemana.filter((t) => t.data === hoje).sort((a, b) => a.hora - b.hora)
   const checklistHoje = (checklistHojeData ?? []) as ChecklistHoje[]
   const leadsParadas = (leadsParadasData ?? []) as LeadParada[]
   const reavaliacoes = (reavaliacoesData ?? []) as ReavaliacaoPendente[]
@@ -189,43 +188,7 @@ export default async function CoordenacaoPage({
       )}
 
       <TituloSeccao cor="teal">Hoje</TituloSeccao>
-      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <h3 className="text-xs font-semibold text-zinc-500">Escala</h3>
-          {escalaHoje.length === 0 ? (
-            <p className="mt-1 text-sm text-zinc-400">Sem turnos marcados.</p>
-          ) : (
-            <ul className="mt-1 flex flex-col gap-1 text-sm text-black dark:text-zinc-50">
-              {escalaHoje.map((e, i) => {
-                const cor = e.pt ? corPorPt[e.pt.id] : undefined
-                return (
-                  <li key={i} className="flex items-center gap-1.5">
-                    <span className="text-zinc-500">
-                      {String(e.hora).padStart(2, '0')}:{String(e.minuto).padStart(2, '0')}
-                    </span>
-                    {cor ? (
-                      <span
-                        className="rounded px-1.5 py-0.5 text-xs font-medium"
-                        style={{ background: cor.bg, color: cor.tx }}
-                      >
-                        {e.pt?.nome}
-                      </span>
-                    ) : (
-                      <span>{e.pt?.nome ?? '—'}</span>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-          <Link
-            href="#planeamento"
-            className="mt-2 inline-block text-xs text-zinc-500 underline"
-          >
-            planear semana
-          </Link>
-        </div>
-
+      <div className="mt-2">
         <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
           <h3 className="text-xs font-semibold text-zinc-500">Checklist</h3>
           {['Abertura', 'Fecho'].map((tipo) => {

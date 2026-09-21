@@ -80,12 +80,23 @@ export default async function TarefasPage({
       </div>
 
       {tarefas.length > 0 && (
-        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-          <div
-            className="h-full rounded-full bg-teal-600"
-            style={{ width: `${Math.round((totalFeitas / tarefas.length) * 100)}%` }}
-          />
-        </div>
+        <>
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+            <div
+              className="h-full rounded-full bg-teal-600"
+              style={{ width: `${Math.round((totalFeitas / tarefas.length) * 100)}%` }}
+            />
+          </div>
+          {totalFeitas >= tarefas.length ? (
+            <p className="mt-3 rounded-lg bg-teal-50 px-3 py-2 text-sm font-medium text-teal-800 dark:bg-teal-950 dark:text-teal-200">
+              ✓ Todas as tarefas de hoje estão feitas.
+            </p>
+          ) : (
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              Faltam {tarefas.length - totalFeitas} de {tarefas.length} tarefas hoje.
+            </p>
+          )}
+        </>
       )}
 
       {error && (
@@ -132,7 +143,7 @@ export default async function TarefasPage({
                   <SubmitButton
                     pendingText="…"
                     aria-label="Desmarcar"
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm text-white"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-teal-600 text-sm text-white"
                   >
                     ✓
                   </SubmitButton>
@@ -145,7 +156,7 @@ export default async function TarefasPage({
                   <SubmitButton
                     pendingText="…"
                     aria-label="Marcar como feita"
-                    className="h-6 w-6 shrink-0 rounded-full border-2 border-zinc-300 dark:border-zinc-700"
+                    className="h-6 w-6 shrink-0 rounded-md border-2 border-zinc-300 dark:border-zinc-700"
                   >
                     <span />
                   </SubmitButton>

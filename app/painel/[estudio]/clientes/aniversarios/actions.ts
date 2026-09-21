@@ -18,11 +18,11 @@ export async function marcarEnviado(formData: FormData) {
   })
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/aniversarios?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/${estudioSlug}/clientes/aniversarios?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/aniversarios`)
-  redirect(`/painel/${estudioSlug}/aniversarios`)
+  revalidatePath(`/painel/${estudioSlug}/clientes/aniversarios`)
+  redirect(`/painel/${estudioSlug}/clientes/aniversarios`)
 }
 
 export async function desfazerEnvio(formData: FormData) {
@@ -33,9 +33,9 @@ export async function desfazerEnvio(formData: FormData) {
   const { error } = await supabase.from('envios_aniversario').delete().eq('id', id)
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/aniversarios?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/${estudioSlug}/clientes/aniversarios?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/aniversarios`)
-  redirect(`/painel/${estudioSlug}/aniversarios`)
+  revalidatePath(`/painel/${estudioSlug}/clientes/aniversarios`)
+  redirect(`/painel/${estudioSlug}/clientes/aniversarios`)
 }

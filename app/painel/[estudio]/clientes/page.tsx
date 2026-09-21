@@ -54,11 +54,21 @@ export default async function ClientesPage({
     query = query.ilike('nome', `%${q}%`)
   }
 
-  const { data, error } = await query
-  if (error) {
-    throw new Error(error.message)
+  const [{ data, error }, { data: todosData, error: erroTodos }] = await Promise.all([
+    query,
+    supabase.from('clientes').select('estado').eq('estudio_id', estudio.id),
+  ])
+  if (error || erroTodos) {
+    throw new Error((error ?? erroTodos)!.message)
   }
   const clientes = (data ?? []) as ClienteLista[]
+  const todos = (todosData ?? []) as { estado: EstadoCliente }[]
+  const contagens: Record<EstadoCliente | 'Todos', number> = {
+    Todos: todos.length,
+    Ativo: todos.filter((c) => c.estado === 'Ativo').length,
+    Suspenso: todos.filter((c) => c.estado === 'Suspenso').length,
+    'Ex-cliente': todos.filter((c) => c.estado === 'Ex-cliente').length,
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -77,12 +87,20 @@ export default async function ClientesPage({
             a ficha completa de cada um, num só sítio
           </p>
         </div>
-        <Link
-          href={`/painel/${slug}/treinos/novo`}
-          className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-        >
-          + Cliente
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/painel/${slug}/clientes/aniversarios`}
+            className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+          >
+            🎂 Aniversários
+          </Link>
+          <Link
+            href={`/painel/${slug}/treinos/novo`}
+            className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+          >
+            + Cliente
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-1.5">
@@ -102,7 +120,7 @@ export default async function ClientesPage({
                   : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
               }`}
             >
-              {f.label}
+              {f.label} ({contagens[f.valor]})
             </Link>
           )
         })}

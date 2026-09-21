@@ -56,7 +56,7 @@ function Calendario({
     <div className="mt-6">
       <div className="flex items-center justify-between gap-3">
         <Link
-          href={`/painel/${slug}/aniversarios?vista=calendario&mes=${anoAnterior}-${String(mesAnteriorNum).padStart(2, '0')}`}
+          href={`/painel/${slug}/clientes/aniversarios?mes=${anoAnterior}-${String(mesAnteriorNum).padStart(2, '0')}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           ← {MESES[mesAnteriorNum - 1].slice(0, 3)}
@@ -65,7 +65,7 @@ function Calendario({
           {MESES[mes - 1]} {ano}
         </strong>
         <Link
-          href={`/painel/${slug}/aniversarios?vista=calendario&mes=${anoSeguinte}-${String(mesSeguinteNum).padStart(2, '0')}`}
+          href={`/painel/${slug}/clientes/aniversarios?mes=${anoSeguinte}-${String(mesSeguinteNum).padStart(2, '0')}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           {MESES[mesSeguinteNum - 1].slice(0, 3)} →
@@ -123,7 +123,9 @@ export default async function AniversariosPage({
   const { error, vista, mes: mesParam } = await searchParams
   const agora = new Date()
   const anoAtual = agora.getFullYear()
-  const vistaCalendario = vista === 'calendario'
+  // Calendário é a vista principal — só passa a lista se pedirem
+  // explicitamente "?vista=lista".
+  const vistaCalendario = vista !== 'lista'
   const anoCal = mesParam ? Number(mesParam.slice(0, 4)) : agora.getFullYear()
   const mesCal = mesParam ? Number(mesParam.slice(5, 7)) : agora.getMonth() + 1
 
@@ -191,10 +193,10 @@ export default async function AniversariosPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <Link
-        href={`/painel/${slug}`}
+        href={`/painel/${slug}/clientes`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
       >
-        ← Voltar
+        ← Clientes
       </Link>
 
       <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
@@ -207,17 +209,7 @@ export default async function AniversariosPage({
 
       <div className="mt-4 flex gap-1.5">
         <Link
-          href={`/painel/${slug}/aniversarios`}
-          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
-            !vistaCalendario
-              ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
-              : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
-          }`}
-        >
-          Lista
-        </Link>
-        <Link
-          href={`/painel/${slug}/aniversarios?vista=calendario`}
+          href={`/painel/${slug}/clientes/aniversarios`}
           className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
             vistaCalendario
               ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
@@ -225,6 +217,16 @@ export default async function AniversariosPage({
           }`}
         >
           Calendário
+        </Link>
+        <Link
+          href={`/painel/${slug}/clientes/aniversarios?vista=lista`}
+          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
+            !vistaCalendario
+              ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+              : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+          }`}
+        >
+          Lista
         </Link>
       </div>
 

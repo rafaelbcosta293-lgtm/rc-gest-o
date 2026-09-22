@@ -3,9 +3,10 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
-import { fmt } from '@/lib/data/presencas'
-import { somarDias } from '@/lib/data/horarios'
+import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
+import { somarDias, inicioDaSemana, diasDaSemana } from '@/lib/data/horarios'
 import { RECORRENCIAS } from '@/lib/data/constantes'
+import { ordenarPorUrgencia, tarefasDoDia } from '@/lib/data/tarefas'
 import { criarTarefa, removerTarefa, marcarFeita, desfazerFeita } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import type { TarefaDiaria, TarefaDiariaConcluida } from '@/lib/supabase/database.types'
@@ -17,10 +18,11 @@ export default async function TarefasPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string; dia?: string }>
+  searchParams: Promise<{ error?: string; dia?: string; vista?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error, dia: diaParam } = await searchParams
+  const { error, dia: diaParam, vista: vistaParam } = await searchParams
+  const vista = vistaParam === 'semana' ? 'semana' : 'dia'
   const hoje = new Date().toISOString().slice(0, 10)
   const dia = diaParam || hoje
   const diaEhHoje = dia === hoje
@@ -48,6 +50,162 @@ export default async function TarefasPage({
   }
   const tarefas = (tarefasData ?? []) as TarefaDiaria[]
 
+  const toggleVista = (
+    <div className="mt-4 flex gap-1.5">
+      <Link
+        href={`/painel/${slug}/tarefas?dia=${dia}`}
+        className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
+          vista !== 'semana'
+            ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+            : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+        }`}
+      >
+        Dia
+      </Link>
+      <Link
+        href={`/painel/${slug}/tarefas?vista=semana&dia=${dia}`}
+        className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
+          vista === 'semana'
+            ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+            : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+        }`}
+      >
+        Semana
+      </Link>
+    </div>
+  )
+
+  if (vista === 'semana') {
+    const inicioSemana = inicioDaSemana(dia)
+    const diasSemana = diasDaSemana(inicioSemana)
+    const fimSemanaExclusivo = somarDias(inicioSemana, 7)
+    const semanaAnterior = somarDias(inicioSemana, -7)
+    const semanaSeguinte = somarDias(inicioSemana, 7)
+
+    const { data: concluidasSemanaData, error: erroConcluidasSemana } =
+      tarefas.length > 0
+        ? await supabase
+            .from('tarefas_diarias_concluidas')
+            .select('tarefa_id, data')
+            .in(
+              'tarefa_id',
+              tarefas.map((t) => t.id)
+            )
+            .gte('data', inicioSemana)
+            .lt('data', fimSemanaExclusivo)
+        : { data: [], error: null }
+
+    if (erroConcluidasSemana) {
+      throw new Error(erroConcluidasSemana.message)
+    }
+    const concluidasSemana = (concluidasSemanaData ?? []) as { tarefa_id: string; data: string }[]
+
+    return (
+      <div className="mx-auto max-w-xl px-4 py-10">
+        <Link
+          href={`/painel/${slug}`}
+          className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        >
+          ← Voltar
+        </Link>
+
+        <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+          Tarefas diárias
+        </h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          {estudio.nome} · {fmt(diasSemana[0])} – {fmt(diasSemana[6])}
+        </p>
+
+        {toggleVista}
+
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <Link
+            href={`/painel/${slug}/tarefas?vista=semana&dia=${semanaAnterior}`}
+            className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          >
+            ←
+          </Link>
+          <span className="text-sm font-medium text-black dark:text-zinc-50">
+            {fmt(diasSemana[0])} – {fmt(diasSemana[6])}
+          </span>
+          <Link
+            href={`/painel/${slug}/tarefas?vista=semana&dia=${semanaSeguinte}`}
+            className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          >
+            →
+          </Link>
+        </div>
+
+        {error && (
+          <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-col gap-5">
+          {diasSemana.map((d, i) => {
+            const idsFeitasNoDia = new Set(
+              concluidasSemana.filter((c) => c.data === d).map((c) => c.tarefa_id)
+            )
+            const listaDoDia = ordenarPorUrgencia(tarefasDoDia(d, hoje, tarefas, idsFeitasNoDia))
+            const ehHoje = d === hoje
+            return (
+              <div key={d}>
+                <h2
+                  className={`text-xs font-semibold uppercase tracking-wider ${
+                    ehHoje ? 'text-teal-600' : 'text-zinc-500'
+                  }`}
+                >
+                  {DIAS_SEMANA[i]} · {fmt(d)}
+                  {ehHoje && ' · hoje'}
+                </h2>
+                <div className="mt-1.5 flex flex-col gap-1">
+                  {listaDoDia.map((t) => {
+                    const feita = idsFeitasNoDia.has(t.id)
+                    return (
+                      <Link
+                        key={t.id}
+                        href={`/painel/${slug}/tarefas?dia=${d}`}
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                          feita
+                            ? 'border-teal-200 bg-teal-50 dark:border-teal-900 dark:bg-teal-950'
+                            : 'border-black/10 bg-white hover:border-black/30 dark:border-white/10 dark:bg-zinc-950'
+                        }`}
+                      >
+                        <span
+                          className={`shrink-0 ${feita ? 'text-teal-600' : 'text-zinc-300 dark:text-zinc-700'}`}
+                        >
+                          {feita ? '✓' : '○'}
+                        </span>
+                        {t.hora && (
+                          <span className="shrink-0 text-xs text-zinc-400">
+                            {t.hora.slice(0, 5)}
+                          </span>
+                        )}
+                        <span
+                          className={`truncate ${
+                            feita
+                              ? 'text-teal-800 line-through dark:text-teal-300'
+                              : 'text-black dark:text-zinc-50'
+                          }`}
+                        >
+                          {t.titulo}
+                        </span>
+                      </Link>
+                    )
+                  })}
+                  {listaDoDia.length === 0 && (
+                    <p className="text-xs text-zinc-400">Sem tarefas.</p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   const { data: feitasData, error: erroFeitas } =
     tarefas.length > 0
       ? await supabase
@@ -66,14 +224,9 @@ export default async function TarefasPage({
   const feitasNoDia = (feitasData ?? []) as unknown as ConcluidaComNome[]
   const feitaPorTarefa = new Map(feitasNoDia.map((f) => [f.tarefa_id, f]))
 
-  // Um dia passado é só histórico (o que foi mesmo feito nesse dia) — não
-  // faz sentido mostrar "pendente" para trás no tempo. Hoje e dias
-  // futuros mostram o que está por fazer, consoante "proxima_data".
-  const pendentes = diaEhPassado
-    ? []
-    : tarefas.filter((t) => t.proxima_data <= dia && !feitaPorTarefa.has(t.id))
-  const idsNoDia = new Set([...pendentes.map((t) => t.id), ...feitaPorTarefa.keys()])
-  const listaDia = tarefas.filter((t) => idsNoDia.has(t.id))
+  const listaDia = ordenarPorUrgencia(
+    tarefasDoDia(dia, hoje, tarefas, new Set(feitaPorTarefa.keys()))
+  )
   const futuras = tarefas
     .filter((t) => t.proxima_data > dia && !feitaPorTarefa.has(t.id))
     .sort((a, b) => a.proxima_data.localeCompare(b.proxima_data))
@@ -101,6 +254,8 @@ export default async function TarefasPage({
           </p>
         </div>
       </div>
+
+      {toggleVista}
 
       <div className="mt-4 flex items-center justify-center gap-3">
         <Link
@@ -163,6 +318,11 @@ export default async function TarefasPage({
             required
             placeholder="Nova tarefa… ex.: repor gel de banho"
             className="min-w-[180px] flex-1 rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+          />
+          <input
+            type="time"
+            name="hora"
+            className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
           />
           <select
             name="recorrencia"
@@ -238,6 +398,11 @@ export default async function TarefasPage({
                 <p
                   className={`truncate text-sm ${feita ? 'text-teal-800 line-through dark:text-teal-300' : 'text-black dark:text-zinc-50'}`}
                 >
+                  {t.hora && (
+                    <span className="mr-1.5 font-mono text-xs font-normal text-zinc-400">
+                      {t.hora.slice(0, 5)}
+                    </span>
+                  )}
                   {t.titulo}
                   {t.recorrencia !== 'Diária' && (
                     <span className="ml-1.5 text-xs font-normal text-zinc-400">
@@ -294,7 +459,10 @@ export default async function TarefasPage({
                 href={`/painel/${slug}/tarefas?dia=${t.proxima_data}`}
                 className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-black/10 px-3 py-2 text-sm text-zinc-500 transition-colors hover:border-black/30 dark:border-white/10"
               >
-                <span>{t.titulo}</span>
+                <span>
+                  {t.hora && <span className="mr-1.5 font-mono text-xs">{t.hora.slice(0, 5)}</span>}
+                  {t.titulo}
+                </span>
                 <span className="shrink-0 text-xs">
                   {t.recorrencia} · {fmt(t.proxima_data)}
                 </span>

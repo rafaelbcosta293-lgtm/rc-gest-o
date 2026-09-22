@@ -100,6 +100,7 @@ export type TarefaDiaria = {
   titulo: string
   recorrencia: RecorrenciaTarefa
   proxima_data: string
+  hora: string | null
   ativa: boolean
   ordem: number
   criado_por: string | null

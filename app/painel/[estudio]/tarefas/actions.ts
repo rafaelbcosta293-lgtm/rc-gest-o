@@ -7,11 +7,18 @@ import { getSessaoAtual } from '@/lib/data/sessao'
 import { proximaOcorrencia } from '@/lib/data/tarefas'
 import type { RecorrenciaTarefa } from '@/lib/supabase/database.types'
 
+function campoOuNull(formData: FormData, nome: string) {
+  const v = formData.get(nome)
+  if (typeof v !== 'string' || v.trim() === '') return null
+  return v.trim()
+}
+
 export async function criarTarefa(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
   const titulo = (formData.get('titulo') as string)?.trim()
   const recorrencia = (formData.get('recorrencia') as RecorrenciaTarefa) || 'Diária'
+  const hora = campoOuNull(formData, 'hora')
   const hoje = new Date().toISOString().slice(0, 10)
   const supabase = await createClient()
   const sessao = await getSessaoAtual()
@@ -24,6 +31,7 @@ export async function criarTarefa(formData: FormData) {
     estudio_id: estudioId,
     titulo,
     recorrencia,
+    hora,
     proxima_data: hoje,
     criado_por: sessao.userId,
   })

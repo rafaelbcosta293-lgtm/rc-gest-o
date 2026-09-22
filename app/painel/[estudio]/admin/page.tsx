@@ -6,12 +6,14 @@ import { fmt, MESES } from '@/lib/data/presencas'
 import { inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from './actions'
+import { ESTADOS_LEAD } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
 import type { Cliente, Lead, LeadParada, EstadoPagamento, ReavaliacaoPendente } from '@/lib/supabase/database.types'
 
 type ClienteResumo = Pick<Cliente, 'id' | 'estado' | 'inicio_contrato'>
 type LeadResumo = Pick<Lead, 'estado' | 'entrada' | 'fecho_em' | 'visita_data'>
+type LeadDoDia = Pick<Lead, 'id' | 'nome' | 'visita_hora' | 'estado'>
 type RegistoSemana = { horas: number; pt: { nome: string } | null }
 
 export default async function AdminPage({
@@ -19,22 +21,28 @@ export default async function AdminPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string; mes?: string; erroSenha?: string }>
+  searchParams: Promise<{ error?: string; mes?: string; dia?: string; erroSenha?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error, mes: mesParam, erroSenha } = await searchParams
+  const { error, mes: mesParam, dia: diaParam, erroSenha } = await searchParams
   const agora = new Date()
   const hoje = agora.toISOString().slice(0, 10)
   const ano = mesParam ? Number(mesParam.slice(0, 4)) : agora.getFullYear()
   const mes = mesParam ? Number(mesParam.slice(5, 7)) : agora.getMonth() + 1
   const inicioMes = `${ano}-${String(mes).padStart(2, '0')}-01`
   const fimMesExclusivo = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, '0')}-01`
+  const mesAtualParam = `${ano}-${String(mes).padStart(2, '0')}`
   const mesAnteriorAno = mes === 1 ? ano - 1 : ano
   const mesAnteriorMes = mes === 1 ? 12 : mes - 1
   const mesSeguinteAno = mes === 12 ? ano + 1 : ano
   const mesSeguinteMes = mes === 12 ? 1 : mes + 1
   const mesAnteriorParam = `${mesAnteriorAno}-${String(mesAnteriorMes).padStart(2, '0')}`
   const mesSeguinteParam = `${mesSeguinteAno}-${String(mesSeguinteMes).padStart(2, '0')}`
+
+  const diaSessoes = diaParam || hoje
+  const diaSessoesEhHoje = diaSessoes === hoje
+  const diaSessoesAnterior = somarDias(diaSessoes, -1)
+  const diaSessoesSeguinte = somarDias(diaSessoes, 1)
 
   const inicioSemana = inicioDaSemana(hoje)
   const fimSemanaExclusivo = somarDias(inicioSemana, 7)
@@ -66,6 +74,7 @@ export default async function AdminPage({
     { data: clientesData, error: erroClientes },
     { data: leadsData, error: erroLeadsTodas },
     { data: registosSemanaData, error: erroRegistosSemana },
+    { data: sessoesDoDiaData, error: erroSessoesDoDia },
   ] = await Promise.all([
     supabase
       .from('v_leads_paradas')
@@ -92,18 +101,35 @@ export default async function AdminPage({
       .eq('estudio_id', estudio.id)
       .gte('data', inicioSemana)
       .lt('data', fimSemanaExclusivo),
+    supabase
+      .from('leads')
+      .select('id, nome, visita_hora, estado')
+      .eq('estudio_id', estudio.id)
+      .eq('visita_data', diaSessoes)
+      .order('visita_hora', { ascending: true, nullsFirst: false }),
   ])
 
-  if (erroLeadsParadas || erroReavaliacoes || erroPagamentos || erroClientes || erroLeadsTodas || erroRegistosSemana) {
+  if (
+    erroLeadsParadas ||
+    erroReavaliacoes ||
+    erroPagamentos ||
+    erroClientes ||
+    erroLeadsTodas ||
+    erroRegistosSemana ||
+    erroSessoesDoDia
+  ) {
     throw new Error(
       (erroLeadsParadas ??
         erroReavaliacoes ??
         erroPagamentos ??
         erroClientes ??
         erroLeadsTodas ??
-        erroRegistosSemana)!.message
+        erroRegistosSemana ??
+        erroSessoesDoDia)!.message
     )
   }
+
+  const sessoesDoDia = (sessoesDoDiaData ?? []) as LeadDoDia[]
 
   const leadsParadas = (leadsParadasData ?? []) as LeadParada[]
   const reavaliacoes = (reavaliacoesData ?? []) as ReavaliacaoPendente[]
@@ -177,7 +203,7 @@ export default async function AdminPage({
       <TituloSeccao cor="azul">Este mês</TituloSeccao>
       <div className="mt-2 flex items-center gap-3">
         <Link
-          href={`/painel/${slug}/admin?mes=${mesAnteriorParam}`}
+          href={`/painel/${slug}/admin?mes=${mesAnteriorParam}&dia=${diaSessoes}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           ←
@@ -186,7 +212,7 @@ export default async function AdminPage({
           {MESES[mes - 1]} {ano}
         </span>
         <Link
-          href={`/painel/${slug}/admin?mes=${mesSeguinteParam}`}
+          href={`/painel/${slug}/admin?mes=${mesSeguinteParam}&dia=${diaSessoes}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           →
@@ -237,6 +263,63 @@ export default async function AdminPage({
           <strong className="block text-2xl text-[#5B3FA0]">{sessoesAgendadas}</strong>
           <span className="text-xs text-zinc-500">sessões experimentais agendadas</span>
         </div>
+      </div>
+
+      <TituloSeccao cor="roxo">Sessões experimentais</TituloSeccao>
+      <div className="mt-2 flex items-center gap-3">
+        <Link
+          href={`/painel/${slug}/admin?mes=${mesAtualParam}&dia=${diaSessoesAnterior}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          ←
+        </Link>
+        <span className="text-sm font-medium">
+          {diaSessoesEhHoje ? 'Hoje' : fmt(diaSessoes)}
+        </span>
+        <Link
+          href={`/painel/${slug}/admin?mes=${mesAtualParam}&dia=${diaSessoesSeguinte}`}
+          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+        >
+          →
+        </Link>
+        {!diaSessoesEhHoje && (
+          <Link
+            href={`/painel/${slug}/admin?mes=${mesAtualParam}`}
+            className="text-xs text-zinc-500 underline"
+          >
+            voltar a hoje
+          </Link>
+        )}
+      </div>
+      <div className="mt-2 flex flex-col gap-2">
+        {sessoesDoDia.map((l) => {
+          const cor = ESTADOS_LEAD[l.estado as keyof typeof ESTADOS_LEAD]
+          return (
+            <Link
+              key={l.id}
+              href={`/painel/${slug}/leads/${l.id}`}
+              className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+            >
+              <span className="flex items-center gap-2">
+                {l.visita_hora && (
+                  <span className="text-xs text-zinc-400">{l.visita_hora.slice(0, 5)}</span>
+                )}
+                <span className="font-medium text-black dark:text-zinc-50">{l.nome}</span>
+              </span>
+              <span
+                className="rounded-full px-2 py-0.5 text-xs font-medium"
+                style={{ background: cor.bg, color: cor.tx }}
+              >
+                {l.estado}
+              </span>
+            </Link>
+          )
+        })}
+        {sessoesDoDia.length === 0 && (
+          <p className="text-sm text-zinc-500">
+            Nenhuma sessão experimental agendada para este dia.
+          </p>
+        )}
       </div>
 
       <TituloSeccao cor="verde">Horas da equipa esta semana</TituloSeccao>

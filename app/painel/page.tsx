@@ -3,19 +3,23 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { corEstudio } from '@/lib/data/constantes'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 
 export default async function PainelPage() {
   const supabase = await createClient()
 
-  const [{ data: userData }, estudios, { data: clientes }] = await Promise.all([
+  const [{ data: userData }, estudios, { data: clientes }, sessao] = await Promise.all([
     supabase.auth.getUser(),
     getEstudios(supabase),
     supabase.from('clientes').select('estudio_id, estado'),
+    getSessaoAtual(),
   ])
 
   if (!userData.user) {
     redirect('/login')
   }
+
+  const { ehAdmin } = papeisDaSessao(sessao)
 
   const contagem = (estudioId: number) =>
     (clientes ?? []).filter((c) => c.estudio_id === estudioId && c.estado === 'Ativo').length
@@ -38,7 +42,7 @@ export default async function PainelPage() {
           return (
             <Link
               key={e.id}
-              href={`/painel/${e.slug}`}
+              href={ehAdmin ? `/painel/${e.slug}/admin` : `/painel/${e.slug}`}
               className="rounded-2xl border border-black/10 bg-white p-6 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
             >
               <span
@@ -52,7 +56,7 @@ export default async function PainelPage() {
                 {n} {n === 1 ? 'cliente ativo' : 'clientes ativos'}
               </p>
               <span className="mt-4 inline-block text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                Entrar →
+                {ehAdmin ? 'Administração →' : 'Entrar →'}
               </span>
             </Link>
           )

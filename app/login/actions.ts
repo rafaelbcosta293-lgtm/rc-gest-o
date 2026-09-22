@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { traduzErroSupabase } from '@/lib/supabase/auth-errors'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { getEstudios } from '@/lib/data/estudios'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -18,6 +20,19 @@ export async function login(formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
+
+  // Quem é admin não precisa de passar pela grelha de módulos — vai
+  // direto para a Administração (do único estúdio, se só houver um).
+  const sessao = await getSessaoAtual()
+  const { ehAdmin } = papeisDaSessao(sessao)
+  if (ehAdmin) {
+    const estudios = await getEstudios(supabase)
+    if (estudios.length === 1) {
+      redirect(`/painel/${estudios[0].slug}/admin`)
+    }
+    redirect('/painel')
+  }
+
   redirect('/')
 }
 

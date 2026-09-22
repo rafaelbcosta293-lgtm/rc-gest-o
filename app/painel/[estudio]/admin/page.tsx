@@ -4,25 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt, MESES } from '@/lib/data/presencas'
 import { inicioDaSemana, somarDias } from '@/lib/data/horarios'
-import { guardarConfig } from './actions'
-import SubmitButton from '@/components/SubmitButton'
+import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { desbloquearAdmin } from './actions'
+import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
-import type {
-  Cliente,
-  ConfigLinha,
-  Lead,
-  LeadParada,
-  EstadoPagamento,
-  ReavaliacaoPendente,
-} from '@/lib/supabase/database.types'
-
-const inputCls =
-  'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
-
-// Config que serve para gerar as mensagens de aniversário — deixou de
-// aparecer aqui (editável agora em Clientes → Aniversários) para a
-// Administração ficar só com dados de gestão do negócio.
-const CHAVES_ANIVERSARIO = ['msg_aniversario', 'msg_aniversario_ex']
+import type { Cliente, Lead, LeadParada, EstadoPagamento, ReavaliacaoPendente } from '@/lib/supabase/database.types'
 
 type ClienteResumo = Pick<Cliente, 'id' | 'estado' | 'inicio_contrato'>
 type LeadResumo = Pick<Lead, 'estado' | 'entrada' | 'fecho_em' | 'visita_data'>
@@ -33,10 +19,10 @@ export default async function AdminPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string; mes?: string }>
+  searchParams: Promise<{ error?: string; mes?: string; erroSenha?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error, mes: mesParam } = await searchParams
+  const { error, mes: mesParam, erroSenha } = await searchParams
   const agora = new Date()
   const hoje = agora.toISOString().slice(0, 10)
   const ano = mesParam ? Number(mesParam.slice(0, 4)) : agora.getFullYear()
@@ -59,11 +45,24 @@ export default async function AdminPage({
     notFound()
   }
 
+  const protegida = await areaTemPassword(supabase, 'admin')
+  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
+  if (protegida && !desbloqueada) {
+    return (
+      <PortaSenha
+        titulo="Administração"
+        estudioSlug={slug}
+        destino={`/painel/${slug}/admin`}
+        action={desbloquearAdmin}
+        erro={erroSenha}
+      />
+    )
+  }
+
   const [
     { data: leadsParadasData, error: erroLeadsParadas },
     { data: reavaliacoesData, error: erroReavaliacoes },
     { data: pagamentosAtrasadosData, error: erroPagamentos },
-    { data: configData, error: erroConfig },
     { data: clientesData, error: erroClientes },
     { data: leadsData, error: erroLeadsTodas },
     { data: registosSemanaData, error: erroRegistosSemana },
@@ -85,7 +84,6 @@ export default async function AdminPage({
       .eq('estudio_id', estudio.id)
       .eq('em_dia', false)
       .order('nome'),
-    supabase.from('config').select('*').order('chave'),
     supabase.from('clientes').select('id, estado, inicio_contrato').eq('estudio_id', estudio.id),
     supabase.from('leads').select('estado, entrada, fecho_em, visita_data').eq('estudio_id', estudio.id),
     supabase
@@ -96,20 +94,11 @@ export default async function AdminPage({
       .lt('data', fimSemanaExclusivo),
   ])
 
-  if (
-    erroLeadsParadas ||
-    erroReavaliacoes ||
-    erroPagamentos ||
-    erroConfig ||
-    erroClientes ||
-    erroLeadsTodas ||
-    erroRegistosSemana
-  ) {
+  if (erroLeadsParadas || erroReavaliacoes || erroPagamentos || erroClientes || erroLeadsTodas || erroRegistosSemana) {
     throw new Error(
       (erroLeadsParadas ??
         erroReavaliacoes ??
         erroPagamentos ??
-        erroConfig ??
         erroClientes ??
         erroLeadsTodas ??
         erroRegistosSemana)!.message
@@ -119,9 +108,6 @@ export default async function AdminPage({
   const leadsParadas = (leadsParadasData ?? []) as LeadParada[]
   const reavaliacoes = (reavaliacoesData ?? []) as ReavaliacaoPendente[]
   const pagamentosAtrasados = (pagamentosAtrasadosData ?? []) as EstadoPagamento[]
-  const config = ((configData ?? []) as ConfigLinha[]).filter(
-    (c) => !CHAVES_ANIVERSARIO.includes(c.chave)
-  )
 
   const clientes = (clientesData ?? []) as ClienteResumo[]
   const clientesAtivos = clientes.filter((c) => c.estado === 'Ativo').length
@@ -179,7 +165,7 @@ export default async function AdminPage({
         Administração
       </h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        {estudio.nome} · dados do negócio, pendências e definições.
+        {estudio.nome} · dados do negócio e pendências.
       </p>
 
       {error && (
@@ -328,34 +314,6 @@ export default async function AdminPage({
         </span>
         <span className="text-sm text-zinc-400">→</span>
       </Link>
-
-      <TituloSeccao cor="neutro">Definições do negócio</TituloSeccao>
-      <div className="mt-2 flex flex-col gap-2">
-        {config.map((c) => (
-          <form
-            key={c.chave}
-            action={guardarConfig}
-            className="flex flex-col gap-1.5 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
-          >
-            <input type="hidden" name="estudio_slug" value={slug} />
-            <input type="hidden" name="chave" value={c.chave} />
-            <label className="text-xs font-medium text-zinc-500">{c.chave}</label>
-            <div className="flex items-end gap-2">
-              {c.chave.includes('msg') ? (
-                <textarea name="valor" defaultValue={c.valor ?? ''} rows={2} className={`${inputCls} flex-1`} />
-              ) : (
-                <input name="valor" defaultValue={c.valor ?? ''} className={`${inputCls} flex-1`} />
-              )}
-              <SubmitButton
-                pendingText="…"
-                className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
-              >
-                Guardar
-              </SubmitButton>
-            </div>
-          </form>
-        ))}
-      </div>
     </div>
   )
 }

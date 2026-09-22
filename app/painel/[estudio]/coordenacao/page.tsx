@@ -4,12 +4,21 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt, MESES } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
-import { registarHoras, atualizarHoras, apagarHoras, guardarSemana, criarInstrutor } from './actions'
+import {
+  registarHoras,
+  atualizarHoras,
+  apagarHoras,
+  guardarSemana,
+  criarInstrutor,
+  desbloquearCoordenacao,
+} from './actions'
 import { alternarAcesso } from '../equipa/actions'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { corInstrutor } from '@/lib/data/constantes'
+import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
+import PortaSenha from '@/components/PortaSenha'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import type {
   EstadoPagamento,
@@ -31,10 +40,10 @@ export default async function CoordenacaoPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ semana?: string; mes?: string; error?: string }>
+  searchParams: Promise<{ semana?: string; mes?: string; error?: string; erroSenha?: string }>
 }) {
   const { estudio: slug } = await params
-  const { semana: semanaParam, mes: mesParam, error } = await searchParams
+  const { semana: semanaParam, mes: mesParam, error, erroSenha } = await searchParams
   const agora = new Date()
   const hoje = agora.toISOString().slice(0, 10)
   const inicioSemana = inicioDaSemana(semanaParam ?? hoje)
@@ -60,6 +69,20 @@ export default async function CoordenacaoPage({
     notFound()
   }
   const { ehGestao } = papeisDaSessao(sessao)
+
+  const protegida = await areaTemPassword(supabase, 'coordenacao')
+  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
+  if (protegida && !desbloqueada) {
+    return (
+      <PortaSenha
+        titulo="Coordenação"
+        estudioSlug={slug}
+        destino={`/painel/${slug}/coordenacao`}
+        action={desbloquearCoordenacao}
+        erro={erroSenha}
+      />
+    )
+  }
 
   const [
     { data: escalaSemanaData, error: erroEscala },

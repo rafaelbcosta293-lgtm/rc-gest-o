@@ -4,12 +4,27 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { somarDias } from '@/lib/data/horarios'
+import { tentarDesbloquear } from '@/lib/data/gate'
 import { redirect } from 'next/navigation'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
   if (typeof v !== 'string' || v.trim() === '') return null
   return v.trim()
+}
+
+export async function desbloquearCoordenacao(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const destino = (formData.get('destino') as string) || `/painel/${estudioSlug}/coordenacao`
+  const senha = formData.get('senha') as string
+  const supabase = await createClient()
+
+  const ok = await tentarDesbloquear(supabase, 'coordenacao', senha)
+  if (!ok) {
+    redirect(`${destino}?erroSenha=1`)
+  }
+
+  redirect(destino)
 }
 
 type AtribuicaoSlot = { data: string; hora: number; minuto: number; pt_ids: string[] }

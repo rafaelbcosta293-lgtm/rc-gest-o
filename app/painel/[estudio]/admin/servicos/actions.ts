@@ -4,6 +4,52 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
+function campoOuNull(formData: FormData, nome: string) {
+  const v = formData.get(nome)
+  if (typeof v !== 'string' || v.trim() === '') return null
+  return v.trim()
+}
+
+export async function guardarConfig(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const chave = formData.get('chave') as string
+  const valor = campoOuNull(formData, 'valor')
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('config').update({ valor }).eq('chave', chave)
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/admin/servicos?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/admin/servicos`)
+  redirect(`/painel/${estudioSlug}/admin/servicos`)
+}
+
+// Password de acesso a Administração/Coordenação — campo fica sempre em
+// branco (nunca mostra a password atual). Só grava quando se escreve
+// algo de novo, para não se apagar sem querer ao guardar o formulário
+// vazio. Usa upsert porque a linha em "config" pode ainda não existir.
+export async function guardarSenha(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const chave = formData.get('chave') as string
+  const senha = campoOuNull(formData, 'senha')
+  const supabase = await createClient()
+
+  if (!senha) {
+    redirect(`/painel/${estudioSlug}/admin/servicos`)
+  }
+
+  const { error } = await supabase.from('config').upsert({ chave, valor: senha }, { onConflict: 'chave' })
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/admin/servicos?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/admin/servicos`)
+  redirect(`/painel/${estudioSlug}/admin/servicos`)
+}
+
 export async function criarPlano(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const supabase = await createClient()

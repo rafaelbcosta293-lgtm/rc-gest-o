@@ -165,6 +165,7 @@ export type Lead = {
   objetivo: string | null
   interesse: string | null
   disponibilidade: string | null
+  walk_in: boolean
   estado: EstadoLead
   responsavel_id: string | null
   entrada: string

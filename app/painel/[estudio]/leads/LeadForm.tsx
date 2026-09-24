@@ -83,9 +83,16 @@ export default function LeadForm({
             id="origem"
             name="origem"
             defaultValue={lead?.origem ?? ''}
-            placeholder="ex.: Instagram, indicação, passou na rua"
+            placeholder="ex.: Instagram, indicação"
             className={inputCls}
           />
+        </div>
+
+        <div className="flex flex-col justify-end gap-1.5 pb-2.5">
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input type="checkbox" name="walk_in" defaultChecked={lead?.walk_in ?? false} />
+            Walk-in (apareceu sem marcação)
+          </label>
         </div>
 
         <div className="flex flex-col gap-1.5">

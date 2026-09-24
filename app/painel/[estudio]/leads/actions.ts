@@ -23,6 +23,7 @@ function camposComuns(formData: FormData) {
     telefone: campoOuNull(formData, 'telefone'),
     email: campoOuNull(formData, 'email'),
     origem: campoOuNull(formData, 'origem'),
+    walk_in: formData.get('walk_in') === 'on',
     objetivo: campoOuNull(formData, 'objetivo'),
     interesse: campoOuNull(formData, 'interesse'),
     disponibilidade: campoOuNull(formData, 'disponibilidade'),

@@ -61,3 +61,16 @@ create policy "desmarcar tarefa" on public.tarefas_diarias_concluidas
       where t.id = tarefa_id and tenho_estudio(t.estudio_id)
     )
   );
+
+-- A partir de 30 de outubro de 2026, o Supabase deixa de conceder estes
+-- grants automaticamente a tabelas novas — sem eles, a Data API
+-- (supabase-js, PostgREST) não consegue sequer chegar à tabela, mesmo
+-- com RLS bem configurada. As policies acima continuam a ser o que
+-- realmente restringe o acesso linha a linha.
+grant select on public.tarefas_diarias to anon;
+grant select, insert, update, delete on public.tarefas_diarias to authenticated;
+grant select, insert, update, delete on public.tarefas_diarias to service_role;
+
+grant select on public.tarefas_diarias_concluidas to anon;
+grant select, insert, update, delete on public.tarefas_diarias_concluidas to authenticated;
+grant select, insert, update, delete on public.tarefas_diarias_concluidas to service_role;

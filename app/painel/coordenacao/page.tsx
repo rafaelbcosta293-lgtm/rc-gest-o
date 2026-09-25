@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getEstudios, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getSessaoAtual, papeisDaSessao, type SessaoAtual } from '@/lib/data/sessao'
 import { fmt, MESES } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
 import {
@@ -12,22 +12,15 @@ import {
   criarInstrutor,
   desbloquearCoordenacao,
 } from './actions'
-import { alternarAcesso } from '../equipa/actions'
-import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
-import { corInstrutor } from '@/lib/data/constantes'
+import { alternarAcesso } from '../[estudio]/equipa/actions'
+import { corInstrutor, corEstudio } from '@/lib/data/constantes'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { metricasNoIntervalo, METRICAS_MARKETING, type LeadMarketing } from '@/lib/data/marketing'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
 import PortaSenha from '@/components/PortaSenha'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
-import type {
-  EstadoPagamento,
-  LeadParada,
-  Perfil,
-  ReavaliacaoPendente,
-  RegistoPt,
-} from '@/lib/supabase/database.types'
+import type { EstadoPagamento, Estudio, LeadParada, Perfil, ReavaliacaoPendente, RegistoPt } from '@/lib/supabase/database.types'
 
 const inputCls =
   'rounded-md border border-black/10 px-2 py-1.5 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
@@ -35,18 +28,100 @@ const inputCls =
 type TurnoSemana = { data: string; hora: number; minuto: number; pt: { id: string; nome: string } | null }
 type ChecklistHoje = { tipo: string; concluidos: number; total: number }
 type RegistoPtComPt = RegistoPt & { pt: { nome: string } | null }
+type SP = Record<string, string | undefined>
+
+// Cada estúdio navega a sua própria semana/mês nesta página combinada,
+// sem mexer no do outro — os parâmetros vêm prefixados com o slug
+// ("fatima_semana", "leiria_mes", …) e comQuery preserva tudo o resto.
+function comQuery(sp: SP, overrides: Record<string, string | undefined>) {
+  const params = new URLSearchParams()
+  for (const [k, v] of Object.entries(sp)) {
+    if (v !== undefined) params.set(k, v)
+  }
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === undefined) params.delete(k)
+    else params.set(k, v)
+  }
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
 
 export default async function CoordenacaoPage({
-  params,
   searchParams,
 }: {
-  params: Promise<{ estudio: string }>
-  searchParams: Promise<{ semana?: string; mes?: string; error?: string; erroSenha?: string }>
+  searchParams: Promise<SP>
 }) {
-  const { estudio: slug } = await params
-  const { semana: semanaParam, mes: mesParam, error, erroSenha } = await searchParams
+  const sp = await searchParams
+  const { error, erroSenha } = sp
+
+  const supabase = await createClient()
+  const sessao = await getSessaoAtual()
+
+  const protegida = await areaTemPassword(supabase, 'coordenacao')
+  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
+  if (protegida && !desbloqueada) {
+    return (
+      <PortaSenha
+        titulo="Coordenação"
+        destino="/painel/coordenacao"
+        action={desbloquearCoordenacao}
+        erro={erroSenha}
+      />
+    )
+  }
+
+  const estudios = await getEstudios(supabase)
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-10">
+      <Link href="/painel" className="text-sm text-zinc-600 underline dark:text-zinc-400">
+        ← Voltar
+      </Link>
+
+      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Coordenação</h1>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        {estudios.map((e) => e.nome).join(' e ')} · o dia de hoje, pendências e horas da equipa, lado a lado.
+      </p>
+
+      {error && (
+        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          {error}
+        </p>
+      )}
+
+      {estudios.map((estudio) => (
+        <section key={estudio.id} className="mt-10 first:mt-6">
+          <div className="flex items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ background: corEstudio(estudio.slug).cor }}
+            />
+            <h2 className="text-lg font-semibold text-black dark:text-zinc-50">{estudio.nome}</h2>
+          </div>
+          <PainelCoordenacaoEstudio estudio={estudio} sp={sp} sessao={sessao} />
+        </section>
+      ))}
+    </div>
+  )
+}
+
+async function PainelCoordenacaoEstudio({
+  estudio,
+  sp,
+  sessao,
+}: {
+  estudio: Pick<Estudio, 'id' | 'slug' | 'nome'>
+  sp: SP
+  sessao: SessaoAtual
+}) {
+  const slug = estudio.slug
+  const pk = (nome: string) => `${slug}_${nome}`
+  const { ehGestao } = papeisDaSessao(sessao)
+
   const agora = new Date()
   const hoje = agora.toISOString().slice(0, 10)
+  const semanaParam = sp[pk('semana')]
+  const mesParam = sp[pk('mes')]
   const inicioSemana = inicioDaSemana(semanaParam ?? hoje)
   const diasSemana = diasDaSemana(inicioSemana)
   const fimSemanaExclusivo = somarDias(inicioSemana, 7)
@@ -65,25 +140,6 @@ export default async function CoordenacaoPage({
   const mesSeguinteParam = `${mesSeguinteAno}-${String(mesSeguinteMes).padStart(2, '0')}`
 
   const supabase = await createClient()
-  const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
-  if (!estudio) {
-    notFound()
-  }
-  const { ehGestao } = papeisDaSessao(sessao)
-
-  const protegida = await areaTemPassword(supabase, 'coordenacao')
-  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
-  if (protegida && !desbloqueada) {
-    return (
-      <PortaSenha
-        titulo="Coordenação"
-        estudioSlug={slug}
-        destino={`/painel/${slug}/coordenacao`}
-        action={desbloquearCoordenacao}
-        erro={erroSenha}
-      />
-    )
-  }
 
   const [
     { data: escalaSemanaData, error: erroEscala },
@@ -198,27 +254,7 @@ export default async function CoordenacaoPage({
   const metricasHoje = metricasNoIntervalo(leadsMarketing, hoje, somarDias(hoje, 1))
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
-      <Link
-        href={`/painel/${slug}`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
-      >
-        ← Voltar
-      </Link>
-
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
-        Coordenação
-      </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        {estudio.nome} · o dia de hoje, pendências e horas da equipa.
-      </p>
-
-      {error && (
-        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      )}
-
+    <>
       <TituloSeccao cor="teal">Hoje</TituloSeccao>
       <div className="mt-2">
         <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
@@ -277,18 +313,18 @@ export default async function CoordenacaoPage({
         ))}
       </div>
       <Link
-        href={`/painel/${slug}/coordenacao/marketing`}
+        href="/painel/coordenacao/marketing"
         className="mt-2 inline-block text-xs text-zinc-500 underline"
       >
         ver calendário diário/semanal/mensal/anual
       </Link>
 
-      <TituloSeccao cor="azul" id="planeamento">
+      <TituloSeccao cor="azul" id={`planeamento-${slug}`}>
         Planeamento da semana
       </TituloSeccao>
       <div className="mt-2 flex items-center gap-3">
         <Link
-          href={`/painel/${slug}/coordenacao?semana=${semanaAnterior}`}
+          href={`/painel/coordenacao${comQuery(sp, { [pk('semana')]: semanaAnterior })}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           ←
@@ -297,7 +333,7 @@ export default async function CoordenacaoPage({
           {fmt(diasSemana[0])} – {fmt(diasSemana[6])}
         </span>
         <Link
-          href={`/painel/${slug}/coordenacao?semana=${semanaSeguinte}`}
+          href={`/painel/coordenacao${comQuery(sp, { [pk('semana')]: semanaSeguinte })}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           →
@@ -309,7 +345,7 @@ export default async function CoordenacaoPage({
       </p>
       <div className="mt-4">
         <GrelhaHorarios
-          key={inicioSemana}
+          key={`${slug}-${inicioSemana}`}
           editavel
           dias={diasSemana}
           slots={slots}
@@ -391,7 +427,7 @@ export default async function CoordenacaoPage({
       <TituloSeccao cor="verde">Horas da equipa</TituloSeccao>
       <div className="mt-2 flex items-center gap-3">
         <Link
-          href={`/painel/${slug}/coordenacao?mes=${mesAnteriorParam}`}
+          href={`/painel/coordenacao${comQuery(sp, { [pk('mes')]: mesAnteriorParam })}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           ←
@@ -400,7 +436,7 @@ export default async function CoordenacaoPage({
           {MESES[mes - 1]} {ano}
         </span>
         <Link
-          href={`/painel/${slug}/coordenacao?mes=${mesSeguinteParam}`}
+          href={`/painel/coordenacao${comQuery(sp, { [pk('mes')]: mesSeguinteParam })}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           →
@@ -428,7 +464,6 @@ export default async function CoordenacaoPage({
         Registar horas
       </h3>
       <form action={registarHoras} className="mt-2 flex flex-wrap items-end gap-2">
-        <input type="hidden" name="estudio_slug" value={slug} />
         <input type="hidden" name="estudio_id" value={estudio.id} />
         <div className="flex flex-col gap-1">
           <label className="text-xs text-zinc-500">Dia</label>
@@ -473,7 +508,6 @@ export default async function CoordenacaoPage({
               {podeEditar ? (
                 <>
                   <form action={atualizarHoras} className="flex flex-1 flex-wrap items-center gap-2">
-                    <input type="hidden" name="estudio_slug" value={slug} />
                     <input type="hidden" name="id" value={r.id} />
                     <input
                       type="number"
@@ -509,7 +543,6 @@ export default async function CoordenacaoPage({
                     </SubmitButton>
                   </form>
                   <form action={apagarHoras}>
-                    <input type="hidden" name="estudio_slug" value={slug} />
                     <input type="hidden" name="id" value={r.id} />
                     <SubmitButton
                       pendingText="…"
@@ -550,7 +583,6 @@ export default async function CoordenacaoPage({
             action={criarInstrutor}
             className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-black/20 p-3 dark:border-white/20"
           >
-            <input type="hidden" name="estudio_slug" value={slug} />
             <input type="hidden" name="estudio_id" value={estudio.id} />
             <div className="flex flex-col gap-1">
               <label className="text-xs text-zinc-500">Nome</label>
@@ -619,6 +651,6 @@ export default async function CoordenacaoPage({
           </div>
         </div>
       </details>
-    </div>
+    </>
   )
 }

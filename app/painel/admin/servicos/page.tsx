@@ -1,7 +1,5 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { areaTemPassword, areaDesbloqueada, chaveConfigSenha } from '@/lib/data/gate'
 import { criarPlano, atualizarPlano, apagarPlano, guardarConfig, guardarSenha } from './actions'
 import { desbloquearAdmin } from '../actions'
@@ -25,20 +23,13 @@ const CHAVES_ESCONDIDAS = [
 ]
 
 export default async function ServicosPage({
-  params,
   searchParams,
 }: {
-  params: Promise<{ estudio: string }>
   searchParams: Promise<{ error?: string; erroSenha?: string }>
 }) {
-  const { estudio: slug } = await params
   const { error, erroSenha } = await searchParams
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
-  if (!estudio) {
-    notFound()
-  }
 
   const protegida = await areaTemPassword(supabase, 'admin')
   const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
@@ -46,8 +37,7 @@ export default async function ServicosPage({
     return (
       <PortaSenha
         titulo="Administração"
-        estudioSlug={slug}
-        destino={`/painel/${slug}/admin/servicos`}
+        destino="/painel/admin/servicos"
         action={desbloquearAdmin}
         erro={erroSenha}
       />
@@ -71,10 +61,7 @@ export default async function ServicosPage({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
-      <Link
-        href={`/painel/${slug}/admin`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
-      >
+      <Link href="/painel/admin" className="text-sm text-zinc-600 underline dark:text-zinc-400">
         ← Administração
       </Link>
 
@@ -82,7 +69,7 @@ export default async function ServicosPage({
         Serviços / Produtos
       </h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        {estudio.nome} · valores dos planos, definições do negócio e acessos.
+        Valores dos planos (partilhados por todos os estúdios), definições do negócio e acessos.
       </p>
 
       {error && (
@@ -98,7 +85,6 @@ export default async function ServicosPage({
             className="flex flex-wrap items-center gap-2 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
           >
             <form action={atualizarPlano} className="flex flex-1 flex-wrap items-center gap-2">
-              <input type="hidden" name="estudio_slug" value={slug} />
               <input type="hidden" name="id" value={p.id} />
               <input
                 name="nome"
@@ -130,7 +116,6 @@ export default async function ServicosPage({
               </SubmitButton>
             </form>
             <form action={apagarPlano}>
-              <input type="hidden" name="estudio_slug" value={slug} />
               <input type="hidden" name="id" value={p.id} />
               <SubmitButton
                 pendingText="…"
@@ -153,7 +138,6 @@ export default async function ServicosPage({
         action={criarPlano}
         className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-black/20 p-3 dark:border-white/20"
       >
-        <input type="hidden" name="estudio_slug" value={slug} />
         <input name="nome" required placeholder="Nome do serviço" className={`${inputCls} flex-1 basis-40`} />
         <input
           name="valor"
@@ -191,7 +175,6 @@ export default async function ServicosPage({
           action={guardarSenha}
           className="flex flex-col gap-1.5 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
         >
-          <input type="hidden" name="estudio_slug" value={slug} />
           <input type="hidden" name="chave" value={chaveConfigSenha('admin')} />
           <label className="text-xs font-medium text-zinc-500">Password de Administração</label>
           <div className="flex items-end gap-2">
@@ -208,7 +191,6 @@ export default async function ServicosPage({
           action={guardarSenha}
           className="flex flex-col gap-1.5 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
         >
-          <input type="hidden" name="estudio_slug" value={slug} />
           <input type="hidden" name="chave" value={chaveConfigSenha('coordenacao')} />
           <label className="text-xs font-medium text-zinc-500">Password de Coordenação</label>
           <div className="flex items-end gap-2">
@@ -231,7 +213,6 @@ export default async function ServicosPage({
             action={guardarConfig}
             className="flex flex-col gap-1.5 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
           >
-            <input type="hidden" name="estudio_slug" value={slug} />
             <input type="hidden" name="chave" value={c.chave} />
             <label className="text-xs font-medium text-zinc-500">{c.chave}</label>
             <div className="flex items-end gap-2">

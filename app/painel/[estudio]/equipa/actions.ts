@@ -6,13 +6,15 @@ import { createClient } from '@/lib/supabase/server'
 
 // "destino" deixa este toggle ser usado tanto na página Equipa como
 // dentro de Coordenação (para gerir quem entra na escala) — volta
-// sempre para onde foi chamado.
+// sempre para onde foi chamado. Coordenação já não é por estúdio, por
+// isso esse destino é a página combinada, sem o slug à frente.
 export async function alternarAcesso(formData: FormData) {
   const slug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
   const perfilId = formData.get('perfil_id') as string
   const temAcesso = formData.get('tem_acesso') === '1'
   const destino = (formData.get('destino') as string) || 'equipa'
+  const caminhoDestino = destino === 'coordenacao' ? '/painel/coordenacao' : `/painel/${slug}/${destino}`
 
   const supabase = await createClient()
 
@@ -25,12 +27,12 @@ export async function alternarAcesso(formData: FormData) {
     : await supabase.from('perfis_estudios').insert({ estudio_id: estudioId, perfil_id: perfilId })
 
   if (error) {
-    redirect(`/painel/${slug}/${destino}?error=${encodeURIComponent(error.message)}`)
+    redirect(`${caminhoDestino}?error=${encodeURIComponent(error.message)}`)
   }
 
   revalidatePath(`/painel/${slug}/equipa`)
-  revalidatePath(`/painel/${slug}/coordenacao`)
-  redirect(`/painel/${slug}/${destino}`)
+  revalidatePath('/painel/coordenacao')
+  redirect(caminhoDestino)
 }
 
 export async function mudarPapel(formData: FormData) {

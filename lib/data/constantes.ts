@@ -105,6 +105,10 @@ export const MODULOS: Modulo[] = [
   { id: 'checklist', nome: 'Abertura / Fecho', icone: '🔑', desc: 'Checklist diária do estúdio', pronto: true },
   { id: 'tarefas', nome: 'Tarefas diárias', icone: '🧹', desc: 'Toalhas, lixos, reposições — o que falta fazer hoje', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: '🕗', desc: 'Escala da semana e ausências da equipa', pronto: true },
-  { id: 'coordenacao', nome: 'Coordenação', icone: '🗂️', desc: 'Escalas, controlos e o que está pendente', pronto: true, restrito: 'gestao' },
-  { id: 'admin', nome: 'Administração', icone: '🔒', desc: 'Financeiro e alertas de gestão', pronto: true, restrito: 'admin' },
 ]
+
+// Coordenação e Administração deixaram de ser por estúdio — passaram a
+// uma página combinada (Fátima + Leiria juntas), acessível a partir de
+// /painel (só para admin), não daqui. Ficam de fora desta lista para
+// não aparecerem (nem, já agora, como links partidos) na navegação de
+// cada estúdio.

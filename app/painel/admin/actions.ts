@@ -5,8 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { tentarDesbloquear } from '@/lib/data/gate'
 
 export async function desbloquearAdmin(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
-  const destino = (formData.get('destino') as string) || `/painel/${estudioSlug}/admin`
+  const destino = (formData.get('destino') as string) || '/painel/admin'
   const senha = formData.get('senha') as string
   const supabase = await createClient()
 

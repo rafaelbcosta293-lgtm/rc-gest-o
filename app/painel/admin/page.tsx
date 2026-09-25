@@ -1,32 +1,113 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudios } from '@/lib/data/estudios'
 import { fmt, MESES } from '@/lib/data/presencas'
 import { inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from './actions'
-import { ESTADOS_LEAD } from '@/lib/data/constantes'
+import { corEstudio, ESTADOS_LEAD } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
-import type { Cliente, Lead, LeadParada, EstadoPagamento, ReavaliacaoPendente } from '@/lib/supabase/database.types'
+import type { Cliente, Estudio, Lead, LeadParada, EstadoPagamento, ReavaliacaoPendente } from '@/lib/supabase/database.types'
 
 type ClienteResumo = Pick<Cliente, 'id' | 'estado' | 'inicio_contrato'>
 type LeadResumo = Pick<Lead, 'estado' | 'entrada' | 'fecho_em' | 'visita_data'>
 type LeadDoDia = Pick<Lead, 'id' | 'nome' | 'visita_hora' | 'estado'>
 type RegistoSemana = { horas: number; pt: { nome: string } | null }
+type SP = Record<string, string | undefined>
+
+// Cada estúdio navega o seu próprio mês/dia nesta página combinada, sem
+// mexer no do outro — os parâmetros vêm prefixados com o slug
+// ("fatima_mes", "leiria_dia", …) e comQuery preserva tudo o resto.
+function comQuery(sp: SP, overrides: Record<string, string | undefined>) {
+  const params = new URLSearchParams()
+  for (const [k, v] of Object.entries(sp)) {
+    if (v !== undefined) params.set(k, v)
+  }
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === undefined) params.delete(k)
+    else params.set(k, v)
+  }
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
 
 export default async function AdminPage({
-  params,
   searchParams,
 }: {
-  params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string; mes?: string; dia?: string; erroSenha?: string }>
+  searchParams: Promise<SP>
 }) {
-  const { estudio: slug } = await params
-  const { error, mes: mesParam, dia: diaParam, erroSenha } = await searchParams
+  const sp = await searchParams
+  const { error, erroSenha } = sp
+
+  const supabase = await createClient()
+
+  const protegida = await areaTemPassword(supabase, 'admin')
+  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
+  if (protegida && !desbloqueada) {
+    return (
+      <PortaSenha titulo="Administração" destino="/painel/admin" action={desbloquearAdmin} erro={erroSenha} />
+    )
+  }
+
+  const estudios = await getEstudios(supabase)
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-10">
+      <Link href="/painel" className="text-sm text-zinc-600 underline dark:text-zinc-400">
+        ← Voltar
+      </Link>
+
+      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Administração</h1>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        {estudios.map((e) => e.nome).join(' e ')} · dados do negócio e pendências, lado a lado.
+      </p>
+
+      {error && (
+        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          {error}
+        </p>
+      )}
+
+      {estudios.map((estudio) => (
+        <section key={estudio.id} className="mt-10 first:mt-6">
+          <div className="flex items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ background: corEstudio(estudio.slug).cor }}
+            />
+            <h2 className="text-lg font-semibold text-black dark:text-zinc-50">{estudio.nome}</h2>
+          </div>
+          <PainelAdminEstudio estudio={estudio} sp={sp} />
+        </section>
+      ))}
+
+      <TituloSeccao cor="roxo">Serviços / Produtos</TituloSeccao>
+      <Link
+        href="/painel/admin/servicos"
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+      >
+        <span className="text-sm text-black dark:text-zinc-50">Gerir valores, planos e serviços</span>
+        <span className="text-sm text-zinc-400">→</span>
+      </Link>
+    </div>
+  )
+}
+
+async function PainelAdminEstudio({
+  estudio,
+  sp,
+}: {
+  estudio: Pick<Estudio, 'id' | 'slug' | 'nome'>
+  sp: SP
+}) {
+  const slug = estudio.slug
+  const pk = (nome: string) => `${slug}_${nome}`
+
   const agora = new Date()
   const hoje = agora.toISOString().slice(0, 10)
+  const mesParam = sp[pk('mes')]
+  const diaParam = sp[pk('dia')]
   const ano = mesParam ? Number(mesParam.slice(0, 4)) : agora.getFullYear()
   const mes = mesParam ? Number(mesParam.slice(5, 7)) : agora.getMonth() + 1
   const inicioMes = `${ano}-${String(mes).padStart(2, '0')}-01`
@@ -48,24 +129,6 @@ export default async function AdminPage({
   const fimSemanaExclusivo = somarDias(inicioSemana, 7)
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
-  if (!estudio) {
-    notFound()
-  }
-
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
-    return (
-      <PortaSenha
-        titulo="Administração"
-        estudioSlug={slug}
-        destino={`/painel/${slug}/admin`}
-        action={desbloquearAdmin}
-        erro={erroSenha}
-      />
-    )
-  }
 
   const [
     { data: leadsParadasData, error: erroLeadsParadas },
@@ -179,31 +242,11 @@ export default async function AdminPage({
   const totalPendencias = leadsParadas.length + reavaliacoes.length + pagamentosAtrasados.length
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <Link
-        href={`/painel/${slug}`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
-      >
-        ← Voltar
-      </Link>
-
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
-        Administração
-      </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        {estudio.nome} · dados do negócio e pendências.
-      </p>
-
-      {error && (
-        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      )}
-
+    <>
       <TituloSeccao cor="azul">Este mês</TituloSeccao>
       <div className="mt-2 flex items-center gap-3">
         <Link
-          href={`/painel/${slug}/admin?mes=${mesAnteriorParam}&dia=${diaSessoes}`}
+          href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAnteriorParam, [pk('dia')]: diaSessoes })}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           ←
@@ -212,7 +255,7 @@ export default async function AdminPage({
           {MESES[mes - 1]} {ano}
         </span>
         <Link
-          href={`/painel/${slug}/admin?mes=${mesSeguinteParam}&dia=${diaSessoes}`}
+          href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesSeguinteParam, [pk('dia')]: diaSessoes })}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           →
@@ -268,23 +311,21 @@ export default async function AdminPage({
       <TituloSeccao cor="roxo">Sessões experimentais</TituloSeccao>
       <div className="mt-2 flex items-center gap-3">
         <Link
-          href={`/painel/${slug}/admin?mes=${mesAtualParam}&dia=${diaSessoesAnterior}`}
+          href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAtualParam, [pk('dia')]: diaSessoesAnterior })}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           ←
         </Link>
-        <span className="text-sm font-medium">
-          {diaSessoesEhHoje ? 'Hoje' : fmt(diaSessoes)}
-        </span>
+        <span className="text-sm font-medium">{diaSessoesEhHoje ? 'Hoje' : fmt(diaSessoes)}</span>
         <Link
-          href={`/painel/${slug}/admin?mes=${mesAtualParam}&dia=${diaSessoesSeguinte}`}
+          href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAtualParam, [pk('dia')]: diaSessoesSeguinte })}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           →
         </Link>
         {!diaSessoesEhHoje && (
           <Link
-            href={`/painel/${slug}/admin?mes=${mesAtualParam}`}
+            href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAtualParam, [pk('dia')]: undefined })}`}
             className="text-xs text-zinc-500 underline"
           >
             voltar a hoje
@@ -316,9 +357,7 @@ export default async function AdminPage({
           )
         })}
         {sessoesDoDia.length === 0 && (
-          <p className="text-sm text-zinc-500">
-            Nenhuma sessão experimental agendada para este dia.
-          </p>
+          <p className="text-sm text-zinc-500">Nenhuma sessão experimental agendada para este dia.</p>
         )}
       </div>
 
@@ -382,21 +421,8 @@ export default async function AdminPage({
             </span>
           </Link>
         ))}
-        {totalPendencias === 0 && (
-          <p className="text-sm text-zinc-500">Nada pendente — tudo em dia.</p>
-        )}
+        {totalPendencias === 0 && <p className="text-sm text-zinc-500">Nada pendente — tudo em dia.</p>}
       </div>
-
-      <TituloSeccao cor="roxo">Serviços / Produtos</TituloSeccao>
-      <Link
-        href={`/painel/${slug}/admin/servicos`}
-        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
-      >
-        <span className="text-sm text-black dark:text-zinc-50">
-          Gerir valores, planos e serviços
-        </span>
-        <span className="text-sm text-zinc-400">→</span>
-      </Link>
-    </div>
+    </>
   )
 }

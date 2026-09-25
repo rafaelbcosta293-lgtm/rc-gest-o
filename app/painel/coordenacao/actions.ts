@@ -14,8 +14,7 @@ function campoOuNull(formData: FormData, nome: string) {
 }
 
 export async function desbloquearCoordenacao(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
-  const destino = (formData.get('destino') as string) || `/painel/${estudioSlug}/coordenacao`
+  const destino = (formData.get('destino') as string) || '/painel/coordenacao'
   const senha = formData.get('senha') as string
   const supabase = await createClient()
 
@@ -66,7 +65,7 @@ export async function guardarSemana(input: {
     if (erroInserir) return { error: erroInserir.message }
   }
 
-  revalidatePath(`/painel/${input.estudioSlug}/coordenacao`)
+  revalidatePath('/painel/coordenacao')
   revalidatePath(`/painel/${input.estudioSlug}/horarios`)
   return { ok: true }
 }
@@ -78,7 +77,6 @@ export async function guardarSemana(input: {
 // ninguém fica a saber — se um dia quiser entrar na app, usa
 // "Esqueci-me da password" com o email que aqui ficou registado.
 export async function criarInstrutor(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
   const nome = formData.get('nome') as string
   const email = formData.get('email') as string
@@ -88,9 +86,7 @@ export async function criarInstrutor(formData: FormData) {
   try {
     admin = createAdminClient()
   } catch (e) {
-    redirect(
-      `/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent((e as Error).message)}`
-    )
+    redirect(`/painel/coordenacao?error=${encodeURIComponent((e as Error).message)}`)
   }
 
   const { data: criado, error: erroCriar } = await admin.auth.admin.createUser({
@@ -102,7 +98,7 @@ export async function criarInstrutor(formData: FormData) {
 
   if (erroCriar || !criado.user) {
     redirect(
-      `/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent(erroCriar?.message ?? 'Não foi possível criar o instrutor.')}`
+      `/painel/coordenacao?error=${encodeURIComponent(erroCriar?.message ?? 'Não foi possível criar o instrutor.')}`
     )
   }
 
@@ -115,15 +111,14 @@ export async function criarInstrutor(formData: FormData) {
     .insert({ estudio_id: estudioId, perfil_id: criado.user.id })
 
   if (erroAcesso) {
-    redirect(`/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent(erroAcesso.message)}`)
+    redirect(`/painel/coordenacao?error=${encodeURIComponent(erroAcesso.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/coordenacao`)
-  redirect(`/painel/${estudioSlug}/coordenacao`)
+  revalidatePath('/painel/coordenacao')
+  redirect('/painel/coordenacao')
 }
 
 export async function registarHoras(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
@@ -139,30 +134,28 @@ export async function registarHoras(formData: FormData) {
   })
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/coordenacao?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/coordenacao`)
-  redirect(`/painel/${estudioSlug}/coordenacao`)
+  revalidatePath('/painel/coordenacao')
+  redirect('/painel/coordenacao')
 }
 
 export async function apagarHoras(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
   const supabase = await createClient()
 
   const { error } = await supabase.from('registos_pt').delete().eq('id', id)
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/coordenacao?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/coordenacao`)
-  redirect(`/painel/${estudioSlug}/coordenacao`)
+  revalidatePath('/painel/coordenacao')
+  redirect('/painel/coordenacao')
 }
 
 export async function atualizarHoras(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
   const supabase = await createClient()
 
@@ -177,9 +170,9 @@ export async function atualizarHoras(formData: FormData) {
     .eq('id', id)
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/coordenacao?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/coordenacao?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/coordenacao`)
-  redirect(`/painel/${estudioSlug}/coordenacao`)
+  revalidatePath('/painel/coordenacao')
+  redirect('/painel/coordenacao')
 }

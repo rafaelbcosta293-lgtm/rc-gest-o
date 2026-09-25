@@ -2,13 +2,11 @@ import SubmitButton from '@/components/SubmitButton'
 
 export default function PortaSenha({
   titulo,
-  estudioSlug,
   destino,
   action,
   erro,
 }: {
   titulo: string
-  estudioSlug: string
   destino: string
   action: (formData: FormData) => void
   erro?: string
@@ -21,7 +19,6 @@ export default function PortaSenha({
         Esta área está protegida por password.
       </p>
       <form action={action} className="mt-6 flex w-full flex-col gap-3">
-        <input type="hidden" name="estudio_slug" value={estudioSlug} />
         <input type="hidden" name="destino" value={destino} />
         <input
           type="password"

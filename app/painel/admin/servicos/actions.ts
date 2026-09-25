@@ -11,7 +11,6 @@ function campoOuNull(formData: FormData, nome: string) {
 }
 
 export async function guardarConfig(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
   const chave = formData.get('chave') as string
   const valor = campoOuNull(formData, 'valor')
   const supabase = await createClient()
@@ -19,11 +18,11 @@ export async function guardarConfig(formData: FormData) {
   const { error } = await supabase.from('config').update({ valor }).eq('chave', chave)
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/admin/servicos?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/admin/servicos?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/admin/servicos`)
-  redirect(`/painel/${estudioSlug}/admin/servicos`)
+  revalidatePath('/painel/admin/servicos')
+  redirect('/painel/admin/servicos')
 }
 
 // Password de acesso a Administração/Coordenação — campo fica sempre em
@@ -31,27 +30,25 @@ export async function guardarConfig(formData: FormData) {
 // algo de novo, para não se apagar sem querer ao guardar o formulário
 // vazio. Usa upsert porque a linha em "config" pode ainda não existir.
 export async function guardarSenha(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
   const chave = formData.get('chave') as string
   const senha = campoOuNull(formData, 'senha')
   const supabase = await createClient()
 
   if (!senha) {
-    redirect(`/painel/${estudioSlug}/admin/servicos`)
+    redirect('/painel/admin/servicos')
   }
 
   const { error } = await supabase.from('config').upsert({ chave, valor: senha }, { onConflict: 'chave' })
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/admin/servicos?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/admin/servicos?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/admin/servicos`)
-  redirect(`/painel/${estudioSlug}/admin/servicos`)
+  revalidatePath('/painel/admin/servicos')
+  redirect('/painel/admin/servicos')
 }
 
 export async function criarPlano(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
   const supabase = await createClient()
 
   const { error } = await supabase.from('planos').insert({
@@ -63,15 +60,14 @@ export async function criarPlano(formData: FormData) {
   })
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/admin/servicos?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/admin/servicos?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/admin/servicos`)
-  redirect(`/painel/${estudioSlug}/admin/servicos`)
+  revalidatePath('/painel/admin/servicos')
+  redirect('/painel/admin/servicos')
 }
 
 export async function atualizarPlano(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
   const supabase = await createClient()
 
@@ -88,24 +84,23 @@ export async function atualizarPlano(formData: FormData) {
     .eq('id', id)
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/admin/servicos?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/admin/servicos?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/admin/servicos`)
-  redirect(`/painel/${estudioSlug}/admin/servicos`)
+  revalidatePath('/painel/admin/servicos')
+  redirect('/painel/admin/servicos')
 }
 
 export async function apagarPlano(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
   const supabase = await createClient()
 
   const { error } = await supabase.from('planos').delete().eq('id', id)
 
   if (error) {
-    redirect(`/painel/${estudioSlug}/admin/servicos?error=${encodeURIComponent(error.message)}`)
+    redirect(`/painel/admin/servicos?error=${encodeURIComponent(error.message)}`)
   }
 
-  revalidatePath(`/painel/${estudioSlug}/admin/servicos`)
-  redirect(`/painel/${estudioSlug}/admin/servicos`)
+  revalidatePath('/painel/admin/servicos')
+  redirect('/painel/admin/servicos')
 }

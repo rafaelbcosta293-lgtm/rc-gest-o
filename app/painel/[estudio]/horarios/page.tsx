@@ -2,13 +2,17 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getSessaoAtual } from '@/lib/data/sessao'
 import { fmt } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
-import { criarAusencia, apagarAusencia } from './actions'
+import { criarAusencia, apagarAusencia, registarHoras, atualizarMinhasHoras, apagarMinhasHoras } from './actions'
 import { corInstrutor } from '@/lib/data/constantes'
 import SubmitButton from '@/components/SubmitButton'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
-import type { Ausencia } from '@/lib/supabase/database.types'
+import type { Ausencia, RegistoPt } from '@/lib/supabase/database.types'
+
+const inputCls =
+  'rounded-md border border-black/10 px-2 py-1.5 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
 
 export default async function HorariosPage({
   params,
@@ -27,7 +31,7 @@ export default async function HorariosPage({
   const semanaSeguinte = somarDias(inicio, 7)
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
+  const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
   if (!estudio) {
     notFound()
   }
@@ -36,6 +40,7 @@ export default async function HorariosPage({
     { data: turnosData, error: erroTurnos },
     listaPts,
     { data: ausenciasData, error: erroAusencias },
+    { data: minhasHorasData, error: erroMinhasHoras },
   ] = await Promise.all([
     supabase
       .from('escalas')
@@ -46,11 +51,19 @@ export default async function HorariosPage({
       .order('criado_em'),
     getEquipaDoEstudio(supabase, estudio.id),
     supabase.from('ausencias').select('*').gte('fim', hoje).order('inicio').limit(20),
+    supabase
+      .from('registos_pt')
+      .select('*')
+      .eq('estudio_id', estudio.id)
+      .eq('pt_id', sessao.userId ?? '')
+      .order('data', { ascending: false })
+      .limit(20),
   ])
 
-  if (erroTurnos || erroAusencias) {
-    throw new Error((erroTurnos ?? erroAusencias)!.message)
+  if (erroTurnos || erroAusencias || erroMinhasHoras) {
+    throw new Error((erroTurnos ?? erroAusencias ?? erroMinhasHoras)!.message)
   }
+  const minhasHoras = (minhasHorasData ?? []) as RegistoPt[]
 
   const ausencias = (ausenciasData ?? []) as Ausencia[]
   const ptsPorId = new Map(listaPts.map((p) => [p.id, p.nome]))
@@ -220,6 +233,99 @@ export default async function HorariosPage({
                 pendingText="…"
                 aria-label="Apagar"
                 className="ml-auto text-lg text-zinc-400 hover:text-red-600"
+              >
+                ×
+              </SubmitButton>
+            </form>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        As minhas horas
+      </h2>
+      <form action={registarHoras} className="mt-2 flex flex-wrap items-end gap-2">
+        <input type="hidden" name="estudio_slug" value={slug} />
+        <input type="hidden" name="estudio_id" value={estudio.id} />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-500">Dia</label>
+          <input type="date" name="data" defaultValue={hoje} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-500">Horas</label>
+          <input type="number" step="0.5" name="horas" defaultValue={0} className={`${inputCls} w-20`} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-500">Treinos 40 min</label>
+          <input type="number" name="treinos_40" defaultValue={0} className={`${inputCls} w-20`} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-500">Treinos 60 min</label>
+          <input type="number" name="treinos_60" defaultValue={0} className={`${inputCls} w-20`} />
+        </div>
+        <div className="flex flex-1 flex-col gap-1">
+          <label className="text-xs text-zinc-500">Nota</label>
+          <input name="nota" className={`${inputCls} w-full`} />
+        </div>
+        <SubmitButton
+          pendingText="A guardar…"
+          className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background"
+        >
+          Registar
+        </SubmitButton>
+      </form>
+
+      {minhasHoras.length === 0 && (
+        <div className="mt-3 rounded-xl border border-dashed border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10">
+          Ainda não registaste horas.
+        </div>
+      )}
+      <div className="mt-3 flex flex-col gap-2">
+        {minhasHoras.map((r) => (
+          <div
+            key={r.id}
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-black/10 bg-white p-2.5 text-sm dark:border-white/10 dark:bg-zinc-950"
+          >
+            <span className="w-20 text-xs text-zinc-500">{fmt(r.data)}</span>
+            <form action={atualizarMinhasHoras} className="flex flex-1 flex-wrap items-center gap-2">
+              <input type="hidden" name="estudio_slug" value={slug} />
+              <input type="hidden" name="id" value={r.id} />
+              <input
+                type="number"
+                step="0.5"
+                name="horas"
+                defaultValue={r.horas}
+                className={`${inputCls} w-16`}
+              />
+              <input
+                type="number"
+                name="treinos_40"
+                defaultValue={r.treinos_40}
+                title="Treinos 40 min"
+                className={`${inputCls} w-14`}
+              />
+              <input
+                type="number"
+                name="treinos_60"
+                defaultValue={r.treinos_60}
+                title="Treinos 60 min"
+                className={`${inputCls} w-14`}
+              />
+              <input name="nota" defaultValue={r.nota ?? ''} className={`${inputCls} flex-1`} />
+              <SubmitButton
+                pendingText="…"
+                className="rounded-md border border-black/10 px-2 py-1 text-xs dark:border-white/10"
+              >
+                Guardar
+              </SubmitButton>
+            </form>
+            <form action={apagarMinhasHoras}>
+              <input type="hidden" name="estudio_slug" value={slug} />
+              <input type="hidden" name="id" value={r.id} />
+              <SubmitButton
+                pendingText="…"
+                aria-label="Apagar registo"
+                className="text-lg text-zinc-400 hover:text-red-600"
               >
                 ×
               </SubmitButton>

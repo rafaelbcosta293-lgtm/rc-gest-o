@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { logout } from './login/actions'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
-import { getEstudios } from '@/lib/data/estudios'
 import SubmitButton from '@/components/SubmitButton'
 
 export default async function Home() {
@@ -11,14 +10,13 @@ export default async function Home() {
   const user = data.user
 
   // Quem é admin salta a grelha de módulos e vai direto para a
-  // Administração — do único estúdio, se só houver um.
+  // Administração, já combinada para todos os estúdios.
   let destino = '/painel'
   if (user) {
     const sessao = await getSessaoAtual()
     const { ehAdmin } = papeisDaSessao(sessao)
     if (ehAdmin) {
-      const estudios = await getEstudios(supabase)
-      destino = estudios.length === 1 ? `/painel/${estudios[0].slug}/admin` : '/painel'
+      destino = '/painel/admin'
     }
   }
 

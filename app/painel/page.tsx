@@ -42,7 +42,7 @@ export default async function PainelPage() {
           return (
             <Link
               key={e.id}
-              href={ehAdmin ? `/painel/${e.slug}/admin` : `/painel/${e.slug}`}
+              href={`/painel/${e.slug}`}
               className="rounded-2xl border border-black/10 bg-white p-6 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
             >
               <span
@@ -56,11 +56,46 @@ export default async function PainelPage() {
                 {n} {n === 1 ? 'cliente ativo' : 'clientes ativos'}
               </p>
               <span className="mt-4 inline-block text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                {ehAdmin ? 'Administração →' : 'Entrar →'}
+                Entrar →
               </span>
             </Link>
           )
         })}
+
+        {ehAdmin && (
+          <>
+            <Link
+              href="/painel/coordenacao"
+              className="rounded-2xl border border-black/10 bg-white p-6 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+            >
+              <span className="block h-1.5 w-10 rounded-full bg-[#1F6FB2]" />
+              <h2 className="mt-4 text-2xl font-semibold text-black dark:text-zinc-50">
+                Coordenação
+              </h2>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Fátima e Leiria, na mesma página.
+              </p>
+              <span className="mt-4 inline-block text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                Entrar →
+              </span>
+            </Link>
+            <Link
+              href="/painel/admin"
+              className="rounded-2xl border border-black/10 bg-white p-6 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+            >
+              <span className="block h-1.5 w-10 rounded-full bg-[#5B3FA0]" />
+              <h2 className="mt-4 text-2xl font-semibold text-black dark:text-zinc-50">
+                Administração
+              </h2>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Fátima e Leiria, na mesma página.
+              </p>
+              <span className="mt-4 inline-block text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                Entrar →
+              </span>
+            </Link>
+          </>
+        )}
       </div>
 
       {estudios.length === 0 && (

@@ -101,7 +101,7 @@ export const MODULOS: Modulo[] = [
   { id: 'presencas', nome: 'Presenças', icone: '✅', desc: 'Quem treinou e quem faltou', pronto: true },
   { id: 'avaliacoes', nome: 'Avaliações', icone: '📏', desc: 'Avaliações, reavaliações e evolução', pronto: true },
   { id: 'leads', nome: 'Leads', icone: '📣', desc: 'Contactos, origem e seguimento', pronto: true },
-  { id: 'pagamentos', nome: 'Pagamentos', icone: '💳', desc: 'Quem tem o pagamento em dia', pronto: true, restrito: 'admin' },
+  { id: 'pagamentos', nome: 'Pagamentos', icone: '💳', desc: 'Quem tem o pagamento em dia', pronto: true },
   { id: 'checklist', nome: 'Abertura / Fecho', icone: '🔑', desc: 'Checklist diária do estúdio', pronto: true },
   { id: 'tarefas', nome: 'Tarefas diárias', icone: '🧹', desc: 'Toalhas, lixos, reposições — o que falta fazer hoje', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: '🕗', desc: 'Escala da semana e ausências da equipa', pronto: true },

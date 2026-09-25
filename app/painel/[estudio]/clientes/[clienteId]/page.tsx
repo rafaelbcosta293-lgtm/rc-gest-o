@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ESTADOS_CLIENTE, ALERTAS } from '@/lib/data/constantes'
 import { mesesAtivo } from '@/lib/data/clientes'
 import { proximoAniversario, idadeEm, fmtDiaMes } from '@/lib/data/aniversarios'
@@ -38,9 +37,8 @@ export default async function FichaCompletaClientePage({
 
   const supabase = await createClient()
 
-  const [estudio, sessao, { data: cliente }] = await Promise.all([
+  const [estudio, { data: cliente }] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
-    getSessaoAtual(),
     supabase
       .from('clientes')
       .select('*, pt_principal:perfis!pt_principal_id(nome)')
@@ -51,7 +49,6 @@ export default async function FichaCompletaClientePage({
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
   }
-  const { ehAdmin } = papeisDaSessao(sessao)
   const c = cliente as unknown as ClienteCompleto
 
   const [
@@ -78,9 +75,7 @@ export default async function FichaCompletaClientePage({
       .eq('cliente_id', clienteId)
       .gte('data', inicio)
       .lt('data', fimExclusivo),
-    ehAdmin
-      ? supabase.from('v_estado_pagamento').select('*').eq('cliente_id', clienteId).maybeSingle()
-      : Promise.resolve({ data: null }),
+    supabase.from('v_estado_pagamento').select('*').eq('cliente_id', clienteId).maybeSingle(),
   ])
 
   const avaliacao = (avaliacoesData?.[0] ?? null) as AvaliacaoResumo | null
@@ -247,33 +242,31 @@ export default async function FichaCompletaClientePage({
         </div>
       </section>
 
-      {/* Pagamentos — só admin */}
-      {ehAdmin && (
-        <section className="mt-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Pagamento
-            </h2>
-            <Link
-              href={`/painel/${slug}/pagamentos/${clienteId}`}
-              className="text-xs font-medium text-zinc-600 underline dark:text-zinc-400"
-            >
-              Ver detalhe
-            </Link>
-          </div>
-          {estadoPagamento ? (
-            <p
-              className={`mt-2 text-sm ${estadoPagamento.em_dia ? 'text-teal-700 dark:text-teal-400' : 'text-red-700 dark:text-red-400'}`}
-            >
-              {estadoPagamento.em_dia
-                ? `Em dia · válido até ${fmt(estadoPagamento.valido_ate)}`
-                : `Por regularizar${estadoPagamento.valido_ate ? ` · venceu em ${fmt(estadoPagamento.valido_ate)}` : ''}`}
-            </p>
-          ) : (
-            <p className="mt-2 text-sm text-zinc-500">Sem pagamentos registados.</p>
-          )}
-        </section>
-      )}
+      {/* Pagamentos */}
+      <section className="mt-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Pagamento
+          </h2>
+          <Link
+            href={`/painel/${slug}/pagamentos/${clienteId}`}
+            className="text-xs font-medium text-zinc-600 underline dark:text-zinc-400"
+          >
+            Ver detalhe
+          </Link>
+        </div>
+        {estadoPagamento ? (
+          <p
+            className={`mt-2 text-sm ${estadoPagamento.em_dia ? 'text-teal-700 dark:text-teal-400' : 'text-red-700 dark:text-red-400'}`}
+          >
+            {estadoPagamento.em_dia
+              ? `Em dia · válido até ${fmt(estadoPagamento.valido_ate)}`
+              : `Por regularizar${estadoPagamento.valido_ate ? ` · venceu em ${fmt(estadoPagamento.valido_ate)}` : ''}`}
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-zinc-500">Sem pagamentos registados.</p>
+        )}
+      </section>
     </div>
   )
 }

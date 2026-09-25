@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { logout } from './login/actions'
-import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { getSessaoAtual } from '@/lib/data/sessao'
+import { podeAcederAdmin } from '@/lib/data/acessos'
 import SubmitButton from '@/components/SubmitButton'
 
 export default async function Home() {
@@ -9,13 +10,12 @@ export default async function Home() {
   const { data } = await supabase.auth.getUser()
   const user = data.user
 
-  // Quem é admin salta a grelha de módulos e vai direto para a
-  // Administração, já combinada para todos os estúdios.
+  // Quem tem acesso à Administração salta a grelha de módulos e vai
+  // direto para lá, já combinada para todos os estúdios.
   let destino = '/painel'
   if (user) {
     const sessao = await getSessaoAtual()
-    const { ehAdmin } = papeisDaSessao(sessao)
-    if (ehAdmin) {
+    if (podeAcederAdmin(sessao.email)) {
       destino = '/painel/admin'
     }
   }

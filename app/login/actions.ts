@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { traduzErroSupabase } from '@/lib/supabase/auth-errors'
-import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { getSessaoAtual } from '@/lib/data/sessao'
+import { podeAcederAdmin } from '@/lib/data/acessos'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -20,11 +21,10 @@ export async function login(formData: FormData) {
 
   revalidatePath('/', 'layout')
 
-  // Quem é admin não precisa de passar pela grelha de módulos — vai
-  // direto para a Administração, já combinada para todos os estúdios.
+  // Quem tem acesso à Administração não precisa de passar pela grelha de
+  // módulos — vai direto para lá, já combinada para todos os estúdios.
   const sessao = await getSessaoAtual()
-  const { ehAdmin } = papeisDaSessao(sessao)
-  if (ehAdmin) {
+  if (podeAcederAdmin(sessao.email)) {
     redirect('/painel/admin')
   }
 

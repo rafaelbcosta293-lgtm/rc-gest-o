@@ -1,11 +1,21 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { MODULOS } from '@/lib/data/constantes'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { podeAcederEstudio } from '@/lib/data/acessos'
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
 
   const sessao = await getSessaoAtual()
+
+  // O acesso a cada estúdio é por email, não por "papel" — só quem está
+  // na lista de lib/data/acessos.ts entra aqui, independentemente do que
+  // a ficha em "perfis" diz.
+  if (!podeAcederEstudio(sessao.email, slug)) {
+    redirect('/painel?erro=sem-acesso')
+  }
+
   const { ehAdmin, ehGestao } = papeisDaSessao(sessao)
 
   const podeAceder = (m: (typeof MODULOS)[number]) =>

@@ -112,7 +112,7 @@ export default async function ChecklistPage({
                   </div>
                   <Link
                     href={`/painel/${slug}/checklist/${registo.id}`}
-                    className="mt-3 inline-block rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+                    className="mt-3 inline-block rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
                   >
                     {registo.concluidos >= registo.total ? 'Ver checklist' : 'Continuar'}
                   </Link>
@@ -235,7 +235,7 @@ export default async function ChecklistPage({
                     />
                     <SubmitButton
                       pendingText="…"
-                      className="rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background"
+                      className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-black"
                     >
                       + Item
                     </SubmitButton>

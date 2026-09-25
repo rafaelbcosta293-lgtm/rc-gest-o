@@ -150,7 +150,7 @@ export default function ExercicioPicker({
                     onClick={() => setCatId(catId === c.id ? null : c.id)}
                     className={`rounded-md border px-3 py-1.5 text-xs ${
                       catId === c.id
-                        ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                        ? 'border-brand bg-brand text-black'
                         : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-800'
                     }`}
                   >
@@ -171,7 +171,7 @@ export default function ExercicioPicker({
                     onClick={() => setCatId(catId === c.id ? null : c.id)}
                     className={`rounded-md border px-3 py-1.5 text-xs ${
                       catId === c.id
-                        ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                        ? 'border-brand bg-brand text-black'
                         : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-800'
                     }`}
                   >

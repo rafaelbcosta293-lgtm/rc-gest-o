@@ -110,7 +110,7 @@ export default async function EquipaPage({
                     className={`rounded-full px-4 py-1.5 text-xs font-medium ${
                       temAcesso
                         ? 'border border-black/10 text-zinc-700 hover:bg-black/[.04] dark:border-white/10 dark:text-zinc-300'
-                        : 'bg-foreground text-background'
+                        : 'bg-brand text-black'
                     }`}
                   >
                     {temAcesso ? 'Remover acesso' : 'Dar acesso'}

@@ -178,7 +178,7 @@ export default function AvaliacaoForm({
 
       <SubmitButton
         pendingText="A guardar…"
-        className="mt-2 self-start rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+        className="mt-2 self-start rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
       >
         {avaliacao ? 'Guardar alterações' : 'Guardar avaliação'}
       </SubmitButton>

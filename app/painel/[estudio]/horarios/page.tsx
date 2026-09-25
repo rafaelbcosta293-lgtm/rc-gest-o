@@ -269,7 +269,7 @@ export default async function HorariosPage({
         </div>
         <SubmitButton
           pendingText="A guardar…"
-          className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background"
+          className="rounded-full bg-brand px-4 py-1.5 text-xs font-medium text-black"
         >
           Registar
         </SubmitButton>

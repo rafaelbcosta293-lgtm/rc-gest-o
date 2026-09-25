@@ -22,9 +22,8 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 px-4 text-center dark:bg-black">
-      <h1 className="text-3xl font-semibold text-black dark:text-zinc-50">
-        RC Gestão
-      </h1>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.png" alt="RC Private Fitness Studio" className="h-14 w-auto" />
 
       {user ? (
         <div className="flex flex-col items-center gap-3">
@@ -34,7 +33,7 @@ export default async function Home() {
           <div className="flex items-center gap-3">
             <Link
               href={destino}
-              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+              className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
             >
               Ir para o painel
             </Link>
@@ -52,7 +51,7 @@ export default async function Home() {
         <div className="flex flex-col items-center gap-3 sm:flex-row">
           <Link
             href="/login"
-            className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+            className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
           >
             Iniciar sessão
           </Link>

@@ -137,7 +137,7 @@ export default function PagamentoForm({
 
       <SubmitButton
         pendingText="A guardar…"
-        className="self-start rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+        className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
       >
         Registar pagamento
       </SubmitButton>

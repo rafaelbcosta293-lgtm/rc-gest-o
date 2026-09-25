@@ -130,7 +130,7 @@ export default async function ClientesPage({
           </Link>
           <Link
             href={`/painel/${slug}/treinos/novo`}
-            className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+            className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
           >
             + Cliente
           </Link>
@@ -150,7 +150,7 @@ export default async function ClientesPage({
               href={`/painel/${slug}/clientes${qs ? `?${qs}` : ''}`}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
                 ativo
-                  ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                  ? 'border-brand bg-brand text-black'
                   : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
               }`}
             >

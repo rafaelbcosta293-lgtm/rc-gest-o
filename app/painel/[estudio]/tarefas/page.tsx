@@ -56,7 +56,7 @@ export default async function TarefasPage({
         href={`/painel/${slug}/tarefas?dia=${dia}`}
         className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
           vista !== 'semana'
-            ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+            ? 'border-brand bg-brand text-black'
             : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
         }`}
       >
@@ -66,7 +66,7 @@ export default async function TarefasPage({
         href={`/painel/${slug}/tarefas?vista=semana&dia=${dia}`}
         className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
           vista === 'semana'
-            ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+            ? 'border-brand bg-brand text-black'
             : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
         }`}
       >
@@ -337,7 +337,7 @@ export default async function TarefasPage({
           </select>
           <SubmitButton
             pendingText="…"
-            className="shrink-0 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"
+            className="shrink-0 rounded-md bg-brand px-4 py-2 text-sm font-medium text-black"
           >
             + Adicionar
           </SubmitButton>

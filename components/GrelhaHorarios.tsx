@@ -238,7 +238,7 @@ function GrelhaEditavel({
           type="button"
           onClick={guardarAlteracoes}
           disabled={aGuardar}
-          className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-[#ccc]"
+          className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
         >
           {aGuardar ? 'A guardar…' : 'Guardar alterações'}
         </button>

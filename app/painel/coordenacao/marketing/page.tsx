@@ -247,7 +247,7 @@ export default async function MarketingPage({
           href={`/painel/coordenacao/marketing?vista=${v}`}
           className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
             vista === v
-              ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+              ? 'border-brand bg-brand text-black'
               : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
           }`}
         >

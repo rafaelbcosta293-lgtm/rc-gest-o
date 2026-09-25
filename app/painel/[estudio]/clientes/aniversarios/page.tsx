@@ -214,7 +214,7 @@ export default async function AniversariosPage({
           href={`/painel/${slug}/clientes/aniversarios`}
           className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
             vistaCalendario
-              ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+              ? 'border-brand bg-brand text-black'
               : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
           }`}
         >
@@ -224,7 +224,7 @@ export default async function AniversariosPage({
           href={`/painel/${slug}/clientes/aniversarios?vista=lista`}
           className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
             !vistaCalendario
-              ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+              ? 'border-brand bg-brand text-black'
               : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
           }`}
         >
@@ -311,7 +311,7 @@ export default async function AniversariosPage({
                   <input type="hidden" name="ano" value={anoAtual} />
                   <SubmitButton
                     pendingText="…"
-                    className="rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background"
+                    className="rounded-full bg-brand px-3 py-1.5 text-xs font-medium text-black"
                   >
                     Marcar como enviado
                   </SubmitButton>

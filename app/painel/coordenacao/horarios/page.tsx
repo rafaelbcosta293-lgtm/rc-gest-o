@@ -259,7 +259,7 @@ async function PainelHorariosEstudio({
             </div>
             <SubmitButton
               pendingText="A criar…"
-              className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background"
+              className="rounded-full bg-brand px-4 py-1.5 text-xs font-medium text-black"
             >
               Criar instrutor
             </SubmitButton>
@@ -297,7 +297,7 @@ async function PainelHorariosEstudio({
                       className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                         temAcesso
                           ? 'border border-black/10 text-zinc-700 hover:bg-black/[.04] dark:border-white/10 dark:text-zinc-300'
-                          : 'bg-foreground text-background'
+                          : 'bg-brand text-black'
                       }`}
                     >
                       {temAcesso ? 'Remover' : 'Adicionar'}

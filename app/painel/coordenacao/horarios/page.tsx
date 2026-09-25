@@ -70,7 +70,7 @@ export default async function HorariosCoordenacaoPage({
         Planeamento da semana
       </h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        {estudios.map((e) => e.nome).join(' e ')} · escala e instrutores, lado a lado.
+        {estudios.map((e) => e.nome).join(' e ')} · escala e instrutores.
       </p>
 
       {error && (
@@ -79,7 +79,10 @@ export default async function HorariosCoordenacaoPage({
         </p>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2">
+      {/* A grelha semanal precisa da largura toda para mostrar
+          segunda a sábado sem scroll horizontal — por isso os estúdios
+          ficam empilhados aqui, ao contrário do resto da Coordenação. */}
+      <div className="mt-6 flex flex-col gap-y-10">
         {estudios.map((estudio) => (
           <section key={estudio.id}>
             <div className="flex items-center gap-2">

@@ -53,7 +53,7 @@ export default async function AdminPage({
   const estudios = await getEstudios(supabase)
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10">
       <Link href="/painel" className="text-sm text-zinc-600 underline dark:text-zinc-400">
         ← Voltar
       </Link>
@@ -69,18 +69,20 @@ export default async function AdminPage({
         </p>
       )}
 
-      {estudios.map((estudio) => (
-        <section key={estudio.id} className="mt-10 first:mt-6">
-          <div className="flex items-center gap-2">
-            <span
-              className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ background: corEstudio(estudio.slug).cor }}
-            />
-            <h2 className="text-lg font-semibold text-black dark:text-zinc-50">{estudio.nome}</h2>
-          </div>
-          <PainelAdminEstudio estudio={estudio} sp={sp} />
-        </section>
-      ))}
+      <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2">
+        {estudios.map((estudio) => (
+          <section key={estudio.id}>
+            <div className="flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: corEstudio(estudio.slug).cor }}
+              />
+              <h2 className="text-lg font-semibold text-black dark:text-zinc-50">{estudio.nome}</h2>
+            </div>
+            <PainelAdminEstudio estudio={estudio} sp={sp} />
+          </section>
+        ))}
+      </div>
 
       <TituloSeccao cor="roxo">Serviços / Produtos</TituloSeccao>
       <Link
@@ -261,7 +263,7 @@ async function PainelAdminEstudio({
           →
         </Link>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
           <strong className="block text-2xl text-black dark:text-zinc-50">{leadsNovas}</strong>
           <span className="text-xs text-zinc-500">leads novas</span>
@@ -285,7 +287,7 @@ async function PainelAdminEstudio({
       </div>
 
       <TituloSeccao cor="teal">Agora</TituloSeccao>
-      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-2 grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
           <strong className="block text-2xl text-teal-700 dark:text-teal-400">
             {clientesAtivos}

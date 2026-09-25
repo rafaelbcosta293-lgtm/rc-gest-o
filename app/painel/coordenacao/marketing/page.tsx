@@ -33,7 +33,7 @@ function TituloEstudio({ estudio }: { estudio: Pick<Estudio, 'slug' | 'nome'> })
 
 function TabelaMetricas({ metricas }: { metricas: MetricasMarketing }) {
   return (
-    <div className="mt-2 grid grid-cols-4 gap-2 text-center sm:grid-cols-7">
+    <div className="mt-2 grid grid-cols-4 gap-2 text-center">
       {METRICAS_MARKETING.map((m) => (
         <div key={m.chave}>
           <strong
@@ -160,7 +160,7 @@ function ResumoAno({ leads, anoSelecionado }: { leads: LeadMarketing[]; anoSelec
   const fimExclusivo = `${anoSelecionado + 1}-01-01`
   const metricas = metricasNoIntervalo(leads, inicio, fimExclusivo)
   return (
-    <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="mt-2 grid grid-cols-2 gap-3">
       {METRICAS_MARKETING.map((m) => (
         <div
           key={m.chave}
@@ -258,7 +258,7 @@ export default async function MarketingPage({
   )
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10">
       <Link href="/painel/coordenacao" className="text-sm text-zinc-600 underline dark:text-zinc-400">
         ← Coordenação
       </Link>
@@ -307,12 +307,14 @@ export default async function MarketingPage({
             ))}
           </div>
 
-          {leadsPorEstudio.map(({ estudio, leads }) => (
-            <div key={estudio.id}>
-              <TituloEstudio estudio={estudio} />
-              <CalendarioDia leads={leads} anoMes={anoMes} mesMes={mesMes} metricaAtual={metricaAtual} hoje={hoje} />
-            </div>
-          ))}
+          <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">
+            {leadsPorEstudio.map(({ estudio, leads }) => (
+              <div key={estudio.id}>
+                <TituloEstudio estudio={estudio} />
+                <CalendarioDia leads={leads} anoMes={anoMes} mesMes={mesMes} metricaAtual={metricaAtual} hoje={hoje} />
+              </div>
+            ))}
+          </div>
         </>
       )}
 
@@ -336,12 +338,14 @@ export default async function MarketingPage({
             </Link>
           </div>
 
-          {leadsPorEstudio.map(({ estudio, leads }) => (
-            <div key={estudio.id}>
-              <TituloEstudio estudio={estudio} />
-              <ListaSemanas leads={leads} anoMes={anoMes} mesMes={mesMes} />
-            </div>
-          ))}
+          <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">
+            {leadsPorEstudio.map(({ estudio, leads }) => (
+              <div key={estudio.id}>
+                <TituloEstudio estudio={estudio} />
+                <ListaSemanas leads={leads} anoMes={anoMes} mesMes={mesMes} />
+              </div>
+            ))}
+          </div>
         </>
       )}
 
@@ -363,12 +367,14 @@ export default async function MarketingPage({
             </Link>
           </div>
 
-          {leadsPorEstudio.map(({ estudio, leads }) => (
-            <div key={estudio.id}>
-              <TituloEstudio estudio={estudio} />
-              <ListaMeses leads={leads} anoSelecionado={anoSelecionado} />
-            </div>
-          ))}
+          <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">
+            {leadsPorEstudio.map(({ estudio, leads }) => (
+              <div key={estudio.id}>
+                <TituloEstudio estudio={estudio} />
+                <ListaMeses leads={leads} anoSelecionado={anoSelecionado} />
+              </div>
+            ))}
+          </div>
         </>
       )}
 
@@ -390,12 +396,14 @@ export default async function MarketingPage({
             </Link>
           </div>
 
-          {leadsPorEstudio.map(({ estudio, leads }) => (
-            <div key={estudio.id}>
-              <TituloEstudio estudio={estudio} />
-              <ResumoAno leads={leads} anoSelecionado={anoSelecionado} />
-            </div>
-          ))}
+          <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">
+            {leadsPorEstudio.map(({ estudio, leads }) => (
+              <div key={estudio.id}>
+                <TituloEstudio estudio={estudio} />
+                <ResumoAno leads={leads} anoSelecionado={anoSelecionado} />
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>

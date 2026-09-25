@@ -65,7 +65,7 @@ export async function guardarSemana(input: {
     if (erroInserir) return { error: erroInserir.message }
   }
 
-  revalidatePath('/painel/coordenacao')
+  revalidatePath('/painel/coordenacao/horarios')
   revalidatePath(`/painel/${input.estudioSlug}/horarios`)
   return { ok: true }
 }
@@ -86,7 +86,7 @@ export async function criarInstrutor(formData: FormData) {
   try {
     admin = createAdminClient()
   } catch (e) {
-    redirect(`/painel/coordenacao?error=${encodeURIComponent((e as Error).message)}`)
+    redirect(`/painel/coordenacao/horarios?error=${encodeURIComponent((e as Error).message)}`)
   }
 
   const { data: criado, error: erroCriar } = await admin.auth.admin.createUser({
@@ -98,7 +98,7 @@ export async function criarInstrutor(formData: FormData) {
 
   if (erroCriar || !criado.user) {
     redirect(
-      `/painel/coordenacao?error=${encodeURIComponent(erroCriar?.message ?? 'Não foi possível criar o instrutor.')}`
+      `/painel/coordenacao/horarios?error=${encodeURIComponent(erroCriar?.message ?? 'Não foi possível criar o instrutor.')}`
     )
   }
 
@@ -111,68 +111,9 @@ export async function criarInstrutor(formData: FormData) {
     .insert({ estudio_id: estudioId, perfil_id: criado.user.id })
 
   if (erroAcesso) {
-    redirect(`/painel/coordenacao?error=${encodeURIComponent(erroAcesso.message)}`)
+    redirect(`/painel/coordenacao/horarios?error=${encodeURIComponent(erroAcesso.message)}`)
   }
 
-  revalidatePath('/painel/coordenacao')
-  redirect('/painel/coordenacao')
-}
-
-export async function registarHoras(formData: FormData) {
-  const estudioId = Number(formData.get('estudio_id'))
-  const supabase = await createClient()
-  const { data: userData } = await supabase.auth.getUser()
-
-  const { error } = await supabase.from('registos_pt').insert({
-    pt_id: userData.user?.id,
-    estudio_id: estudioId,
-    data: formData.get('data') as string,
-    horas: Number(formData.get('horas')) || 0,
-    treinos_40: Number(formData.get('treinos_40')) || 0,
-    treinos_60: Number(formData.get('treinos_60')) || 0,
-    nota: campoOuNull(formData, 'nota'),
-  })
-
-  if (error) {
-    redirect(`/painel/coordenacao?error=${encodeURIComponent(error.message)}`)
-  }
-
-  revalidatePath('/painel/coordenacao')
-  redirect('/painel/coordenacao')
-}
-
-export async function apagarHoras(formData: FormData) {
-  const id = formData.get('id') as string
-  const supabase = await createClient()
-
-  const { error } = await supabase.from('registos_pt').delete().eq('id', id)
-
-  if (error) {
-    redirect(`/painel/coordenacao?error=${encodeURIComponent(error.message)}`)
-  }
-
-  revalidatePath('/painel/coordenacao')
-  redirect('/painel/coordenacao')
-}
-
-export async function atualizarHoras(formData: FormData) {
-  const id = formData.get('id') as string
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('registos_pt')
-    .update({
-      horas: Number(formData.get('horas')) || 0,
-      treinos_40: Number(formData.get('treinos_40')) || 0,
-      treinos_60: Number(formData.get('treinos_60')) || 0,
-      nota: campoOuNull(formData, 'nota'),
-    })
-    .eq('id', id)
-
-  if (error) {
-    redirect(`/painel/coordenacao?error=${encodeURIComponent(error.message)}`)
-  }
-
-  revalidatePath('/painel/coordenacao')
-  redirect('/painel/coordenacao')
+  revalidatePath('/painel/coordenacao/horarios')
+  redirect('/painel/coordenacao/horarios')
 }

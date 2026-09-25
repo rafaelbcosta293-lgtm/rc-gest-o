@@ -5,16 +5,18 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 // "destino" deixa este toggle ser usado tanto na página Equipa como
-// dentro de Coordenação (para gerir quem entra na escala) — volta
-// sempre para onde foi chamado. Coordenação já não é por estúdio, por
-// isso esse destino é a página combinada, sem o slug à frente.
+// dentro de Coordenação → Horários (para gerir quem entra na escala) —
+// volta sempre para onde foi chamado. Coordenação já não é por
+// estúdio, por isso esses destinos são a página combinada, sem o slug
+// à frente.
 export async function alternarAcesso(formData: FormData) {
   const slug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
   const perfilId = formData.get('perfil_id') as string
   const temAcesso = formData.get('tem_acesso') === '1'
   const destino = (formData.get('destino') as string) || 'equipa'
-  const caminhoDestino = destino === 'coordenacao' ? '/painel/coordenacao' : `/painel/${slug}/${destino}`
+  const destinosCombinados = ['coordenacao', 'coordenacao/horarios']
+  const caminhoDestino = destinosCombinados.includes(destino) ? `/painel/${destino}` : `/painel/${slug}/${destino}`
 
   const supabase = await createClient()
 
@@ -31,7 +33,7 @@ export async function alternarAcesso(formData: FormData) {
   }
 
   revalidatePath(`/painel/${slug}/equipa`)
-  revalidatePath('/painel/coordenacao')
+  revalidatePath('/painel/coordenacao/horarios')
   redirect(caminhoDestino)
 }
 

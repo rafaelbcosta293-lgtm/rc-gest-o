@@ -16,13 +16,13 @@ import { alternarAcesso } from '../equipa/actions'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { corInstrutor } from '@/lib/data/constantes'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { metricasNoIntervalo, METRICAS_MARKETING, type LeadMarketing } from '@/lib/data/marketing'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
 import PortaSenha from '@/components/PortaSenha'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import type {
   EstadoPagamento,
-  Lead,
   LeadParada,
   Perfil,
   ReavaliacaoPendente,
@@ -35,7 +35,6 @@ const inputCls =
 type TurnoSemana = { data: string; hora: number; minuto: number; pt: { id: string; nome: string } | null }
 type ChecklistHoje = { tipo: string; concluidos: number; total: number }
 type RegistoPtComPt = RegistoPt & { pt: { nome: string } | null }
-type LeadMarketing = Pick<Lead, 'estado' | 'entrada' | 'visita_data' | 'visita_marcada_em' | 'walk_in'>
 
 export default async function CoordenacaoPage({
   params,
@@ -64,14 +63,6 @@ export default async function CoordenacaoPage({
   const mesSeguinteMes = mes === 12 ? 1 : mes + 1
   const mesAnteriorParam = `${mesAnteriorAno}-${String(mesAnteriorMes).padStart(2, '0')}`
   const mesSeguinteParam = `${mesSeguinteAno}-${String(mesSeguinteMes).padStart(2, '0')}`
-
-  // O painel de Marketing é sempre "hoje"/"este mês" a sério — não segue
-  // a navegação de semana/mês usada mais abaixo para escala e horas.
-  const anoAtual = agora.getFullYear()
-  const mesAtual = agora.getMonth() + 1
-  const inicioMesAtual = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01`
-  const fimMesAtualExclusivo =
-    mesAtual === 12 ? `${anoAtual + 1}-01-01` : `${anoAtual}-${String(mesAtual + 1).padStart(2, '0')}-01`
 
   const supabase = await createClient()
   const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
@@ -204,32 +195,7 @@ export default async function CoordenacaoPage({
   const resumoHoras = [...resumoPorPt.values()].sort((a, b) => b.horas - a.horas)
 
   const leadsMarketing = (leadsMarketingData ?? []) as LeadMarketing[]
-  const leadsNovasMes = leadsMarketing.filter(
-    (l) => l.entrada >= inicioMesAtual && l.entrada < fimMesAtualExclusivo
-  ).length
-  const contactoComSucesso = leadsMarketing.filter(
-    (l) => l.entrada >= inicioMesAtual && l.entrada < fimMesAtualExclusivo && l.estado !== 'Novo'
-  ).length
-  const marcacoesHoje = leadsMarketing.filter((l) => l.visita_marcada_em === hoje).length
-  const visitasHoje = leadsMarketing.filter((l) => l.visita_data === hoje).length
-  const fechoVisitasHoje = leadsMarketing.filter(
-    (l) => l.visita_data === hoje && l.estado === 'Convertido'
-  ).length
-  const walkInsHoje = leadsMarketing.filter((l) => l.walk_in && l.entrada === hoje).length
-  const fechoWalkInsHoje = leadsMarketing.filter(
-    (l) => l.walk_in && l.entrada === hoje && l.estado === 'Convertido'
-  ).length
-  const somaFechosHoje = fechoVisitasHoje + fechoWalkInsHoje
-
-  const linhasMarketing = [
-    { label: 'Leads novas deste mês', valor: leadsNovasMes },
-    { label: 'Contacto com sucesso', valor: contactoComSucesso },
-    { label: 'Marcações na agenda hoje', valor: marcacoesHoje },
-    { label: 'Visitas hoje', valor: visitasHoje },
-    { label: 'Fecho das visitas de hoje', valor: fechoVisitasHoje },
-    { label: 'Walk-ins hoje', valor: walkInsHoje },
-    { label: 'Fecho de walk-ins hoje', valor: fechoWalkInsHoje },
-  ]
+  const metricasHoje = metricasNoIntervalo(leadsMarketing, hoje, somarDias(hoje, 1))
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -282,28 +248,40 @@ export default async function CoordenacaoPage({
       </div>
 
       <TituloSeccao cor="roxo">Marketing</TituloSeccao>
-      <p className="mt-2 text-xs text-zinc-500">
-        Atualizado automaticamente, todos os dias — leads deste mês e o funil de hoje.
-      </p>
+      <p className="mt-2 text-xs text-zinc-500">Funil de hoje, atualizado automaticamente.</p>
       <div className="mt-2 flex flex-col overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
-        {linhasMarketing.map((linha, i) => (
+        {METRICAS_MARKETING.map((metrica, i) => (
           <div
-            key={linha.label}
-            className={`flex items-center justify-between gap-3 bg-white px-4 py-2.5 text-sm dark:bg-zinc-950 ${
-              i > 0 ? 'border-t border-black/10 dark:border-white/10' : ''
-            }`}
+            key={metrica.chave}
+            className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm ${
+              metrica.chave === 'totalFechos'
+                ? 'bg-teal-50 dark:bg-teal-950'
+                : 'bg-white dark:bg-zinc-950'
+            } ${i > 0 ? 'border-t border-black/10 dark:border-white/10' : ''}`}
           >
-            <span className="text-zinc-600 dark:text-zinc-400">{linha.label}</span>
-            <strong className="text-black dark:text-zinc-50">{linha.valor}</strong>
+            <span
+              className={
+                metrica.chave === 'totalFechos'
+                  ? 'font-medium text-teal-800 dark:text-teal-200'
+                  : 'text-zinc-600 dark:text-zinc-400'
+              }
+            >
+              {metrica.label}
+            </span>
+            <strong
+              className={metrica.chave === 'totalFechos' ? 'text-teal-800 dark:text-teal-200' : 'text-black dark:text-zinc-50'}
+            >
+              {metricasHoje[metrica.chave]}
+            </strong>
           </div>
         ))}
-        <div className="flex items-center justify-between gap-3 border-t border-black/10 bg-teal-50 px-4 py-2.5 text-sm dark:border-white/10 dark:bg-teal-950">
-          <span className="font-medium text-teal-800 dark:text-teal-200">
-            Soma dos fechos (visitas + walk-ins)
-          </span>
-          <strong className="text-teal-800 dark:text-teal-200">{somaFechosHoje}</strong>
-        </div>
       </div>
+      <Link
+        href={`/painel/${slug}/coordenacao/marketing`}
+        className="mt-2 inline-block text-xs text-zinc-500 underline"
+      >
+        ver calendário diário/semanal/mensal/anual
+      </Link>
 
       <TituloSeccao cor="azul" id="planeamento">
         Planeamento da semana

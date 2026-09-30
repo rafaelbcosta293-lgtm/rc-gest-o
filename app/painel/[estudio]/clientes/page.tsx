@@ -10,6 +10,7 @@ import type { EstadoCliente } from '@/lib/supabase/database.types'
 
 type ClienteLista = {
   id: string
+  numero_socio: string | null
   nome: string
   telefone: string | null
   estado: EstadoCliente
@@ -48,7 +49,9 @@ export default async function ClientesPage({
 
   let query = supabase
     .from('clientes')
-    .select('id, nome, telefone, estado, alerta, nascimento, inicio_contrato, saiu_em, frequencia_semanal')
+    .select(
+      'id, numero_socio, nome, telefone, estado, alerta, nascimento, inicio_contrato, saiu_em, frequencia_semanal'
+    )
     .eq('estudio_id', estudio.id)
     .order('nome')
 
@@ -56,7 +59,7 @@ export default async function ClientesPage({
     query = query.eq('estado', estado)
   }
   if (q) {
-    query = query.ilike('nome', `%${q}%`)
+    query = query.or(`nome.ilike.%${q}%,numero_socio.ilike.%${q}%`)
   }
 
   const [
@@ -166,7 +169,7 @@ export default async function ClientesPage({
           type="text"
           name="q"
           defaultValue={q}
-          placeholder="Procurar cliente…"
+          placeholder="Procurar por nome ou nº de sócio…"
           className="w-full rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
         />
       </form>
@@ -190,6 +193,9 @@ export default async function ClientesPage({
               }`}
             >
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="w-16 shrink-0 font-mono text-xs text-zinc-500">
+                  {c.numero_socio ?? '—'}
+                </span>
                 <span className="flex min-w-[160px] flex-1 items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.dot }} />
                   <span className="truncate font-medium text-black dark:text-zinc-50">{c.nome}</span>

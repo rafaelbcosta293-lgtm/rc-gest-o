@@ -109,6 +109,9 @@ export default async function FichaCompletaClientePage({
             >
               {est.label}
             </span>
+            {c.numero_socio && (
+              <span className="font-mono text-xs text-zinc-500">Sócio {c.numero_socio}</span>
+            )}
           </div>
           {c.objetivo && (
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{c.objetivo}</p>

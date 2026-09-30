@@ -8,6 +8,7 @@ export type Estudio = {
   nome: string
   endereco: string | null
   ativo: boolean
+  codigo_socio: string
 }
 
 export type Perfil = {
@@ -25,6 +26,7 @@ export type EstadoCliente = 'Ativo' | 'Suspenso' | 'Ex-cliente'
 export type Cliente = {
   id: string
   estudio_id: number
+  numero_socio: string | null
   nome: string
   telefone: string | null
   email: string | null

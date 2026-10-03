@@ -30,6 +30,9 @@ export type Cliente = {
   nome: string
   telefone: string | null
   email: string | null
+  morada: string | null
+  codigo_postal: string | null
+  cidade: string | null
   nascimento: string | null
   objetivo: string | null
   frequencia_semanal: number | null

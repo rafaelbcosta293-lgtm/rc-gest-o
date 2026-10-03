@@ -9,7 +9,13 @@ import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { metricasNoIntervalo, METRICAS_MARKETING, type LeadMarketing } from '@/lib/data/marketing'
 import TituloSeccao from '@/components/TituloSeccao'
 import PortaSenha from '@/components/PortaSenha'
-import type { EstadoPagamento, Estudio, LeadParada, ReavaliacaoPendente } from '@/lib/supabase/database.types'
+import type {
+  ClienteSemTreino,
+  EstadoPagamento,
+  Estudio,
+  LeadParada,
+  ReavaliacaoPendente,
+} from '@/lib/supabase/database.types'
 
 type ChecklistHoje = { tipo: string; concluidos: number; total: number }
 
@@ -96,6 +102,7 @@ async function PainelCoordenacaoEstudio({
     { data: reavaliacoesData },
     { data: pagamentosData },
     { data: leadsMarketingData, error: erroLeadsMarketing },
+    { data: semTreinoData },
   ] = await Promise.all([
     supabase
       .from('checklist_registos')
@@ -117,6 +124,11 @@ async function PainelCoordenacaoEstudio({
       .from('leads')
       .select('estado, entrada, visita_data, visita_marcada_em, walk_in')
       .eq('estudio_id', estudio.id),
+    supabase
+      .from('v_clientes_sem_treino_recente')
+      .select('*')
+      .eq('estudio_id', estudio.id)
+      .gt('dias_sem_treino', 7),
   ])
 
   if (erroLeadsMarketing) {
@@ -129,6 +141,17 @@ async function PainelCoordenacaoEstudio({
   const pagamentosAtrasados = (pagamentosData ?? []) as EstadoPagamento[]
   const leadsMarketing = (leadsMarketingData ?? []) as LeadMarketing[]
   const metricasHoje = metricasNoIntervalo(leadsMarketing, hoje, somarDias(hoje, 1))
+
+  // "Sem treino há mais de 7 dias" é calculado agora; "sem evento no
+  // Google Calendar" vem da cache que o job diário (app/api/cron/retencao)
+  // escreveu — por isso é uma segunda consulta, dependente da primeira.
+  const candidatosInativos = (semTreinoData ?? []) as ClienteSemTreino[]
+  const idsCandidatos = candidatosInativos.map((c) => c.cliente_id)
+  const { data: semAgendamentoData } = idsCandidatos.length
+    ? await supabase.from('clientes_sem_agendamento').select('cliente_id').in('cliente_id', idsCandidatos)
+    : { data: [] }
+  const idsSemAgendamento = new Set((semAgendamentoData ?? []).map((d) => d.cliente_id))
+  const clientesInativos = candidatosInativos.filter((c) => idsSemAgendamento.has(c.cliente_id))
 
   return (
     <>
@@ -234,7 +257,19 @@ async function PainelCoordenacaoEstudio({
             </span>
           </Link>
         ))}
-        {leadsParadas.length + reavaliacoes.length + pagamentosAtrasados.length === 0 && (
+        {clientesInativos.map((c) => (
+          <Link
+            key={`inativo-${c.cliente_id}`}
+            href={`/painel/${slug}/clientes/${c.cliente_id}`}
+            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+          >
+            <span className="text-black dark:text-zinc-50">{c.nome} · Cliente Inativo / Sem Agendamento</span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              {c.dias_sem_treino} dias sem treinar
+            </span>
+          </Link>
+        ))}
+        {leadsParadas.length + reavaliacoes.length + pagamentosAtrasados.length + clientesInativos.length === 0 && (
           <p className="text-sm text-zinc-500">Nada pendente — tudo em dia.</p>
         )}
       </div>

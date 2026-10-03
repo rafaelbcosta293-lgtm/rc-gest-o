@@ -257,6 +257,15 @@ export type LeadParada = Lead & {
   dias_sem_contacto: number
 }
 
+export type ClienteSemTreino = {
+  cliente_id: string
+  estudio_id: number
+  nome: string
+  numero_socio: string | null
+  ultima_presenca: string | null
+  dias_sem_treino: number
+}
+
 export type ReavaliacaoPendente = {
   cliente_id: string
   estudio_id: number

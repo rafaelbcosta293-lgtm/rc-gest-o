@@ -27,7 +27,10 @@ export default async function EstudioPage({
   const podeAceder = (m: (typeof MODULOS)[number]) =>
     m.pronto && (!m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao))
 
-  const ativos = (clientes ?? []).filter((c) => c.estado === 'Ativo').length
+  const todosClientes = clientes ?? []
+  const ativos = todosClientes.filter((c) => c.estado === 'Ativo').length
+  const suspensos = todosClientes.filter((c) => c.estado === 'Suspenso').length
+  const inativos = todosClientes.filter((c) => c.estado === 'Ex-cliente').length
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -74,6 +77,11 @@ export default async function EstudioPage({
               {m.id === 'treinos' && (
                 <p className="mt-3 text-xs font-medium text-teal-700 dark:text-teal-400">
                   {ativos} {ativos === 1 ? 'cliente ativo' : 'clientes ativos'}
+                </p>
+              )}
+              {m.id === 'clientes' && (
+                <p className="mt-3 text-xs font-medium text-teal-700 dark:text-teal-400">
+                  {todosClientes.length} totais · {ativos} ativos · {suspensos} suspensos · {inativos} inativos
                 </p>
               )}
             </Link>

@@ -97,29 +97,6 @@ export type ExercicioCatalogo = {
 
 export type TipoOperacao = 'Abertura' | 'Fecho'
 
-export type RecorrenciaTarefa = 'Diária' | 'Semanal' | 'Mensal' | 'Anual'
-
-export type TarefaDiaria = {
-  id: string
-  estudio_id: number
-  titulo: string
-  recorrencia: RecorrenciaTarefa
-  proxima_data: string
-  hora: string | null
-  ativa: boolean
-  ordem: number
-  criado_por: string | null
-  criado_em: string
-}
-
-export type TarefaDiariaConcluida = {
-  id: string
-  tarefa_id: string
-  data: string
-  feito_por: string | null
-  feito_em: string
-}
-
 export type ChecklistModelo = {
   id: string
   tipo: TipoOperacao

@@ -56,8 +56,6 @@ export const ESTADOS_LEAD = {
 
 export const TIPOS_CONTACTO = ['Telefone', 'WhatsApp', 'Email', 'Presencial', 'Mensagem redes'] as const
 
-export const RECORRENCIAS = ['Diária', 'Semanal', 'Mensal', 'Anual'] as const
-
 // Uma cor por instrutor (por ordem alfabética, atribuída pela posição na
 // lista) — para se identificar quem trabalha quando só de olhar para a
 // grelha de horários, sem ter de ler cada nome.
@@ -103,7 +101,6 @@ export const MODULOS: Modulo[] = [
   { id: 'leads', nome: 'Leads', icone: '📣', desc: 'Contactos, origem e seguimento', pronto: true },
   { id: 'pagamentos', nome: 'Pagamentos', icone: '💳', desc: 'Quem tem o pagamento em dia', pronto: true },
   { id: 'checklist', nome: 'Abertura / Fecho', icone: '🔑', desc: 'Checklist diária do estúdio', pronto: true },
-  { id: 'tarefas', nome: 'Tarefas diárias', icone: '🧹', desc: 'Toalhas, lixos, reposições — o que falta fazer hoje', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: '🕗', desc: 'Escala da semana e ausências da equipa', pronto: true },
 ]
 

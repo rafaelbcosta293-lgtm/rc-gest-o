@@ -81,7 +81,7 @@ export default async function EstudioPage({
               )}
               {m.id === 'clientes' && (
                 <p className="mt-3 text-xs font-medium text-teal-700 dark:text-teal-400">
-                  {todosClientes.length} totais · {ativos} ativos · {suspensos} suspensos · {inativos} inativos
+                  {ativos} ativos · {suspensos} suspensos · {inativos} inativos
                 </p>
               )}
             </Link>

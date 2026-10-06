@@ -30,15 +30,64 @@ const FILTROS: { valor: EstadoCliente | 'Todos'; label: string }[] = [
   { valor: 'Ex-cliente', label: 'Inativos' },
 ]
 
+type Ordem = 'nome' | 'numero' | 'inscricao'
+type Direcao = 'asc' | 'desc'
+
+const ORDENS: { valor: Ordem; label: string }[] = [
+  { valor: 'nome', label: 'Nome' },
+  { valor: 'numero', label: 'Nº de cliente' },
+  { valor: 'inscricao', label: 'Data de inscrição' },
+]
+
+// Direção inicial ao mudar de critério (antes de a pessoa tocar na
+// seta ↑/↓) — nome continua igual a hoje (A→Z); inscrição começa pelo
+// mais recente, que é como a equipa normalmente quer ver isto.
+const DIRECAO_POR_OMISSAO: Record<Ordem, Direcao> = {
+  nome: 'asc',
+  numero: 'asc',
+  inscricao: 'desc',
+}
+
+function normalizarNome(nome: string): string {
+  return nome
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+}
+
+// numero_socio é tipo "F24201" — a parte que importa para ordenar é só
+// o sequencial final (201), não o texto todo (isso puxaria F23999
+// para antes de F24001, por exemplo).
+function numeroSequencial(numeroSocio: string | null): number | null {
+  if (!numeroSocio) return null
+  const m = numeroSocio.match(/(\d+)$/)
+  return m ? Number(m[1]) : null
+}
+
+function construirQuery(
+  base: { estado?: string; q?: string; ordem?: string; dir?: string },
+  overrides: Record<string, string | undefined>
+) {
+  const combinado = { ...base, ...overrides }
+  const params = new URLSearchParams()
+  for (const [k, v] of Object.entries(combinado)) {
+    if (v) params.set(k, v)
+  }
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
+
 export default async function ClientesPage({
   params,
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ q?: string; estado?: string }>
+  searchParams: Promise<{ q?: string; estado?: string; ordem?: string; dir?: string }>
 }) {
   const { estudio: slug } = await params
-  const { q, estado } = await searchParams
+  const { q, estado, ordem: ordemParam, dir: dirParam } = await searchParams
+  const ordem: Ordem = ordemParam === 'numero' || ordemParam === 'inscricao' ? ordemParam : 'nome'
+  const direcao: Direcao = dirParam === 'asc' || dirParam === 'desc' ? dirParam : DIRECAO_POR_OMISSAO[ordem]
   const agora = new Date()
 
   const supabase = await createClient()
@@ -53,7 +102,6 @@ export default async function ClientesPage({
       'id, numero_socio, nome, telefone, estado, alerta, nascimento, inicio_contrato, saiu_em, frequencia_semanal'
     )
     .eq('estudio_id', estudio.id)
-    .order('nome')
 
   if (estado && estado !== 'Todos') {
     query = query.eq('estado', estado)
@@ -75,6 +123,32 @@ export default async function ClientesPage({
     throw new Error((error ?? erroTodos ?? erroPagamentos)!.message)
   }
   const clientes = (data ?? []) as ClienteLista[]
+
+  // Ordenado aqui (não no Supabase) porque o critério "Nº de cliente"
+  // precisa de extrair a parte numérica do numero_socio — não dá para
+  // pedir isso ao Postgrest diretamente. Sem nunca mexer na ordem
+  // interna de quem não tem o campo preenchido: fica sempre no fim,
+  // seja qual for a direção escolhida.
+  const clientesOrdenados = [...clientes].sort((a, b) => {
+    let comparacao = 0
+    if (ordem === 'numero') {
+      const na = numeroSequencial(a.numero_socio)
+      const nb = numeroSequencial(b.numero_socio)
+      if (na === null && nb === null) return 0
+      if (na === null) return 1
+      if (nb === null) return -1
+      comparacao = na - nb
+    } else if (ordem === 'inscricao') {
+      if (!a.inicio_contrato && !b.inicio_contrato) return 0
+      if (!a.inicio_contrato) return 1
+      if (!b.inicio_contrato) return -1
+      comparacao = a.inicio_contrato.localeCompare(b.inicio_contrato)
+    } else {
+      comparacao = normalizarNome(a.nome).localeCompare(normalizarNome(b.nome))
+    }
+    return direcao === 'desc' ? -comparacao : comparacao
+  })
+
   const todos = (todosData ?? []) as { estado: EstadoCliente }[]
   const contagens: Record<EstadoCliente | 'Todos', number> = {
     Todos: todos.length,
@@ -143,14 +217,14 @@ export default async function ClientesPage({
       <div className="mt-6 flex flex-wrap gap-1.5">
         {FILTROS.map((f) => {
           const ativo = (estado ?? 'Todos') === f.valor
-          const params = new URLSearchParams()
-          if (f.valor !== 'Todos') params.set('estado', f.valor)
-          if (q) params.set('q', q)
-          const qs = params.toString()
+          const href = `/painel/${slug}/clientes${construirQuery(
+            { q, ordem: ordemParam, dir: dirParam },
+            { estado: f.valor === 'Todos' ? undefined : f.valor }
+          )}`
           return (
             <Link
               key={f.valor}
-              href={`/painel/${slug}/clientes${qs ? `?${qs}` : ''}`}
+              href={href}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
                 ativo
                   ? 'border-brand bg-brand text-black'
@@ -163,8 +237,44 @@ export default async function ClientesPage({
         })}
       </div>
 
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+        <span className="font-medium">Ordenar por:</span>
+        {ORDENS.map((o) => {
+          const ativo = ordem === o.valor
+          const href = `/painel/${slug}/clientes${construirQuery(
+            { estado, q },
+            { ordem: o.valor === 'nome' ? undefined : o.valor, dir: ativo ? direcao : undefined }
+          )}`
+          return (
+            <Link
+              key={o.valor}
+              href={href}
+              className={`rounded-full border px-3 py-1.5 font-medium ${
+                ativo
+                  ? 'border-brand bg-brand text-black'
+                  : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+              }`}
+            >
+              {o.label}
+            </Link>
+          )
+        })}
+        <Link
+          href={`/painel/${slug}/clientes${construirQuery(
+            { estado, q, ordem: ordemParam },
+            { dir: direcao === 'asc' ? 'desc' : 'asc' }
+          )}`}
+          className="rounded-full border border-black/10 px-3 py-1.5 font-medium text-zinc-600 dark:border-white/10 dark:text-zinc-400"
+          title={direcao === 'asc' ? 'Ordem crescente — trocar para decrescente' : 'Ordem decrescente — trocar para crescente'}
+        >
+          {direcao === 'asc' ? '↑' : '↓'}
+        </Link>
+      </div>
+
       <form method="get" className="mt-4">
         {estado && <input type="hidden" name="estado" value={estado} />}
+        {ordemParam && <input type="hidden" name="ordem" value={ordemParam} />}
+        {dirParam && <input type="hidden" name="dir" value={dirParam} />}
         <input
           type="text"
           name="q"
@@ -175,7 +285,7 @@ export default async function ClientesPage({
       </form>
 
       <div className="mt-4 flex flex-col overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
-        {clientes.map((c, i) => {
+        {clientesOrdenados.map((c, i) => {
           const est = ESTADOS_CLIENTE[c.estado] ?? ESTADOS_CLIENTE.Ativo
           const a = ALERTAS[c.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
           const meses = mesesAtivo(c.inicio_contrato, c.saiu_em)
@@ -211,8 +321,10 @@ export default async function ClientesPage({
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
-                <span className="w-36 shrink-0">
-                  {meses !== null ? `${meses} ${meses === 1 ? 'mês' : 'meses'} de contrato` : 'sem data de início'}
+                <span className="w-44 shrink-0">
+                  {c.inicio_contrato
+                    ? `desde ${fmt(c.inicio_contrato)}${meses !== null ? ` · ${meses} ${meses === 1 ? 'mês' : 'meses'}` : ''}`
+                    : 'sem data de início'}
                 </span>
                 <span className="w-36 shrink-0">
                   {pagamento ? (

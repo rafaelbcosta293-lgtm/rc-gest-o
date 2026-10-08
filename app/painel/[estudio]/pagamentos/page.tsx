@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt, treinosNoPeriodo } from '@/lib/data/presencas'
+import { segurosPorPagar } from '@/lib/data/clientes'
 import type { EstadoPagamento } from '@/lib/supabase/database.types'
 
 type PagamentoDetalhe = {
@@ -149,6 +150,32 @@ export default async function PagamentosPage({
   const emDia = clientesComResumo.filter((c) => c.em_dia)
   const atrasados = clientesComResumo.filter((c) => !c.em_dia)
 
+  const { data: clientesInicioData, error: erroClientesInicio } = idsClientes.length
+    ? await supabase.from('clientes').select('id, inicio_contrato').in('id', idsClientes)
+    : { data: [], error: null }
+  if (erroClientesInicio) {
+    throw new Error(erroClientesInicio.message)
+  }
+  const inicioContratoPorCliente = new Map(
+    (clientesInicioData ?? []).map((c) => [c.id, c.inicio_contrato])
+  )
+  const { data: segurosPagosData, error: erroSegurosPagos } = idsClientes.length
+    ? await supabase
+        .from('pagamentos')
+        .select('cliente_id, data_pagamento')
+        .in('cliente_id', idsClientes)
+        .eq('inclui_seguro', true)
+    : { data: [], error: null }
+  if (erroSegurosPagos) {
+    throw new Error(erroSegurosPagos.message)
+  }
+  const clientesParaSeguro = clientes.map((c) => ({
+    id: c.cliente_id,
+    nome: c.nome,
+    inicio_contrato: inicioContratoPorCliente.get(c.cliente_id) ?? null,
+  }))
+  const segurosARenovar = segurosPorPagar(clientesParaSeguro, new Date(), segurosPagosData ?? [])
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
@@ -161,7 +188,10 @@ export default async function PagamentosPage({
       <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Pagamentos</h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         {estudio.nome} · {atrasados.length} {atrasados.length === 1 ? 'atrasado' : 'atrasados'} de{' '}
-        {clientes.length} clientes ativos.
+        {clientes.length} clientes ativos
+        {segurosARenovar.length > 0 &&
+          ` · ${segurosARenovar.length} ${segurosARenovar.length === 1 ? 'seguro' : 'seguros'} a renovar`}
+        .
       </p>
 
       {atrasados.length > 0 && (
@@ -172,6 +202,28 @@ export default async function PagamentosPage({
           <div className="mt-2 flex flex-col gap-2">
             {atrasados.map((c) => (
               <LinhaPagamento key={c.cliente_id} slug={slug} cliente={c} variante="atrasado" />
+            ))}
+          </div>
+        </>
+      )}
+
+      {segurosARenovar.length > 0 && (
+        <>
+          <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-amber-600">
+            Seguro a renovar ({segurosARenovar.length})
+          </h2>
+          <div className="mt-2 flex flex-col gap-2">
+            {segurosARenovar.map((c) => (
+              <Link
+                key={`seguro-${c.id}`}
+                href={`/painel/${slug}/pagamentos/${c.id}`}
+                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+              >
+                <span className="font-medium text-black dark:text-zinc-50">{c.nome}</span>
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                  em dívida desde {fmt(c.dataRenovacao)}
+                </span>
+              </Link>
             ))}
           </div>
         </>

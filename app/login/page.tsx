@@ -8,7 +8,7 @@ import PasswordInput from '@/components/PasswordInput'
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; info?: string }>
 }) {
   const supabase = await createClient()
   const { data } = await supabase.auth.getUser()
@@ -16,7 +16,7 @@ export default async function LoginPage({
     redirect('/')
   }
 
-  const { error } = await searchParams
+  const { error, info } = await searchParams
 
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
@@ -29,6 +29,12 @@ export default async function LoginPage({
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           Entra com o teu email e palavra-passe.
         </p>
+
+        {info && (
+          <p className="mt-4 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+            {info}
+          </p>
+        )}
 
         {error && (
           <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

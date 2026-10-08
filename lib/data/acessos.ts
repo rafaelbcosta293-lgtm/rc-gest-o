@@ -6,7 +6,7 @@
 // guardado no Supabase Auth.
 const EMAIL_DONO = 'rafaelbcosta293@gmail.com'
 const EMAIL_GERAL = 'rc.privatefitstudio@gmail.com'
-const EMAIL_POR_ESTUDIO: Record<string, string> = {
+export const EMAIL_POR_ESTUDIO: Record<string, string> = {
   fatima: 'rc.privatefitstudio.fatima@gmail.com',
   leiria: 'rc.privatefitstudio.leiria@gmail.com',
 }

@@ -92,6 +92,15 @@ export default async function AdminPage({
         <span className="text-sm text-black dark:text-zinc-50">Gerir valores, planos e serviços</span>
         <span className="text-sm text-zinc-400">→</span>
       </Link>
+
+      <TituloSeccao cor="neutro">Contas</TituloSeccao>
+      <Link
+        href="/painel/admin/contas"
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+      >
+        <span className="text-sm text-black dark:text-zinc-50">Palavra-passe das contas de login dos estúdios</span>
+        <span className="text-sm text-zinc-400">→</span>
+      </Link>
     </div>
   )
 }

@@ -6,11 +6,12 @@ import { inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from './actions'
 import { corEstudio, ESTADOS_LEAD } from '@/lib/data/constantes'
+import { precisaRenovarSeguro } from '@/lib/data/clientes'
 import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
 import type { Cliente, Estudio, Lead, LeadParada, EstadoPagamento, ReavaliacaoPendente } from '@/lib/supabase/database.types'
 
-type ClienteResumo = Pick<Cliente, 'id' | 'estado' | 'inicio_contrato'>
+type ClienteResumo = Pick<Cliente, 'id' | 'nome' | 'estado' | 'inicio_contrato'>
 type LeadResumo = Pick<Lead, 'estado' | 'entrada' | 'fecho_em' | 'visita_data'>
 type LeadDoDia = Pick<Lead, 'id' | 'nome' | 'visita_hora' | 'estado'>
 type RegistoSemana = { horas: number; pt: { nome: string } | null }
@@ -167,7 +168,7 @@ async function PainelAdminEstudio({
       .eq('estudio_id', estudio.id)
       .eq('em_dia', false)
       .order('nome'),
-    supabase.from('clientes').select('id, estado, inicio_contrato').eq('estudio_id', estudio.id),
+    supabase.from('clientes').select('id, nome, estado, inicio_contrato').eq('estudio_id', estudio.id),
     supabase.from('leads').select('estado, entrada, fecho_em, visita_data').eq('estudio_id', estudio.id),
     supabase
       .from('registos_pt')
@@ -216,6 +217,9 @@ async function PainelAdminEstudio({
   const novosClientes = clientes.filter(
     (c) => c.inicio_contrato && c.inicio_contrato >= inicioMes && c.inicio_contrato < fimMesExclusivo
   ).length
+  const segurosARenovar = clientes.filter(
+    (c) => c.estado === 'Ativo' && precisaRenovarSeguro(c.inicio_contrato, agora)
+  )
 
   const leads = (leadsData ?? []) as LeadResumo[]
   const leadsNovas = leads.filter((l) => l.entrada >= inicioMes && l.entrada < fimMesExclusivo).length
@@ -250,7 +254,8 @@ async function PainelAdminEstudio({
     .map(([nome, horas]) => ({ nome, horas }))
     .sort((a, b) => b.horas - a.horas)
 
-  const totalPendencias = leadsParadas.length + reavaliacoes.length + pagamentosAtrasados.length
+  const totalPendencias =
+    leadsParadas.length + reavaliacoes.length + pagamentosAtrasados.length + segurosARenovar.length
 
   return (
     <>
@@ -429,6 +434,20 @@ async function PainelAdminEstudio({
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {p.valido_ate ? `venceu em ${fmt(p.valido_ate)}` : 'sem pagamentos'}
+            </span>
+          </Link>
+        ))}
+        {segurosARenovar.map((c) => (
+          <Link
+            key={`seguro-${c.id}`}
+            href={`/painel/${slug}/pagamentos/${c.id}`}
+            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+          >
+            <span className="font-medium text-black dark:text-zinc-50">
+              {c.nome} <span className="text-xs text-zinc-500">· renovação de seguro</span>
+            </span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              cliente desde {fmt(c.inicio_contrato!)}
             </span>
           </Link>
         ))}

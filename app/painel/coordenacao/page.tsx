@@ -7,9 +7,11 @@ import { desbloquearCoordenacao } from './actions'
 import { corEstudio } from '@/lib/data/constantes'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { metricasNoIntervalo, METRICAS_MARKETING, type LeadMarketing } from '@/lib/data/marketing'
+import { precisaRenovarSeguro } from '@/lib/data/clientes'
 import TituloSeccao from '@/components/TituloSeccao'
 import PortaSenha from '@/components/PortaSenha'
 import type {
+  Cliente,
   ClienteSemTreino,
   EstadoPagamento,
   Estudio,
@@ -18,6 +20,7 @@ import type {
 } from '@/lib/supabase/database.types'
 
 type ChecklistHoje = { tipo: string; concluidos: number; total: number }
+type ClienteSeguro = Pick<Cliente, 'id' | 'nome' | 'inicio_contrato'>
 
 export default async function CoordenacaoPage({
   searchParams,
@@ -103,6 +106,7 @@ async function PainelCoordenacaoEstudio({
     { data: pagamentosData },
     { data: leadsMarketingData, error: erroLeadsMarketing },
     { data: semTreinoData },
+    { data: clientesAtivosData },
   ] = await Promise.all([
     supabase
       .from('checklist_registos')
@@ -129,6 +133,11 @@ async function PainelCoordenacaoEstudio({
       .select('*')
       .eq('estudio_id', estudio.id)
       .gt('dias_sem_treino', 7),
+    supabase
+      .from('clientes')
+      .select('id, nome, inicio_contrato')
+      .eq('estudio_id', estudio.id)
+      .eq('estado', 'Ativo'),
   ])
 
   if (erroLeadsMarketing) {
@@ -152,6 +161,10 @@ async function PainelCoordenacaoEstudio({
     : { data: [] }
   const idsSemAgendamento = new Set((semAgendamentoData ?? []).map((d) => d.cliente_id))
   const clientesInativos = candidatosInativos.filter((c) => idsSemAgendamento.has(c.cliente_id))
+
+  const agora = new Date()
+  const clientesAtivos = (clientesAtivosData ?? []) as ClienteSeguro[]
+  const segurosARenovar = clientesAtivos.filter((c) => precisaRenovarSeguro(c.inicio_contrato, agora))
 
   return (
     <>
@@ -269,9 +282,24 @@ async function PainelCoordenacaoEstudio({
             </span>
           </Link>
         ))}
-        {leadsParadas.length + reavaliacoes.length + pagamentosAtrasados.length + clientesInativos.length === 0 && (
-          <p className="text-sm text-zinc-500">Nada pendente — tudo em dia.</p>
-        )}
+        {segurosARenovar.map((c) => (
+          <Link
+            key={`seguro-${c.id}`}
+            href={`/painel/${slug}/pagamentos/${c.id}`}
+            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+          >
+            <span className="text-black dark:text-zinc-50">{c.nome} · renovação de seguro</span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              cliente desde {fmt(c.inicio_contrato!)}
+            </span>
+          </Link>
+        ))}
+        {leadsParadas.length +
+          reavaliacoes.length +
+          pagamentosAtrasados.length +
+          clientesInativos.length +
+          segurosARenovar.length ===
+          0 && <p className="text-sm text-zinc-500">Nada pendente — tudo em dia.</p>}
       </div>
     </>
   )

@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
-import { fmt, intervaloMes } from '@/lib/data/presencas'
+import { fmt } from '@/lib/data/presencas'
 import { somarDias } from '@/lib/data/horarios'
 import { desbloquearCoordenacao } from './actions'
 import { corEstudio } from '@/lib/data/constantes'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { metricasNoIntervalo, METRICAS_MARKETING, type LeadMarketing } from '@/lib/data/marketing'
-import { precisaRenovarSeguro } from '@/lib/data/clientes'
+import { segurosPorPagar } from '@/lib/data/clientes'
 import TituloSeccao from '@/components/TituloSeccao'
 import PortaSenha from '@/components/PortaSenha'
 import type {
@@ -164,26 +164,18 @@ async function PainelCoordenacaoEstudio({
 
   const agora = new Date()
   const clientesAtivos = (clientesAtivosData ?? []) as ClienteSeguro[]
-  const segurosCandidatos = clientesAtivos.filter((c) => precisaRenovarSeguro(c.inicio_contrato, agora))
-  const { inicio: inicioMesRenovacao, fimExclusivo: fimMesRenovacaoExclusivo } = intervaloMes(
-    agora.getFullYear(),
-    agora.getMonth() + 1
-  )
-  const idsSegurosCandidatos = segurosCandidatos.map((c) => c.id)
-  const { data: segurosPagosData, error: erroSegurosPagos } = idsSegurosCandidatos.length
+  const idsClientesAtivos = clientesAtivos.map((c) => c.id)
+  const { data: segurosPagosData, error: erroSegurosPagos } = idsClientesAtivos.length
     ? await supabase
         .from('pagamentos')
-        .select('cliente_id')
-        .in('cliente_id', idsSegurosCandidatos)
+        .select('cliente_id, data_pagamento')
+        .in('cliente_id', idsClientesAtivos)
         .eq('inclui_seguro', true)
-        .gte('data_pagamento', inicioMesRenovacao)
-        .lt('data_pagamento', fimMesRenovacaoExclusivo)
     : { data: [], error: null }
   if (erroSegurosPagos) {
     throw new Error(erroSegurosPagos.message)
   }
-  const idsSeguroJaPago = new Set((segurosPagosData ?? []).map((p) => p.cliente_id))
-  const segurosARenovar = segurosCandidatos.filter((c) => !idsSeguroJaPago.has(c.id))
+  const segurosARenovar = segurosPorPagar(clientesAtivos, agora, segurosPagosData ?? [])
 
   return (
     <>
@@ -309,7 +301,7 @@ async function PainelCoordenacaoEstudio({
           >
             <span className="text-black dark:text-zinc-50">{c.nome} · renovação de seguro</span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
-              cliente desde {fmt(c.inicio_contrato!)}
+              em dívida desde {fmt(c.dataRenovacao)}
             </span>
           </Link>
         ))}

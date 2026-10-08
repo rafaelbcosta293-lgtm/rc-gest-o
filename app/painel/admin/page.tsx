@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
-import { fmt, MESES, intervaloMes } from '@/lib/data/presencas'
+import { fmt, MESES } from '@/lib/data/presencas'
 import { inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from './actions'
 import { corEstudio, ESTADOS_LEAD } from '@/lib/data/constantes'
-import { precisaRenovarSeguro } from '@/lib/data/clientes'
+import { segurosPorPagar } from '@/lib/data/clientes'
 import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
 import type { Cliente, Estudio, Lead, LeadParada, EstadoPagamento, ReavaliacaoPendente } from '@/lib/supabase/database.types'
@@ -217,28 +217,19 @@ async function PainelAdminEstudio({
   const novosClientes = clientes.filter(
     (c) => c.inicio_contrato && c.inicio_contrato >= inicioMes && c.inicio_contrato < fimMesExclusivo
   ).length
-  const segurosCandidatos = clientes.filter(
-    (c) => c.estado === 'Ativo' && precisaRenovarSeguro(c.inicio_contrato, agora)
-  )
-  const { inicio: inicioMesRenovacao, fimExclusivo: fimMesRenovacaoExclusivo } = intervaloMes(
-    agora.getFullYear(),
-    agora.getMonth() + 1
-  )
-  const idsSegurosCandidatos = segurosCandidatos.map((c) => c.id)
-  const { data: segurosPagosData, error: erroSegurosPagos } = idsSegurosCandidatos.length
+  const clientesAtivosComContrato = clientes.filter((c) => c.estado === 'Ativo')
+  const idsClientesAtivos = clientesAtivosComContrato.map((c) => c.id)
+  const { data: segurosPagosData, error: erroSegurosPagos } = idsClientesAtivos.length
     ? await supabase
         .from('pagamentos')
-        .select('cliente_id')
-        .in('cliente_id', idsSegurosCandidatos)
+        .select('cliente_id, data_pagamento')
+        .in('cliente_id', idsClientesAtivos)
         .eq('inclui_seguro', true)
-        .gte('data_pagamento', inicioMesRenovacao)
-        .lt('data_pagamento', fimMesRenovacaoExclusivo)
     : { data: [], error: null }
   if (erroSegurosPagos) {
     throw new Error(erroSegurosPagos.message)
   }
-  const idsSeguroJaPago = new Set((segurosPagosData ?? []).map((p) => p.cliente_id))
-  const segurosARenovar = segurosCandidatos.filter((c) => !idsSeguroJaPago.has(c.id))
+  const segurosARenovar = segurosPorPagar(clientesAtivosComContrato, agora, segurosPagosData ?? [])
 
   const leads = (leadsData ?? []) as LeadResumo[]
   const leadsNovas = leads.filter((l) => l.entrada >= inicioMes && l.entrada < fimMesExclusivo).length
@@ -466,7 +457,7 @@ async function PainelAdminEstudio({
               {c.nome} <span className="text-xs text-zinc-500">· renovação de seguro</span>
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
-              cliente desde {fmt(c.inicio_contrato!)}
+              em dívida desde {fmt(c.dataRenovacao)}
             </span>
           </Link>
         ))}

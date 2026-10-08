@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
-import { fmt } from '@/lib/data/presencas'
+import { fmt, intervaloMes } from '@/lib/data/presencas'
 import { somarDias } from '@/lib/data/horarios'
 import { desbloquearCoordenacao } from './actions'
 import { corEstudio } from '@/lib/data/constantes'
@@ -164,7 +164,26 @@ async function PainelCoordenacaoEstudio({
 
   const agora = new Date()
   const clientesAtivos = (clientesAtivosData ?? []) as ClienteSeguro[]
-  const segurosARenovar = clientesAtivos.filter((c) => precisaRenovarSeguro(c.inicio_contrato, agora))
+  const segurosCandidatos = clientesAtivos.filter((c) => precisaRenovarSeguro(c.inicio_contrato, agora))
+  const { inicio: inicioMesRenovacao, fimExclusivo: fimMesRenovacaoExclusivo } = intervaloMes(
+    agora.getFullYear(),
+    agora.getMonth() + 1
+  )
+  const idsSegurosCandidatos = segurosCandidatos.map((c) => c.id)
+  const { data: segurosPagosData, error: erroSegurosPagos } = idsSegurosCandidatos.length
+    ? await supabase
+        .from('pagamentos')
+        .select('cliente_id')
+        .in('cliente_id', idsSegurosCandidatos)
+        .eq('inclui_seguro', true)
+        .gte('data_pagamento', inicioMesRenovacao)
+        .lt('data_pagamento', fimMesRenovacaoExclusivo)
+    : { data: [], error: null }
+  if (erroSegurosPagos) {
+    throw new Error(erroSegurosPagos.message)
+  }
+  const idsSeguroJaPago = new Set((segurosPagosData ?? []).map((p) => p.cliente_id))
+  const segurosARenovar = segurosCandidatos.filter((c) => !idsSeguroJaPago.has(c.id))
 
   return (
     <>

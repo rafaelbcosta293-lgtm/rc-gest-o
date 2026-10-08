@@ -15,7 +15,9 @@ export function mesesAtivo(inicioContrato: string | null, saiuEm: string | null)
 // entrou em fevereiro de 2025 → renova em fevereiro de 2026, 2027, …).
 // Fica ativo o mês inteiro, a partir do dia 1 — não exige dia exato.
 // Exclui o próprio mês/ano de entrada (isso é a inscrição, não uma
-// renovação).
+// renovação). Só diz se o cliente está "no mês de renovar" — quem
+// chama isto ainda tem de excluir quem já pagou o seguro esse mês
+// (ver pagamentos.inclui_seguro nas páginas de Admin/Coordenação).
 export function precisaRenovarSeguro(inicioContrato: string | null, hoje: Date): boolean {
   if (!inicioContrato) return false
   const anoInicio = Number(inicioContrato.slice(0, 4))

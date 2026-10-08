@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { MODULOS } from '@/lib/data/constantes'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { segurosPorPagar } from '@/lib/data/clientes'
 
 export default async function EstudioPage({
   params,
@@ -20,7 +21,7 @@ export default async function EstudioPage({
 
   const { data: clientes } = await supabase
     .from('clientes')
-    .select('estado')
+    .select('id, estado, inicio_contrato')
     .eq('estudio_id', estudio.id)
 
   const { ehAdmin, ehGestao } = papeisDaSessao(sessao)
@@ -31,6 +32,23 @@ export default async function EstudioPage({
   const ativos = todosClientes.filter((c) => c.estado === 'Ativo').length
   const suspensos = todosClientes.filter((c) => c.estado === 'Suspenso').length
   const inativos = todosClientes.filter((c) => c.estado === 'Ex-cliente').length
+
+  const clientesAtivos = todosClientes.filter((c) => c.estado === 'Ativo')
+  const idsClientesAtivos = clientesAtivos.map((c) => c.id)
+  const { data: segurosPagosData } = idsClientesAtivos.length
+    ? await supabase
+        .from('pagamentos')
+        .select('cliente_id, data_pagamento')
+        .in('cliente_id', idsClientesAtivos)
+        .eq('inclui_seguro', true)
+    : { data: [] }
+  const segurosEmDivida = segurosPorPagar(clientesAtivos, new Date(), segurosPagosData ?? []).length
+
+  const { data: pagamentosEstadoData } = await supabase
+    .from('v_estado_pagamento')
+    .select('em_dia')
+    .eq('estudio_id', estudio.id)
+  const mensalidadesEmDivida = (pagamentosEstadoData ?? []).filter((p) => !p.em_dia).length
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -82,6 +100,12 @@ export default async function EstudioPage({
               {m.id === 'clientes' && (
                 <p className="mt-3 text-xs font-medium text-teal-700 dark:text-teal-400">
                   {ativos} ativos · {suspensos} suspensos · {inativos} inativos
+                </p>
+              )}
+              {m.id === 'pagamentos' && (
+                <p className="mt-3 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  {segurosEmDivida} {segurosEmDivida === 1 ? 'seguro em dívida' : 'seguros em dívida'} ·{' '}
+                  {mensalidadesEmDivida} {mensalidadesEmDivida === 1 ? 'mensalidade em dívida' : 'mensalidades em dívida'}
                 </p>
               )}
             </Link>

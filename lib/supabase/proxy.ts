@@ -5,8 +5,18 @@ import { NextResponse, type NextRequest } from 'next/server'
 // Tudo o resto (ex.: /painel) exige login.
 const PUBLIC_PATHS = ['/', '/login', '/registo', '/recuperar-password']
 
+// Endpoints chamados por serviços externos, sem sessão de utilizador
+// nenhuma (cron de retenção, webhook do Google Forms) — cada um valida
+// o seu próprio segredo lá dentro (CRON_SECRET / LEADS_WEBHOOK_SECRET),
+// por isso não ficam à espera de login.
+const PUBLIC_API_PATHS = ['/api/cron/retencao', '/api/leads/google-forms']
+
 function isPublicPath(pathname: string) {
-  return PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/auth')
+  return (
+    PUBLIC_PATHS.includes(pathname) ||
+    PUBLIC_API_PATHS.includes(pathname) ||
+    pathname.startsWith('/auth')
+  )
 }
 
 export async function updateSession(request: NextRequest) {

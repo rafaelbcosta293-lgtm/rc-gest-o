@@ -42,7 +42,19 @@ export default async function EstudioPage({
         .in('cliente_id', idsClientesAtivos)
         .eq('inclui_seguro', true)
     : { data: [] }
-  const segurosEmDivida = segurosPorPagar(clientesAtivos, new Date(), segurosPagosData ?? []).length
+  const { data: reativacoesData } = idsClientesAtivos.length
+    ? await supabase
+        .from('pagamentos')
+        .select('cliente_id, data_pagamento')
+        .in('cliente_id', idsClientesAtivos)
+        .eq('inclui_reativacao', true)
+    : { data: [] }
+  const segurosEmDivida = segurosPorPagar(
+    clientesAtivos,
+    new Date(),
+    segurosPagosData ?? [],
+    reativacoesData ?? []
+  ).length
 
   const { data: pagamentosEstadoData } = await supabase
     .from('v_estado_pagamento')

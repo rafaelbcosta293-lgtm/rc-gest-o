@@ -118,7 +118,7 @@ export default async function FichaCompletaClientePage({
           )}
         </div>
         <Link
-          href={`/painel/${slug}/treinos/${clienteId}/editar`}
+          href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=clientes`}
           className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
         >
           Editar ficha

@@ -169,12 +169,27 @@ export default async function PagamentosPage({
   if (erroSegurosPagos) {
     throw new Error(erroSegurosPagos.message)
   }
+  const { data: reativacoesData, error: erroReativacoesSeguro } = idsClientes.length
+    ? await supabase
+        .from('pagamentos')
+        .select('cliente_id, data_pagamento')
+        .in('cliente_id', idsClientes)
+        .eq('inclui_reativacao', true)
+    : { data: [], error: null }
+  if (erroReativacoesSeguro) {
+    throw new Error(erroReativacoesSeguro.message)
+  }
   const clientesParaSeguro = clientes.map((c) => ({
     id: c.cliente_id,
     nome: c.nome,
     inicio_contrato: inicioContratoPorCliente.get(c.cliente_id) ?? null,
   }))
-  const segurosARenovar = segurosPorPagar(clientesParaSeguro, new Date(), segurosPagosData ?? [])
+  const segurosARenovar = segurosPorPagar(
+    clientesParaSeguro,
+    new Date(),
+    segurosPagosData ?? [],
+    reativacoesData ?? []
+  )
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">

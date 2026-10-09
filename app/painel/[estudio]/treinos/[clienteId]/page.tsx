@@ -75,7 +75,7 @@ export default async function FichaClientePage({
         </div>
         <div className="flex gap-2">
           <Link
-            href={`/painel/${slug}/treinos/${clienteId}/editar`}
+            href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=treinos`}
             className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
           >
             Editar ficha

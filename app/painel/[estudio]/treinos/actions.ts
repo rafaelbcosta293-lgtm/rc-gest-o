@@ -50,9 +50,13 @@ export async function criarCliente(formData: FormData) {
   redirect(`/painel/${estudioSlug}/treinos/${data.id}`)
 }
 
+const MODULOS_ORIGEM = ['clientes', 'treinos']
+
 export async function atualizarCliente(formData: FormData) {
   const id = formData.get('id') as string
   const estudioSlug = formData.get('estudio_slug') as string
+  const voltarParam = formData.get('voltar') as string
+  const voltar = MODULOS_ORIGEM.includes(voltarParam) ? voltarParam : 'treinos'
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -65,13 +69,15 @@ export async function atualizarCliente(formData: FormData) {
 
   if (error) {
     redirect(
-      `/painel/${estudioSlug}/treinos/${id}/editar?error=${encodeURIComponent('Não foi possível guardar as alterações.')}`
+      `/painel/${estudioSlug}/treinos/${id}/editar?voltar=${voltar}&error=${encodeURIComponent('Não foi possível guardar as alterações.')}`
     )
   }
 
+  revalidatePath(`/painel/${estudioSlug}/clientes`)
+  revalidatePath(`/painel/${estudioSlug}/clientes/${id}`)
   revalidatePath(`/painel/${estudioSlug}/treinos`)
   revalidatePath(`/painel/${estudioSlug}/treinos/${id}`)
-  redirect(`/painel/${estudioSlug}/treinos/${id}`)
+  redirect(`/painel/${estudioSlug}/${voltar}/${id}`)
 }
 
 // Chamado diretamente do seletor de exercícios (sem <form>/redirect):

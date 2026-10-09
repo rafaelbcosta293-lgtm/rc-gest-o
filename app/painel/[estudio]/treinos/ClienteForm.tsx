@@ -13,6 +13,7 @@ export default function ClienteForm({
   pts,
   action,
   error,
+  voltar,
 }: {
   estudioSlug: string
   estudioId: number
@@ -20,12 +21,14 @@ export default function ClienteForm({
   pts: Pick<Perfil, 'id' | 'nome'>[]
   action: (formData: FormData) => void
   error?: string
+  voltar?: string
 }) {
   return (
     <form action={action} className="mt-6 flex flex-col gap-4">
       <input type="hidden" name="estudio_slug" value={estudioSlug} />
       <input type="hidden" name="estudio_id" value={estudioId} />
       {cliente && <input type="hidden" name="id" value={cliente.id} />}
+      {voltar && <input type="hidden" name="voltar" value={voltar} />}
 
       {error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

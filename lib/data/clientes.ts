@@ -40,10 +40,15 @@ export function dataRenovacaoSeguroEmDivida(inicioContrato: string | null, hoje:
 // ficou em dívida, conta como pago). pagamentosSeguro só precisa de
 // cliente_id/data_pagamento dos pagamentos com inclui_seguro=true
 // desses clientes — não é preciso filtrar por data antes de chamar.
+// pagamentosReativacao (cliente_id/data_pagamento dos pagamentos com
+// inclui_reativacao=true) é opcional: quando um cliente foi reativado
+// depois do inicio_contrato original, o ciclo do seguro passa a contar
+// a partir dessa reativação, não da inscrição antiga.
 export function segurosPorPagar<T extends { id: string; inicio_contrato: string | null }>(
   clientes: T[],
   hoje: Date,
-  pagamentosSeguro: { cliente_id: string; data_pagamento: string }[]
+  pagamentosSeguro: { cliente_id: string; data_pagamento: string }[],
+  pagamentosReativacao: { cliente_id: string; data_pagamento: string }[] = []
 ): (T & { dataRenovacao: string })[] {
   const datasPagasPorCliente = new Map<string, string[]>()
   for (const p of pagamentosSeguro) {
@@ -52,9 +57,20 @@ export function segurosPorPagar<T extends { id: string; inicio_contrato: string 
     datasPagasPorCliente.set(p.cliente_id, datas)
   }
 
+  const ultimaReativacaoPorCliente = new Map<string, string>()
+  for (const p of pagamentosReativacao) {
+    const atual = ultimaReativacaoPorCliente.get(p.cliente_id)
+    if (!atual || p.data_pagamento > atual) {
+      ultimaReativacaoPorCliente.set(p.cliente_id, p.data_pagamento)
+    }
+  }
+
   const resultado: (T & { dataRenovacao: string })[] = []
   for (const c of clientes) {
-    const dataRenovacao = dataRenovacaoSeguroEmDivida(c.inicio_contrato, hoje)
+    const reativacao = ultimaReativacaoPorCliente.get(c.id) ?? null
+    const ancora =
+      reativacao && (!c.inicio_contrato || reativacao > c.inicio_contrato) ? reativacao : c.inicio_contrato
+    const dataRenovacao = dataRenovacaoSeguroEmDivida(ancora, hoje)
     if (!dataRenovacao) continue
     const datasPagas = datasPagasPorCliente.get(c.id) ?? []
     const jaPago = datasPagas.some((data) => data >= dataRenovacao)

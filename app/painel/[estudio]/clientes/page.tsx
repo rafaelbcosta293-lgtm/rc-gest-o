@@ -85,7 +85,10 @@ export default async function ClientesPage({
   searchParams: Promise<{ q?: string; estado?: string; ordem?: string; dir?: string }>
 }) {
   const { estudio: slug } = await params
-  const { q, estado, ordem: ordemParam, dir: dirParam } = await searchParams
+  const { q, estado: estadoParam, ordem: ordemParam, dir: dirParam } = await searchParams
+  // Sem filtro na URL, mostra os ativos por omissão — "Todos" passa a
+  // ser uma escolha explícita, como qualquer outro filtro.
+  const estado = estadoParam ?? 'Ativo'
   const ordem: Ordem = ordemParam === 'numero' || ordemParam === 'inscricao' ? ordemParam : 'nome'
   const direcao: Direcao = dirParam === 'asc' || dirParam === 'desc' ? dirParam : DIRECAO_POR_OMISSAO[ordem]
   const agora = new Date()
@@ -103,7 +106,7 @@ export default async function ClientesPage({
     )
     .eq('estudio_id', estudio.id)
 
-  if (estado && estado !== 'Todos') {
+  if (estado !== 'Todos') {
     query = query.eq('estado', estado)
   }
   if (q) {
@@ -216,10 +219,10 @@ export default async function ClientesPage({
 
       <div className="mt-6 flex flex-wrap gap-1.5">
         {FILTROS.map((f) => {
-          const ativo = (estado ?? 'Todos') === f.valor
+          const ativo = estado === f.valor
           const href = `/painel/${slug}/clientes${construirQuery(
             { q, ordem: ordemParam, dir: dirParam },
-            { estado: f.valor === 'Todos' ? undefined : f.valor }
+            { estado: f.valor }
           )}`
           return (
             <Link

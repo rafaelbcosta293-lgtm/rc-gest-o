@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
-import { criarPagamento, apagarPagamento } from '../actions'
+import { criarPagamento, apagarPagamento, registarPagamentoSeguro } from '../actions'
 import PagamentoForm from '../PagamentoForm'
 import SubmitButton from '@/components/SubmitButton'
 import type { Pagamento, Plano } from '@/lib/supabase/database.types'
@@ -94,6 +94,44 @@ export default async function PagamentosClientePage({
         planos={planos}
         action={criarPagamento}
       />
+
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        Registar só o seguro
+      </h2>
+      <p className="mt-1 text-xs text-zinc-500">
+        Sem mexer na mensalidade — só marca o seguro deste ciclo como pago.
+      </p>
+      <form action={registarPagamentoSeguro} className="mt-3 flex flex-wrap items-end gap-3">
+        <input type="hidden" name="estudio_slug" value={slug} />
+        <input type="hidden" name="cliente_id" value={clienteId} />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Valor (€)</label>
+          <input
+            name="valor"
+            type="number"
+            step="0.01"
+            required
+            className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Data do pagamento
+          </label>
+          <input
+            name="data_pagamento"
+            type="date"
+            defaultValue={hoje}
+            className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
+          />
+        </div>
+        <SubmitButton
+          pendingText="A guardar…"
+          className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+        >
+          Registar seguro
+        </SubmitButton>
+      </form>
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
         Histórico ({pagamentos.length})

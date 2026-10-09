@@ -5,15 +5,18 @@ import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { atualizarCliente } from '../../actions'
 import ClienteForm from '../../ClienteForm'
 
+const MODULOS_ORIGEM = ['clientes', 'treinos']
+
 export default async function EditarClientePage({
   params,
   searchParams,
 }: {
   params: Promise<{ estudio: string; clienteId: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; voltar?: string }>
 }) {
   const { estudio: slug, clienteId } = await params
-  const { error } = await searchParams
+  const { error, voltar: voltarParam } = await searchParams
+  const voltar = MODULOS_ORIGEM.includes(voltarParam ?? '') ? voltarParam! : 'treinos'
 
   const supabase = await createClient()
   const [estudio, { data: cliente }] = await Promise.all([
@@ -30,7 +33,7 @@ export default async function EditarClientePage({
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
-        href={`/painel/${slug}/treinos/${clienteId}`}
+        href={`/painel/${slug}/${voltar}/${clienteId}`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
       >
         ← {cliente.nome}
@@ -47,6 +50,7 @@ export default async function EditarClientePage({
         pts={pts}
         action={atualizarCliente}
         error={error}
+        voltar={voltar}
       />
     </div>
   )

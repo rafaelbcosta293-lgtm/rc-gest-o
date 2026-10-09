@@ -175,7 +175,17 @@ async function PainelCoordenacaoEstudio({
   if (erroSegurosPagos) {
     throw new Error(erroSegurosPagos.message)
   }
-  const segurosARenovar = segurosPorPagar(clientesAtivos, agora, segurosPagosData ?? [])
+  const { data: reativacoesData, error: erroReativacoesSeguro } = idsClientesAtivos.length
+    ? await supabase
+        .from('pagamentos')
+        .select('cliente_id, data_pagamento')
+        .in('cliente_id', idsClientesAtivos)
+        .eq('inclui_reativacao', true)
+    : { data: [], error: null }
+  if (erroReativacoesSeguro) {
+    throw new Error(erroReativacoesSeguro.message)
+  }
+  const segurosARenovar = segurosPorPagar(clientesAtivos, agora, segurosPagosData ?? [], reativacoesData ?? [])
 
   return (
     <>

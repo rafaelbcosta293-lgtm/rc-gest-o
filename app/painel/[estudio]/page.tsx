@@ -50,6 +50,12 @@ export default async function EstudioPage({
     .eq('estudio_id', estudio.id)
   const mensalidadesEmDivida = (pagamentosEstadoData ?? []).filter((p) => !p.em_dia).length
 
+  const { data: leadsParadasData } = await supabase
+    .from('v_leads_paradas')
+    .select('id')
+    .eq('estudio_id', estudio.id)
+  const leadsContactoAtrasado = (leadsParadasData ?? []).length
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -92,11 +98,6 @@ export default async function EstudioPage({
                 {m.nome}
               </h2>
               <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{m.desc}</p>
-              {m.id === 'treinos' && (
-                <p className="mt-3 text-xs font-medium text-teal-700 dark:text-teal-400">
-                  {ativos} {ativos === 1 ? 'cliente ativo' : 'clientes ativos'}
-                </p>
-              )}
               {m.id === 'clientes' && (
                 <p className="mt-3 text-xs font-medium text-teal-700 dark:text-teal-400">
                   {ativos} ativos · {suspensos} suspensos · {inativos} inativos
@@ -106,6 +107,12 @@ export default async function EstudioPage({
                 <p className="mt-3 text-xs font-medium text-amber-700 dark:text-amber-400">
                   {segurosEmDivida} {segurosEmDivida === 1 ? 'seguro em dívida' : 'seguros em dívida'} ·{' '}
                   {mensalidadesEmDivida} {mensalidadesEmDivida === 1 ? 'mensalidade em dívida' : 'mensalidades em dívida'}
+                </p>
+              )}
+              {m.id === 'leads' && (
+                <p className="mt-3 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  {leadsContactoAtrasado} {leadsContactoAtrasado === 1 ? 'lead' : 'leads'} com contacto em
+                  atraso
                 </p>
               )}
             </Link>

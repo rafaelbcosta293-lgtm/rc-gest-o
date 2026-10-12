@@ -18,10 +18,13 @@ type ClienteComUltimaAvaliacao = {
 
 export default async function AvaliacoesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ estudio: string }>
+  searchParams: Promise<{ q?: string }>
 }) {
   const { estudio: slug } = await params
+  const { q } = await searchParams
 
   const supabase = await createClient()
   const estudio = await getEstudioPorSlug(supabase, slug)
@@ -31,7 +34,7 @@ export default async function AvaliacoesPage({
 
   // Uma única consulta: clientes ativos e, para cada um, só a avaliação
   // mais recente (embutida), tal como já fazemos em Treinos.
-  const { data: clientesData, error } = await supabase
+  let query = supabase
     .from('clientes')
     .select('id, nome, avaliacoes(data, proxima_reavaliacao, peso_kg, imc, massa_gorda_pct)')
     .eq('estudio_id', estudio.id)
@@ -39,6 +42,10 @@ export default async function AvaliacoesPage({
     .order('nome')
     .order('data', { referencedTable: 'avaliacoes', ascending: false })
     .limit(1, { referencedTable: 'avaliacoes' })
+  if (q) {
+    query = query.ilike('nome', `%${q}%`)
+  }
+  const { data: clientesData, error } = await query
 
   if (error) {
     throw new Error(error.message)
@@ -63,7 +70,17 @@ export default async function AvaliacoesPage({
         {estudio.nome} · avaliações físicas, reavaliações e evolução.
       </p>
 
-      <div className="mt-6 flex flex-col gap-2">
+      <form method="get" className="mt-4">
+        <input
+          type="text"
+          name="q"
+          defaultValue={q}
+          placeholder="Procurar por nome…"
+          className="w-full rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+        />
+      </form>
+
+      <div className="mt-4 flex flex-col gap-2">
         {clientes.map((c) => {
           const ultima = c.avaliacoes?.[0]
           const reavaliacaoAtrasada = ultima?.proxima_reavaliacao
@@ -102,7 +119,7 @@ export default async function AvaliacoesPage({
 
       {clientes.length === 0 && (
         <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
-          Ainda não há clientes ativos neste estúdio.
+          {q ? 'Nenhum cliente ativo com esse nome.' : 'Ainda não há clientes ativos neste estúdio.'}
         </div>
       )}
     </div>

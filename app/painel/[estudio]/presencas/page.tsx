@@ -11,11 +11,11 @@ export default async function PresencasPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ ano?: string; mes?: string }>
+  searchParams: Promise<{ ano?: string; mes?: string; q?: string }>
 }) {
   const { estudio: slug } = await params
   const agora = new Date()
-  const { ano: anoParam, mes: mesParam } = await searchParams
+  const { ano: anoParam, mes: mesParam, q } = await searchParams
   const ano = anoParam ? Number(anoParam) : agora.getFullYear()
   const mes = mesParam ? Number(mesParam) : agora.getMonth() + 1
 
@@ -25,12 +25,16 @@ export default async function PresencasPage({
     notFound()
   }
 
-  const { data: clientes } = await supabase
+  let queryClientes = supabase
     .from('clientes')
     .select('id, nome, frequencia_semanal')
     .eq('estudio_id', estudio.id)
     .eq('estado', 'Ativo')
     .order('nome')
+  if (q) {
+    queryClientes = queryClientes.ilike('nome', `%${q}%`)
+  }
+  const { data: clientes } = await queryClientes
 
   const ids = (clientes ?? []).map((c) => c.id)
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)
@@ -77,7 +81,7 @@ export default async function PresencasPage({
 
       <div className="mt-6 flex items-center gap-3">
         <Link
-          href={`/painel/${slug}/presencas?ano=${mesAnterior.ano}&mes=${mesAnterior.mes}`}
+          href={`/painel/${slug}/presencas?ano=${mesAnterior.ano}&mes=${mesAnterior.mes}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           ←
@@ -86,14 +90,26 @@ export default async function PresencasPage({
           {MESES[mes - 1]} {ano}
         </span>
         <Link
-          href={`/painel/${slug}/presencas?ano=${mesSeguinte.ano}&mes=${mesSeguinte.mes}`}
+          href={`/painel/${slug}/presencas?ano=${mesSeguinte.ano}&mes=${mesSeguinte.mes}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
           className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
         >
           →
         </Link>
       </div>
 
-      <div className="mt-6 flex flex-col overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
+      <form method="get" className="mt-4">
+        <input type="hidden" name="ano" value={ano} />
+        <input type="hidden" name="mes" value={mes} />
+        <input
+          type="text"
+          name="q"
+          defaultValue={q}
+          placeholder="Procurar por nome…"
+          className="w-full rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+        />
+      </form>
+
+      <div className="mt-4 flex flex-col overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
         {(clientes ?? []).map((c, indice) => {
           const s = statsPorCliente.get(c.id) ?? { feitos: 0, faltas: 0, avisadas: 0 }
           const prev = treinosPrevistos(c.frequencia_semanal, ano, mes)
@@ -156,7 +172,7 @@ export default async function PresencasPage({
 
       {(clientes ?? []).length === 0 && (
         <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
-          Ainda não há clientes ativos neste estúdio.
+          {q ? 'Nenhum cliente ativo com esse nome.' : 'Ainda não há clientes ativos neste estúdio.'}
         </div>
       )}
     </div>

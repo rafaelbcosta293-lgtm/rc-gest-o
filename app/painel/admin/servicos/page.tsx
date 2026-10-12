@@ -18,6 +18,7 @@ const inputCls =
 const CHAVES_ESCONDIDAS = [
   'msg_aniversario',
   'msg_aniversario_ex',
+  'regulamento',
   chaveConfigSenha('admin'),
   chaveConfigSenha('coordenacao'),
 ]

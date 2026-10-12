@@ -9,6 +9,7 @@ export async function entrarCliente(formData: FormData) {
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const next = formData.get('next') as string | null
 
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
@@ -16,5 +17,7 @@ export async function entrarCliente(formData: FormData) {
     redirect(`/cliente/entrar?error=${encodeURIComponent(traduzErroSupabase(error.message))}`)
   }
 
-  redirect('/cliente')
+  // Só segue "next" se apontar mesmo para dentro de /cliente — nunca
+  // para um URL externo (ex.: alguém a manipular o parâmetro à mão).
+  redirect(next && next.startsWith('/cliente') ? next : '/cliente')
 }

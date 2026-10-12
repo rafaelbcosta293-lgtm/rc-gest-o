@@ -69,8 +69,16 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   if (!user && !isPublicPath(request.nextUrl.pathname)) {
+    const destino = request.nextUrl.pathname
     const url = request.nextUrl.clone()
-    url.pathname = getLoginPath(request.nextUrl.pathname)
+    url.pathname = getLoginPath(destino)
+    url.search = ''
+    // Em /cliente, guarda para onde voltar depois do login — importa
+    // sobretudo para o check-in por QR (digitalizar sem sessão ativa
+    // não pode perder-se a caminho do login).
+    if (destino.startsWith('/cliente')) {
+      url.searchParams.set('next', destino + request.nextUrl.search)
+    }
     return NextResponse.redirect(url)
   }
 

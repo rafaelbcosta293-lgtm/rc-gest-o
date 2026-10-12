@@ -111,6 +111,13 @@ export default async function AdminPage({
         <span className="text-sm text-black dark:text-zinc-50">Regulamento interno (visível na app do cliente)</span>
         <span className="text-sm text-zinc-400">→</span>
       </Link>
+      <Link
+        href="/painel/admin/checkin"
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+      >
+        <span className="text-sm text-black dark:text-zinc-50">Código QR de presença (para imprimir)</span>
+        <span className="text-sm text-zinc-400">→</span>
+      </Link>
     </div>
   )
 }

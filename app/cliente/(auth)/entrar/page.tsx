@@ -8,15 +8,15 @@ import PasswordInput from '@/components/PasswordInput'
 export default async function EntrarClientePage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; next?: string }>
 }) {
+  const { error, next } = await searchParams
+
   const supabase = await createClient()
   const { data } = await supabase.auth.getUser()
   if (data.user) {
-    redirect('/cliente')
+    redirect(next && next.startsWith('/cliente') ? next : '/cliente')
   }
-
-  const { error } = await searchParams
 
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
@@ -37,6 +37,7 @@ export default async function EntrarClientePage({
         )}
 
         <form className="mt-6 flex flex-col gap-4" action={entrarCliente}>
+          {next && <input type="hidden" name="next" value={next} />}
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="email"

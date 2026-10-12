@@ -9,7 +9,15 @@ import { corEstudio, ESTADOS_LEAD } from '@/lib/data/constantes'
 import { segurosPorPagar } from '@/lib/data/clientes'
 import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
-import type { Cliente, Estudio, Lead, LeadParada, EstadoPagamento, ReavaliacaoPendente } from '@/lib/supabase/database.types'
+import type {
+  Cliente,
+  ClienteSemTreino,
+  Estudio,
+  Lead,
+  LeadParada,
+  EstadoPagamento,
+  ReavaliacaoPendente,
+} from '@/lib/supabase/database.types'
 
 type ClienteResumo = Pick<Cliente, 'id' | 'nome' | 'estado' | 'inicio_contrato'>
 type LeadResumo = Pick<Lead, 'estado' | 'entrada' | 'fecho_em' | 'visita_data'>
@@ -150,6 +158,7 @@ async function PainelAdminEstudio({
     { data: leadsData, error: erroLeadsTodas },
     { data: registosSemanaData, error: erroRegistosSemana },
     { data: sessoesDoDiaData, error: erroSessoesDoDia },
+    { data: semTreinoData, error: erroSemTreino },
   ] = await Promise.all([
     supabase
       .from('v_leads_paradas')
@@ -182,6 +191,11 @@ async function PainelAdminEstudio({
       .eq('estudio_id', estudio.id)
       .eq('visita_data', diaSessoes)
       .order('visita_hora', { ascending: true, nullsFirst: false }),
+    supabase
+      .from('v_clientes_sem_treino_recente')
+      .select('*')
+      .eq('estudio_id', estudio.id)
+      .gt('dias_sem_treino', 7),
   ])
 
   if (
@@ -191,7 +205,8 @@ async function PainelAdminEstudio({
     erroClientes ||
     erroLeadsTodas ||
     erroRegistosSemana ||
-    erroSessoesDoDia
+    erroSessoesDoDia ||
+    erroSemTreino
   ) {
     throw new Error(
       (erroLeadsParadas ??
@@ -200,7 +215,8 @@ async function PainelAdminEstudio({
         erroClientes ??
         erroLeadsTodas ??
         erroRegistosSemana ??
-        erroSessoesDoDia)!.message
+        erroSessoesDoDia ??
+        erroSemTreino)!.message
     )
   }
 
@@ -209,6 +225,23 @@ async function PainelAdminEstudio({
   const leadsParadas = (leadsParadasData ?? []) as LeadParada[]
   const reavaliacoes = (reavaliacoesData ?? []) as ReavaliacaoPendente[]
   const pagamentosAtrasados = (pagamentosAtrasadosData ?? []) as EstadoPagamento[]
+
+  // "Sem treino há mais de 7 dias" é calculado agora; "sem evento no
+  // Google Calendar" vem da cache que o job diário (app/api/cron/retencao)
+  // escreveu — por isso é uma segunda consulta, dependente da primeira.
+  const candidatosSemTreino = (semTreinoData ?? []) as ClienteSemTreino[]
+  const idsCandidatosSemTreino = candidatosSemTreino.map((c) => c.cliente_id)
+  const { data: semAgendamentoData, error: erroSemAgendamento } = idsCandidatosSemTreino.length
+    ? await supabase
+        .from('clientes_sem_agendamento')
+        .select('cliente_id')
+        .in('cliente_id', idsCandidatosSemTreino)
+    : { data: [], error: null }
+  if (erroSemAgendamento) {
+    throw new Error(erroSemAgendamento.message)
+  }
+  const idsSemAgendamento = new Set((semAgendamentoData ?? []).map((d) => d.cliente_id))
+  const clientesSemAgendamento = candidatosSemTreino.filter((c) => idsSemAgendamento.has(c.cliente_id))
 
   const clientes = (clientesData ?? []) as ClienteResumo[]
   const clientesAtivos = clientes.filter((c) => c.estado === 'Ativo').length
@@ -280,7 +313,11 @@ async function PainelAdminEstudio({
     .sort((a, b) => b.horas - a.horas)
 
   const totalPendencias =
-    leadsParadas.length + reavaliacoes.length + pagamentosAtrasados.length + segurosARenovar.length
+    leadsParadas.length +
+    reavaliacoes.length +
+    pagamentosAtrasados.length +
+    clientesSemAgendamento.length +
+    segurosARenovar.length
 
   return (
     <>
@@ -459,6 +496,20 @@ async function PainelAdminEstudio({
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {p.valido_ate ? `venceu em ${fmt(p.valido_ate)}` : 'sem pagamentos'}
+            </span>
+          </Link>
+        ))}
+        {clientesSemAgendamento.map((c) => (
+          <Link
+            key={`inativo-${c.cliente_id}`}
+            href={`/painel/${slug}/clientes/${c.cliente_id}`}
+            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+          >
+            <span className="font-medium text-black dark:text-zinc-50">
+              {c.nome} <span className="text-xs text-zinc-500">· Cliente Inativo / Sem Agendamento</span>
+            </span>
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              {c.dias_sem_treino} dias sem treinar
             </span>
           </Link>
         ))}

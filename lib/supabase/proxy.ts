@@ -5,6 +5,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 // Tudo o resto (ex.: /painel) exige login.
 const PUBLIC_PATHS = ['/', '/login', '/registo', '/recuperar-password']
 
+// Login próprio dos clientes (separado do da equipa) — isPublicPath só
+// decide SE é preciso sessão; qual página de login usar é decidido à
+// parte, em getLoginPath, consoante o prefixo do pedido. /cliente/ativar
+// também fica aqui porque a própria página já trata os dois casos (com
+// e sem sessão válida) com uma mensagem própria — não faz sentido o
+// proxy intercetar antes disso com um redireciono genérico.
+const CLIENTE_PUBLIC_PATHS = ['/cliente/entrar', '/cliente/recuperar-password', '/cliente/ativar']
+
 // Endpoints chamados por serviços externos, sem sessão de utilizador
 // nenhuma (cron de retenção, webhook do Google Forms) — cada um valida
 // o seu próprio segredo lá dentro (CRON_SECRET / LEADS_WEBHOOK_SECRET),
@@ -14,9 +22,16 @@ const PUBLIC_API_PATHS = ['/api/cron/retencao', '/api/leads/google-forms']
 function isPublicPath(pathname: string) {
   return (
     PUBLIC_PATHS.includes(pathname) ||
+    CLIENTE_PUBLIC_PATHS.includes(pathname) ||
     PUBLIC_API_PATHS.includes(pathname) ||
     pathname.startsWith('/auth')
   )
+}
+
+// /cliente/** sem sessão volta para o login dos clientes, não para o
+// da equipa — são áreas e contas completamente separadas.
+function getLoginPath(pathname: string) {
+  return pathname.startsWith('/cliente') ? '/cliente/entrar' : '/login'
 }
 
 export async function updateSession(request: NextRequest) {
@@ -55,7 +70,7 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !isPublicPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = getLoginPath(request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt, treinosNoPeriodo } from '@/lib/data/presencas'
 import { segurosPorPagar } from '@/lib/data/clientes'
+import ListaPagamentos, { type LinhaPagamentoAtraso, type LinhaSeguro } from './ListaPagamentos'
 import type { EstadoPagamento } from '@/lib/supabase/database.types'
 
 type PagamentoDetalhe = {
@@ -17,46 +18,6 @@ type ClientePagamento = EstadoPagamento & {
   tipoMensalidade: string | null
   realizados: number
   adquiridos: number | null
-}
-
-function LinhaPagamento({ slug, cliente, variante }: {
-  slug: string
-  cliente: ClientePagamento
-  variante: 'atrasado' | 'emDia'
-}) {
-  const cores =
-    variante === 'atrasado'
-      ? 'border-red-200 bg-red-50 hover:border-red-300 dark:border-red-900 dark:bg-red-950'
-      : 'border-black/10 bg-white hover:border-black/30 dark:border-white/10 dark:bg-zinc-950'
-  return (
-    <Link
-      href={`/painel/${slug}/pagamentos/${cliente.cliente_id}`}
-      className={`flex flex-col gap-1.5 rounded-xl border p-4 transition-colors ${cores}`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="font-medium text-black dark:text-zinc-50">{cliente.nome}</span>
-        <span
-          className={`text-xs font-medium ${
-            variante === 'atrasado' ? 'text-red-700 dark:text-red-300' : 'text-teal-700 dark:text-teal-400'
-          }`}
-        >
-          {variante === 'atrasado'
-            ? cliente.valido_ate
-              ? `venceu em ${fmt(cliente.valido_ate)}`
-              : 'sem pagamentos'
-            : `válido até ${fmt(cliente.valido_ate)}`}
-        </span>
-      </div>
-      <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
-        <span>{cliente.tipoMensalidade ?? 'sem plano associado'}</span>
-        {cliente.adquiridos != null && (
-          <span>
-            · {cliente.realizados} de {cliente.adquiridos} treinos
-          </span>
-        )}
-      </div>
-    </Link>
-  )
 }
 
 export default async function PagamentosPage({
@@ -191,6 +152,28 @@ export default async function PagamentosPage({
     reativacoesData ?? []
   )
 
+  const paraLinha = (c: ClientePagamento, variante: 'atrasado' | 'emDia'): LinhaPagamentoAtraso => ({
+    clienteId: c.cliente_id,
+    nome: c.nome,
+    variante,
+    situacaoLabel:
+      variante === 'atrasado'
+        ? c.valido_ate
+          ? `venceu em ${fmt(c.valido_ate)}`
+          : 'sem pagamentos'
+        : `válido até ${fmt(c.valido_ate)}`,
+    tipoMensalidade: c.tipoMensalidade,
+    realizados: c.realizados,
+    adquiridos: c.adquiridos,
+  })
+  const linhasAtrasados = atrasados.map((c) => paraLinha(c, 'atrasado'))
+  const linhasEmDia = emDia.map((c) => paraLinha(c, 'emDia'))
+  const linhasSeguros: LinhaSeguro[] = segurosARenovar.map((c) => ({
+    clienteId: c.id,
+    nome: c.nome,
+    emDividaDesdeLabel: `em dívida desde ${fmt(c.dataRenovacao)}`,
+  }))
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
@@ -209,55 +192,12 @@ export default async function PagamentosPage({
         .
       </p>
 
-      {atrasados.length > 0 && (
-        <>
-          <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-red-600">
-            Por regularizar ({atrasados.length})
-          </h2>
-          <div className="mt-2 flex flex-col gap-2">
-            {atrasados.map((c) => (
-              <LinhaPagamento key={c.cliente_id} slug={slug} cliente={c} variante="atrasado" />
-            ))}
-          </div>
-        </>
-      )}
-
-      {segurosARenovar.length > 0 && (
-        <>
-          <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-amber-600">
-            Seguro a renovar ({segurosARenovar.length})
-          </h2>
-          <div className="mt-2 flex flex-col gap-2">
-            {segurosARenovar.map((c) => (
-              <Link
-                key={`seguro-${c.id}`}
-                href={`/painel/${slug}/pagamentos/${c.id}`}
-                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
-              >
-                <span className="font-medium text-black dark:text-zinc-50">{c.nome}</span>
-                <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                  em dívida desde {fmt(c.dataRenovacao)}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
-
-      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Em dia ({emDia.length})
-      </h2>
-      <div className="mt-2 flex flex-col gap-2">
-        {emDia.map((c) => (
-          <LinhaPagamento key={c.cliente_id} slug={slug} cliente={c} variante="emDia" />
-        ))}
-      </div>
-
-      {clientes.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
-          Ainda não há clientes ativos neste estúdio.
-        </div>
-      )}
+      <ListaPagamentos
+        slug={slug}
+        atrasados={linhasAtrasados}
+        emDia={linhasEmDia}
+        segurosARenovar={linhasSeguros}
+      />
     </div>
   )
 }

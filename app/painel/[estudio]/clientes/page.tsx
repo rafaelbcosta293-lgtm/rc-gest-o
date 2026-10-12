@@ -6,6 +6,7 @@ import { ESTADOS_CLIENTE, ALERTAS } from '@/lib/data/constantes'
 import { mesesAtivo } from '@/lib/data/clientes'
 import { proximoAniversario } from '@/lib/data/aniversarios'
 import { treinosPrevistos, intervaloMes, fmt } from '@/lib/data/presencas'
+import ListaClientes, { type LinhaCliente } from './ListaClientes'
 import type { EstadoCliente } from '@/lib/supabase/database.types'
 
 type ClienteLista = {
@@ -65,7 +66,7 @@ function numeroSequencial(numeroSocio: string | null): number | null {
 }
 
 function construirQuery(
-  base: { estado?: string; q?: string; ordem?: string; dir?: string },
+  base: { estado?: string; ordem?: string; dir?: string },
   overrides: Record<string, string | undefined>
 ) {
   const combinado = { ...base, ...overrides }
@@ -82,10 +83,10 @@ export default async function ClientesPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ q?: string; estado?: string; ordem?: string; dir?: string }>
+  searchParams: Promise<{ estado?: string; ordem?: string; dir?: string }>
 }) {
   const { estudio: slug } = await params
-  const { q, estado: estadoParam, ordem: ordemParam, dir: dirParam } = await searchParams
+  const { estado: estadoParam, ordem: ordemParam, dir: dirParam } = await searchParams
   // Sem filtro na URL, mostra os ativos por omissão — "Todos" passa a
   // ser uma escolha explícita, como qualquer outro filtro.
   const estado = estadoParam ?? 'Ativo'
@@ -108,9 +109,6 @@ export default async function ClientesPage({
 
   if (estado !== 'Todos') {
     query = query.eq('estado', estado)
-  }
-  if (q) {
-    query = query.or(`nome.ilike.%${q}%,numero_socio.ilike.%${q}%`)
   }
 
   const [
@@ -184,6 +182,44 @@ export default async function ClientesPage({
     feitosPorCliente.set(p.cliente_id, (feitosPorCliente.get(p.cliente_id) ?? 0) + 1)
   }
 
+  const linhas: LinhaCliente[] = clientesOrdenados.map((c) => {
+    const est = ESTADOS_CLIENTE[c.estado] ?? ESTADOS_CLIENTE.Ativo
+    const a = ALERTAS[c.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
+    const meses = mesesAtivo(c.inicio_contrato, c.saiu_em)
+    const aniversario = c.nascimento ? proximoAniversario(c.nascimento, agora) : null
+    const pagamento = pagamentoPorCliente.get(c.id)
+    const feitos = feitosPorCliente.get(c.id) ?? 0
+    const alvo = treinosPrevistos(c.frequencia_semanal, anoAtual, mesAtual)?.arredondado
+
+    return {
+      id: c.id,
+      numeroSocio: c.numero_socio,
+      nome: c.nome,
+      telefone: c.telefone,
+      estadoLabel: est.label,
+      estadoBg: est.bg,
+      estadoTx: est.tx,
+      alertaDot: a.dot,
+      inscricaoLabel: c.inicio_contrato
+        ? `desde ${fmt(c.inicio_contrato)}${meses !== null ? ` · ${meses} ${meses === 1 ? 'mês' : 'meses'}` : ''}`
+        : 'sem data de início',
+      pagamentoLabel: pagamento
+        ? pagamento.valido_ate
+          ? `pag. até ${fmt(pagamento.valido_ate)}`
+          : 'sem pagamentos'
+        : 'sem pagamentos',
+      pagamentoEmDia: pagamento ? pagamento.em_dia : null,
+      treinosLabel: alvo != null ? `${feitos} de ${alvo} treinos` : `${feitos} treinos`,
+      aniversarioLabel: aniversario
+        ? aniversario.dias === 0
+          ? '🎂 faz anos hoje'
+          : aniversario.dias <= 30
+            ? `🎂 em ${aniversario.dias}d`
+            : `🎂 ${aniversario.data.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}`
+        : null,
+    }
+  })
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
@@ -221,7 +257,7 @@ export default async function ClientesPage({
         {FILTROS.map((f) => {
           const ativo = estado === f.valor
           const href = `/painel/${slug}/clientes${construirQuery(
-            { q, ordem: ordemParam, dir: dirParam },
+            { ordem: ordemParam, dir: dirParam },
             { estado: f.valor }
           )}`
           return (
@@ -245,7 +281,7 @@ export default async function ClientesPage({
         {ORDENS.map((o) => {
           const ativo = ordem === o.valor
           const href = `/painel/${slug}/clientes${construirQuery(
-            { estado, q },
+            { estado },
             { ordem: o.valor === 'nome' ? undefined : o.valor, dir: ativo ? direcao : undefined }
           )}`
           return (
@@ -264,7 +300,7 @@ export default async function ClientesPage({
         })}
         <Link
           href={`/painel/${slug}/clientes${construirQuery(
-            { estado, q, ordem: ordemParam },
+            { estado, ordem: ordemParam },
             { dir: direcao === 'asc' ? 'desc' : 'asc' }
           )}`}
           className="rounded-full border border-black/10 px-3 py-1.5 font-medium text-zinc-600 dark:border-white/10 dark:text-zinc-400"
@@ -274,92 +310,7 @@ export default async function ClientesPage({
         </Link>
       </div>
 
-      <form method="get" className="mt-4">
-        {estado && <input type="hidden" name="estado" value={estado} />}
-        {ordemParam && <input type="hidden" name="ordem" value={ordemParam} />}
-        {dirParam && <input type="hidden" name="dir" value={dirParam} />}
-        <input
-          type="text"
-          name="q"
-          defaultValue={q}
-          placeholder="Procurar por nome ou nº de sócio…"
-          className="w-full rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
-        />
-      </form>
-
-      <div className="mt-4 flex flex-col overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
-        {clientesOrdenados.map((c, i) => {
-          const est = ESTADOS_CLIENTE[c.estado] ?? ESTADOS_CLIENTE.Ativo
-          const a = ALERTAS[c.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
-          const meses = mesesAtivo(c.inicio_contrato, c.saiu_em)
-          const aniversario = c.nascimento ? proximoAniversario(c.nascimento, agora) : null
-          const pagamento = pagamentoPorCliente.get(c.id)
-          const feitos = feitosPorCliente.get(c.id) ?? 0
-          const alvo = treinosPrevistos(c.frequencia_semanal, anoAtual, mesAtual)?.arredondado
-
-          return (
-            <Link
-              key={c.id}
-              href={`/painel/${slug}/clientes/${c.id}`}
-              className={`flex flex-col gap-1.5 bg-white px-4 py-3 text-sm transition-colors hover:bg-black/[.02] dark:bg-zinc-950 dark:hover:bg-white/[.05] ${
-                i > 0 ? 'border-t border-black/10 dark:border-white/10' : ''
-              }`}
-            >
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="w-16 shrink-0 font-mono text-xs text-zinc-500">
-                  {c.numero_socio ?? '—'}
-                </span>
-                <span className="flex min-w-[160px] flex-1 items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.dot }} />
-                  <span className="truncate font-medium text-black dark:text-zinc-50">{c.nome}</span>
-                </span>
-                <span
-                  className="w-24 shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-medium"
-                  style={{ background: est.bg, color: est.tx }}
-                >
-                  {est.label}
-                </span>
-                <span className="w-32 shrink-0 text-xs text-zinc-500">
-                  {c.telefone ?? 'sem contacto'}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
-                <span className="w-44 shrink-0">
-                  {c.inicio_contrato
-                    ? `desde ${fmt(c.inicio_contrato)}${meses !== null ? ` · ${meses} ${meses === 1 ? 'mês' : 'meses'}` : ''}`
-                    : 'sem data de início'}
-                </span>
-                <span className="w-36 shrink-0">
-                  {pagamento ? (
-                    <span className={pagamento.em_dia ? 'text-teal-700 dark:text-teal-400' : 'text-red-600'}>
-                      {pagamento.valido_ate ? `pag. até ${fmt(pagamento.valido_ate)}` : 'sem pagamentos'}
-                    </span>
-                  ) : (
-                    'sem pagamentos'
-                  )}
-                </span>
-                <span className="w-32 shrink-0">
-                  {alvo != null ? `${feitos} de ${alvo} treinos` : `${feitos} treinos`}
-                </span>
-                <span className="w-40 shrink-0">
-                  {aniversario &&
-                    (aniversario.dias === 0
-                      ? '🎂 faz anos hoje'
-                      : aniversario.dias <= 30
-                        ? `🎂 em ${aniversario.dias}d`
-                        : `🎂 ${aniversario.data.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}`)}
-                </span>
-              </div>
-            </Link>
-          )
-        })}
-      </div>
-
-      {clientes.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
-          {q ? 'Nenhum cliente com esse nome.' : 'Ainda não há clientes com este filtro.'}
-        </div>
-      )}
+      <ListaClientes linhas={linhas} slug={slug} />
     </div>
   )
 }

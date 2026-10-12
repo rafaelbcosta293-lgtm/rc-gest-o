@@ -48,6 +48,16 @@ export type Cliente = {
   motivo_saida: string | null
   notas: string | null
   criado_em: string
+  auth_user_id: string | null
+}
+
+export type Evento = {
+  id: string
+  estudio_id: number | null
+  titulo: string
+  corpo: string
+  publicado: boolean
+  criado_em: string
 }
 
 export type Sessao = {

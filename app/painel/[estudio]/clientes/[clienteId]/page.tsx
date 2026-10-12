@@ -6,6 +6,8 @@ import { ESTADOS_CLIENTE, ALERTAS } from '@/lib/data/constantes'
 import { mesesAtivo } from '@/lib/data/clientes'
 import { proximoAniversario, idadeEm, fmtDiaMes } from '@/lib/data/aniversarios'
 import { fmt, intervaloMes, MESES } from '@/lib/data/presencas'
+import { convidarClienteParaApp } from './actions'
+import SubmitButton from '@/components/SubmitButton'
 import type { Cliente, EstadoPagamento } from '@/lib/supabase/database.types'
 
 type ClienteCompleto = Cliente & { pt_principal: { nome: string } | null }
@@ -27,10 +29,13 @@ type SessaoResumo = {
 
 export default async function FichaCompletaClientePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ estudio: string; clienteId: string }>
+  searchParams: Promise<{ error?: string; convidado?: string }>
 }) {
   const { estudio: slug, clienteId } = await params
+  const { error: erroParam, convidado } = await searchParams
   const agora = new Date()
   const { ano, mes } = { ano: agora.getFullYear(), mes: agora.getMonth() + 1 }
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)
@@ -268,6 +273,47 @@ export default async function FichaCompletaClientePage({
           </p>
         ) : (
           <p className="mt-2 text-sm text-zinc-500">Sem pagamentos registados.</p>
+        )}
+      </section>
+
+      {/* Acesso à app do cliente */}
+      <section className="mt-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Acesso à app
+        </h2>
+
+        {erroParam && (
+          <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+            {erroParam}
+          </p>
+        )}
+        {convidado && (
+          <p className="mt-2 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+            Convite enviado para {c.email}.
+          </p>
+        )}
+
+        {c.auth_user_id ? (
+          <p className="mt-2 text-sm text-teal-700 dark:text-teal-400">✓ Conta ativa</p>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-zinc-500">
+              {c.email
+                ? 'Ainda sem conta — convida o cliente para entrar na app pelo email da ficha.'
+                : 'Sem email na ficha — adiciona um para poderes convidar este cliente.'}
+            </p>
+            <form action={convidarClienteParaApp} className="mt-3">
+              <input type="hidden" name="estudio_slug" value={slug} />
+              <input type="hidden" name="cliente_id" value={clienteId} />
+              <SubmitButton
+                pendingText="A convidar…"
+                disabled={!c.email}
+                className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/[.08]"
+              >
+                Convidar para a app
+              </SubmitButton>
+            </form>
+          </>
         )}
       </section>
     </div>

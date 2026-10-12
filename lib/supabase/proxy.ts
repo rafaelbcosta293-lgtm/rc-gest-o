@@ -72,11 +72,12 @@ export async function updateSession(request: NextRequest) {
     const destino = request.nextUrl.pathname
     const url = request.nextUrl.clone()
     url.pathname = getLoginPath(destino)
-    url.search = ''
     // Em /cliente, guarda para onde voltar depois do login — importa
     // sobretudo para o check-in por QR (digitalizar sem sessão ativa
-    // não pode perder-se a caminho do login).
+    // não pode perder-se a caminho do login). Em /painel mantém-se
+    // exatamente o comportamento de sempre, sem mexer na query.
     if (destino.startsWith('/cliente')) {
+      url.search = ''
       url.searchParams.set('next', destino + request.nextUrl.search)
     }
     return NextResponse.redirect(url)

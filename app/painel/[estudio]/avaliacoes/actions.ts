@@ -17,6 +17,14 @@ function numeroOuNull(formData: FormData, nome: string) {
   return Number.isFinite(n) ? n : null
 }
 
+// error.message sozinho (ex.: "numeric field overflow") não diz qual
+// campo — o detalhe do Postgres (ex.: "A field with precision 4, scale
+// 1 must round to an absolute value less than 10^3.") é o que permite
+// perceber de imediato qual o valor a corrigir.
+function mensagemErro(error: { message: string; details?: string | null }) {
+  return error.details ? `${error.message} — ${error.details}` : error.message
+}
+
 // massa_gorda_kg, massa_magra_kg e imc não entram aqui: são colunas
 // calculadas automaticamente pela base de dados a partir do peso, da
 // altura e da massa gorda (%) — enviar um valor para elas dá erro.
@@ -49,7 +57,7 @@ export async function criarAvaliacao(formData: FormData) {
 
   if (error) {
     redirect(
-      `/painel/${estudioSlug}/avaliacoes/${clienteId}/nova?error=${encodeURIComponent(error.message)}`
+      `/painel/${estudioSlug}/avaliacoes/${clienteId}/nova?error=${encodeURIComponent(mensagemErro(error))}`
     )
   }
 
@@ -68,7 +76,7 @@ export async function atualizarAvaliacao(formData: FormData) {
 
   if (error) {
     redirect(
-      `/painel/${estudioSlug}/avaliacoes/${clienteId}/${id}/editar?error=${encodeURIComponent(error.message)}`
+      `/painel/${estudioSlug}/avaliacoes/${clienteId}/${id}/editar?error=${encodeURIComponent(mensagemErro(error))}`
     )
   }
 

@@ -7,7 +7,9 @@ export default function PaginaAtualizarPalavraPasse() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Nova palavra-passe</CardTitle>
+        <CardTitle className="text-xl">
+          <h1>Nova palavra-passe</h1>
+        </CardTitle>
         <CardDescription>Escolha uma palavra-passe com pelo menos 8 caracteres.</CardDescription>
       </CardHeader>
       <CardContent>

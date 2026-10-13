@@ -10,19 +10,46 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { exigirPerfil } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
+import { normalizarPesquisa, soAlgarismos } from "@/lib/texto"
 import { EsqueletoLista } from "./esqueletos"
 
 export const metadata = { title: "Clientes" }
 
 type ParametrosPesquisa = PageProps<"/clientes">["searchParams"]
 
-/** Retira os caracteres com significado especial nos filtros do PostgREST (or=, ilike). */
-function limparPesquisa(texto: string): string {
-  return texto.replace(/[,()"\\%*]/g, " ").replace(/\s+/g, " ").trim()
-}
-
 function primeiroValor(valor: string | string[] | undefined): string {
   return (Array.isArray(valor) ? valor[0] : valor) ?? ""
+}
+
+type ClientePesquisavel = {
+  nome: string
+  nif: string | null
+  localidade: string | null
+  pessoa_contacto: string | null
+  email: string | null
+  telemovel: string | null
+  telefone: string | null
+}
+
+/**
+ * Texto: todas as palavras têm de aparecer no nome, localidade, pessoa de
+ * contacto ou email, sem contar acentos ("joao sintra" encontra "João … Sintra").
+ * Números (3 ou mais algarismos): procura no NIF e nos telefones ignorando
+ * espaços e o indicativo +351 ("912345678" encontra "912 345 678").
+ */
+function corresponde(cliente: ClientePesquisavel, pesquisa: string) {
+  const algarismos = soAlgarismos(pesquisa)
+  if (/^[\d\s+().-]+$/.test(pesquisa) && algarismos.length >= 3) {
+    return [cliente.nif, cliente.telemovel, cliente.telefone].some(
+      (numero) => numero !== null && soAlgarismos(numero).includes(algarismos)
+    )
+  }
+  const texto = normalizarPesquisa(
+    [cliente.nome, cliente.localidade, cliente.pessoa_contacto, cliente.email].filter(Boolean).join(" ")
+  )
+  return normalizarPesquisa(pesquisa)
+    .split(/\s+/)
+    .every((palavra) => texto.includes(palavra))
 }
 
 function BotaoNovoCliente() {
@@ -56,28 +83,22 @@ async function ListaClientes({ searchParams }: { searchParams: ParametrosPesquis
   await exigirPerfil("gerente", "chefe_equipa")
   const parametros = await searchParams
   const textoPesquisa = primeiroValor(parametros.q)
-  const pesquisa = limparPesquisa(textoPesquisa)
+  const pesquisa = textoPesquisa.trim()
   const mostrarInativos = primeiroValor(parametros.inativos) === "1"
 
   const supabase = await createClient()
   let consulta = supabase
     .from("clientes")
-    .select("id, nome, localidade, telemovel, ativo, locais(count)")
+    .select("id, nome, nif, localidade, pessoa_contacto, email, telemovel, telefone, ativo, locais(count)")
     .order("nome")
   if (!mostrarInativos) consulta = consulta.eq("ativo", true)
-  if (pesquisa) {
-    const padrao = `%${pesquisa}%`
-    // Números: ignorar espaços, para "912345678" encontrar "912 345 678" (e vice-versa).
-    const algarismos = pesquisa.replace(/\D/g, "")
-    const eNumero = /^[\d\s+]+$/.test(pesquisa) && algarismos.length >= 3
-    const padraoNif = eNumero ? `%${algarismos}%` : padrao
-    const padraoTelemovel = eNumero ? `%${algarismos.split("").join("%")}%` : padrao
-    consulta = consulta.or(
-      `nome.ilike.${padrao},localidade.ilike.${padrao},nif.ilike.${padraoNif},telemovel.ilike.${padraoTelemovel}`
-    )
-  }
-  const { data: clientes, error } = await consulta
+  const { data: todos, error } = await consulta
   if (error) throw new Error(`Erro ao carregar os clientes: ${error.message}`)
+
+  // A pesquisa é feita aqui (e não na base de dados) para ignorar acentos e
+  // os espaços dos números. Funciona até 1000 clientes (limite por omissão da
+  // API do Supabase); acima disso, paginar e pesquisar na BD (unaccent).
+  const clientes = pesquisa ? todos.filter((cliente) => corresponde(cliente, pesquisa)) : todos
 
   // Ligação "Mostrar/Esconder inativos" que mantém a pesquisa.
   const alternarInativos = new URLSearchParams()

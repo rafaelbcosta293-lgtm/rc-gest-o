@@ -96,7 +96,8 @@ acesso** (email e palavra-passe) ligada à sua ficha. Há três perfis:
 | O que pode fazer | Gerente | Chefe de equipa | Colaborador |
 | --- | :---: | :---: | :---: |
 | Ver colaboradores e equipas | ✅ | ✅ | ✅ |
-| Criar, alterar e apagar colaboradores e equipas | ✅ | — | — |
+| Criar e alterar colaboradores (desativam-se, não se apagam) | ✅ | — | — |
+| Criar, alterar e apagar equipas | ✅ | — | — |
 | Ver e alterar o custo/hora dos colaboradores | ✅ | — | — |
 | Ver ausências | todas | as da sua equipa | só as suas |
 | Marcar e apagar ausências | ✅ | — | — |
@@ -139,9 +140,14 @@ Todos os comandos seguintes correm **dentro da pasta `fatijardins`**.
 ## 2) Projeto Supabase
 
 **Já existe um projeto criado:** “fatijardins”, com a referência (ref) `iodjvvtumuhlvdsemhbb`, na
-região **eu-west-3 (Paris)**, com a migração e os dados de exemplo já aplicados. O endereço é
+região **eu-west-3 (Paris)**, com as migrações e os dados de exemplo já aplicados. O endereço é
 `https://iodjvvtumuhlvdsemhbb.supabase.co`. Se vai usar este projeto, passe ao
-[passo 4](#4-configurar-a-autenticação-no-painel-do-supabase).
+[passo 4](#4-configurar-a-autenticação-no-painel-do-supabase), mas leia primeiro o aviso abaixo.
+
+> 🔒 **Contas de demonstração.** Este projeto tem as 6 contas de exemplo (incluindo um **gerente**)
+> com a palavra-passe `Fatijardins2026!`, que está escrita neste repositório **público**. Servem
+> para testar no computador. **Antes de publicar a app na Vercel** (passo 9), apague-as ou mude-lhes
+> a palavra-passe, seguindo os passos em [Dados de exemplo](#dados-de-exemplo).
 
 **Para criar um projeto de raiz:**
 
@@ -200,10 +206,17 @@ Cria 2 equipas, 7 colaboradores, 8 clientes, 12 locais e estas contas, todas com
 >    delete from auth.users where email like '%@example.com';
 >    ```
 >
->    (Em alternativa, em cada colaborador: **Acesso à app → Retirar acesso**. Apagar no painel em
->    *Authentication → Users* uma conta ligada a um colaborador pode dar o erro
->    “Database error deleting user”.)
-> 4. Na app, apague ou desative os colaboradores, equipas e clientes de exemplo.
+>    (Em alternativa: em cada colaborador, **Acesso à app → Retirar acesso**, ou no painel em
+>    *Authentication → Users*.)
+> 4. Na app, desative os colaboradores de exemplo e apague (ou desative) as equipas e os clientes
+>    de exemplo.
+> 5. Confirme que só ficaram os acessos que espera:
+>
+>    ```sql
+>    select nome, perfil, ativo, user_id is not null as tem_acesso
+>    from public.colaboradores
+>    where user_id is not null or perfil = 'gerente';
+>    ```
 
 ### Primeiro gerente (se não usar os dados de exemplo)
 
@@ -325,6 +338,10 @@ npm run build       # compila como na Vercel; se passar aqui, deve passar lá
 
 ## 9) Publicar na Vercel
 
+> ⚠️ **Antes de publicar:** apague as contas de demonstração ou mude-lhes a palavra-passe (ver
+> [Dados de exemplo](#dados-de-exemplo)). Depois de publicada, qualquer pessoa pode abrir a página de
+> entrada, e a palavra-passe de exemplo é pública.
+
 1. Em [vercel.com](https://vercel.com) → **Add New… → Project** → importe o repositório do GitHub.
 2. Em **Root Directory** clique **Edit** e escolha **`fatijardins`**.
 3. **Framework Preset:** Next.js (é detetado sozinho). Deixe os comandos por omissão.
@@ -380,7 +397,11 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
   conta (há colaboradores sem conta) e retirar o acesso não apaga a ficha.
 - **Tem de existir sempre um gerente ativo** (regra na base de dados).
 - **NIF validado com o dígito de controlo** e único; código postal `0000-000`; telefones portugueses.
-- **Desativar em vez de apagar** clientes e colaboradores, para manter o histórico.
+- **Desativar em vez de apagar:** os colaboradores só se desativam (mantêm o histórico); os clientes
+  e locais podem ser apagados pelo gerente, mas recomenda-se desativá-los quando já tiverem
+  trabalhos.
+- **Um chefe só vê as ausências da equipa enquanto tiver o perfil de chefe**; ao mudar o perfil de
+  um chefe, a app tira-o de chefe das equipas que chefiava.
 - **Locais com coordenadas opcionais** (latitude e longitude, ambas ou nenhuma) para abrir o
   caminho no Google Maps ou no Waze.
 - **Componentes shadcn/ui escritos à mão** em `components/ui` (sem a ferramenta da linha de comandos).
@@ -395,9 +416,13 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
 
 ## 12) Roteiro das fases
 
-1. **Base** ✅ — contas, perfis e permissões, equipa, ausências, clientes e locais, app instalável.
-2. **Campo** — agenda dos trabalhos por equipa e registo do que se fez no local (horas, notas, fotos).
-3. **Orçamentos** — preparar e enviar orçamentos aos clientes e acompanhar a sua aceitação.
-4. **Recursos** — materiais, viaturas e equipamentos usados em cada trabalho.
-5. **Dinheiro** — custos e rentabilidade por cliente e trabalho, ligação à faturação certificada.
-6. **Extras** — notificações, relatórios e outras melhorias pedidas pela equipa.
+1. **Base** ✅ — login, perfis e permissões (RLS), menu para telemóvel e PC, clientes e locais,
+   colaboradores, equipas e ausências, app instalável, dados de exemplo.
+2. **Campo** — agenda/calendário por equipa, “O meu dia” para o colaborador, registo diário com
+   fotos e materiais, picagem de horas.
+3. **Orçamentos** — visitas com fotos, editor de orçamento, PDF com logótipo, conversão do orçamento
+   aceite em trabalho.
+4. **Recursos** — equipamentos e manutenções, consumíveis e stock ligado aos trabalhos.
+5. **Dinheiro** — pagamentos, dívidas por cliente, contratos de manutenção recorrentes com geração
+   automática de agendamentos e cobranças.
+6. **Extras** — rotas do dia, obras com orçado vs. real, relatórios, calendário sazonal.

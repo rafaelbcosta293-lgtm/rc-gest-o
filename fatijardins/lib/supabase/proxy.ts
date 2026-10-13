@@ -44,7 +44,12 @@ export async function atualizarSessao(request: NextRequest) {
   const temSessao = Boolean(data?.claims?.sub)
   const caminho = request.nextUrl.pathname
 
-  if (!temSessao && !eRotaPublica(caminho)) {
+  // Server Actions (POST com o cabeçalho Next-Action) não são redirecionadas:
+  // um 307 para /login partia a resposta da ação e o utilizador só via
+  // "verifique a ligação". A própria ação verifica a sessão e responde.
+  const eServerAction = request.method === "POST" && request.headers.has("next-action")
+
+  if (!temSessao && !eRotaPublica(caminho) && !eServerAction) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     url.search = ""

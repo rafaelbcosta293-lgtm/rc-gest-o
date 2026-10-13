@@ -29,11 +29,19 @@ export type CamposNovaPalavraPasse = z.input<typeof esquemaNovaPalavraPasse>
 
 /**
  * Só aceita caminhos internos (ex. "/clientes") para evitar redirecionar
- * para sites externos através de ?seguinte=.
+ * para sites externos através de ?seguinte=. Usa o mesmo parser de URL do
+ * browser, que ignora tabulações e mudanças de linha ("/\t/site.com").
  */
 export function caminhoSeguro(valor: string | null | undefined, alternativa = "/"): string {
-  if (!valor || !valor.startsWith("/") || valor.startsWith("//") || valor.startsWith("/\\")) {
+  if (!valor || !valor.startsWith("/") || /[\u0000-\u001f\u007f\\]/.test(valor)) {
     return alternativa
   }
-  return valor
+  try {
+    const base = "http://fatijardins.invalid"
+    const url = new URL(valor, base)
+    if (url.origin !== base) return alternativa
+    return url.pathname + url.search + url.hash
+  } catch {
+    return alternativa
+  }
 }

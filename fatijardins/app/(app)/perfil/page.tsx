@@ -1,7 +1,6 @@
 import { Suspense } from "react"
 import { LogOutIcon, SmartphoneIcon } from "lucide-react"
 
-import { terminarSessao } from "@/app/(auth)/acoes"
 import { CabecalhoPagina } from "@/components/cabecalho-pagina"
 import { FormularioPalavraPasse } from "@/components/formulario-palavra-passe"
 import { Badge } from "@/components/ui/badge"
@@ -81,7 +80,7 @@ async function DadosPerfil() {
           <dt className="text-muted-foreground">Equipa</dt>
           <dd>{equipa?.nome ?? "—"}</dd>
         </dl>
-        <form action={terminarSessao} className="mt-6">
+        <form action="/auth/sair" method="post" className="mt-6">
           <Button type="submit" variant="outline" size="lg" className="w-full sm:w-fit">
             <LogOutIcon />
             Terminar sessão

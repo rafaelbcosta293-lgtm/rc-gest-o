@@ -11,10 +11,7 @@ export function ligacaoTelefone(numero: string) {
   return `tel:${numero.replace(/[^\d+]/g, "")}`
 }
 
-/** Minúsculas e sem acentos, para pesquisar "ines" e encontrar "Inês". */
-export function normalizarPesquisa(texto: string) {
-  return texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("pt").trim()
-}
+export { normalizarPesquisa } from "@/lib/texto"
 
 /** Os searchParams podem vir repetidos (?q=a&q=b): usa o primeiro. */
 export function primeiroValor(valor: string | string[] | undefined) {

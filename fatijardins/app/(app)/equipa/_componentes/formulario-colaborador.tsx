@@ -46,8 +46,11 @@ export function FormularioColaborador({
     defaultValues: valoresIniciais,
   })
 
-  const { submeter, aGuardar } = useAcaoFormulario(form, (valores) =>
-    colaboradorId ? atualizarColaborador(colaboradorId, valores) : criarColaborador(valores)
+  const { submeter, aGuardar } = useAcaoFormulario(
+    form,
+    (valores) => (colaboradorId ? atualizarColaborador(colaboradorId, valores) : criarColaborador(valores)),
+    // A página "Novo colaborador" fica guardada pelo Next.js: limpar depois de criar.
+    { aoConcluir: () => (colaboradorId ? undefined : form.reset()) }
   )
 
   return (

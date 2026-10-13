@@ -118,6 +118,14 @@ select pg_temp.entrar('a0000000-0000-4000-8000-000000000005');
 select pg_temp.verificar((select count(*) from public.ausencias) = 1, 'colaborador vê as suas ausências');
 reset role;
 
+-- Um chefe que passa a colaborador deixa de ver as ausências da equipa,
+-- mesmo que continue indicado como chefe (chefe_id) da equipa.
+update public.colaboradores set perfil = 'colaborador' where id = 'c0000000-0000-4000-8000-000000000002';
+select pg_temp.entrar('a0000000-0000-4000-8000-000000000002');
+select pg_temp.verificar((select count(*) from public.ausencias) = 0, 'chefe despromovido deixa de ver as ausências da equipa');
+reset role;
+update public.colaboradores set perfil = 'chefe_equipa' where id = 'c0000000-0000-4000-8000-000000000002';
+
 -- ---------------------------------------------------------------------
 -- Conta sem colaborador associado e colaborador inativo
 -- ---------------------------------------------------------------------

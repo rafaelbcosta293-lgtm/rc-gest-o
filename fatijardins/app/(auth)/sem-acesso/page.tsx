@@ -5,7 +5,6 @@ import { ShieldOffIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { obterEstadoSessao } from "@/lib/auth"
-import { terminarSessao } from "../acoes"
 
 export const metadata = { title: "Sem acesso" }
 
@@ -27,13 +26,15 @@ export default function PaginaSemAcesso() {
     <Card>
       <CardHeader>
         <ShieldOffIcon className="mb-2 size-8 text-muted-foreground" />
-        <CardTitle className="text-xl">Sem acesso à app</CardTitle>
+        <CardTitle className="text-xl">
+          <h1>Sem acesso à app</h1>
+        </CardTitle>
         <Suspense fallback={<CardDescription>A verificar…</CardDescription>}>
           <Conteudo />
         </Suspense>
       </CardHeader>
       <CardContent>
-        <form action={terminarSessao}>
+        <form action="/auth/sair" method="post">
           <Button type="submit" variant="outline" className="w-full">
             Terminar sessão
           </Button>

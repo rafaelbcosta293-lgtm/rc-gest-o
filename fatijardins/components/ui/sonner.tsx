@@ -9,6 +9,8 @@ function Toaster(props: ToasterProps) {
       position="top-center"
       richColors
       closeButton
+      containerAriaLabel="Notificações"
+      toastOptions={{ closeButtonAriaLabel: "Fechar aviso" }}
       style={
         {
           "--normal-bg": "var(--popover)",

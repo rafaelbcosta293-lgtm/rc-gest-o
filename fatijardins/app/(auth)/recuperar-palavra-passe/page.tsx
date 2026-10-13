@@ -9,7 +9,9 @@ export default function PaginaRecuperar() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Recuperar palavra-passe</CardTitle>
+        <CardTitle className="text-xl">
+          <h1>Recuperar palavra-passe</h1>
+        </CardTitle>
         <CardDescription>
           Indique o seu email. Vai receber uma ligação para definir uma nova palavra-passe.
         </CardDescription>

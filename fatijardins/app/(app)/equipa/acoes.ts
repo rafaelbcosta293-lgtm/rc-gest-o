@@ -165,6 +165,22 @@ export async function atualizarColaborador(
   if (error) return erroBD(error)
   if (!alterados.length) return NAO_EXISTE
 
+  // Quem deixa de ser chefe (ou fica inativo) deixa de chefiar as equipas.
+  let mensagem = "Alterações guardadas."
+  const podeChefiar = colaborador.ativo && (colaborador.perfil === "chefe_equipa" || colaborador.perfil === "gerente")
+  if (!podeChefiar) {
+    const { data: equipasLibertadas, error: erroEquipas } = await supabase
+      .from("equipas")
+      .update({ chefe_id: null })
+      .eq("chefe_id", id)
+      .select("nome")
+    if (erroEquipas) return erroBD(erroEquipas)
+    if (equipasLibertadas.length) {
+      const nomes = equipasLibertadas.map((e) => e.nome).join(", ")
+      mensagem = `Alterações guardadas. Deixou de ser chefe de: ${nomes}. Escolha um novo chefe.`
+    }
+  }
+
   // Custo/hora vazio = sem custo definido.
   const { error: erroCusto } =
     custoHora === null
@@ -181,7 +197,7 @@ export async function atualizarColaborador(
     }
   }
 
-  return { ok: true, mensagem: "Alterações guardadas.", redirecionar: `/equipa/colaboradores/${id}` }
+  return { ok: true, mensagem, redirecionar: `/equipa/colaboradores/${id}` }
 }
 
 // ---------------------------------------------------------------------

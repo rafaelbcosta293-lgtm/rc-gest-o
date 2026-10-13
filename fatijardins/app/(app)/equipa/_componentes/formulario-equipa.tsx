@@ -40,8 +40,11 @@ export function FormularioEquipa({ equipaId, valoresIniciais, chefes, cancelarHr
     resolver: zodResolver(esquemaEquipa),
     defaultValues: valoresIniciais,
   })
-  const { submeter, aGuardar } = useAcaoFormulario(form, (valores) =>
-    equipaId ? atualizarEquipa(equipaId, valores) : criarEquipa(valores)
+  const { submeter, aGuardar } = useAcaoFormulario(
+    form,
+    (valores) => (equipaId ? atualizarEquipa(equipaId, valores) : criarEquipa(valores)),
+    // A página "Nova equipa" fica guardada pelo Next.js: limpar depois de criar.
+    { aoConcluir: () => (equipaId ? undefined : form.reset()) }
   )
 
   return (

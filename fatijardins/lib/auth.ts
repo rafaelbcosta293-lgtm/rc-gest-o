@@ -2,6 +2,7 @@ import "server-only"
 
 import { cache } from "react"
 import { redirect } from "next/navigation"
+import { isAuthRetryableFetchError } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
 import type { Perfil } from "@/lib/perfis"
@@ -29,18 +30,25 @@ type EstadoSessao =
  */
 const lerSessao = cache(async (): Promise<EstadoSessao> => {
   const supabase = await createClient()
-  const { data } = await supabase.auth.getClaims()
+  const { data, error: erroSessao } = await supabase.auth.getClaims()
+  // Falha de rede/servidor: mostrar o erro ("Tentar de novo") em vez de
+  // mandar a pessoa para o login como se não tivesse sessão.
+  if (erroSessao && isAuthRetryableFetchError(erroSessao)) {
+    throw new Error("Não foi possível verificar a sessão.")
+  }
   const claims = data?.claims
   if (!claims?.sub) return { estado: "sem_sessao" }
 
   const email = typeof claims.email === "string" ? claims.email : null
-  const { data: colaborador } = await supabase
+  const { data: colaborador, error } = await supabase
     .from("colaboradores")
     .select("id, nome, perfil, funcao, equipa_id")
     .eq("user_id", claims.sub)
     .eq("ativo", true)
     .maybeSingle()
 
+  // Uma falha da base de dados não pode ser confundida com "sem acesso".
+  if (error) throw new Error(`Não foi possível verificar o acesso: ${error.message}`)
   if (!colaborador) return { estado: "sem_acesso", userId: claims.sub, email }
 
   return {

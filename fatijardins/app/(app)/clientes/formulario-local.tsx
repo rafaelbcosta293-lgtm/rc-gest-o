@@ -236,7 +236,7 @@ export function FormularioLocal({ clienteId, local, moradaCliente }: Props) {
               <FormItem>
                 <FormLabel>Latitude</FormLabel>
                 <FormControl>
-                  <Input inputMode="decimal" autoComplete="off" placeholder="Ex.: 38,722252" {...field} />
+                  <Input inputMode="text" autoComplete="off" placeholder="Ex.: 38,722252" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -250,7 +250,7 @@ export function FormularioLocal({ clienteId, local, moradaCliente }: Props) {
               <FormItem>
                 <FormLabel>Longitude</FormLabel>
                 <FormControl>
-                  <Input inputMode="decimal" autoComplete="off" placeholder="Ex.: -9,139337" {...field} />
+                  <Input inputMode="text" autoComplete="off" placeholder="Ex.: -9,139337" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

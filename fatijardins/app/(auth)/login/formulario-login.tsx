@@ -33,6 +33,9 @@ export function FormularioLogin() {
           toast.error(resultado.erro)
           return
         }
+        // A página de login fica guardada (escondida) pelo Next.js: não deixar
+        // lá o email e a palavra-passe depois de entrar.
+        form.reset()
         router.replace(resultado.redirecionar ?? "/")
         router.refresh()
       } catch {

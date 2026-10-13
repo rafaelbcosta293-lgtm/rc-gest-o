@@ -1,7 +1,6 @@
 "use server"
 
 import { headers } from "next/headers"
-import { redirect } from "next/navigation"
 
 import { erroValidacao, type ResultadoAcao } from "@/lib/acoes"
 import { createClient } from "@/lib/supabase/server"
@@ -109,11 +108,4 @@ export async function atualizarPalavraPasse(
   }
 
   return { ok: true, mensagem: "A palavra-passe foi alterada.", redirecionar: "/" }
-}
-
-export async function terminarSessao() {
-  const supabase = await createClient()
-  // Só este dispositivo: sair no telemóvel não deve terminar a sessão no PC.
-  await supabase.auth.signOut({ scope: "local" })
-  redirect("/login")
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { LoaderCircleIcon, MailCheckIcon } from "lucide-react"
@@ -18,16 +18,43 @@ export function FormularioRecuperar() {
     resolver: zodResolver(esquemaRecuperar),
     defaultValues: { email: "" },
   })
+  const limparAoSair = useRef(false)
   const { submeter, aGuardar } = useAcaoFormulario(form, pedirRecuperacao, {
     semNotificacao: true,
-    aoConcluir: (resultado) => setEnviado(resultado.mensagem ?? ""),
+    aoConcluir: (resultado) => {
+      setEnviado(resultado.mensagem ?? "")
+      limparAoSair.current = true
+    },
   })
+
+  // O Next.js guarda esta página escondida ao navegar: ao voltar, mostrar de
+  // novo o formulário e não a mensagem do pedido anterior.
+  useLayoutEffect(() => {
+    return () => {
+      if (limparAoSair.current) {
+        limparAoSair.current = false
+        setEnviado(null)
+        form.reset()
+      }
+    }
+  }, [form])
 
   if (enviado !== null) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-lg bg-accent p-4 text-center text-sm">
         <MailCheckIcon className="size-8 text-primary" />
         <p>{enviado}</p>
+        <Button
+          type="button"
+          variant="link"
+          onClick={() => {
+            limparAoSair.current = false
+            setEnviado(null)
+            form.reset()
+          }}
+        >
+          Enviar para outro email
+        </Button>
       </div>
     )
   }

@@ -9,7 +9,9 @@ export default function PaginaLogin() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Entrar</CardTitle>
+        <CardTitle className="text-xl">
+          <h1>Entrar</h1>
+        </CardTitle>
         <CardDescription>Use o email e a palavra-passe que o gerente lhe deu.</CardDescription>
       </CardHeader>
       <CardContent>

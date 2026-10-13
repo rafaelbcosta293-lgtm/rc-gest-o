@@ -29,10 +29,10 @@ async function EditarColaborador({ params }: { params: Props["params"] }) {
   const [colaboradorRes, custoRes, equipasRes] = await Promise.all([
     supabase
       .from("colaboradores")
-      .select("id, nome, funcao, perfil, telemovel, email, equipa_id, ativo")
+      .select("id, nome, funcao, perfil, telemovel, email, equipa_id, ativo, updated_at")
       .eq("id", id)
       .maybeSingle(),
-    supabase.from("colaboradores_custos").select("custo_hora").eq("colaborador_id", id).maybeSingle(),
+    supabase.from("colaboradores_custos").select("custo_hora, updated_at").eq("colaborador_id", id).maybeSingle(),
     supabase.from("equipas").select("id, nome, ativa").order("nome"),
   ])
   if (colaboradorRes.error) throw new Error(`Erro ao ler o colaborador: ${colaboradorRes.error.message}`)
@@ -49,6 +49,9 @@ async function EditarColaborador({ params }: { params: Props["params"] }) {
     <>
       <CabecalhoPagina titulo="Editar colaborador" descricao={colaborador.nome} voltar={{ href: ficha }} />
       <FormularioColaborador
+        // O Next.js reaproveita esta página ao voltar: montar de novo o
+        // formulário quando os dados mudam, para nunca gravar valores antigos.
+        key={`${colaborador.updated_at}|${custoRes.data?.updated_at ?? ""}`}
         colaboradorId={colaborador.id}
         equipas={equipas}
         eProprio={colaborador.id === sessao.colaborador.id}

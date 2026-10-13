@@ -27,7 +27,7 @@ async function EditarEquipa({ params }: { params: Props["params"] }) {
 
   const supabase = await createClient()
   const [equipaRes, chefesRes] = await Promise.all([
-    supabase.from("equipas").select("id, nome, cor, chefe_id, ativa, notas").eq("id", id).maybeSingle(),
+    supabase.from("equipas").select("id, nome, cor, chefe_id, ativa, notas, updated_at").eq("id", id).maybeSingle(),
     supabase
       .from("colaboradores")
       .select("id, nome, perfil, ativo")
@@ -48,6 +48,8 @@ async function EditarEquipa({ params }: { params: Props["params"] }) {
     <>
       <CabecalhoPagina titulo="Editar equipa" descricao={equipa.nome} voltar={{ href: detalhe }} />
       <FormularioEquipa
+        // Montar de novo quando os dados mudam (a página é reaproveitada).
+        key={equipa.updated_at}
         equipaId={equipa.id}
         chefes={chefes}
         cancelarHref={detalhe}

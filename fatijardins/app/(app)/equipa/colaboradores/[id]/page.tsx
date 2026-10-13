@@ -56,7 +56,10 @@ async function FichaColaborador({ params }: { params: Props["params"] }) {
 
   const eu = colaborador.id === sessao.colaborador.id
   // A RLS decide o que se vê; aqui só se evita mostrar uma lista vazia enganadora.
-  const podeVerAusencias = gerente || eu || colaborador.equipa?.chefe_id === sessao.colaborador.id
+  // Mesma regra da RLS: o chefe só vê as ausências da equipa enquanto for chefe.
+  const chefeDaEquipa =
+    sessao.colaborador.perfil === "chefe_equipa" && colaborador.equipa?.chefe_id === sessao.colaborador.id
+  const podeVerAusencias = gerente || eu || chefeDaEquipa
 
   const [custoRes, ausenciasRes] = await Promise.all([
     gerente

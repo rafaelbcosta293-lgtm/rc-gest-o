@@ -15,9 +15,19 @@ export function CampoPesquisa({ placeholder = "Pesquisar…" }: { placeholder?: 
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [valor, setValor] = useState(searchParams.get("q") ?? "")
+  const qEndereco = searchParams.get("q") ?? ""
+  const [valor, setValor] = useState(qEndereco)
+  const [qAnterior, setQAnterior] = useState(qEndereco)
+  const [aEscrever, setAEscrever] = useState(false)
   const [aPesquisar, iniciar] = useTransition()
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // O Next.js reaproveita a página ao voltar a ela: se o ?q= do endereço
+  // mudou por outra via (menu, botão voltar), mostrar o que o endereço diz.
+  if (qEndereco !== qAnterior) {
+    setQAnterior(qEndereco)
+    if (!aEscrever && qEndereco !== valor.trim()) setValor(qEndereco)
+  }
 
   useEffect(() => () => {
     if (temporizador.current) clearTimeout(temporizador.current)
@@ -25,8 +35,11 @@ export function CampoPesquisa({ placeholder = "Pesquisar…" }: { placeholder?: 
 
   function alterar(novo: string) {
     setValor(novo)
+    setAEscrever(true)
     if (temporizador.current) clearTimeout(temporizador.current)
     temporizador.current = setTimeout(() => {
+      temporizador.current = null
+      setAEscrever(false)
       const parametros = new URLSearchParams(searchParams.toString())
       if (novo.trim()) parametros.set("q", novo.trim())
       else parametros.delete("q")

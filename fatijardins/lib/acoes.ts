@@ -8,7 +8,7 @@ export type ResultadoAcao<T = undefined> =
 
 export const SEM_PERMISSAO: ResultadoAcao<never> = {
   ok: false,
-  erro: "Não tem permissão para esta ação.",
+  erro: "Não tem permissão para esta ação. Se a sessão terminou, volte a entrar.",
 }
 
 export function erroValidacao(erro: z.ZodError): ResultadoAcao<never> {

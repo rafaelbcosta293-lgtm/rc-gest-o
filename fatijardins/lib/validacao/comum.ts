@@ -40,6 +40,8 @@ export const nifOpcional = z
 export const codigoPostalOpcional = z
   .string()
   .trim()
+  // Aceita "2765001" ou "2765 001" (no iPhone o teclado numérico não tem hífen).
+  .transform((valor) => valor.replace(/^(\d{4})\s*-?\s*(\d{3})$/, "$1-$2"))
   .refine((valor) => valor === "" || /^\d{4}-\d{3}$/.test(valor), "Use o formato 0000-000.")
   .transform(vazioParaNull)
 
@@ -67,11 +69,25 @@ export const emailObrigatorio = z
   .min(1, "Indique o email.")
   .pipe(z.email("Email inválido."))
 
-/** Número escrito à portuguesa ("12,50" ou "1 200"); vazio → null. */
-export function numeroOpcional({ min, max }: { min?: number; max?: number } = {}) {
+/**
+ * Número escrito à portuguesa: "12,50", "1 200", "1.200" ou "1.200,50"
+ * (o ponto conta como separador de milhares); vazio → null.
+ * Com pontoDecimal (coordenadas GPS), o ponto é a vírgula decimal:
+ * "-9.139337" e "-9,139337" são o mesmo número.
+ */
+export function numeroOpcional({
+  min,
+  max,
+  pontoDecimal = false,
+}: { min?: number; max?: number; pontoDecimal?: boolean } = {}) {
   return z
     .string()
-    .transform((valor) => valor.replace(/\s/g, "").replace(",", "."))
+    .transform((valor) => {
+      const texto = valor.replace(/\s/g, "")
+      if (pontoDecimal) return texto.replace(",", ".")
+      if (texto.includes(",")) return texto.replace(/\./g, "").replace(",", ".")
+      return /^-?\d{1,3}(\.\d{3})+$/.test(texto) ? texto.replace(/\./g, "") : texto
+    })
     .refine((valor) => valor === "" || /^-?\d+(\.\d+)?$/.test(valor), "Indique um número válido.")
     .transform((valor) => (valor === "" ? null : Number(valor)))
     .refine((valor) => valor === null || min === undefined || valor >= min, `O valor mínimo é ${min}.`)

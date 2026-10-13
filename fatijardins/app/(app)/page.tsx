@@ -66,14 +66,14 @@ function Indicador({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:bg-accent/50"
+      className="flex items-center gap-2.5 rounded-xl border bg-card p-3 shadow-sm transition-colors hover:bg-accent/50 sm:gap-3 sm:p-4"
     >
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground sm:size-11">
         <Icone className="size-5" />
       </span>
       <span className="min-w-0">
         <span className="block text-2xl leading-tight font-semibold tabular-nums">{valor ?? "—"}</span>
-        <span className="block truncate text-sm text-muted-foreground">{rotulo}</span>
+        <span className="block text-sm leading-tight text-balance text-muted-foreground">{rotulo}</span>
       </span>
     </Link>
   )

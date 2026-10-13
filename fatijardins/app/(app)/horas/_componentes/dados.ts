@@ -1,0 +1,104 @@
+import "server-only"
+
+import type { Sessao } from "@/lib/auth"
+import { intervaloDoMes, type PeriodoBase } from "@/lib/horas"
+import type { Enums } from "@/lib/supabase/database.types"
+import type { createClient } from "@/lib/supabase/server"
+
+type Supabase = Awaited<ReturnType<typeof createClient>>
+
+export type PessoaHoras = {
+  id: string
+  nome: string
+  equipa: string | null
+  ativo: boolean
+}
+
+/**
+ * Pessoas cujas horas o utilizador pode ver no mapa:
+ * colaborador → só o próprio; chefe → o próprio e os membros ativos das
+ * equipas que chefia; gerente → todos (a lista mostra os ativos).
+ */
+export async function pessoasVisiveis(sessao: Sessao, supabase: Supabase): Promise<PessoaHoras[]> {
+  const eu: PessoaHoras = { id: sessao.colaborador.id, nome: sessao.colaborador.nome, equipa: null, ativo: true }
+  const perfil = sessao.colaborador.perfil
+  if (perfil === "colaborador") return [eu]
+
+  let consulta = supabase
+    .from("colaboradores")
+    .select("id, nome, ativo, equipa:equipas!colaboradores_equipa_id_fkey(nome)")
+    .order("nome")
+  if (perfil === "chefe_equipa") {
+    const { data: equipas, error } = await supabase.from("equipas").select("id").eq("chefe_id", sessao.colaborador.id)
+    if (error) throw new Error(`Não foi possível carregar as equipas: ${error.message}`)
+    if (equipas.length === 0) return [eu]
+    consulta = consulta.in("equipa_id", equipas.map((equipa) => equipa.id)).eq("ativo", true)
+  }
+  const { data, error } = await consulta
+  if (error) throw new Error(`Não foi possível carregar os colaboradores: ${error.message}`)
+
+  const pessoas = data.map((pessoa) => ({
+    id: pessoa.id,
+    nome: pessoa.nome,
+    equipa: pessoa.equipa?.nome ?? null,
+    ativo: pessoa.ativo,
+  }))
+  return pessoas.some((pessoa) => pessoa.id === eu.id) ? pessoas : [eu, ...pessoas]
+}
+
+export type PeriodoMapa = PeriodoBase & {
+  id: string
+  colaboradorId: string
+  origem: Enums<"origem_registo_horas">
+  notas: string | null
+  /** null se o período não tiver trabalho ou se o trabalho não estiver visível (RLS). */
+  trabalho: { titulo: string; data: string; cliente: string | null } | null
+}
+
+const TAMANHO_PAGINA = 1000
+
+/** Períodos do mês (pela data da entrada em Lisboa) de uma pessoa, ou de todas (null). */
+export async function periodosDoMes(supabase: Supabase, mes: string, colaboradorId: string | null): Promise<PeriodoMapa[]> {
+  const { desde, ate } = intervaloDoMes(mes)
+  const periodos: PeriodoMapa[] = []
+  // A API devolve no máximo 1000 linhas de cada vez.
+  for (let inicio = 0; ; inicio += TAMANHO_PAGINA) {
+    let consulta = supabase
+      .from("registos_horas")
+      .select(
+        "id, colaborador_id, entrada, saida, trabalho_id, a_rever, origem, notas, trabalho:trabalhos(titulo, data, cliente:clientes(nome))"
+      )
+      .gte("entrada", desde)
+      .lt("entrada", ate)
+      .order("entrada")
+      .order("id")
+      .range(inicio, inicio + TAMANHO_PAGINA - 1)
+    if (colaboradorId) consulta = consulta.eq("colaborador_id", colaboradorId)
+    const { data, error } = await consulta
+    if (error) throw new Error(`Não foi possível carregar as horas: ${error.message}`)
+    for (const registo of data) {
+      periodos.push({
+        id: registo.id,
+        colaboradorId: registo.colaborador_id,
+        entrada: registo.entrada,
+        saida: registo.saida,
+        trabalhoId: registo.trabalho_id,
+        aRever: registo.a_rever,
+        origem: registo.origem,
+        notas: registo.notas,
+        trabalho: registo.trabalho
+          ? { titulo: registo.trabalho.titulo, data: registo.trabalho.data, cliente: registo.trabalho.cliente?.nome ?? null }
+          : null,
+      })
+    }
+    if (data.length < TAMANHO_PAGINA) return periodos
+  }
+}
+
+/** Texto do trabalho de um período ("Manutenção semanal (Condomínio X)"). */
+export function rotuloTrabalho(periodo: Pick<PeriodoMapa, "trabalhoId" | "trabalho">): string {
+  if (!periodo.trabalhoId) return "Sem trabalho"
+  // O colaborador só vê os trabalhos do próprio dia (RLS): nos outros dias fica "Trabalho".
+  if (!periodo.trabalho) return "Trabalho"
+  return periodo.trabalho.cliente ? `${periodo.trabalho.titulo} (${periodo.trabalho.cliente})` : periodo.trabalho.titulo
+}

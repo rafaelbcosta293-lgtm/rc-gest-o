@@ -1,12 +1,13 @@
 # Fatijardins
 
 Aplicação de gestão interna da **Fatijardins**, empresa de manutenção e construção de jardins.
-Serve para organizar a **equipa**, os **clientes** e os **locais** onde se trabalha. Foi pensada
-primeiro para o **telemóvel** (pode ser instalada como uma app) e funciona também no **PC**.
+Serve para organizar a **equipa**, os **clientes** e os **locais**, a **agenda** dos trabalhos, o
+**registo** do que se faz no local e as **horas** de cada pessoa. Foi pensada primeiro para o
+**telemóvel** (pode ser instalada como uma app) e funciona também no **PC**.
 
-> **Estado:** fase 1 (Base) concluída. Ver o [roteiro](#12-roteiro-das-fases) no fim.
+> **Estado:** fases 1 (Base) e 2 (Campo) concluídas. Ver o [roteiro](#12-roteiro-das-fases) no fim.
 
-**Índice:** [O que faz](#o-que-a-app-faz-fase-1) ·
+**Índice:** [O que faz](#o-que-a-app-faz) ·
 [Tecnologia](#tecnologia) ·
 [Pastas](#estrutura-de-pastas) ·
 [Perfis e permissões](#perfis-e-permissões) ·
@@ -21,12 +22,12 @@ primeiro para o **telemóvel** (pode ser instalada como uma app) e funciona tamb
 [8) Verificar](#8-verificar-o-código) ·
 [9) Vercel](#9-publicar-na-vercel) ·
 [10) Telemóvel](#10-instalar-no-telemóvel) ·
-[11) Decisões](#11-decisões-tomadas-na-fase-1) ·
+[11) Decisões](#11-decisões-tomadas) ·
 [12) Roteiro](#12-roteiro-das-fases)
 
 ---
 
-## O que a app faz (fase 1)
+## O que a app faz
 
 - **Entrar** com email e palavra-passe, **recuperar** a palavra-passe por email e **mudá-la** no Perfil.
 - **Início:** números de clientes, locais, colaboradores e equipas (gerente e chefes) ou a minha
@@ -38,6 +39,19 @@ primeiro para o **telemóvel** (pode ser instalada como uma app) e funciona tamb
   - acesso à app: o gerente cria a conta, repõe a palavra-passe ou retira o acesso.
 - **Clientes e locais:** dados de faturação (NIF validado), contactos e os locais de trabalho de cada
   cliente (morada, coordenadas, área do jardim), com ligações diretas para o Google Maps e o Waze.
+- **Agenda** (gerente e chefes): semana e dia por equipa, arrastar e largar para mudar o dia, a
+  equipa ou a ordem de passagem (no telemóvel, botões ↑/↓); trabalhos pontuais ou que se repetem
+  (todas as semanas, de 15 em 15 dias ou todos os meses), por atribuir, cancelar e reativar; ausências
+  e feriados nacionais assinalados.
+- **O meu dia** (Início do colaborador e do chefe): os trabalhos de hoje pela ordem de passagem,
+  com morada, notas para a equipa, “Navegar” (Google Maps/Waze), “Ligar” e a picagem de horas.
+- **Ficha do trabalho / registo diário**, pensada para o telemóvel no local: iniciar e concluir,
+  tarefas feitas, notas, materiais gastos, fotos antes/depois tiradas com a câmara (comprimidas no
+  telemóvel antes de enviar: máx. 1600 px, JPEG), assinatura do cliente no ecrã e horas do trabalho.
+- **Horas:** picagem de entrada/saída (com localização opcional) e troca de trabalho; mapa mensal
+  por pessoa com horas por dia e por trabalho, horas extra (acima de 8 h nos dias úteis e todas as
+  horas em fins de semana e feriados), exportação para Excel (CSV) individual ou da equipa, e
+  correções feitas pelo gerente.
 - **App instalável** no telemóvel (PWA), com uma página “Sem ligação à internet” quando não há rede.
 
 ## Tecnologia
@@ -58,7 +72,11 @@ A app vive na pasta `fatijardins/` (o resto do repositório é outra aplicação
 fatijardins/
 ├── app/                      Páginas (cada pasta é um endereço)
 │   ├── (auth)/               Entrar, recuperar e atualizar palavra-passe, sem acesso
-│   ├── (app)/                Páginas com sessão iniciada (menu, Início, Clientes, Equipa, Perfil)
+│   ├── (app)/                Páginas com sessão iniciada (menu, Início, Agenda, Clientes, …)
+│   │   ├── _inicio/          Início: “O meu dia” e o resumo do gerente
+│   │   ├── agenda/           Calendário semanal e diário por equipa
+│   │   ├── trabalhos/        Criar/editar trabalhos (+ acoes.ts) e a ficha com o registo diário
+│   │   ├── horas/            Mapa mensal, correções e exportação CSV (+ picagem em acoes.ts)
 │   │   ├── clientes/         Clientes e os seus locais (+ acoes.ts: gravar na base de dados)
 │   │   ├── equipa/           Colaboradores, equipas, ausências e acessos (+ acoes.ts)
 │   │   └── perfil/           Dados da conta e mudar palavra-passe
@@ -68,21 +86,25 @@ fatijardins/
 │   ├── favicon.ico, icon.svg, apple-icon.png   Ícones do browser e do iPhone
 │   └── layout.tsx            Estrutura comum a todas as páginas
 ├── components/               Peças reutilizáveis (cabeçalho, logótipo, menu…)
+│   ├── horas/                Picagem de horas (usada no Início e na ficha do trabalho)
 │   └── ui/                   Botões, campos, cartões, diálogos (shadcn/ui)
 ├── hooks/                    use-acao-formulario.ts (envio de formulários)
 ├── lib/                      Lógica partilhada
 │   ├── supabase/             Ligação ao Supabase e tipos da base de dados
 │   ├── validacao/            Regras dos formulários (NIF, código postal, telefone…)
 │   ├── auth.ts, perfis.ts    Sessão e perfis
-│   └── formatar.ts           Datas, euros e áreas no formato português
+│   ├── formatar.ts, datas.ts Datas, horas, euros, semanas e feriados nacionais
+│   ├── trabalhos.ts          Estados, tipos e repetições dos trabalhos
+│   ├── horas.ts              Contas das horas (por dia, extras, por trabalho)
+│   └── fotos.ts              Compressão das fotos no telemóvel antes de enviar
 ├── public/
 │   ├── icons/                Ícones da app instalada
 │   └── sw.js                 Service worker (página offline e cache de ficheiros estáticos)
 ├── scripts/gerar-icones.mjs  Volta a gerar os ícones a partir do símbolo
 ├── supabase/
 │   ├── migrations/           SQL que cria as tabelas e as permissões (por ordem de data)
-│   ├── seed.sql              Dados de exemplo (contas demo, equipas, clientes, locais)
-│   └── tests/rls_fase1.sql   Testes das permissões
+│   ├── seed.sql              Dados de exemplo (contas, equipas, clientes, locais, trabalhos, horas)
+│   └── tests/                Testes das permissões (rls_fase1.sql, rls_fase2.sql)
 ├── proxy.ts                  Envia para /login quem não tem sessão
 ├── .env.example              Modelo das variáveis de ambiente
 └── package.json              Dependências e comandos (npm run …)
@@ -101,9 +123,17 @@ acesso** (email e palavra-passe) ligada à sua ficha. Há três perfis:
 | Ver e alterar o custo/hora dos colaboradores | ✅ | — | — |
 | Ver ausências | todas | as da sua equipa | só as suas |
 | Marcar e apagar ausências | ✅ | — | — |
-| Ver, criar e alterar clientes e locais | ✅ | ✅ | — (fase 2) |
+| Ver, criar e alterar clientes e locais | ✅ | ✅ | ver os dos trabalhos de hoje |
 | Apagar clientes e locais | ✅ | — | — |
 | Criar acessos, repor palavras-passe, retirar acessos | ✅ | — | — |
+| Ver a agenda | toda | as equipas que chefia | — (vê “O meu dia”) |
+| Criar, mover, reordenar, cancelar trabalhos | ✅ | nas equipas que chefia | — |
+| Ver trabalhos | todos | os das suas equipas | só os de hoje da sua equipa |
+| Iniciar/concluir, registar tarefas, materiais, fotos, assinatura | ✅ | ✅ | nos trabalhos de hoje |
+| Apagar fotos | ✅ | ✅ | só as suas |
+| Picar entrada/saída (hora do servidor) | ✅ | ✅ | ✅ |
+| Ver horas | de todos | da sua equipa | só as suas |
+| Corrigir horas à mão, exportar a equipa | ✅ | — | — |
 | Mudar a própria palavra-passe | ✅ | ✅ | ✅ |
 
 **Onde são aplicadas** (do mais importante para o menos importante):
@@ -177,11 +207,17 @@ npx supabase db push                        # aplica as migrações que faltam
 1. No painel do projeto, abra **SQL Editor** → **New query**.
 2. Abra cada ficheiro de `supabase/migrations/` por ordem, copie todo o conteúdo, cole e clique **Run**.
 
+A migração da fase 2 cria também o espaço de ficheiros (**Storage**) `fotos`, privado, onde ficam as
+fotos dos trabalhos e as assinaturas, com as mesmas regras de acesso dos trabalhos. Não é preciso
+configurar nada no painel. Com a compressão (cerca de 200–400 KB por foto), o 1 GB do plano
+gratuito dá para alguns milhares de fotos.
+
 ### Dados de exemplo
 
 Para experimentar a app, cole o conteúdo de `supabase/seed.sql` no **SQL Editor** e clique **Run**.
-Cria 2 equipas, 7 colaboradores, 8 clientes, 12 locais e estas contas, todas com a palavra-passe
-**`Fatijardins2026!`**:
+Cria 2 equipas, 7 colaboradores, 8 clientes, 12 locais, trabalhos (hoje, no último e no próximo dia
+útil, mais uma série semanal), 2 registos com materiais, horas do último dia útil e estas contas,
+todas com a palavra-passe **`Fatijardins2026!`**:
 
 | Email | Nome | Perfil | Equipa |
 | --- | --- | --- | --- |
@@ -193,6 +229,10 @@ Cria 2 equipas, 7 colaboradores, 8 clientes, 12 locais e estas contas, todas com
 | ines@example.com | Inês Rocha | Colaboradora | Equipa Terra |
 
 (O Jorge Dias, da Equipa Terra, é um colaborador **sem** conta de acesso.)
+
+As datas dos trabalhos e das horas de exemplo são calculadas a partir do dia em que a seed corre. No
+projeto já criado foram carregadas a 13/10/2026: para ver “O meu dia” com trabalhos noutro dia,
+crie-os na Agenda.
 
 > ⚠️ **Antes de usar a app a sério**, apague estas contas (ou mude-lhes a palavra-passe) — toda a
 > gente conhece esta palavra-passe. Ordem sugerida:
@@ -235,8 +275,9 @@ A partir daí, o gerente cria os restantes colaboradores e acessos na própria a
 
 ### Testes de permissões
 
-Com os dados de exemplo carregados, cole `supabase/tests/rls_fase1.sql` no **SQL Editor** e clique
-**Run**. O teste corre dentro de uma transação e desfaz tudo no fim (*rollback*), por isso **não
+Com os dados de exemplo carregados **no próprio dia** (os testes da fase 2 contam os trabalhos de
+“hoje”), cole `supabase/tests/rls_fase1.sql` e depois `supabase/tests/rls_fase2.sql` no
+**SQL Editor** e clique **Run**. O teste corre dentro de uma transação e desfaz tudo no fim (*rollback*), por isso **não
 altera dados**. Se alguma regra estiver errada aparece um erro `FALHOU: …`; se tudo estiver bem,
 termina sem erros.
 
@@ -386,7 +427,7 @@ sozinha quando a ligação regressa.
 Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/logotipo.tsx` e em
 `scripts/gerar-icones.mjs` e corra `node scripts/gerar-icones.mjs`.
 
-## 11) Decisões tomadas na fase 1
+## 11) Decisões tomadas
 
 - **Custo/hora numa tabela própria** (`colaboradores_custos`) que só o gerente vê: a lista de
   colaboradores é visível a todos, os custos não.
@@ -408,6 +449,23 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
 - **Cache Components ativo e dados sempre lidos no pedido** (`connection()`): nunca há dados de um
   utilizador guardados em cache partilhada. O service worker também nunca guarda páginas com dados.
 - **Região Paris** (Supabase eu-west-3 e Vercel cdg1): perto de Portugal e dentro da UE (RGPD).
+- **Fase 2 — trabalhos:** um trabalho é uma visita marcada para um dia, um local e uma equipa; o
+  cliente vem do local. A ordem no dia é a ordem de passagem (servirá às rotas da fase 6). Os
+  trabalhos que se repetem são criados todos de uma vez (até 1 ano) e ficam ligados como série, para
+  se poder alterar ou apagar “este e os seguintes”. Só se apagam trabalhos agendados sem registos;
+  os outros cancelam-se.
+- **Fase 2 — colaborador:** vê só os trabalhos de hoje da sua equipa e os clientes/locais desses
+  trabalhos, e só lhes pode mudar o estado (iniciar/concluir); no mapa de horas vê o nome dos
+  trabalhos onde picou noutros dias, mas não os pode abrir.
+- **Fase 2 — horas:** a picagem é feita por funções na base de dados com a hora do servidor (a hora
+  do telemóvel não conta); mudar de trabalho fecha o período anterior; não há períodos sobrepostos;
+  uma saída esquecida fecha às 23:59 desse dia e fica marcada “a rever” para o gerente. Horas extra:
+  acima de 8 h por dia útil, e todas as horas em fins de semana e feriados nacionais (os feriados
+  municipais não estão incluídos). O CSV usa `;` e vírgula decimal, para abrir bem no Excel português.
+- **Fase 2 — materiais:** registados como texto (descrição, quantidade, unidade); na fase 4 passam a
+  ligar-se aos consumíveis e ao stock.
+- **Fase 2 — fotos:** comprimidas no telemóvel antes de enviar; guardadas num espaço privado e
+  mostradas com ligações temporárias (1 hora).
 - **Português de Portugal** em toda a interface: datas `dd/mm/aaaa`, euros `1 234,56 €`, fuso
   horário de Lisboa.
 - **A app não emite faturas.** Em Portugal as faturas têm de ser emitidas por software certificado
@@ -418,7 +476,7 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
 
 1. **Base** ✅ — login, perfis e permissões (RLS), menu para telemóvel e PC, clientes e locais,
    colaboradores, equipas e ausências, app instalável, dados de exemplo.
-2. **Campo** — agenda/calendário por equipa, “O meu dia” para o colaborador, registo diário com
+2. **Campo** ✅ — agenda/calendário por equipa, “O meu dia” para o colaborador, registo diário com
    fotos e materiais, picagem de horas.
 3. **Orçamentos** — visitas com fotos, editor de orçamento, PDF com logótipo, conversão do orçamento
    aceite em trabalho.

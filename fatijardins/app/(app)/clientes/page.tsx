@@ -47,9 +47,12 @@ function corresponde(cliente: ClientePesquisavel, pesquisa: string) {
   const texto = normalizarPesquisa(
     [cliente.nome, cliente.localidade, cliente.pessoa_contacto, cliente.email].filter(Boolean).join(" ")
   )
-  return normalizarPesquisa(pesquisa)
-    .split(/\s+/)
-    .every((palavra) => texto.includes(palavra))
+  // Pontuação (vírgulas, aspas, parênteses…) não conta como parte das palavras.
+  const palavras = normalizarPesquisa(pesquisa)
+    .replace(/[^\p{L}\p{N}@._-]+/gu, " ")
+    .split(" ")
+    .filter(Boolean)
+  return palavras.every((palavra) => texto.includes(palavra))
 }
 
 function BotaoNovoCliente() {

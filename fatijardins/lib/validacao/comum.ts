@@ -86,7 +86,7 @@ export function numeroOpcional({
       const texto = valor.replace(/\s/g, "")
       if (pontoDecimal) return texto.replace(",", ".")
       if (texto.includes(",")) return texto.replace(/\./g, "").replace(",", ".")
-      return /^-?\d{1,3}(\.\d{3})+$/.test(texto) ? texto.replace(/\./g, "") : texto
+      return /^-?[1-9]\d{0,2}(\.\d{3})+$/.test(texto) ? texto.replace(/\./g, "") : texto
     })
     .refine((valor) => valor === "" || /^-?\d+(\.\d+)?$/.test(valor), "Indique um número válido.")
     .transform((valor) => (valor === "" ? null : Number(valor)))

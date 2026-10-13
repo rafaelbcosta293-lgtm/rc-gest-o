@@ -29,9 +29,16 @@ export function CampoPesquisa({ placeholder = "Pesquisar…" }: { placeholder?: 
     if (!aEscrever && qEndereco !== valor.trim()) setValor(qEndereco)
   }
 
-  useEffect(() => () => {
-    if (temporizador.current) clearTimeout(temporizador.current)
-  }, [])
+  // Ao sair da página (ou quando o Next.js a esconde), cancelar a pesquisa
+  // pendente para a caixa voltar a acompanhar o endereço.
+  useEffect(
+    () => () => {
+      if (temporizador.current) clearTimeout(temporizador.current)
+      temporizador.current = null
+      setAEscrever(false)
+    },
+    []
+  )
 
   function alterar(novo: string) {
     setValor(novo)

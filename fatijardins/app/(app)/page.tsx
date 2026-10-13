@@ -89,7 +89,7 @@ async function Resumo() {
   ])
 
   return (
-    <section aria-label="Resumo" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section aria-label="Resumo" className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 lg:grid-cols-4">
       <Indicador href="/clientes" icone={TreesIcon} rotulo="Clientes ativos" valor={clientes.count} />
       <Indicador href="/clientes" icone={MapPinIcon} rotulo="Locais / jardins" valor={locais.count} />
       <Indicador href="/equipa" icone={UsersIcon} rotulo="Colaboradores" valor={colaboradores.count} />

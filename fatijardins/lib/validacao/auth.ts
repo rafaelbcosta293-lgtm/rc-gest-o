@@ -39,8 +39,18 @@ export function caminhoSeguro(valor: string | null | undefined, alternativa = "/
   try {
     const base = "http://fatijardins.invalid"
     const url = new URL(valor, base)
-    if (url.origin !== base) return alternativa
-    return url.pathname + url.search + url.hash
+    const caminho = url.pathname + url.search + url.hash
+    // A normalização pode criar um endereço de outro site ("/..//site.com"
+    // passa a "//site.com"): verificar também o resultado final.
+    if (
+      url.origin !== base ||
+      !caminho.startsWith("/") ||
+      caminho.startsWith("//") ||
+      new URL(caminho, base).origin !== base
+    ) {
+      return alternativa
+    }
+    return caminho
   } catch {
     return alternativa
   }

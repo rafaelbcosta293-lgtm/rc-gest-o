@@ -9,13 +9,25 @@ import { createClient } from "@/lib/supabase/server"
  * (formulários, dados) antes de outra pessoa usar o mesmo telemóvel.
  */
 export async function POST(request: NextRequest) {
+  // Recusar pedidos vindos de outros sites (compara com o anfitrião do pedido,
+  // para funcionar também por IP na rede local ou atrás de um proxy).
   const origem = request.headers.get("origin")
-  if (origem && origem !== request.nextUrl.origin) {
+  const anfitriao = request.headers.get("x-forwarded-host") ?? request.headers.get("host")
+  if (origem && anfitriao && hostDe(origem) !== anfitriao) {
     return new NextResponse("Pedido recusado.", { status: 403 })
   }
 
   const supabase = await createClient()
   await supabase.auth.signOut({ scope: "local" })
 
-  return NextResponse.redirect(new URL("/login", request.nextUrl.origin), { status: 303 })
+  // Caminho relativo: o browser fica no mesmo endereço por onde abriu a app.
+  return new NextResponse(null, { status: 303, headers: { Location: "/login" } })
+}
+
+function hostDe(endereco: string) {
+  try {
+    return new URL(endereco).host
+  } catch {
+    return null
+  }
 }

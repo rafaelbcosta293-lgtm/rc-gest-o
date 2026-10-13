@@ -98,8 +98,10 @@ reset role;
 -- Colaborador (Tiago — Equipa Verde; Nuno tem férias marcadas)
 -- ---------------------------------------------------------------------
 select pg_temp.entrar('a0000000-0000-4000-8000-000000000004');
-select pg_temp.verificar((select count(*) from public.clientes) = 0, 'colaborador NÃO vê clientes (fase 1)');
-select pg_temp.verificar((select count(*) from public.locais) = 0, 'colaborador NÃO vê locais (fase 1)');
+-- Desde a fase 2, o colaborador vê só os clientes e locais dos trabalhos de
+-- hoje da sua equipa (3 nos dados de exemplo).
+select pg_temp.verificar((select count(*) from public.clientes) = 3, 'colaborador só vê os clientes dos seus trabalhos de hoje');
+select pg_temp.verificar((select count(*) from public.locais) = 3, 'colaborador só vê os locais dos seus trabalhos de hoje');
 select pg_temp.verificar((select count(*) from public.colaboradores_custos) = 0, 'colaborador NÃO vê custos/hora');
 select pg_temp.verificar((select count(*) from public.colaboradores) = 7, 'colaborador vê a lista da equipa');
 select pg_temp.verificar((select count(*) from public.equipas) = 2, 'colaborador vê as equipas');

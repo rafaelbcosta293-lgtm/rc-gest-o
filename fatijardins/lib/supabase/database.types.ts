@@ -226,6 +226,60 @@ export type Database = {
           },
         ]
       }
+      fotos: {
+        Row: {
+          altura: number | null
+          caminho: string
+          colaborador_id: string | null
+          created_at: string
+          id: string
+          largura: number | null
+          legenda: string | null
+          momento: Database["public"]["Enums"]["momento_foto"]
+          tamanho_bytes: number | null
+          trabalho_id: string | null
+        }
+        Insert: {
+          altura?: number | null
+          caminho: string
+          colaborador_id?: string | null
+          created_at?: string
+          id?: string
+          largura?: number | null
+          legenda?: string | null
+          momento?: Database["public"]["Enums"]["momento_foto"]
+          tamanho_bytes?: number | null
+          trabalho_id?: string | null
+        }
+        Update: {
+          altura?: number | null
+          caminho?: string
+          colaborador_id?: string | null
+          created_at?: string
+          id?: string
+          largura?: number | null
+          legenda?: string | null
+          momento?: Database["public"]["Enums"]["momento_foto"]
+          tamanho_bytes?: number | null
+          trabalho_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fotos_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fotos_trabalho_id_fkey"
+            columns: ["trabalho_id"]
+            isOneToOne: false
+            referencedRelation: "trabalhos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locais: {
         Row: {
           area_m2: number | null
@@ -282,16 +336,321 @@ export type Database = {
           },
         ]
       }
+      registo_materiais: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          quantidade: number
+          registo_id: string
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          quantidade: number
+          registo_id: string
+          unidade?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          quantidade?: number
+          registo_id?: string
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registo_materiais_registo_id_fkey"
+            columns: ["registo_id"]
+            isOneToOne: false
+            referencedRelation: "registos_trabalho"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registos_horas: {
+        Row: {
+          a_rever: boolean
+          colaborador_id: string
+          created_at: string
+          entrada: string
+          entrada_latitude: number | null
+          entrada_longitude: number | null
+          id: string
+          notas: string | null
+          origem: Database["public"]["Enums"]["origem_registo_horas"]
+          saida: string | null
+          saida_latitude: number | null
+          saida_longitude: number | null
+          trabalho_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          a_rever?: boolean
+          colaborador_id: string
+          created_at?: string
+          entrada: string
+          entrada_latitude?: number | null
+          entrada_longitude?: number | null
+          id?: string
+          notas?: string | null
+          origem?: Database["public"]["Enums"]["origem_registo_horas"]
+          saida?: string | null
+          saida_latitude?: number | null
+          saida_longitude?: number | null
+          trabalho_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          a_rever?: boolean
+          colaborador_id?: string
+          created_at?: string
+          entrada?: string
+          entrada_latitude?: number | null
+          entrada_longitude?: number | null
+          id?: string
+          notas?: string | null
+          origem?: Database["public"]["Enums"]["origem_registo_horas"]
+          saida?: string | null
+          saida_latitude?: number | null
+          saida_longitude?: number | null
+          trabalho_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registos_horas_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registos_horas_trabalho_id_fkey"
+            columns: ["trabalho_id"]
+            isOneToOne: false
+            referencedRelation: "trabalhos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registos_trabalho: {
+        Row: {
+          assinado_em: string | null
+          assinatura_caminho: string | null
+          assinatura_nome: string | null
+          colaborador_id: string | null
+          created_at: string
+          id: string
+          notas: string | null
+          tarefas_feitas: string | null
+          trabalho_id: string
+          updated_at: string
+        }
+        Insert: {
+          assinado_em?: string | null
+          assinatura_caminho?: string | null
+          assinatura_nome?: string | null
+          colaborador_id?: string | null
+          created_at?: string
+          id?: string
+          notas?: string | null
+          tarefas_feitas?: string | null
+          trabalho_id: string
+          updated_at?: string
+        }
+        Update: {
+          assinado_em?: string | null
+          assinatura_caminho?: string | null
+          assinatura_nome?: string | null
+          colaborador_id?: string | null
+          created_at?: string
+          id?: string
+          notas?: string | null
+          tarefas_feitas?: string | null
+          trabalho_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registos_trabalho_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registos_trabalho_trabalho_id_fkey"
+            columns: ["trabalho_id"]
+            isOneToOne: true
+            referencedRelation: "trabalhos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trabalhos: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          criado_por: string | null
+          data: string
+          descricao: string | null
+          duracao_prevista_min: number | null
+          equipa_id: string | null
+          estado: Database["public"]["Enums"]["estado_trabalho"]
+          hora_inicio: string | null
+          id: string
+          local_id: string
+          ordem: number
+          origem: Database["public"]["Enums"]["origem_trabalho"]
+          serie_id: string | null
+          tipo: Database["public"]["Enums"]["tipo_trabalho"]
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          criado_por?: string | null
+          data: string
+          descricao?: string | null
+          duracao_prevista_min?: number | null
+          equipa_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_trabalho"]
+          hora_inicio?: string | null
+          id?: string
+          local_id: string
+          ordem?: number
+          origem?: Database["public"]["Enums"]["origem_trabalho"]
+          serie_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_trabalho"]
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          criado_por?: string | null
+          data?: string
+          descricao?: string | null
+          duracao_prevista_min?: number | null
+          equipa_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_trabalho"]
+          hora_inicio?: string | null
+          id?: string
+          local_id?: string
+          ordem?: number
+          origem?: Database["public"]["Enums"]["origem_trabalho"]
+          serie_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_trabalho"]
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trabalhos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trabalhos_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trabalhos_equipa_id_fkey"
+            columns: ["equipa_id"]
+            isOneToOne: false
+            referencedRelation: "equipas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trabalhos_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "locais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      picar_entrada: {
+        Args: {
+          p_latitude?: number
+          p_longitude?: number
+          p_trabalho_id?: string
+        }
+        Returns: {
+          a_rever: boolean
+          colaborador_id: string
+          created_at: string
+          entrada: string
+          entrada_latitude: number | null
+          entrada_longitude: number | null
+          id: string
+          notas: string | null
+          origem: Database["public"]["Enums"]["origem_registo_horas"]
+          saida: string | null
+          saida_latitude: number | null
+          saida_longitude: number | null
+          trabalho_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "registos_horas"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      picar_saida: {
+        Args: { p_latitude?: number; p_longitude?: number }
+        Returns: {
+          a_rever: boolean
+          colaborador_id: string
+          created_at: string
+          entrada: string
+          entrada_latitude: number | null
+          entrada_longitude: number | null
+          id: string
+          notas: string | null
+          origem: Database["public"]["Enums"]["origem_registo_horas"]
+          saida: string | null
+          saida_latitude: number | null
+          saida_longitude: number | null
+          trabalho_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "registos_horas"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
+      estado_trabalho: "agendado" | "em_curso" | "concluido" | "cancelado"
+      momento_foto: "antes" | "depois" | "outra"
+      origem_registo_horas: "picagem" | "manual"
+      origem_trabalho: "avulso" | "contrato" | "orcamento"
       perfil_utilizador: "gerente" | "chefe_equipa" | "colaborador"
       tipo_ausencia: "ferias" | "doenca" | "formacao" | "falta" | "outro"
+      tipo_trabalho: "manutencao" | "obra"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -419,8 +778,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      estado_trabalho: ["agendado", "em_curso", "concluido", "cancelado"],
+      momento_foto: ["antes", "depois", "outra"],
+      origem_registo_horas: ["picagem", "manual"],
+      origem_trabalho: ["avulso", "contrato", "orcamento"],
       perfil_utilizador: ["gerente", "chefe_equipa", "colaborador"],
       tipo_ausencia: ["ferias", "doenca", "formacao", "falta", "outro"],
+      tipo_trabalho: ["manutencao", "obra"],
     },
   },
 } as const

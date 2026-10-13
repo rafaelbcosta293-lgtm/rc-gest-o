@@ -101,3 +101,75 @@ insert into public.locais (cliente_id, nome, morada, codigo_postal, localidade, 
   ('d0000000-0000-4000-8000-000000000007', 'Quintinha', 'Rua da Pena, 8', '2710-560', 'Sintra', 38.787600, -9.387800, 1500, null),
   ('d0000000-0000-4000-8000-000000000008', 'Jardim do condomínio', 'Avenida Sabóia, 500', '2765-278', 'Monte Estoril', 38.708900, -9.408300, 1600, null),
   ('d0000000-0000-4000-8000-000000000008', 'Piscina e envolvente', 'Avenida Sabóia, 500', '2765-278', 'Monte Estoril', 38.709100, -9.408000, 400, 'Não usar sopradores perto da piscina.');
+
+-- =====================================================================
+-- Fase 2 — trabalhos, registos e horas de exemplo (datas relativas a hoje)
+-- =====================================================================
+with
+  dias as (
+    select
+      current_date as hoje,
+      current_date - case extract(isodow from current_date)::int when 1 then 3 when 7 then 2 else 1 end as anterior,
+      current_date + case extract(isodow from current_date)::int when 5 then 3 when 6 then 2 else 1 end as seguinte,
+      date_trunc('week', current_date)::date as segunda
+  ),
+  l as (
+    select l.id, l.nome, c.nome as cliente
+    from public.locais l join public.clientes c on c.id = l.cliente_id
+  )
+insert into public.trabalhos (id, local_id, cliente_id, titulo, descricao, tipo, data, hora_inicio, duracao_prevista_min, equipa_id, ordem, estado, serie_id, criado_por)
+select v.id::uuid, l.id, '00000000-0000-0000-0000-000000000000', v.titulo, v.descricao, v.tipo::public.tipo_trabalho, v.data, v.hora::time, v.duracao, v.equipa::uuid, v.ordem, v.estado::public.estado_trabalho, v.serie::uuid, 'c0000000-0000-4000-8000-000000000001'
+from dias d
+cross join lateral (values
+  -- Equipa Verde — hoje
+  ('b0000000-0000-4000-8000-000000000001', 'Helena Marques', 'Moradia', 'Manutenção quinzenal', 'Cortar relva, aparar sebes, limpar canteiros.', 'manutencao', d.hoje, '08:30', 120, 'e0000000-0000-4000-8000-000000000001', 1, 'agendado', null),
+  ('b0000000-0000-4000-8000-000000000002', 'João e Teresa Antunes', 'Casa principal', 'Revisão da rega', 'Verificar os 6 setores e programar o horário de inverno.', 'manutencao', d.hoje, '11:00', 90, 'e0000000-0000-4000-8000-000000000001', 2, 'agendado', null),
+  ('b0000000-0000-4000-8000-000000000003', 'Condomínio Monte Estoril', 'Jardim do condomínio', 'Manutenção semanal', 'Relva, folhas e limpeza dos caminhos.', 'manutencao', d.hoje, '14:00', 180, 'e0000000-0000-4000-8000-000000000001', 3, 'agendado', null),
+  -- Equipa Terra — hoje
+  ('b0000000-0000-4000-8000-000000000004', 'Hotel Quinta das Palmeiras, Lda.', 'Jardins do hotel', 'Manutenção semanal', 'Relvados, canteiros da entrada e poda ligeira.', 'manutencao', d.hoje, '08:00', 240, 'e0000000-0000-4000-8000-000000000002', 1, 'agendado', 'f0000000-0000-4000-8000-000000000001'),
+  ('b0000000-0000-4000-8000-000000000005', 'Margarida Coelho', 'Quintinha', 'Plantação de sebe', 'Plantar 20 m de sebe de eleagnus.', 'obra', d.hoje, '14:00', 180, 'e0000000-0000-4000-8000-000000000002', 2, 'agendado', null),
+  -- Último dia útil (concluídos, com registo)
+  ('b0000000-0000-4000-8000-000000000006', 'Condomínio Jardins do Tejo', 'Espaços verdes comuns', 'Manutenção semanal', 'Relva e sebes.', 'manutencao', d.anterior, '08:30', 240, 'e0000000-0000-4000-8000-000000000001', 1, 'concluido', null),
+  ('b0000000-0000-4000-8000-000000000007', 'Escola Internacional do Restelo', 'Campo de jogos', 'Corte e adubação do relvado', null, 'manutencao', d.anterior, '08:00', 300, 'e0000000-0000-4000-8000-000000000002', 1, 'concluido', null),
+  -- Próximo dia útil
+  ('b0000000-0000-4000-8000-000000000008', 'Ricardo Sousa', 'Pátio e terraço', 'Tratamento dos vasos', 'Adubar, tratar a buganvília e limpar os vasos.', 'manutencao', d.seguinte, '09:00', 60, 'e0000000-0000-4000-8000-000000000002', 1, 'agendado', null),
+  ('b0000000-0000-4000-8000-000000000009', 'João e Teresa Antunes', 'Casa de férias', 'Limpeza geral', 'Corte de relva e limpeza antes do inverno.', 'manutencao', d.seguinte, '09:00', 240, 'e0000000-0000-4000-8000-000000000001', 1, 'agendado', null),
+  -- Por atribuir a uma equipa
+  ('b0000000-0000-4000-8000-000000000010', 'Escola Internacional do Restelo', 'Campus', 'Poda de árvores', 'Poda das tílias junto ao portão.', 'manutencao', d.seguinte, null, 240, null, 1, 'agendado', null)
+) as v(id, cliente, local, titulo, descricao, tipo, data, hora, duracao, equipa, ordem, estado, serie)
+join l on l.cliente = v.cliente and l.nome = v.local;
+
+-- Série semanal do hotel: mais 7 semanas, à mesma hora.
+insert into public.trabalhos (local_id, cliente_id, titulo, descricao, tipo, data, hora_inicio, duracao_prevista_min, equipa_id, ordem, serie_id, criado_por)
+select t.local_id, t.cliente_id, t.titulo, t.descricao, t.tipo, t.data + 7 * n, t.hora_inicio, t.duracao_prevista_min, t.equipa_id, t.ordem, t.serie_id, t.criado_por
+from public.trabalhos t
+cross join generate_series(1, 7) as n
+where t.id = 'b0000000-0000-4000-8000-000000000004';
+
+insert into public.registos_trabalho (id, trabalho_id, tarefas_feitas, notas, colaborador_id) values
+  ('a1000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000006', 'Relva cortada, sebes aparadas, folhas recolhidas.', 'O aspersor do setor 2 está partido — avisar o condomínio.', 'c0000000-0000-4000-8000-000000000002'),
+  ('a1000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000007', 'Corte do relvado e adubação de outono.', null, 'c0000000-0000-4000-8000-000000000003');
+
+insert into public.registo_materiais (registo_id, descricao, quantidade, unidade) values
+  ('a1000000-0000-4000-8000-000000000001', 'Sacos de recolha de verdes', 6, 'un'),
+  ('a1000000-0000-4000-8000-000000000001', 'Fio de roçadora 3 mm', 15, 'm'),
+  ('a1000000-0000-4000-8000-000000000002', 'Adubo de outono 12-6-24', 25, 'kg');
+
+with d as (
+  select current_date - case extract(isodow from current_date)::int when 1 then 3 when 7 then 2 else 1 end as dia
+)
+insert into public.registos_horas (colaborador_id, trabalho_id, entrada, saida, origem)
+select v.colaborador::uuid, v.trabalho::uuid,
+  (d.dia + v.entrada::time) at time zone 'Europe/Lisbon',
+  (d.dia + v.saida::time) at time zone 'Europe/Lisbon',
+  'picagem'
+from d cross join (values
+  ('c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000006', '08:25', '12:40'),
+  ('c0000000-0000-4000-8000-000000000002', null, '13:35', '17:10'),
+  ('c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000006', '08:30', '12:40'),
+  ('c0000000-0000-4000-8000-000000000004', null, '13:40', '18:20'),
+  ('c0000000-0000-4000-8000-000000000005', 'b0000000-0000-4000-8000-000000000006', '08:30', '12:35'),
+  ('c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000007', '07:55', '13:05'),
+  ('c0000000-0000-4000-8000-000000000006', 'b0000000-0000-4000-8000-000000000007', '08:00', '13:00'),
+  ('c0000000-0000-4000-8000-000000000006', null, '14:00', '17:00')
+) as v(colaborador, trabalho, entrada, saida);

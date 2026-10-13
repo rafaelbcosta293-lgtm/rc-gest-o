@@ -131,4 +131,19 @@ select pg_temp.entrar('a0000000-0000-4000-8000-000000000006');
 select pg_temp.verificar((select count(*) from public.colaboradores) = 0, 'colaborador inativo perde o acesso');
 reset role;
 
+-- ---------------------------------------------------------------------
+-- Apagar uma conta desliga o colaborador sem erro. O trigger do gerente
+-- tem de ser security definer: o Supabase Auth apaga contas com o papel
+-- supabase_auth_admin, que não pode ler public.colaboradores.
+-- ---------------------------------------------------------------------
+select pg_temp.verificar(
+  (select prosecdef from pg_proc where oid = 'app.garantir_gerente_ativo'::regproc),
+  'trigger do gerente é security definer (o Supabase Auth consegue apagar contas)'
+);
+delete from auth.users where id = 'a0000000-0000-4000-8000-000000000005';
+select pg_temp.verificar(
+  (select user_id is null and ativo from public.colaboradores where id = 'c0000000-0000-4000-8000-000000000005'),
+  'apagar a conta de um colaborador desliga-o sem erro'
+);
+
 rollback;

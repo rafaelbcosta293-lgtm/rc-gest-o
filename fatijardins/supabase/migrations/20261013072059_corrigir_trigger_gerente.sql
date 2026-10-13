@@ -1,0 +1,13 @@
+-- =====================================================================
+-- Fatijardins — correção da fase 1
+-- O trigger que garante pelo menos um gerente ativo tem de correr com os
+-- privilégios do dono da função (security definer).
+--
+-- Porquê: quando o Supabase Auth apaga uma conta, o "on delete set null"
+-- de colaboradores.user_id dispara este trigger com o papel
+-- supabase_auth_admin, que não pode ler public.colaboradores. Resultado:
+-- "Database error deleting user" ao apagar qualquer conta (API admin ou
+-- painel Authentication → Users).
+-- A função mantém set search_path = '' e não é executável pela API.
+-- =====================================================================
+alter function app.garantir_gerente_ativo() security definer;

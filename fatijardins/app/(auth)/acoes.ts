@@ -113,6 +113,7 @@ export async function atualizarPalavraPasse(
 
 export async function terminarSessao() {
   const supabase = await createClient()
-  await supabase.auth.signOut()
+  // Só este dispositivo: sair no telemóvel não deve terminar a sessão no PC.
+  await supabase.auth.signOut({ scope: "local" })
   redirect("/login")
 }

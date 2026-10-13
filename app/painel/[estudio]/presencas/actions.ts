@@ -33,6 +33,8 @@ export async function marcarPresenca(formData: FormData) {
     estado,
     pt_id: userData.user?.id ?? null,
     nota,
+    origem: 'manual',
+    google_event_id: null,
   })
 
   if (erroInserir) {

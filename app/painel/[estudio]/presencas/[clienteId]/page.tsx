@@ -42,7 +42,7 @@ export default async function PresencasClientePage({
         .maybeSingle(),
       supabase
         .from('presencas')
-        .select('id, data, estado, nota, pt:perfis!pt_id(nome)')
+        .select('id, data, estado, nota, origem, pt:perfis!pt_id(nome)')
         .eq('cliente_id', clienteId)
         .gte('data', inicio)
         .lt('data', fimExclusivo)
@@ -62,6 +62,7 @@ export default async function PresencasClientePage({
     data: string
     estado: string
     nota: string | null
+    origem: string
     pt: { nome: string } | null
   }
   const lista = (presencasData ?? []) as unknown as PresencaComPt[]
@@ -240,7 +241,9 @@ export default async function PresencasClientePage({
               >
                 {p.estado}
               </span>
-              <span className="text-xs text-zinc-500">{p.pt?.nome ?? '—'}</span>
+              <span className="text-xs text-zinc-500">
+                {p.origem === 'calendario' ? 'Google Calendar' : (p.pt?.nome ?? '—')}
+              </span>
               {p.nota && (
                 <span className="flex-1 truncate text-xs text-zinc-600 dark:text-zinc-400">
                   {p.nota}

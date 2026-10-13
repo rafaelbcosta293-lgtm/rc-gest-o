@@ -9,7 +9,11 @@ const PUBLIC_PATHS = ['/', '/login', '/registo', '/recuperar-password']
 // nenhuma (cron de retenção, webhook do Google Forms) — cada um valida
 // o seu próprio segredo lá dentro (CRON_SECRET / LEADS_WEBHOOK_SECRET),
 // por isso não ficam à espera de login.
-const PUBLIC_API_PATHS = ['/api/cron/retencao', '/api/leads/google-forms']
+const PUBLIC_API_PATHS = [
+  '/api/cron/retencao',
+  '/api/cron/presencas-calendario',
+  '/api/leads/google-forms',
+]
 
 function isPublicPath(pathname: string) {
   return (

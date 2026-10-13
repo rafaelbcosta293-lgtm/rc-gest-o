@@ -77,3 +77,62 @@ export function clienteTemEventoFuturo(nomeCliente: string, textosEventos: strin
   const nomeNormalizado = normalizar(nomeCliente)
   return textosEventos.some((texto) => texto.includes(nomeNormalizado))
 }
+
+export type EventoComCor = {
+  id: string
+  // Data local do início (YYYY-MM-DD), tirada diretamente da string que
+  // o Google devolve (já no fuso do calendário) — não se converte para
+  // UTC para não arriscar deslizar de dia perto da meia-noite.
+  data: string
+  fim: Date
+  // undefined/null = evento sem cor própria, a mostrar na cor
+  // predefinida do calendário. Qualquer valor = cor escolhida à mão
+  // para aquele evento específico, substituindo a predefinida.
+  colorId: string | null
+  texto: string
+}
+
+// Eventos com hora marcada (exclui eventos de dia inteiro, que não têm
+// start.dateTime) num intervalo — usado para decidir presença pela cor,
+// não só para verificar se "há algum evento" como textosDeEventosFuturos.
+export async function eventosComCorNoIntervalo(
+  calendarId: string,
+  timeMin: string,
+  timeMax: string
+): Promise<EventoComCor[]> {
+  const calendar = clienteGoogle()
+
+  const { data } = await calendar.events.list({
+    calendarId,
+    timeMin,
+    timeMax,
+    singleEvents: true,
+    maxResults: 2500,
+    fields: 'items(id,summary,description,start,end,colorId)',
+  })
+
+  const eventos: EventoComCor[] = []
+  for (const ev of data.items ?? []) {
+    if (!ev.id || !ev.start?.dateTime || !ev.end?.dateTime) continue
+    eventos.push({
+      id: ev.id,
+      data: ev.start.dateTime.slice(0, 10),
+      fim: new Date(ev.end.dateTime),
+      colorId: ev.colorId ?? null,
+      texto: normalizar(`${ev.summary ?? ''} ${ev.description ?? ''}`),
+    })
+  }
+  return eventos
+}
+
+// Só conta como correspondência se exatamente um cliente (de entre os
+// ativos passados) aparecer no texto do evento — com mais do que um
+// candidato, não há como saber a quem atribuir a presença, por isso
+// prefere-se não marcar nada a arriscar marcar o cliente errado.
+export function clienteExatoDoEvento<T extends { id: string; nome: string }>(
+  texto: string,
+  clientes: T[]
+): T | null {
+  const encontrados = clientes.filter((c) => texto.includes(normalizar(c.nome)))
+  return encontrados.length === 1 ? encontrados[0] : null
+}

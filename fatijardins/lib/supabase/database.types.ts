@@ -588,6 +588,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      detalhes_trabalhos_das_horas: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          cliente: string
+          data: string
+          local: string
+          titulo: string
+          trabalho_id: string
+        }[]
+      }
       picar_entrada: {
         Args: {
           p_latitude?: number

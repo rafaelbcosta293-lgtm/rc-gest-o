@@ -195,6 +195,27 @@ select pg_temp.verificar(
 reset role;
 
 -- ---------------------------------------------------------------------
+-- Nomes dos trabalhos no mapa de horas (função própria)
+-- ---------------------------------------------------------------------
+select pg_temp.entrar('a0000000-0000-4000-8000-000000000004');
+select pg_temp.verificar(
+  (select count(*) from public.detalhes_trabalhos_das_horas(current_date - 10, current_date) where trabalho_id = 'b0000000-0000-4000-8000-000000000006') = 1,
+  'colaborador vê o nome dos trabalhos onde picou noutros dias'
+);
+select pg_temp.verificar(
+  (select count(*) from public.detalhes_trabalhos_das_horas(current_date - 10, current_date) where trabalho_id = 'b0000000-0000-4000-8000-000000000007') = 0,
+  'colaborador não vê o nome de trabalhos onde só outra equipa picou'
+);
+reset role;
+select pg_temp.entrar('a0000000-0000-4000-8000-000000000003');
+select pg_temp.verificar(
+  (select count(*) from public.detalhes_trabalhos_das_horas(current_date - 10, current_date) where trabalho_id = 'b0000000-0000-4000-8000-000000000007') = 1
+  and (select count(*) from public.detalhes_trabalhos_das_horas(current_date - 10, current_date) where trabalho_id = 'b0000000-0000-4000-8000-000000000006') = 0,
+  'chefe vê os nomes dos trabalhos da sua equipa e não os das outras'
+);
+reset role;
+
+-- ---------------------------------------------------------------------
 -- Conta sem colaborador
 -- ---------------------------------------------------------------------
 select pg_temp.entrar('ffffffff-ffff-4fff-8fff-ffffffffffff');

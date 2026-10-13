@@ -51,15 +51,19 @@ export type PeriodoMapa = PeriodoBase & {
   colaboradorId: string
   origem: Enums<"origem_registo_horas">
   notas: string | null
-  /** null se o período não tiver trabalho ou se o trabalho não estiver visível (RLS). */
-  trabalho: { titulo: string; data: string; cliente: string | null } | null
+  /**
+   * null se o período não tiver trabalho. Os trabalhos que a RLS esconde (o
+   * colaborador só vê os de hoje) vêm da função detalhes_trabalhos_das_horas,
+   * com visivel = false (não se pode abrir a ficha).
+   */
+  trabalho: { titulo: string; data: string; cliente: string | null; visivel: boolean } | null
 }
 
 const TAMANHO_PAGINA = 1000
 
 /** Períodos do mês (pela data da entrada em Lisboa) de uma pessoa, ou de todas (null). */
 export async function periodosDoMes(supabase: Supabase, mes: string, colaboradorId: string | null): Promise<PeriodoMapa[]> {
-  const { desde, ate } = intervaloDoMes(mes)
+  const { desde, ate, primeiro, ultimo } = intervaloDoMes(mes)
   const periodos: PeriodoMapa[] = []
   // A API devolve no máximo 1000 linhas de cada vez.
   for (let inicio = 0; ; inicio += TAMANHO_PAGINA) {
@@ -87,18 +91,37 @@ export async function periodosDoMes(supabase: Supabase, mes: string, colaborador
         origem: registo.origem,
         notas: registo.notas,
         trabalho: registo.trabalho
-          ? { titulo: registo.trabalho.titulo, data: registo.trabalho.data, cliente: registo.trabalho.cliente?.nome ?? null }
+          ? {
+              titulo: registo.trabalho.titulo,
+              data: registo.trabalho.data,
+              cliente: registo.trabalho.cliente?.nome ?? null,
+              visivel: true,
+            }
           : null,
       })
     }
-    if (data.length < TAMANHO_PAGINA) return periodos
+    if (data.length < TAMANHO_PAGINA) break
   }
+
+  // Trabalhos escondidos pela RLS: só o título/cliente, pela função da BD.
+  if (periodos.some((periodo) => periodo.trabalhoId && !periodo.trabalho)) {
+    const { data, error } = await supabase.rpc("detalhes_trabalhos_das_horas", { p_inicio: primeiro, p_fim: ultimo })
+    if (error) throw new Error(`Não foi possível carregar os trabalhos das horas: ${error.message}`)
+    const detalhes = new Map(data.map((trabalho) => [trabalho.trabalho_id, trabalho]))
+    for (const periodo of periodos) {
+      const detalhe = periodo.trabalhoId && !periodo.trabalho ? detalhes.get(periodo.trabalhoId) : undefined
+      if (detalhe) {
+        periodo.trabalho = { titulo: detalhe.titulo, data: detalhe.data, cliente: detalhe.cliente, visivel: false }
+      }
+    }
+  }
+  return periodos
 }
 
 /** Texto do trabalho de um período ("Manutenção semanal (Condomínio X)"). */
 export function rotuloTrabalho(periodo: Pick<PeriodoMapa, "trabalhoId" | "trabalho">): string {
   if (!periodo.trabalhoId) return "Sem trabalho"
-  // O colaborador só vê os trabalhos do próprio dia (RLS): nos outros dias fica "Trabalho".
+  // Trabalho que já não existe ou sem acesso: fica "Trabalho".
   if (!periodo.trabalho) return "Trabalho"
   return periodo.trabalho.cliente ? `${periodo.trabalho.titulo} (${periodo.trabalho.cliente})` : periodo.trabalho.titulo
 }

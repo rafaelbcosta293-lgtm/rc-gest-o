@@ -120,7 +120,7 @@ export function ListaDias({ datas, dias, gerente, ligarTrabalhos }: Props) {
                             {formatarHora(periodo.entrada)}–{aberto ? "…" : formatarHora(periodo.saida)}
                           </span>
                           <span className="text-muted-foreground"> · </span>
-                          {ligarTrabalhos && periodo.trabalho && periodo.trabalhoId ? (
+                          {ligarTrabalhos && periodo.trabalho?.visivel && periodo.trabalhoId ? (
                             <Link href={`/trabalhos/${periodo.trabalhoId}`} className="underline-offset-4 hover:underline">
                               {rotulo}
                             </Link>

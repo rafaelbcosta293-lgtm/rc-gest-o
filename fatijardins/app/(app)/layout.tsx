@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import Link from "next/link"
+import { UserRoundIcon } from "lucide-react"
 
 import { Logotipo } from "@/components/logotipo"
 import { Navegacao, NavegacaoEsqueleto } from "@/components/navegacao/navegacao"
@@ -14,6 +15,13 @@ export default function LayoutApp({ children }: LayoutProps<"/">) {
         <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
           <Link href="/" aria-label="Início">
             <Logotipo />
+          </Link>
+          <Link
+            href="/perfil"
+            aria-label="Perfil"
+            className="ml-auto flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent active:bg-accent"
+          >
+            <UserRoundIcon className="size-6" />
           </Link>
         </header>
         <main className="mx-auto w-full max-w-5xl px-4 pt-5 pb-28 md:px-8 md:pt-8 md:pb-10">

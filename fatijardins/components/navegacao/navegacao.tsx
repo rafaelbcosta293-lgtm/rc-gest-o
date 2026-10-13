@@ -4,7 +4,7 @@ import { Logotipo } from "@/components/logotipo"
 import { Skeleton } from "@/components/ui/skeleton"
 import { exigirSessao } from "@/lib/auth"
 import { NOMES_PERFIL } from "@/lib/perfis"
-import { itensParaPerfil } from "./itens"
+import { itensBarraInferior, itensParaPerfil } from "./itens"
 import { LigacoesInferiores, LigacoesLaterais } from "./ligacoes-navegacao"
 
 /** Menu lateral no PC e barra inferior no telemóvel, conforme o perfil. */
@@ -29,7 +29,7 @@ export async function Navegacao() {
           </p>
         </Link>
       </aside>
-      <LigacoesInferiores itens={itens} />
+      <LigacoesInferiores itens={itensBarraInferior(itens)} />
     </>
   )
 }

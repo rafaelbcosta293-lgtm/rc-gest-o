@@ -2,14 +2,24 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { HouseIcon, TreesIcon, UserRoundIcon, UsersIcon, type LucideIcon } from "lucide-react"
+import {
+  CalendarDaysIcon,
+  ClockIcon,
+  HouseIcon,
+  TreesIcon,
+  UserRoundIcon,
+  UsersIcon,
+  type LucideIcon,
+} from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import type { IconeNavegacao, ItemNavegacao } from "./itens"
 
 const ICONES: Record<IconeNavegacao, LucideIcon> = {
   inicio: HouseIcon,
+  agenda: CalendarDaysIcon,
   clientes: TreesIcon,
+  horas: ClockIcon,
   equipa: UsersIcon,
   perfil: UserRoundIcon,
 }

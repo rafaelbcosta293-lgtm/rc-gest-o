@@ -89,3 +89,34 @@ export function somarDias(data: string, dias: number): string {
   const resultado = new Date(Date.UTC(ano, mes - 1, dia + dias))
   return resultado.toISOString().slice(0, 10)
 }
+
+const formatoHora = new Intl.DateTimeFormat("pt-PT", {
+  timeZone: FUSO_HORARIO,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+})
+
+/** "08:30:00" (coluna time) → "08:30"; data/hora (timestamptz) → hora em Lisboa. */
+export function formatarHora(valor: string | Date | null | undefined): string {
+  if (!valor) return ""
+  if (typeof valor === "string" && /^\d{2}:\d{2}(:\d{2})?$/.test(valor)) return valor.slice(0, 5)
+  const data = typeof valor === "string" ? new Date(valor) : valor
+  return Number.isNaN(data.getTime()) ? "" : formatoHora.format(data)
+}
+
+/** Minutos → "2 h 30 min", "45 min", "8 h". */
+export function formatarDuracao(minutos: number | null | undefined): string {
+  if (minutos === null || minutos === undefined || Number.isNaN(minutos)) return ""
+  const total = Math.max(0, Math.round(minutos))
+  const horas = Math.floor(total / 60)
+  const resto = total % 60
+  if (horas === 0) return `${resto} min`
+  return resto === 0 ? `${horas} h` : `${horas} h ${String(resto).padStart(2, "0")} min`
+}
+
+/** Minutos → horas decimais à portuguesa ("7,5"), para mapas e CSV. */
+export function formatarHorasDecimais(minutos: number): string {
+  return new Intl.NumberFormat("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }).format(minutos / 60)
+}
+

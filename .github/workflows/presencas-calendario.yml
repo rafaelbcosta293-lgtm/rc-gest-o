@@ -1,0 +1,20 @@
+name: Presenças automáticas (Google Calendar)
+
+# O plano gratuito da Vercel só permite crons com 1 execução por dia,
+# o que é demasiado espaçado para marcar presença pouco depois de uma
+# sessão terminar. Este workflow chama o mesmo endpoint a cada 30
+# minutos, sem custo (GitHub Actions é grátis para este volume).
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reconciliar presenças com a cor dos eventos
+        run: |
+          curl --fail-with-body -sS -X GET \
+            "${{ secrets.APP_URL }}/api/cron/presencas-calendario" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

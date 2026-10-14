@@ -36,7 +36,7 @@ as $$
 begin
   execute sql;
   raise exception 'FALHOU: %', mensagem;
-exception when insufficient_privilege or check_violation then
+exception when insufficient_privilege or check_violation or foreign_key_violation then
   raise notice 'ok — %', mensagem;
 end;
 $$;
@@ -156,8 +156,9 @@ select pg_temp.recusado(
 -- Picagem
 select pg_temp.verificar(
   (select trabalho_id = 'b0000000-0000-4000-8000-000000000002' and saida is null and origem = 'picagem'
-   from public.picar_entrada('b0000000-0000-4000-8000-000000000002', 38.7, -9.4)),
-  'picar entrada num trabalho de hoje'
+     and entrada_latitude = 38.7006 and entrada_longitude = -9.4219
+   from public.picar_entrada('b0000000-0000-4000-8000-000000000002', 38.700612, -9.421937)),
+  'picar entrada num trabalho de hoje (localização com 4 casas decimais)'
 );
 select pg_temp.verificar((select estado = 'em_curso' from public.trabalhos where id = 'b0000000-0000-4000-8000-000000000002'), 'picar entrada inicia o trabalho');
 select pg_temp.recusado(
@@ -191,6 +192,67 @@ select pg_temp.verificar(
   (select r.a_rever and r.saida = (((d.dia + 1)::timestamp at time zone 'Europe/Lisbon') - interval '1 second')
    from public.picar_saida() r, dia_anterior d),
   'saída esquecida fecha às 23:59:59 desse dia e fica a rever'
+);
+reset role;
+
+-- ---------------------------------------------------------------------
+-- Reforços da revisão de segurança
+-- ---------------------------------------------------------------------
+select pg_temp.entrar('a0000000-0000-4000-8000-000000000004');
+select pg_temp.recusado(
+  $q$insert into public.fotos (trabalho_id, caminho) values ('b0000000-0000-4000-8000-000000000001', 'trabalhos/b0000000-0000-4000-8000-000000000002/isco.jpg')$q$,
+  'foto só pode apontar para a pasta do próprio trabalho'
+);
+select pg_temp.recusado(
+  $q$update public.fotos set colaborador_id = 'c0000000-0000-4000-8000-000000000006' where trabalho_id = 'b0000000-0000-4000-8000-000000000001'$q$,
+  'colaborador não muda o autor nem o caminho das fotos'
+);
+update public.registos_trabalho set notas = 'x', colaborador_id = 'c0000000-0000-4000-8000-000000000006'
+  where trabalho_id = 'b0000000-0000-4000-8000-000000000001';
+select pg_temp.verificar(
+  (select colaborador_id = 'c0000000-0000-4000-8000-000000000004' from public.registos_trabalho where trabalho_id = 'b0000000-0000-4000-8000-000000000001'),
+  'o autor do registo é sempre quem grava'
+);
+update public.registos_trabalho
+  set assinatura_caminho = 'trabalhos/b0000000-0000-4000-8000-000000000001/assinatura-teste.png', assinatura_nome = 'Cliente', assinado_em = '2020-01-01'
+  where trabalho_id = 'b0000000-0000-4000-8000-000000000001';
+select pg_temp.verificar(
+  (select assinado_em > now() - interval '1 minute' from public.registos_trabalho where trabalho_id = 'b0000000-0000-4000-8000-000000000001'),
+  'a data da assinatura é a do servidor'
+);
+select pg_temp.recusado(
+  $q$update public.registos_trabalho set assinatura_caminho = null where trabalho_id = 'b0000000-0000-4000-8000-000000000001'$q$,
+  'colaborador não apaga uma assinatura feita'
+);
+select pg_temp.recusado(
+  $q$update public.registos_trabalho set assinatura_caminho = 'trabalhos/b0000000-0000-4000-8000-000000000003/x.png' where trabalho_id = 'b0000000-0000-4000-8000-000000000001'$q$,
+  'colaborador não substitui uma assinatura feita'
+);
+select pg_temp.recusado(
+  $q$update public.trabalhos set created_at = '2020-01-01' where id = 'b0000000-0000-4000-8000-000000000001'$q$,
+  'colaborador não altera outras colunas do trabalho (created_at)'
+);
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.trabalhos set estado = 'cancelado' where id = 'b0000000-0000-4000-8000-000000000003';
+select pg_temp.entrar('a0000000-0000-4000-8000-000000000004');
+select pg_temp.recusado(
+  $q$update public.trabalhos set estado = 'concluido' where id = 'b0000000-0000-4000-8000-000000000003'$q$,
+  'colaborador não conclui trabalhos cancelados'
+);
+select pg_temp.verificar((select count(*) from public.clientes where id = (select cliente_id from public.trabalhos where id = 'b0000000-0000-4000-8000-000000000001')) = 1
+  and (select count(*) from public.locais) = 2, 'colaborador deixa de ver o local de um trabalho cancelado');
+reset role;
+select pg_temp.entrar('a0000000-0000-4000-8000-000000000002');
+select pg_temp.recusado(
+  $q$update public.trabalhos set data = data + 1 where id = 'b0000000-0000-4000-8000-000000000006'$q$,
+  'trabalho com registo/horas não muda de dia'
+);
+reset role;
+select pg_temp.entrar('a0000000-0000-4000-8000-000000000001');
+select pg_temp.recusado(
+  $q$delete from public.trabalhos where id = 'b0000000-0000-4000-8000-000000000006'$q$,
+  'trabalho com horas/registo não se apaga'
 );
 reset role;
 

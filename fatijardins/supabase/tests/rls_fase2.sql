@@ -204,6 +204,14 @@ select pg_temp.recusado(
   'foto só pode apontar para a pasta do próprio trabalho'
 );
 select pg_temp.recusado(
+  $q$insert into public.fotos (trabalho_id, caminho) values ('b0000000-0000-4000-8000-000000000001', 'trabalhos/b0000000-0000-4000-8000-000000000001/../b0000000-0000-4000-8000-000000000002/isco.jpg')$q$,
+  'foto com "../" no caminho é recusada'
+);
+select pg_temp.recusado(
+  $q$insert into public.fotos (trabalho_id, caminho) values ('b0000000-0000-4000-8000-000000000001', 'outra/pasta/isco.jpg')$q$,
+  'foto fora da pasta "trabalhos/" é recusada'
+);
+select pg_temp.recusado(
   $q$update public.fotos set colaborador_id = 'c0000000-0000-4000-8000-000000000006' where trabalho_id = 'b0000000-0000-4000-8000-000000000001'$q$,
   'colaborador não muda o autor nem o caminho das fotos'
 );

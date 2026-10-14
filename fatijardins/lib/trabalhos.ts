@@ -63,9 +63,11 @@ export function compararOrdem(a: ItemOrdem, b: ItemOrdem) {
 
 /**
  * Lugar de um trabalho que entra num dia de uma equipa (novo, ou vindo de
- * outro dia/equipa): antes do primeiro com hora posterior ou sem hora; sem
- * hora fica no fim. Os seguintes são empurrados uma posição; a ordem dos
- * outros entre si (que pode ter sido mudada à mão) mantém-se.
+ * outro dia/equipa): antes do primeiro com hora posterior (os sem hora não
+ * contam) ou, se não houver, logo a seguir ao último com hora; sem hora, ou
+ * num dia só com trabalhos sem hora, fica no fim. Os seguintes são empurrados
+ * uma posição; a ordem dos outros entre si (que pode ter sido mudada à mão)
+ * mantém-se.
  */
 export function lugarNaOrdem(
   trabalhos: ItemOrdem[],
@@ -73,7 +75,16 @@ export function lugarNaOrdem(
 ): { ordem: number; empurrados: { id: string; ordem: number }[] } {
   const lista = [...trabalhos].sort(compararOrdem)
   const nova = hora?.slice(0, 5) ?? null
-  let i = nova === null ? -1 : lista.findIndex((t) => t.hora === null || t.hora.slice(0, 5) > nova)
+  // Antes do primeiro com hora posterior; os sem hora não contam (podem ter sido postos à mão
+  // em qualquer lugar). Sem nenhum posterior, logo a seguir ao último com hora. Sem hora: no fim.
+  let i = -1
+  if (nova !== null) {
+    i = lista.findIndex((t) => t.hora !== null && t.hora.slice(0, 5) > nova)
+    if (i === -1) {
+      const ultimoComHora = lista.findLastIndex((t) => t.hora !== null)
+      i = ultimoComHora === -1 ? lista.length : ultimoComHora + 1
+    }
+  }
   if (i === -1) i = lista.length
 
   const ordem = i === 0 ? Math.min(1, lista[0]?.ordem ?? 1) : lista[i - 1].ordem + 1

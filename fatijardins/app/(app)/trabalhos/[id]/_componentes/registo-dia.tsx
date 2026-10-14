@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CircleAlertIcon, LoaderCircleIcon, RotateCwIcon, SaveIcon } from "lucide-react"
@@ -67,9 +67,12 @@ export function RegistoDia({ trabalhoId, tarefasFeitas, notas, versao, atualizad
   }
 
   const [conflito, setConflito] = useState(false)
+  // O que foi enviado na última gravação (para não perder o que se escreveu enquanto gravava).
+  const enviados = useRef<CamposRegisto | null>(null)
   const { submeter, aGuardar } = useAcaoFormulario(
     form,
     async (campos) => {
+      enviados.current = campos
       const resultado = await guardarRegisto(trabalhoId, base.versao, campos)
       setConflito(!resultado.ok && resultado.erro === MENSAGEM_CONFLITO_REGISTO)
       return resultado
@@ -80,7 +83,20 @@ export function RegistoDia({ trabalhoId, tarefasFeitas, notas, versao, atualizad
       aoConcluir: ({ dados }) => {
         if (!dados) return
         setBase({ versao: dados.versao, tarefasFeitas: dados.tarefas_feitas, notas: dados.notas })
-        form.reset({ tarefas_feitas: paraCampo(dados.tarefas_feitas), notas: paraCampo(dados.notas) })
+        // Os campos ficam com o que ficou gravado e deixam de contar como "por guardar"
+        // (keepDirtyValues: false; senão uma versão nova de um colega não lhes chegava e
+        // a gravação seguinte apagava-a sem aviso). O que a pessoa escreveu durante a
+        // gravação volta a ser posto e continua por guardar.
+        const atuais = form.getValues()
+        form.reset(
+          { tarefas_feitas: paraCampo(dados.tarefas_feitas), notas: paraCampo(dados.notas) },
+          { keepDirtyValues: false }
+        )
+        for (const campo of ["tarefas_feitas", "notas"] as const) {
+          if (enviados.current && atuais[campo] !== enviados.current[campo]) {
+            form.setValue(campo, atuais[campo], { shouldDirty: true })
+          }
+        }
       },
     }
   )

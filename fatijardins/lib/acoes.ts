@@ -19,6 +19,18 @@ export function erroValidacao(erro: z.ZodError): ResultadoAcao<never> {
   }
 }
 
+/**
+ * As regras da BD (triggers e funções) já levantam erros com mensagens em
+ * português para quem usa a app; as mensagens do próprio Postgres (em inglês,
+ * com nomes de tabelas e restrições) nunca se mostram.
+ */
+function eMensagemDaApp(mensagem: string | undefined): mensagem is string {
+  return (
+    !!mensagem &&
+    !/violates|violation|permission denied|row-level security|constraint|relation|column|function/i.test(mensagem)
+  )
+}
+
 /** Traduz erros do Postgres/PostgREST para mensagens claras em português. */
 export function mensagemErroBD(
   erro: Pick<PostgrestError, "code" | "message"> | null | undefined,
@@ -30,11 +42,12 @@ export function mensagemErroBD(
     case "23503":
       return mensagens.emUso ?? "Não é possível concluir: existem registos associados."
     case "23514":
-      return erro.message.startsWith("Tem de existir")
-        ? erro.message
-        : "Algum dos valores não é válido."
+      return eMensagemDaApp(erro.message) ? erro.message : "Algum dos valores não é válido."
     case "42501":
-      return "Não tem permissão para esta ação."
+      return eMensagemDaApp(erro.message) ? erro.message : "Não tem permissão para esta ação."
+    case "P0001":
+    case "P0002":
+      return eMensagemDaApp(erro.message) ? erro.message : "Ocorreu um erro inesperado. Tente novamente."
     case "PGRST116":
       return "O registo não existe ou não tem acesso a ele."
     default:

@@ -130,18 +130,23 @@ acesso** (email e palavra-passe) ligada à sua ficha. Há três perfis:
 | Criar, mover, reordenar, cancelar trabalhos | ✅ | nas equipas que chefia | — |
 | Ver trabalhos | todos | os das suas equipas | só os de hoje da sua equipa |
 | Iniciar/concluir, registar tarefas, materiais, fotos, assinatura | ✅ | ✅ | nos trabalhos de hoje |
+| Reabrir ou cancelar trabalhos | ✅ | nas equipas que chefia | — |
+| Apagar ou substituir uma assinatura já feita | ✅ | ✅ | — |
 | Apagar fotos | ✅ | ✅ | só as suas |
 | Picar entrada/saída (hora do servidor) | ✅ | ✅ | ✅ |
 | Ver horas | de todos | da sua equipa | só as suas |
+| Ver o local onde se picou | ✅ | — | — |
 | Corrigir horas à mão, exportar a equipa | ✅ | — | — |
 | Mudar a própria palavra-passe | ✅ | ✅ | ✅ |
 
 **Onde são aplicadas** (do mais importante para o menos importante):
 
-1. **Na base de dados — Row Level Security (RLS).** É a proteção real: as regras estão em
-   `supabase/migrations/…_fase1_base.sql` e o PostgreSQL recusa ler ou gravar o que o perfil não
-   permite, venha o pedido de onde vier. Uma conta sem colaborador ativo não vê nada. Um gatilho
-   impede que fique sem nenhum gerente ativo.
+1. **Na base de dados — Row Level Security (RLS).** É a proteção real: as regras estão nas
+   migrações de `supabase/migrations/` e o PostgreSQL recusa ler ou gravar o que o perfil não
+   permite, venha o pedido de onde vier. Uma conta sem colaborador ativo não vê nada. Gatilhos
+   (*triggers*) garantem as regras que a RLS sozinha não cobre: nunca ficar sem gerente ativo; o
+   colaborador só iniciar ou concluir trabalhos; a autoria e a data da assinatura serem as do
+   servidor; um trabalho com horas, registo ou fotos não mudar de dia.
 2. **No servidor (Server Actions, ficheiros `acoes.ts`).** Antes de gravar, confirmam a sessão e o
    perfil e validam os dados com as mesmas regras do formulário (`lib/validacao/`).
 3. **Na interface.** Esconde menus e botões que a pessoa não pode usar
@@ -208,9 +213,9 @@ npx supabase db push                        # aplica as migrações que faltam
 2. Abra cada ficheiro de `supabase/migrations/` por ordem, copie todo o conteúdo, cole e clique **Run**.
 
 A migração da fase 2 cria também o espaço de ficheiros (**Storage**) `fotos`, privado, onde ficam as
-fotos dos trabalhos e as assinaturas, com as mesmas regras de acesso dos trabalhos. Não é preciso
-configurar nada no painel. Com a compressão (cerca de 200–400 KB por foto), o 1 GB do plano
-gratuito dá para alguns milhares de fotos.
+fotos dos trabalhos e as assinaturas, com as mesmas regras de acesso dos trabalhos (só JPEG ou PNG,
+até 3 MB por ficheiro). Não é preciso configurar nada no painel. Com a compressão (cerca de
+200–400 KB por foto), o 1 GB do plano gratuito dá para alguns milhares de fotos.
 
 ### Dados de exemplo
 
@@ -466,6 +471,25 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
   ligar-se aos consumíveis e ao stock.
 - **Fase 2 — fotos:** comprimidas no telemóvel antes de enviar; guardadas num espaço privado e
   mostradas com ligações temporárias (1 hora).
+- **Fase 2 — trabalhos já começados:** um trabalho com horas, registo do dia ou fotos não muda de
+  dia (as horas ficariam no dia errado) — cancela-se e cria-se outro; um trabalho com horas também
+  não se apaga. Um trabalho novo entra na ordem do dia segundo a hora de início; depois, a ordem
+  manual (arrastar ou ↑/↓) é a que conta.
+- **Fase 2 — registo do dia:** se duas pessoas alterarem o mesmo registo ao mesmo tempo, a segunda a
+  guardar é avisada e nada se perde. Uma assinatura do cliente, depois de feita, só pode ser
+  substituída ou apagada pelo gerente ou pelo chefe. Nas quantidades dos materiais o ponto e a
+  vírgula são ambos separadores decimais (`1.250` = 1,25).
+- **Fase 2 — localização da picagem:** opcional (cada pessoa decide no seu telemóvel) e guardada com
+  precisão de cerca de 11 m. Só o gerente a vê na app (ligação para o mapa e colunas no CSV).
+- **Fase 2 — riscos aceites** (pouco prováveis, e a correção custaria mais do que evita; podem ser
+  revistos mais tarde):
+  - quem tem conta pode pedir à API do Supabase ligações temporárias mais longas para as fotos que
+    já pode ver; a app usa sempre 1 hora;
+  - o colaborador, pela API, consegue ler a ficha completa dos clientes dos seus trabalhos de hoje
+    (NIF, email, morada de faturação), embora a app só lhe mostre o contacto;
+  - o chefe, pela API, consegue ler a localização arredondada das picagens da sua equipa;
+  - ficheiros enviados para o Storage sem foto associada ficam lá até serem apagados no painel
+    (o limite de 3 MB por ficheiro reduz o impacto).
 - **Português de Portugal** em toda a interface: datas `dd/mm/aaaa`, euros `1 234,56 €`, fuso
   horário de Lisboa.
 - **A app não emite faturas.** Em Portugal as faturas têm de ser emitidas por software certificado

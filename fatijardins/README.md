@@ -104,6 +104,7 @@ fatijardins/
 ├── supabase/
 │   ├── migrations/           SQL que cria as tabelas e as permissões (por ordem de data)
 │   ├── seed.sql              Dados de exemplo (contas, equipas, clientes, locais, trabalhos, horas)
+│   ├── exemplos_para_hoje.sql Põe os trabalhos e as horas de exemplo no dia de hoje
 │   └── tests/                Testes das permissões (rls_fase1.sql, rls_fase2.sql)
 ├── proxy.ts                  Envia para /login quem não tem sessão
 ├── .env.example              Modelo das variáveis de ambiente
@@ -235,9 +236,11 @@ todas com a palavra-passe **`Fatijardins2026!`**:
 
 (O Jorge Dias, da Equipa Terra, é um colaborador **sem** conta de acesso.)
 
-As datas dos trabalhos e das horas de exemplo são calculadas a partir do dia em que a seed corre. No
-projeto já criado foram carregadas a 13/10/2026: para ver “O meu dia” com trabalhos noutro dia,
-crie-os na Agenda.
+As datas dos trabalhos e das horas de exemplo são calculadas a partir do dia em que a seed corre
+(no projeto já criado, 14/10/2026). Para testar noutro dia — por exemplo, para os colaboradores
+verem trabalhos em “O meu dia” —, cole `supabase/exemplos_para_hoje.sql` no **SQL Editor** e clique
+**Run**: os trabalhos e as horas de exemplo passam para o dia de hoje (o último e o próximo dia útil
+ficam à mesma distância). Só mexe nos dados de exemplo e pode correr-se as vezes que for preciso.
 
 > ⚠️ **Antes de usar a app a sério**, apague estas contas (ou mude-lhes a palavra-passe) — toda a
 > gente conhece esta palavra-passe. Ordem sugerida:
@@ -280,8 +283,8 @@ A partir daí, o gerente cria os restantes colaboradores e acessos na própria a
 
 ### Testes de permissões
 
-Com os dados de exemplo carregados **no próprio dia** (os testes da fase 2 contam os trabalhos de
-“hoje”), cole `supabase/tests/rls_fase1.sql` e depois `supabase/tests/rls_fase2.sql` no
+Com os dados de exemplo no dia de hoje (os testes da fase 2 contam os trabalhos de “hoje”; se
+preciso, corra antes `supabase/exemplos_para_hoje.sql`), cole `supabase/tests/rls_fase1.sql` e depois `supabase/tests/rls_fase2.sql` no
 **SQL Editor** e clique **Run**. O teste corre dentro de uma transação e desfaz tudo no fim (*rollback*), por isso **não
 altera dados**. Se alguma regra estiver errada aparece um erro `FALHOU: …`; se tudo estiver bem,
 termina sem erros.

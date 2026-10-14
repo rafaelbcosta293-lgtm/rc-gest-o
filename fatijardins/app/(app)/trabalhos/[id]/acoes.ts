@@ -18,6 +18,8 @@ import {
   esquemaFoto,
   esquemaMaterial,
   esquemaRegisto,
+  esquemaVersaoRegisto,
+  MENSAGEM_CONFLITO_REGISTO,
   type CamposMaterial,
   type CamposRegisto,
   type DadosFoto,
@@ -59,12 +61,13 @@ async function prepararTrabalho(id: string): Promise<{ contexto: Contexto } | { 
   const { data, error } = await supabase.from("trabalhos").select("id").eq("id", trabalhoId.data).maybeSingle()
   if (error) return { falha: erroBD(error) }
   if (!data) return { falha: NAO_EXISTE }
-  return { contexto: { sessao, supabase, trabalhoId: trabalhoId.data } }
+  // O id tal como está na BD (minúsculas): é com ele que se comparam os caminhos no Storage.
+  return { contexto: { sessao, supabase, trabalhoId: data.id } }
 }
 
 /** Devolve o id do registo do trabalho, criando-o (vazio) se ainda não existir. */
 async function obterOuCriarRegisto(
-  { supabase, sessao, trabalhoId }: Contexto
+  { supabase, trabalhoId }: Contexto
 ): Promise<{ id: string } | { erro: ResultadoAcao<never> }> {
   const existente = await supabase.from("registos_trabalho").select("id").eq("trabalho_id", trabalhoId).maybeSingle()
   if (existente.error) return { erro: erroBD(existente.error) }
@@ -72,7 +75,7 @@ async function obterOuCriarRegisto(
 
   const novo = await supabase
     .from("registos_trabalho")
-    .insert({ trabalho_id: trabalhoId, colaborador_id: sessao.colaborador.id })
+    .insert({ trabalho_id: trabalhoId })
     .select("id")
     .single()
   if (novo.error?.code === "23505") {
@@ -89,12 +92,17 @@ async function obterOuCriarRegisto(
 // Estado do trabalho
 // ---------------------------------------------------------------------
 
-/** Estados de onde se pode passar para cada estado. */
+/**
+ * Estados de onde se pode passar para cada estado (os mesmos dos botões).
+ * O colaborador só inicia e conclui: agendado → em curso; agendado/em curso
+ * → concluído, exatamente o que a BD lhe aceita.
+ */
 const ORIGENS_ESTADO: Record<EstadoTrabalho, EstadoTrabalho[]> = {
   em_curso: ["agendado"],
   concluido: ["agendado", "em_curso"],
   cancelado: ["agendado", "em_curso"],
-  agendado: ["em_curso", "concluido", "cancelado"],
+  // "Reabrir" (só gerente/chefe).
+  agendado: ["concluido", "cancelado"],
 }
 
 const MENSAGEM_ESTADO: Record<EstadoTrabalho, string> = {
@@ -149,27 +157,63 @@ export async function mudarEstado(id: string, estado: EstadoTrabalho): Promise<R
 // Registo do dia (tarefas feitas e notas)
 // ---------------------------------------------------------------------
 
-export async function guardarRegisto(id: string, valores: CamposRegisto): Promise<ResultadoAcao> {
+/** O registo como ficou gravado; versao (updated_at) é a base da gravação seguinte. */
+export type RegistoGuardado = { versao: string; tarefas_feitas: string | null; notas: string | null }
+
+const CONFLITO_REGISTO: ResultadoAcao<never> = { ok: false, erro: MENSAGEM_CONFLITO_REGISTO }
+
+/**
+ * Concorrência otimista: só grava sobre a versão (updated_at) que o
+ * formulário carregou. Se um colega gravou entretanto, não grava (senão o
+ * texto dele perdia-se) e a pessoa mantém o que escreveu no formulário.
+ * versao = null: o registo ainda não existia quando a ficha abriu.
+ */
+export async function guardarRegisto(
+  id: string,
+  versao: string | null,
+  valores: CamposRegisto
+): Promise<ResultadoAcao<RegistoGuardado>> {
   const preparado = await prepararTrabalho(id)
   if ("falha" in preparado) return preparado.falha
-  const { sessao, supabase, trabalhoId } = preparado.contexto
+  const { supabase, trabalhoId } = preparado.contexto
 
   const dados = esquemaRegisto.safeParse(valores)
   if (!dados.success) return erroValidacao(dados.error)
+  const base = esquemaVersaoRegisto.safeParse(versao)
+  if (!base.success) return CONFLITO_REGISTO
 
-  // Um único registo por trabalho: cria ou atualiza.
-  const { error } = await supabase
-    .from("registos_trabalho")
-    .upsert(
-      { trabalho_id: trabalhoId, ...dados.data, colaborador_id: sessao.colaborador.id },
-      { onConflict: "trabalho_id" }
-    )
-    .select("id")
-    .single()
-  if (error) return erroBD(error)
+  // O autor (colaborador_id) e o updated_at são definidos pela BD.
+  const colunas = "tarefas_feitas, notas, updated_at"
+  let gravado: { tarefas_feitas: string | null; notas: string | null; updated_at: string } | null
+  if (base.data === null) {
+    const { data, error } = await supabase
+      .from("registos_trabalho")
+      .insert({ trabalho_id: trabalhoId, ...dados.data })
+      .select(colunas)
+      .single()
+    // 23505: um colega criou o registo depois de a ficha abrir.
+    if (error?.code === "23505") return CONFLITO_REGISTO
+    if (error) return erroBD(error)
+    gravado = data
+  } else {
+    const { data, error } = await supabase
+      .from("registos_trabalho")
+      .update(dados.data)
+      .eq("trabalho_id", trabalhoId)
+      .eq("updated_at", base.data)
+      .select(colunas)
+    if (error) return erroBD(error)
+    gravado = data[0] ?? null
+  }
+  // Nenhuma linha mudou: o registo já não está na versão que a pessoa carregou.
+  if (!gravado) return CONFLITO_REGISTO
 
   revalidar(trabalhoId)
-  return { ok: true, mensagem: "Registo guardado." }
+  return {
+    ok: true,
+    mensagem: "Registo guardado.",
+    dados: { versao: gravado.updated_at, tarefas_feitas: gravado.tarefas_feitas, notas: gravado.notas },
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -287,8 +331,14 @@ export async function apagarFoto(id: string, fotoId: string): Promise<ResultadoA
   if (data.length === 0) return SEM_PERMISSAO
 
   // Primeiro a linha, depois o ficheiro: nunca fica uma foto a apontar para um ficheiro que já não existe.
-  const { error: erroRemover } = await supabase.storage.from(BUCKET_FOTOS).remove([foto.caminho])
-  if (erroRemover) console.error("Não foi possível apagar o ficheiro da foto:", foto.caminho, erroRemover.message)
+  // Só se apaga um ficheiro da pasta deste trabalho; um caminho de outro sítio (que a BD já não
+  // aceita) deixaria apagar o ficheiro de outro trabalho: aí sai só a linha.
+  if (eCaminhoFoto(trabalhoId, foto.caminho)) {
+    const { error: erroRemover } = await supabase.storage.from(BUCKET_FOTOS).remove([foto.caminho])
+    if (erroRemover) console.error("Não foi possível apagar o ficheiro da foto:", foto.caminho, erroRemover.message)
+  } else {
+    console.error("Foto com um caminho fora da pasta do trabalho; o ficheiro não foi apagado:", foto.caminho)
+  }
 
   revalidar(trabalhoId)
   return { ok: true, mensagem: "Foto apagada." }
@@ -301,7 +351,7 @@ export async function apagarFoto(id: string, fotoId: string): Promise<ResultadoA
 export async function guardarAssinatura(id: string, caminho: string, nome: string): Promise<ResultadoAcao> {
   const preparado = await prepararTrabalho(id)
   if ("falha" in preparado) return preparado.falha
-  const { sessao, supabase, trabalhoId } = preparado.contexto
+  const { supabase, trabalhoId } = preparado.contexto
 
   const dados = esquemaAssinatura.safeParse({ nome })
   if (!dados.success) return erroValidacao(dados.error)
@@ -314,12 +364,8 @@ export async function guardarAssinatura(id: string, caminho: string, nome: strin
     return { ok: false, erro: "A assinatura não chegou ao servidor. Tente de novo." }
   }
 
-  const assinatura = {
-    assinatura_caminho: caminho,
-    assinatura_nome: dados.data.nome,
-    assinado_em: new Date().toISOString(),
-    colaborador_id: sessao.colaborador.id,
-  }
+  // A data (assinado_em) e o autor (colaborador_id) são definidos pela BD.
+  const assinatura = { assinatura_caminho: caminho, assinatura_nome: dados.data.nome }
 
   const { data: registo, error: erroRegisto } = await supabase
     .from("registos_trabalho")
@@ -375,23 +421,27 @@ export async function apagarAssinatura(id: string): Promise<ResultadoAcao> {
     return { ok: false, erro: "Este trabalho já não tem assinatura." }
   }
 
+  // A BD limpa o nome e a data da assinatura com a imagem.
   const { data, error } = await supabase
     .from("registos_trabalho")
-    .update({
-      assinatura_caminho: null,
-      assinatura_nome: null,
-      assinado_em: null,
-      colaborador_id: sessao.colaborador.id,
-    })
+    .update({ assinatura_caminho: null })
     .eq("id", registo.id)
     .eq("assinatura_caminho", registo.assinatura_caminho)
     .select("id")
   if (error) return erroBD(error)
   if (data.length === 0) return SEM_PERMISSAO
 
-  const { error: erroRemover } = await supabase.storage.from(BUCKET_FOTOS).remove([registo.assinatura_caminho])
-  if (erroRemover) {
-    console.error("Não foi possível apagar o ficheiro da assinatura:", registo.assinatura_caminho, erroRemover.message)
+  // Tal como nas fotos: só se apaga um ficheiro da pasta deste trabalho.
+  if (eCaminhoAssinatura(trabalhoId, registo.assinatura_caminho)) {
+    const { error: erroRemover } = await supabase.storage.from(BUCKET_FOTOS).remove([registo.assinatura_caminho])
+    if (erroRemover) {
+      console.error("Não foi possível apagar o ficheiro da assinatura:", registo.assinatura_caminho, erroRemover.message)
+    }
+  } else {
+    console.error(
+      "Assinatura com um caminho fora da pasta do trabalho; o ficheiro não foi apagado:",
+      registo.assinatura_caminho
+    )
   }
 
   revalidar(trabalhoId)

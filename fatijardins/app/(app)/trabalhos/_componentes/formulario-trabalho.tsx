@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input"
 import { NativeSelect } from "@/components/ui/native-select"
 import { Textarea } from "@/components/ui/textarea"
 import { useAcaoFormulario } from "@/hooks/use-acao-formulario"
-import { eDataValida } from "@/lib/datas"
+import { DATA_MAXIMA, DATA_MINIMA, eDataValida } from "@/lib/datas"
 import { formatarData, formatarDuracao } from "@/lib/formatar"
 import { datasDaSerie, NOMES_RECORRENCIA, NOMES_TIPO_TRABALHO } from "@/lib/trabalhos"
 import { cn } from "@/lib/utils"
@@ -52,8 +52,11 @@ type Props = {
   equipas: { id: string; nome: string }[]
   /** O gerente pode deixar o trabalho "Por atribuir"; o chefe tem de escolher a equipa. */
   permitirSemEquipa: boolean
-  /** Ao editar: o trabalho (sem trabalho, o formulário cria). */
-  trabalho?: { id: string; serie: boolean }
+  /**
+   * Ao editar: o trabalho (sem trabalho, o formulário cria). dataFixa: já tem
+   * horas, registo ou fotos e não pode mudar de dia (a BD também o recusa).
+   */
+  trabalho?: { id: string; serie: boolean; dataFixa?: boolean }
   cancelarHref: string
 }
 
@@ -285,10 +288,15 @@ export function FormularioTrabalho({
                 <FormItem>
                   <FormLabel>Data *</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" min={DATA_MINIMA} max={DATA_MAXIMA} {...field} disabled={trabalho?.dataFixa} />
                   </FormControl>
-                  {trabalho?.serie && aplicar === "seguintes" && (
-                    <FormDescription>A data só muda neste trabalho.</FormDescription>
+                  {trabalho?.dataFixa ? (
+                    <FormDescription>
+                      Já tem horas, registo ou fotos: não pode mudar de dia. Para outro dia, cancele-o e crie outro.
+                    </FormDescription>
+                  ) : (
+                    trabalho?.serie &&
+                    aplicar === "seguintes" && <FormDescription>A data só muda neste trabalho.</FormDescription>
                   )}
                   <FormMessage />
                 </FormItem>

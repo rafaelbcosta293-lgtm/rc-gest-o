@@ -8,27 +8,35 @@ import { picarEntrada, picarSaida, type ResultadoPicagem } from "@/app/(app)/hor
 import type { DadosLocalizacao } from "@/lib/validacao/horas"
 
 // ---------------------------------------------------------------------
-// Preferência "Guardar a localização" (lembrada neste telemóvel)
+// Preferência "Guardar a localização" (lembrada neste telemóvel, para
+// cada pessoa: num telemóvel partilhado, a escolha de uma não vale para outra)
 // ---------------------------------------------------------------------
 
-const CHAVE_LOCALIZACAO = "fatijardins:picagem:localizacao"
 const ouvintes = new Set<() => void>()
-/** Valor escolhido nesta visita (se o browser não deixar gravar no localStorage). */
-let escolhaNestaVisita: boolean | null = null
+/** Valores escolhidos nesta visita (se o browser não deixar gravar no localStorage). */
+const escolhasNestaVisita = new Map<string, boolean>()
 
-function lerPreferencia(): boolean {
-  if (escolhaNestaVisita !== null) return escolhaNestaVisita
+function chaveLocalizacao(colaboradorId: string) {
+  return `fatijardins:picagem:localizacao:${colaboradorId}`
+}
+
+/** Sem saber quem é a pessoa, não se guarda a localização. */
+function lerPreferencia(colaboradorId: string | undefined): boolean {
+  if (!colaboradorId) return false
+  const nestaVisita = escolhasNestaVisita.get(colaboradorId)
+  if (nestaVisita !== undefined) return nestaVisita
   try {
-    return window.localStorage.getItem(CHAVE_LOCALIZACAO) === "1"
+    return window.localStorage.getItem(chaveLocalizacao(colaboradorId)) === "1"
   } catch {
     return false
   }
 }
 
-function gravarPreferencia(valor: boolean) {
-  escolhaNestaVisita = valor
+function gravarPreferencia(colaboradorId: string | undefined, valor: boolean) {
+  if (!colaboradorId) return
+  escolhasNestaVisita.set(colaboradorId, valor)
   try {
-    window.localStorage.setItem(CHAVE_LOCALIZACAO, valor ? "1" : "0")
+    window.localStorage.setItem(chaveLocalizacao(colaboradorId), valor ? "1" : "0")
   } catch {
     // Modo privado ou armazenamento bloqueado: fica só para esta visita.
   }
@@ -52,9 +60,9 @@ type ResultadoPosicao =
   | { ok: true; posicao: { latitude: number; longitude: number } }
   | { ok: false; recusada: boolean }
 
-/** 6 casas decimais (cerca de 10 cm), como a base de dados guarda. */
+/** 4 casas decimais (cerca de 11 m), como a base de dados guarda. */
 function arredondar(valor: number) {
-  return Math.round(valor * 1e6) / 1e6
+  return Math.round(valor * 1e4) / 1e4
 }
 
 function obterPosicao(): Promise<ResultadoPosicao> {
@@ -109,12 +117,22 @@ export function usePicagem(): ValorContexto {
   return valor
 }
 
-export function ProvedorPicagem({ children }: { children: React.ReactNode }) {
+type PropsProvedor = {
+  /** Quem está a picar (a preferência da localização é de cada pessoa). */
+  colaboradorId?: string
+  children: React.ReactNode
+}
+
+export function ProvedorPicagem({ colaboradorId, children }: PropsProvedor) {
   const router = useRouter()
   const [aCorrer, iniciar] = useTransition()
   const [etapa, setEtapa] = useState<EtapaPicagem>(null)
   const [aviso, setAviso] = useState<string | null>(null)
-  const guardarLocalizacao = useSyncExternalStore(subscreverPreferencia, lerPreferencia, () => false)
+  const guardarLocalizacao = useSyncExternalStore(
+    subscreverPreferencia,
+    () => lerPreferencia(colaboradorId),
+    () => false
+  )
 
   // O Next.js guarda a página escondida ao navegar: ao voltar, sem avisos antigos.
   useLayoutEffect(() => {
@@ -168,7 +186,7 @@ export function ProvedorPicagem({ children }: { children: React.ReactNode }) {
     aviso,
     fecharAviso: () => setAviso(null),
     guardarLocalizacao,
-    mudarGuardarLocalizacao: gravarPreferencia,
+    mudarGuardarLocalizacao: (valor) => gravarPreferencia(colaboradorId, valor),
     entrar: (trabalhoId, aoConcluir) =>
       executar((localizacao) => picarEntrada({ trabalhoId, ...localizacao }), aoConcluir),
     sair: (aoConcluir) => executar((localizacao) => picarSaida(localizacao), aoConcluir),

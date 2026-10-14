@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { eDataValida } from "@/lib/datas"
+
 // Mensagens de erro do Zod em português por omissão.
 z.config(z.locales.pt())
 
@@ -101,8 +103,12 @@ export const uuidOpcional = z
 
 export const idObrigatorio = z.uuid("Identificador inválido.")
 
+/** Data real entre 2000 e 2100 (como na agenda): 2026-02-30 ou 9999-12-31 não passam. */
 export const dataObrigatoria = (mensagem = "Indique a data.") =>
-  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, mensagem)
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: mensagem, abort: true })
+    .refine((valor) => eDataValida(valor), "Data inválida.")
 
 /** Converte valores da base de dados para o texto dos campos do formulário. */
 export function paraCampo(valor: string | number | null | undefined): string {

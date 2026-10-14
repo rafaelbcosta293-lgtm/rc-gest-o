@@ -12,11 +12,13 @@ type Props = {
   atual: boolean
   /** Há uma entrada aberta noutro trabalho (o botão muda de trabalho). */
   aTrabalhar: boolean
+  /** Botão cheio: a ação principal (na ficha, à frente de "Iniciar trabalho"). */
+  principal?: boolean
   className?: string
 }
 
 /** Pica a entrada (ou muda) diretamente para este trabalho. Usa a mesma ação do widget. */
-export function PicarAqui({ trabalhoId, atual, aTrabalhar, className }: Props) {
+export function PicarAqui({ trabalhoId, atual, aTrabalhar, principal = false, className }: Props) {
   const { aCorrer, entrar } = usePicagem()
 
   if (atual) {
@@ -35,10 +37,10 @@ export function PicarAqui({ trabalhoId, atual, aTrabalhar, className }: Props) {
   return (
     <Button
       size="lg"
-      variant="outline"
+      variant={principal ? "default" : "outline"}
       disabled={aCorrer}
       onClick={() => entrar(trabalhoId)}
-      className={cn("border-primary/50 text-primary hover:text-primary", className)}
+      className={cn(!principal && "border-primary/50 text-primary hover:text-primary", className)}
     >
       {aCorrer ? <LoaderCircleIcon className="animate-spin" /> : <LogInIcon />}
       {aTrabalhar ? "Mudar para aqui" : "Picar aqui"}

@@ -466,15 +466,16 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
   do telemóvel não conta); mudar de trabalho fecha o período anterior; não há períodos sobrepostos;
   uma saída esquecida fecha às 23:59 desse dia e fica marcada “a rever” para o gerente. Horas extra:
   acima de 8 h por dia útil, e todas as horas em fins de semana e feriados nacionais (os feriados
-  municipais não estão incluídos). O CSV usa `;` e vírgula decimal, para abrir bem no Excel português.
+  municipais não estão incluídos). O CSV usa `;` e vírgula decimal, para abrir bem no Excel português,
+  e traz também os minutos exatos (o total em horas é calculado a partir deles).
 - **Fase 2 — materiais:** registados como texto (descrição, quantidade, unidade); na fase 4 passam a
   ligar-se aos consumíveis e ao stock.
 - **Fase 2 — fotos:** comprimidas no telemóvel antes de enviar; guardadas num espaço privado e
   mostradas com ligações temporárias (1 hora).
 - **Fase 2 — trabalhos já começados:** um trabalho com horas, registo do dia ou fotos não muda de
   dia (as horas ficariam no dia errado) — cancela-se e cria-se outro; um trabalho com horas também
-  não se apaga. Um trabalho novo entra na ordem do dia segundo a hora de início; depois, a ordem
-  manual (arrastar ou ↑/↓) é a que conta.
+  não se apaga. Um trabalho novo (ou que muda de dia ou de equipa) entra na ordem do dia segundo a
+  hora de início; depois, a ordem manual (arrastar ou ↑/↓) é a que conta.
 - **Fase 2 — registo do dia:** se duas pessoas alterarem o mesmo registo ao mesmo tempo, a segunda a
   guardar é avisada e nada se perde. Uma assinatura do cliente, depois de feita, só pode ser
   substituída ou apagada pelo gerente ou pelo chefe. Nas quantidades dos materiais o ponto e a

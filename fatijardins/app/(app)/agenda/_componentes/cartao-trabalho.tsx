@@ -14,11 +14,23 @@ function BadgeEstado({ trabalho, className }: { trabalho: TrabalhoAgenda; classN
   )
 }
 
+function sitio(trabalho: TrabalhoAgenda) {
+  return `${trabalho.cliente} — ${trabalho.local}`
+}
+
+/** Texto completo (dica ao passar o rato): o local distingue dois trabalhos do mesmo cliente. */
+function textoCompleto(trabalho: TrabalhoAgenda) {
+  return `${trabalho.titulo}\n${sitio(trabalho)}`
+}
+
 /** Conteúdo do cartão pequeno da grelha semanal (PC). */
 export function ConteudoCartaoCompacto({ trabalho }: { trabalho: TrabalhoAgenda }) {
   const cancelado = trabalho.estado === "cancelado"
   return (
-    <span className={cn("flex min-w-0 flex-col gap-0.5", cancelado && "opacity-60")}>
+    <span
+      className={cn("flex min-w-0 flex-col gap-0.5", cancelado && "opacity-60")}
+      title={textoCompleto(trabalho)}
+    >
       <span className="flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
         {trabalho.hora ? formatarHora(trabalho.hora) : "Sem hora"}
         {trabalho.serie && <RepeatIcon className="size-3" aria-label="Repete-se" />}
@@ -27,9 +39,7 @@ export function ConteudoCartaoCompacto({ trabalho }: { trabalho: TrabalhoAgenda 
       <span className={cn("line-clamp-2 text-xs leading-snug font-medium", cancelado && "line-through")}>
         {trabalho.titulo}
       </span>
-      <span className="truncate text-[11px] text-muted-foreground">
-        {trabalho.cliente} — {trabalho.local}
-      </span>
+      <span className="truncate text-[11px] text-muted-foreground">{sitio(trabalho)}</span>
       <BadgeEstado trabalho={trabalho} className="mt-0.5 px-1.5 py-0 text-[10px]" />
     </span>
   )
@@ -46,7 +56,10 @@ export function ConteudoCartaoGrande({
 }) {
   const cancelado = trabalho.estado === "cancelado"
   return (
-    <span className={cn("flex min-w-0 flex-1 items-start gap-3", cancelado && "opacity-60")}>
+    <span
+      className={cn("flex min-w-0 flex-1 items-start gap-3", cancelado && "opacity-60")}
+      title={textoCompleto(trabalho)}
+    >
       {posicao !== undefined && (
         <span
           className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground tabular-nums"
@@ -60,11 +73,9 @@ export function ConteudoCartaoGrande({
           <span className={cn("font-medium text-pretty", cancelado && "line-through")}>{trabalho.titulo}</span>
           <BadgeEstado trabalho={trabalho} />
         </span>
-        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-          <MapPinIcon className="size-3.5 shrink-0" />
-          <span className="truncate">
-            {trabalho.cliente} — {trabalho.local}
-          </span>
+        <span className="flex items-start gap-1 text-sm text-muted-foreground">
+          <MapPinIcon className="mt-0.5 size-3.5 shrink-0" />
+          <span className="line-clamp-2 break-words">{sitio(trabalho)}</span>
         </span>
         <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted-foreground tabular-nums">
           <span className="inline-flex items-center gap-1">

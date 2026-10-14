@@ -49,7 +49,7 @@ export async function OMeuDia({ sessao }: { sessao: Sessao }) {
   const chefe = sessao.colaborador.perfil === "chefe_equipa"
 
   return (
-    <ProvedorPicagem>
+    <ProvedorPicagem colaboradorId={sessao.colaborador.id}>
       <div className="grid gap-6">
         <Picagem estado={estado} />
 

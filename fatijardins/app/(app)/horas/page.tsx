@@ -99,7 +99,8 @@ async function MapaHoras({ searchParams }: { searchParams: ParametrosPesquisa })
 
   const intervalo = intervaloDoMes(mes)
   const [periodos, trabalhosR] = await Promise.all([
-    periodosDoMes(supabase, mes, pessoa.id),
+    // A localização da picagem só se mostra ao gerente.
+    periodosDoMes(supabase, mes, pessoa.id, { comLocalizacao: gerente }),
     gerente
       ? supabase
           .from("trabalhos")

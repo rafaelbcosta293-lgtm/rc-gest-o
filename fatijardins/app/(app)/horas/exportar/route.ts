@@ -4,6 +4,7 @@ import { exigirSessao } from "@/lib/auth"
 import { feriadoNacional, formatarDiaSemanaCurto, formatarMesAno } from "@/lib/datas"
 import { formatarData, formatarHora, formatarHorasDecimais, hojeEmLisboa } from "@/lib/formatar"
 import { agruparPorDia, eMesValido, semAcentosParaFicheiro, totaisDoMes } from "@/lib/horas"
+import { textoCoordenadas } from "@/lib/mapas"
 import { eGerente } from "@/lib/perfis"
 import { createClient } from "@/lib/supabase/server"
 import { periodosDoMes, pessoasVisiveis, rotuloTrabalho, type PeriodoMapa } from "../_componentes/dados"
@@ -17,15 +18,17 @@ import { periodosDoMes, pessoasVisiveis, rotuloTrabalho, type PeriodoMapa } from
 
 type Valor = string | number | null | undefined
 
+/**
+ * Célula para o Excel. Os textos (títulos, nomes, notas…) ficam sem
+ * carateres de controlo (um CR isolado parte a linha), com uma plica antes
+ * do que pareça uma fórmula (= + - @) e entre aspas se tiverem ";", aspas
+ * ou espaços nas pontas. Os números passam tal como estão.
+ */
 function celula(valor: Valor): string {
-  const texto = String(valor ?? "").replace(/\r?\n/g, " ")
-  return /[;"]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto
-}
-
-/** Texto escrito por pessoas: evita que o Excel o leia como fórmula. */
-function textoLivre(valor: string | null | undefined): string {
-  if (!valor) return ""
-  return /^[=+\-@\t\r]/.test(valor) ? `'${valor}` : valor
+  if (typeof valor === "number") return String(valor)
+  let texto = String(valor ?? "").replace(/[\u0000-\u001f\u007f]/g, " ")
+  if (/^\s*[=+\-@]/.test(texto)) texto = `'${texto}`
+  return /[;"]|^\s|\s$/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto
 }
 
 function linha(...valores: Valor[]): string {
@@ -73,7 +76,9 @@ export async function GET(request: NextRequest) {
       porPessoa.set(periodo.colaboradorId, [...(porPessoa.get(periodo.colaboradorId) ?? []), periodo])
     }
 
-    const linhas = [linha("Nome", "Equipa", "Dias", "Horas totais", "Normais", "Extra dias úteis", "Extra fins de semana/feriados")]
+    const linhas = [
+      linha("Nome", "Equipa", "Dias", "Horas totais", "Minutos", "Normais", "Extra dias úteis", "Extra fins de semana/feriados"),
+    ]
     const soma = { dias: 0, minutos: 0, normais: 0, extraUteis: 0, extraFimDeSemana: 0 }
     for (const pessoa of pessoas) {
       const lista = porPessoa.get(pessoa.id) ?? []
@@ -87,10 +92,11 @@ export async function GET(request: NextRequest) {
       soma.extraFimDeSemana += totais.extraFimDeSemana
       linhas.push(
         linha(
-          textoLivre(pessoa.nome),
-          textoLivre(pessoa.equipa),
+          pessoa.nome,
+          pessoa.equipa,
           totais.dias,
           horas(totais.minutos),
+          totais.minutos,
           horas(totais.normais),
           horas(totais.extraUteis),
           horas(totais.extraFimDeSemana)
@@ -99,7 +105,16 @@ export async function GET(request: NextRequest) {
     }
     linhas.push(
       "",
-      linha("Total", "", soma.dias, horas(soma.minutos), horas(soma.normais), horas(soma.extraUteis), horas(soma.extraFimDeSemana)),
+      linha(
+        "Total",
+        "",
+        soma.dias,
+        horas(soma.minutos),
+        soma.minutos,
+        horas(soma.normais),
+        horas(soma.extraUteis),
+        horas(soma.extraFimDeSemana)
+      ),
       linha("Mês", nomeMes)
     )
     return respostaCsv(linhas, `horas-equipa-${mes}.csv`)
@@ -111,11 +126,28 @@ export async function GET(request: NextRequest) {
   const pessoa = pessoas.find((p) => p.id === pedido)
   if (!pessoa) return respostaErro(403, "Não tem acesso às horas desta pessoa.")
 
-  const periodos = await periodosDoMes(supabase, mes, pessoa.id)
+  // O gerente recebe também onde foi picada a entrada e a saída.
+  const gerente = eGerente(sessao.colaborador.perfil)
+  const periodos = await periodosDoMes(supabase, mes, pessoa.id, { comLocalizacao: gerente })
   const dias = agruparPorDia(periodos, agora)
   const totais = totaisDoMes(dias)
 
-  const linhas = [linha("Data", "Dia", "Entrada", "Saída", "Trabalho", "Cliente", "Horas", "Extra", "Notas")]
+  // "Horas" vem arredondada a 2 casas; "Minutos" é exato e soma sempre o total.
+  const linhas = [
+    linha(
+      "Data",
+      "Dia",
+      "Entrada",
+      "Saída",
+      "Trabalho",
+      "Cliente",
+      "Horas",
+      "Minutos",
+      "Extra",
+      "Notas",
+      ...(gerente ? ["Local da entrada", "Local da saída"] : [])
+    ),
+  ]
   for (const dia of dias) {
     const nomeDia = formatarDiaSemanaCurto(dia.data) + (feriadoNacional(dia.data) ? " (feriado)" : "")
     dia.periodos.forEach((periodo, indice) => {
@@ -132,24 +164,38 @@ export async function GET(request: NextRequest) {
           nomeDia,
           formatarHora(periodo.entrada),
           periodo.saida ? formatarHora(periodo.saida) : "",
-          textoLivre(periodo.trabalho?.titulo ?? rotuloTrabalho(periodo)),
-          textoLivre(periodo.trabalho?.cliente),
+          periodo.trabalho?.titulo ?? rotuloTrabalho(periodo),
+          periodo.trabalho?.cliente,
           horas(periodo.minutos),
+          periodo.minutos,
           // O extra é do dia: fica na última linha de cada dia.
           ultimo && dia.extra > 0 ? horas(dia.extra) : "",
-          textoLivre(notas.join(" · "))
+          notas.join(" · "),
+          ...(gerente ? [textoCoordenadas(periodo.localEntrada), textoCoordenadas(periodo.localSaida)] : [])
         )
       )
     })
   }
   linhas.push(
     "",
-    linha("Total", "", "", "", "", "", horas(totais.minutos), horas(totais.extraUteis + totais.extraFimDeSemana), ""),
-    linha("Normais", "", "", "", "", "", horas(totais.normais), "", ""),
-    linha("Extra dias úteis", "", "", "", "", "", "", horas(totais.extraUteis), ""),
-    linha("Extra fins de semana/feriados", "", "", "", "", "", "", horas(totais.extraFimDeSemana), ""),
+    // O total em horas vem dos minutos (não da soma das linhas arredondadas).
+    linha(
+      "Total",
+      "",
+      "",
+      "",
+      "",
+      "",
+      horas(totais.minutos),
+      totais.minutos,
+      horas(totais.extraUteis + totais.extraFimDeSemana),
+      ""
+    ),
+    linha("Normais", "", "", "", "", "", horas(totais.normais), "", "", ""),
+    linha("Extra dias úteis", "", "", "", "", "", "", "", horas(totais.extraUteis), ""),
+    linha("Extra fins de semana/feriados", "", "", "", "", "", "", "", horas(totais.extraFimDeSemana), ""),
     linha("Dias trabalhados", totais.dias),
-    linha("Colaborador", textoLivre(pessoa.nome)),
+    linha("Colaborador", pessoa.nome),
     linha("Mês", nomeMes)
   )
   return respostaCsv(linhas, `horas-${semAcentosParaFicheiro(pessoa.nome)}-${mes}.csv`)

@@ -61,3 +61,15 @@ export function urlWaze(destino: DestinoMapa): string | null {
   parametros.set("navigate", "yes")
   return `https://waze.com/ul?${parametros.toString()}`
 }
+
+/** Ponto no OpenStreetMap (ex.: onde a pessoa picou). Devolve null se não houver coordenadas. */
+export function urlOpenStreetMap(destino: DestinoMapa): string | null {
+  if (!temCoordenadas(destino)) return null
+  const { latitude, longitude } = destino
+  return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=18/${latitude}/${longitude}`
+}
+
+/** Coordenadas em texto ("38.7006, -9.4219"), ou "" se não houver. */
+export function textoCoordenadas(destino: DestinoMapa | null | undefined): string {
+  return destino && temCoordenadas(destino) ? `${destino.latitude}, ${destino.longitude}` : ""
+}

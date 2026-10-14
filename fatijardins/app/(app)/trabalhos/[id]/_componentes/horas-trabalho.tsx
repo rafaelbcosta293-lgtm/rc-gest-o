@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge"
-import { formatarData, formatarDuracao, formatarHora, hojeEmLisboa } from "@/lib/formatar"
+import { formatarData, formatarDuracao, formatarHora } from "@/lib/formatar"
+import { dataEmLisboa, minutosDoPeriodo } from "@/lib/horas"
 
 export type RegistoHorasTrabalho = {
   id: string
@@ -13,7 +14,7 @@ type Props = {
   registos: RegistoHorasTrabalho[]
   /** Data do trabalho (aaaa-mm-dd): só se mostra a data das picagens de outros dias. */
   dataTrabalho: string
-  /** Hora atual (ms), para a duração dos períodos ainda abertos. */
+  /** Hora atual (ms), para a duração dos períodos ainda abertos (no máximo até ao fim do dia da entrada). */
   agora: number
 }
 
@@ -23,11 +24,10 @@ export function HorasTrabalho({ registos, dataTrabalho, agora }: Props) {
     return <p className="text-sm text-muted-foreground">Ainda não há horas registadas neste trabalho.</p>
   }
 
+  // Mesmas contas do mapa de horas e do CSV (minutos inteiros, aberto até ao fim do dia).
   const linhas = registos.map((registo) => {
-    const inicio = new Date(registo.entrada)
-    const fim = registo.saida ? new Date(registo.saida).getTime() : agora
-    const minutos = Math.max(0, (fim - inicio.getTime()) / 60_000)
-    const dia = hojeEmLisboa(inicio)
+    const minutos = minutosDoPeriodo(registo, agora)
+    const dia = dataEmLisboa(registo.entrada)
     return { ...registo, minutos, outroDia: dia !== dataTrabalho ? formatarData(dia) : null }
   })
   const total = linhas.reduce((soma, linha) => soma + linha.minutos, 0)

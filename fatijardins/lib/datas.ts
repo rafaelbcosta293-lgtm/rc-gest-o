@@ -15,9 +15,24 @@ function deUTC(data: Date): string {
   return data.toISOString().slice(0, 10)
 }
 
-export function eDataValida(data: string | null | undefined): data is string {
+/** Datas aceites pela app (endereços, formulários e navegação da agenda). */
+export const DATA_MINIMA = "2000-01-01"
+export const DATA_MAXIMA = "2100-12-31"
+
+/** Data que existe no calendário ("aaaa-mm-dd"), em qualquer ano (para as contas internas). */
+export function eDataReal(data: string | null | undefined): data is string {
   if (!data || !DATA.test(data)) return false
   return deUTC(paraUTC(data)) === data
+}
+
+/** Data real ("aaaa-mm-dd") entre DATA_MINIMA e DATA_MAXIMA. */
+export function eDataValida(data: string | null | undefined): data is string {
+  return eDataReal(data) && data >= DATA_MINIMA && data <= DATA_MAXIMA
+}
+
+/** Mantém a data dentro do intervalo aceite pela app. */
+export function limitarData(data: string): string {
+  return data < DATA_MINIMA ? DATA_MINIMA : data > DATA_MAXIMA ? DATA_MAXIMA : data
 }
 
 export function somarDiasData(data: string, dias: number): string {

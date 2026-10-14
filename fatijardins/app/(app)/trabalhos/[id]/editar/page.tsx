@@ -40,7 +40,10 @@ async function EditarTrabalho({ params }: { params: Parametros }) {
   if (error) throw new Error(`Erro ao carregar o trabalho: ${error.message}`)
   if (!trabalho) notFound()
 
-  const [opcoes, seguintesR] = await Promise.all([
+  // Horas, registo ou fotos (as que este perfil vê): a data deixa de se poder mudar (a BD também o recusa).
+  const contar = (tabela: "registos_horas" | "registos_trabalho" | "fotos") =>
+    supabase.from(tabela).select("id", { count: "exact", head: true }).eq("trabalho_id", trabalho.id)
+  const [opcoes, seguintesR, ...atividadeR] = await Promise.all([
     carregarOpcoesTrabalho(supabase, sessao, {
       clienteId: trabalho.cliente_id,
       localId: trabalho.local_id,
@@ -55,7 +58,11 @@ async function EditarTrabalho({ params }: { params: Parametros }) {
           .gt("data", trabalho.data)
           .eq("estado", "agendado")
       : Promise.resolve({ count: 0 }),
+    contar("registos_horas"),
+    contar("registos_trabalho"),
+    contar("fotos"),
   ])
+  const comAtividade = atividadeR.some((r) => (r.count ?? 0) > 0)
 
   const valoresIniciais: CamposTrabalho = {
     cliente_id: trabalho.cliente_id,
@@ -104,7 +111,7 @@ async function EditarTrabalho({ params }: { params: Parametros }) {
         locais={opcoes.locais}
         equipas={opcoes.equipas}
         permitirSemEquipa={opcoes.permitirSemEquipa}
-        trabalho={{ id: trabalho.id, serie: trabalho.serie_id !== null }}
+        trabalho={{ id: trabalho.id, serie: trabalho.serie_id !== null, dataFixa: comAtividade }}
         cancelarHref={`/trabalhos/${trabalho.id}`}
       />
     </div>

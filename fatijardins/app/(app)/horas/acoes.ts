@@ -28,22 +28,17 @@ const NAO_EXISTE: ResultadoAcao<never> = {
 }
 const SOBREPOSTO = "Este período sobrepõe-se a outro registo desta pessoa."
 
-/** Mensagens das funções picar_entrada/picar_saida, já escritas para o utilizador. */
-const MENSAGENS_PICAGEM = new Set([
-  "Sem acesso à app.",
-  "Este trabalho não é de hoje ou não pertence à sua equipa.",
-  "Não tem nenhuma entrada aberta.",
-  "Localização incompleta.",
-])
-
+/**
+ * Erros de picar_entrada/picar_saida. As mensagens das funções ("Este
+ * trabalho não é de hoje…", "Não tem nenhuma entrada aberta.") já são para
+ * a pessoa e o erroBD mostra-as tal como estão.
+ */
 function erroPicagem(erro: PostgrestError): ResultadoAcao<never> {
-  console.error("Erro na picagem:", erro.code, erro.message)
-  if (MENSAGENS_PICAGEM.has(erro.message)) return { ok: false, erro: erro.message }
   if (erro.code === "23P01") {
+    console.error("Erro na picagem:", erro.code, erro.message)
     return { ok: false, erro: "Já existe um período registado a esta hora. Fale com o gerente." }
   }
-  if (erro.code === "23505") return { ok: false, erro: "Já tem uma entrada aberta. Atualize a página." }
-  return erroBD(erro)
+  return erroBD(erro, { duplicado: "Já tem uma entrada aberta. Atualize a página." })
 }
 
 function avisoSaidaEsquecida(entrada: string) {

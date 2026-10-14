@@ -10,7 +10,7 @@ import { eDataValida } from "@/lib/datas"
 import { eGerente, eGerenteOuChefe } from "@/lib/perfis"
 import type { TablesInsert, TablesUpdate } from "@/lib/supabase/database.types"
 import { createClient } from "@/lib/supabase/server"
-import { datasDaSerie } from "@/lib/trabalhos"
+import { datasDaSerie, lugarNaOrdem } from "@/lib/trabalhos"
 import { idObrigatorio } from "@/lib/validacao/comum"
 import { esquemaTrabalho, type CamposTrabalho, type DadosTrabalho } from "@/lib/validacao/trabalhos"
 
@@ -25,9 +25,9 @@ const PEDIDO_INVALIDO: ResultadoAcao<never> = { ok: false, erro: "Pedido inváli
 
 const SO_EQUIPAS_CHEFIADAS = "Só pode agendar trabalhos nas equipas que chefia."
 const SO_GERENTE_POR_ATRIBUIR = "Só o gerente pode deixar trabalhos por atribuir."
-const TEM_REGISTOS = "Este trabalho já tem registos. Cancele-o em vez de o apagar."
-const TEM_REGISTOS_SERIE =
-  "Algum destes trabalhos já tem registos. Apague só este ou cancele os que já têm registos."
+const TEM_ATIVIDADE = "Este trabalho já tem horas, registo ou fotos e não pode ser apagado. Cancele-o."
+const TEM_ATIVIDADE_SERIE =
+  "Algum destes trabalhos já tem horas, registo ou fotos. Apague só este ou cancele os que já têm."
 
 /** Estados em que o trabalho ainda pode mudar de dia ou de equipa. */
 const ESTADOS_MOVEIS = ["agendado", "em_curso"] as const
@@ -62,29 +62,52 @@ function erroCampo(campo: keyof CamposTrabalho, mensagem: string): ResultadoAcao
   return { ok: false, erro: mensagem, campos: { [campo]: [mensagem] } }
 }
 
+type Lugar = ReturnType<typeof lugarNaOrdem>
+type NovaOrdem = { id: string; ordem: number }
+
 /**
- * Próxima posição (ordem de passagem) em cada dia para uma equipa (ou para
- * "por atribuir"): o máximo atual + 1. Devolve null se a leitura falhar.
+ * Lugar na ordem de passagem (ver lugarNaOrdem) de um trabalho que entra em
+ * cada dia de uma equipa (ou de "por atribuir"), com a hora de início que
+ * terá nesse dia. Devolve null se a leitura falhar.
  */
-async function proximasOrdens(
+async function lugaresNaOrdem(
   supabase: Supabase,
   equipaId: string | null,
-  datas: string[],
+  entradas: { data: string; hora: string | null }[],
   excluir: string[] = []
-): Promise<Map<string, number> | null> {
-  let consulta = supabase.from("trabalhos").select("id, data, ordem").in("data", datas)
+): Promise<Map<string, Lugar> | null> {
+  let consulta = supabase
+    .from("trabalhos")
+    .select("id, data, ordem, hora_inicio, titulo")
+    .in("data", entradas.map((e) => e.data))
   consulta = equipaId ? consulta.eq("equipa_id", equipaId) : consulta.is("equipa_id", null)
   const { data, error } = await consulta
   if (error) {
     console.error("Erro da base de dados:", error.code, error.message)
     return null
   }
-  const ordens = new Map<string, number>(datas.map((dia) => [dia, 1]))
-  for (const linha of data) {
-    if (excluir.includes(linha.id)) continue
-    ordens.set(linha.data, Math.max(ordens.get(linha.data) ?? 1, linha.ordem + 1))
+  const outros = data.filter((t) => !excluir.includes(t.id))
+  return new Map(
+    entradas.map(({ data: dia, hora }) => [
+      dia,
+      lugarNaOrdem(
+        outros
+          .filter((t) => t.data === dia)
+          .map((t) => ({ id: t.id, ordem: t.ordem, hora: t.hora_inicio, titulo: t.titulo })),
+        hora
+      ),
+    ])
+  )
+}
+
+/** Grava ordens de passagem (os trabalhos empurrados); não é crítico se falhar (desempata a hora). */
+async function gravarOrdens(supabase: Supabase, ordens: NovaOrdem[]) {
+  const resultados = await Promise.all(
+    ordens.map((t) => supabase.from("trabalhos").update({ ordem: t.ordem }).eq("id", t.id))
+  )
+  for (const { error } of resultados) {
+    if (error) console.error("Erro da base de dados:", error.code, error.message)
   }
-  return ordens
 }
 
 /** O local tem de pertencer ao cliente escolhido (e estar ativo, salvo se já era o do trabalho). */
@@ -130,8 +153,12 @@ export async function criarTrabalho(valores: CamposTrabalho): Promise<ResultadoA
   if (!local.ok) return local.resultado
 
   const datas = datasDaSerie(trabalho.data, trabalho.repetir, trabalho.ate ?? trabalho.data)
-  const ordens = await proximasOrdens(supabase, trabalho.equipa_id, datas)
-  if (!ordens) return erroBD(null)
+  const lugares = await lugaresNaOrdem(
+    supabase,
+    trabalho.equipa_id,
+    datas.map((data) => ({ data, hora: trabalho.hora_inicio }))
+  )
+  if (!lugares) return erroBD(null)
 
   // Os trabalhos de uma repetição ficam ligados pelo mesmo serie_id.
   const serieId = datas.length > 1 ? crypto.randomUUID() : null
@@ -145,13 +172,14 @@ export async function criarTrabalho(valores: CamposTrabalho): Promise<ResultadoA
     hora_inicio: trabalho.hora_inicio,
     duracao_prevista_min: trabalho.duracao_prevista_min,
     equipa_id: trabalho.equipa_id,
-    ordem: ordens.get(data) ?? 1,
+    ordem: lugares.get(data)?.ordem ?? 1,
     serie_id: serieId,
   }))
 
   // Um só insert: ou ficam todos gravados ou nenhum.
   const { error } = await supabase.from("trabalhos").insert(linhas)
   if (error) return erroGravar(error, sessao)
+  await gravarOrdens(supabase, [...lugares.values()].flatMap((lugar) => lugar.empurrados))
 
   revalidarAgenda()
   return {
@@ -194,12 +222,13 @@ export async function atualizarTrabalho(
   const local = await validarLocal(supabase, novo, atual.local_id)
   if (!local.ok) return local.resultado
 
-  // Mudou de dia ou de equipa: passa para o fim da ordem desse dia/equipa.
-  let ordem = atual.ordem
+  // Mudou de dia ou de equipa: entra na ordem desse dia/equipa segundo a hora.
+  let lugar: Lugar | undefined
   if (novo.data !== atual.data || novo.equipa_id !== atual.equipa_id) {
-    const ordens = await proximasOrdens(supabase, novo.equipa_id, [novo.data], [atual.id])
-    if (!ordens) return erroBD(null)
-    ordem = ordens.get(novo.data) ?? 1
+    const entrada = { data: novo.data, hora: novo.hora_inicio }
+    const lugares = await lugaresNaOrdem(supabase, novo.equipa_id, [entrada], [atual.id])
+    if (!lugares) return erroBD(null)
+    lugar = lugares.get(novo.data)
   }
 
   const alteracoes: TablesUpdate<"trabalhos"> = {
@@ -212,7 +241,7 @@ export async function atualizarTrabalho(
     hora_inicio: novo.hora_inicio,
     duracao_prevista_min: novo.duracao_prevista_min,
     equipa_id: novo.equipa_id,
-    ordem,
+    ordem: lugar?.ordem ?? atual.ordem,
   }
   const { data: linhas, error } = await supabase
     .from("trabalhos")
@@ -221,6 +250,7 @@ export async function atualizarTrabalho(
     .select("id")
   if (error) return erroGravar(error, sessao)
   if (linhas.length === 0) return NAO_EXISTE
+  if (lugar) await gravarOrdens(supabase, lugar.empurrados)
 
   let seguintes: string[] = []
   if (aplicarSerie && atual.serie_id) {
@@ -239,7 +269,7 @@ export async function atualizarTrabalho(
     if (Object.keys(serie).length > 0) {
       const { data: lista, error: erroLista } = await supabase
         .from("trabalhos")
-        .select("id, data")
+        .select("id, data, hora_inicio")
         .eq("serie_id", atual.serie_id)
         .gt("data", atual.data)
         .eq("estado", "agendado")
@@ -247,11 +277,16 @@ export async function atualizarTrabalho(
       if (erroLista) return erroBD(erroLista)
 
       if (lista.length > 0) {
-        // Calcular as posições na nova equipa antes de mudar (para não contar estes trabalhos).
-        const ordensNovas = mudouEquipa
-          ? await proximasOrdens(supabase, novo.equipa_id, lista.map((t) => t.data), lista.map((t) => t.id))
+        // Lugares na nova equipa, com a hora que cada um vai ter.
+        const lugaresNovos = mudouEquipa
+          ? await lugaresNaOrdem(
+              supabase,
+              novo.equipa_id,
+              lista.map((t) => ({ data: t.data, hora: "hora_inicio" in serie ? novo.hora_inicio : t.hora_inicio })),
+              lista.map((t) => t.id)
+            )
           : null
-        if (mudouEquipa && !ordensNovas) return erroBD(null)
+        if (mudouEquipa && !lugaresNovos) return erroBD(null)
 
         const ids = lista.map((t) => t.id)
         const { data: alterados, error: erroSerie } = await supabase
@@ -268,15 +303,14 @@ export async function atualizarTrabalho(
         }
         seguintes = alterados.map((t) => t.id)
 
-        if (ordensNovas) {
-          // Ordem de passagem: no fim de cada dia da nova equipa (não é crítico se falhar).
-          await Promise.all(
-            alterados.map((t) =>
-              supabase
-                .from("trabalhos")
-                .update({ ordem: ordensNovas.get(t.data) ?? 1 })
-                .eq("id", t.id)
-            )
+        if (lugaresNovos) {
+          // Ordem de passagem em cada dia da nova equipa (não é crítico se falhar).
+          await gravarOrdens(
+            supabase,
+            alterados.flatMap((t) => {
+              const lugarDia = lugaresNovos.get(t.data)
+              return lugarDia ? [{ id: t.id, ordem: lugarDia.ordem }, ...lugarDia.empurrados] : []
+            })
           )
         }
       }
@@ -298,7 +332,11 @@ export async function atualizarTrabalho(
 // Agenda: mover e reordenar
 // ---------------------------------------------------------------------
 
-/** Muda o dia e/ou a equipa (arrastar na agenda). Fica no fim da ordem desse dia/equipa. */
+/**
+ * Muda o dia e/ou a equipa (arrastar na agenda). Entra na ordem desse
+ * dia/equipa segundo a hora. A BD recusa mudar o dia de um trabalho com
+ * horas, registo ou fotos (a mensagem dela chega ao utilizador).
+ */
 export async function moverTrabalho(id: string, data: string, equipaId: string | null): Promise<ResultadoAcao> {
   const sessao = await sessaoGestor()
   if (!sessao) return SEM_PERMISSAO
@@ -313,7 +351,7 @@ export async function moverTrabalho(id: string, data: string, equipaId: string |
   const supabase = await createClient()
   const { data: atual, error: erroLer } = await supabase
     .from("trabalhos")
-    .select("id, data, equipa_id, estado")
+    .select("id, data, equipa_id, estado, hora_inicio")
     .eq("id", destino.id)
     .maybeSingle()
   if (erroLer) return erroBD(erroLer)
@@ -323,12 +361,18 @@ export async function moverTrabalho(id: string, data: string, equipaId: string |
   }
   if (atual.data === destino.data && atual.equipa_id === destino.equipaId) return { ok: true }
 
-  const ordens = await proximasOrdens(supabase, destino.equipaId, [destino.data], [atual.id])
-  if (!ordens) return erroBD(null)
+  const lugares = await lugaresNaOrdem(
+    supabase,
+    destino.equipaId,
+    [{ data: destino.data, hora: atual.hora_inicio }],
+    [atual.id]
+  )
+  const lugar = lugares?.get(destino.data)
+  if (!lugar) return erroBD(null)
 
   const { data: linhas, error } = await supabase
     .from("trabalhos")
-    .update({ data: destino.data, equipa_id: destino.equipaId, ordem: ordens.get(destino.data) ?? 1 })
+    .update({ data: destino.data, equipa_id: destino.equipaId, ordem: lugar.ordem })
     .eq("id", atual.id)
     .in("estado", ESTADOS_MOVEIS)
     .select("id")
@@ -340,6 +384,7 @@ export async function moverTrabalho(id: string, data: string, equipaId: string |
     return erroGravar(error, sessao)
   }
   if (linhas.length === 0) return NAO_EXISTE
+  await gravarOrdens(supabase, lugar.empurrados)
 
   revalidarAgenda(atual.id)
   return { ok: true, mensagem: "Trabalho movido." }
@@ -481,23 +526,16 @@ export async function apagarTrabalho(id: string, incluirSeguintes = false): Prom
     if (error) return erroBD(error)
     ids.push(...seguintes.map((t) => t.id).filter((tid) => tid !== atual.id))
   }
-  const mensagemRegistos = ids.length > 1 ? TEM_REGISTOS_SERIE : TEM_REGISTOS
 
-  // As horas picadas não impedem o apagar (ficariam sem trabalho): verificar antes.
-  const { count, error: erroHoras } = await supabase
-    .from("registos_horas")
-    .select("id", { count: "exact", head: true })
-    .in("trabalho_id", ids)
-  if (erroHoras) return erroBD(erroHoras)
-  if (count) return { ok: false, erro: mensagemRegistos }
-
+  // Horas, registo e fotos impedem o apagar (chaves estrangeiras "restrict"):
+  // a BD recusa tudo (23503), mesmo as horas que o chefe não vê.
   const { data: apagados, error } = await supabase
     .from("trabalhos")
     .delete()
     .in("id", ids)
     .eq("estado", "agendado")
     .select("id")
-  if (error) return erroBD(error, { emUso: mensagemRegistos })
+  if (error) return erroBD(error, { emUso: ids.length > 1 ? TEM_ATIVIDADE_SERIE : TEM_ATIVIDADE })
   if (apagados.length === 0) return NAO_EXISTE
 
   revalidarAgenda(...apagados.map((t) => t.id))

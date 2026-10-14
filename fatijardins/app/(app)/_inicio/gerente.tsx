@@ -64,19 +64,20 @@ export async function HojePorEquipa() {
           <ul className="divide-y">
             {linhas.map((linha) => (
               <li key={linha.equipaId ?? "sem-equipa"}>
+                {/* Nome inteiro numa linha e os contadores por baixo (a quebrar se preciso). */}
                 <Link
                   href={linha.equipaId ? `/agenda?vista=dia&equipa=${linha.equipaId}` : "/agenda?vista=dia"}
-                  className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 py-2.5"
+                  className="grid min-h-12 gap-0.5 py-2.5"
                 >
-                  <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
+                  <span className="flex items-start gap-2 font-medium">
                     <span
-                      className="size-2.5 shrink-0 rounded-full bg-muted-foreground"
+                      className="mt-1.5 size-2.5 shrink-0 rounded-full bg-muted-foreground"
                       style={linha.cor ? { backgroundColor: linha.cor } : undefined}
                       aria-hidden="true"
                     />
-                    <span className="truncate">{linha.nome}</span>
+                    <span className="min-w-0 break-words">{linha.nome}</span>
                   </span>
-                  <span className="flex gap-3 text-sm tabular-nums">
+                  <span className="flex flex-wrap gap-x-3 gap-y-0.5 pl-4.5 text-sm whitespace-nowrap tabular-nums">
                     <span title="Agendados">
                       <span className="font-semibold">{linha.agendado}</span>{" "}
                       <span className="text-muted-foreground">agendados</span>
@@ -230,7 +231,7 @@ export async function PicagemGerente({ sessao }: { sessao: Sessao }) {
   return (
     <section aria-label="A minha picagem" className="grid gap-2">
       <h2 className="text-sm font-medium text-muted-foreground">A minha picagem</h2>
-      <ProvedorPicagem>
+      <ProvedorPicagem colaboradorId={sessao.colaborador.id}>
         <Picagem estado={estado} />
       </ProvedorPicagem>
     </section>

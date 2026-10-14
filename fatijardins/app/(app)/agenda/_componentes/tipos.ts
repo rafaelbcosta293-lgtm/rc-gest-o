@@ -1,5 +1,5 @@
-import { eDataValida, somarDiasData } from "@/lib/datas"
-import type { EstadoTrabalho, TipoTrabalho } from "@/lib/trabalhos"
+import { eDataValida, limitarData, somarDiasData } from "@/lib/datas"
+import { compararOrdem, type EstadoTrabalho, type TipoTrabalho } from "@/lib/trabalhos"
 
 export type Vista = "semana" | "dia"
 
@@ -48,15 +48,7 @@ export function chaveCelula(equipaId: string | null, data: string) {
 }
 
 /** Ordem de passagem; depois a hora (sem hora no fim) e o título. */
-export function compararTrabalhos(a: TrabalhoAgenda, b: TrabalhoAgenda) {
-  if (a.ordem !== b.ordem) return a.ordem - b.ordem
-  if (a.hora !== b.hora) {
-    if (a.hora === null) return 1
-    if (b.hora === null) return -1
-    return a.hora < b.hora ? -1 : 1
-  }
-  return a.titulo.localeCompare(b.titulo, "pt")
-}
+export const compararTrabalhos: (a: TrabalhoAgenda, b: TrabalhoAgenda) => number = compararOrdem
 
 /** Os trabalhos concluídos ou cancelados ficam onde estão. */
 export function podeMover(trabalho: TrabalhoAgenda) {
@@ -109,6 +101,8 @@ export function passoAgenda(vista: Vista) {
   return vista === "semana" ? 7 : 1
 }
 
+/** Dia/semana anterior ou seguinte, sem sair das datas aceites (no limite fica igual). */
 export function deslocar(parametros: ParametrosAgenda, sentido: 1 | -1): ParametrosAgenda {
-  return { ...parametros, data: somarDiasData(parametros.data, sentido * passoAgenda(parametros.vista)) }
+  const data = somarDiasData(parametros.data, sentido * passoAgenda(parametros.vista))
+  return { ...parametros, data: limitarData(data) }
 }

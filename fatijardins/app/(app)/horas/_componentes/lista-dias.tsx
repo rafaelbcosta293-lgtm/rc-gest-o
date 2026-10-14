@@ -1,12 +1,13 @@
 import Link from "next/link"
-import { TriangleAlertIcon } from "lucide-react"
+import { MapPinIcon, TriangleAlertIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { eFimDeSemana, feriadoNacional, formatarDiaCurto } from "@/lib/datas"
 import { formatarDuracao, formatarHora } from "@/lib/formatar"
 import { dataEmLisboa, horaEmLisboa, type DiaHoras } from "@/lib/horas"
+import { urlOpenStreetMap } from "@/lib/mapas"
 import { cn } from "@/lib/utils"
-import { rotuloTrabalho, type PeriodoMapa } from "./dados"
+import { rotuloTrabalho, type Coordenadas, type PeriodoMapa } from "./dados"
 import { BotaoEditarPeriodo, BotaoRevisto, type PeriodoEditavel } from "./editor-periodos"
 
 function paraEditar(periodo: PeriodoMapa): PeriodoEditavel {
@@ -19,6 +20,24 @@ function paraEditar(periodo: PeriodoMapa): PeriodoEditavel {
     trabalhoRotulo: rotuloTrabalho(periodo),
     notas: periodo.notas,
   }
+}
+
+/** Onde foi picada a entrada/saída, no OpenStreetMap (noutro separador). */
+function LigacaoLocal({ local, rotulo }: { local: Coordenadas; rotulo: string }) {
+  const url = urlOpenStreetMap(local)
+  if (!url) return null
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex min-h-8 items-center gap-1 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+    >
+      <MapPinIcon className="size-3.5" aria-hidden="true" />
+      {rotulo}
+      <span className="sr-only"> (abre noutro separador)</span>
+    </a>
+  )
 }
 
 function maiuscula(texto: string) {
@@ -147,6 +166,12 @@ export function ListaDias({ datas, dias, gerente, ligarTrabalhos }: Props) {
                           )}
                         </p>
                         {periodo.notas && <p className="text-xs text-muted-foreground">{periodo.notas}</p>}
+                        {gerente && (periodo.localEntrada || periodo.localSaida) && (
+                          <p className="flex flex-wrap gap-x-3 text-xs">
+                            {periodo.localEntrada && <LigacaoLocal local={periodo.localEntrada} rotulo="Ver local da entrada" />}
+                            {periodo.localSaida && <LigacaoLocal local={periodo.localSaida} rotulo="Ver local da saída" />}
+                          </p>
+                        )}
                         {gerente && periodo.aRever && (
                           <div className="mt-1">
                             <BotaoRevisto id={periodo.id} />

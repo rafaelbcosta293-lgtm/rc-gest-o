@@ -4,6 +4,7 @@ import { useTransition } from "react"
 import { CircleCheckIcon, LoaderCircleIcon, PlayIcon, RotateCcwIcon, CircleXIcon } from "lucide-react"
 import { toast } from "sonner"
 
+import { PicarAqui } from "@/components/horas/picar-aqui"
 import { Button } from "@/components/ui/button"
 import type { ResultadoAcao } from "@/lib/acoes"
 import type { EstadoTrabalho } from "@/lib/trabalhos"
@@ -15,8 +16,11 @@ type Props = {
   estado: EstadoTrabalho
   /** Gerente ou chefe de equipa: também cancela e reabre. */
   podeGerir: boolean
-  /** Botão "Picar aqui" (só nos trabalhos de hoje por fazer). */
-  picagem?: React.ReactNode
+  /**
+   * Picagem neste trabalho (só nos trabalhos de hoje por fazer); null = não se pica aqui.
+   * atual: a pessoa está a picar aqui; aTrabalhar: tem uma entrada aberta noutro trabalho.
+   */
+  picagem: { atual: boolean; aTrabalhar: boolean } | null
 }
 
 /** Botões grandes para mudar o estado do trabalho. */
@@ -37,10 +41,15 @@ export function EstadoTrabalhoBotoes({ trabalhoId, estado, podeGerir, picagem }:
     })
   }
 
+  // O colaborador só tem as transições que a BD lhe aceita: agendado → em curso; agendado/em curso → concluído.
   const podeIniciar = estado === "agendado"
   const podeConcluir = estado === "agendado" || estado === "em_curso"
   const podeCancelar = podeGerir && (estado === "agendado" || estado === "em_curso")
   const podeReabrir = podeGerir && (estado === "concluido" || estado === "cancelado")
+  // "Iniciar" só muda o estado e não conta horas: enquanto a pessoa não está a picar aqui,
+  // a ação principal é picar.
+  const picarPrincipal = picagem !== null && !picagem.atual
+  const nomePicar = picagem?.aTrabalhar ? "Mudar para aqui" : "Picar aqui"
 
   return (
     <div className="grid gap-3">
@@ -57,12 +66,25 @@ export function EstadoTrabalhoBotoes({ trabalhoId, estado, podeGerir, picagem }:
         </p>
       )}
 
-      {picagem}
+      {picagem && (
+        <PicarAqui
+          trabalhoId={trabalhoId}
+          atual={picagem.atual}
+          aTrabalhar={picagem.aTrabalhar}
+          principal={picarPrincipal}
+          className="w-full"
+        />
+      )}
 
       {(podeIniciar || podeConcluir) && (
         <div className="grid gap-2 sm:grid-cols-2">
           {podeIniciar && (
-            <Button size="lg" onClick={iniciarTrabalho} disabled={aIniciar}>
+            <Button
+              size="lg"
+              variant={picarPrincipal ? "outline" : "default"}
+              onClick={iniciarTrabalho}
+              disabled={aIniciar}
+            >
               {aIniciar ? <LoaderCircleIcon className="animate-spin" /> : <PlayIcon />}
               Iniciar trabalho
             </Button>
@@ -72,7 +94,7 @@ export function EstadoTrabalhoBotoes({ trabalhoId, estado, podeGerir, picagem }:
               gatilho={
                 <Button
                   size="lg"
-                  variant={podeIniciar ? "outline" : "default"}
+                  variant={podeIniciar || picarPrincipal ? "outline" : "default"}
                   className={podeIniciar ? undefined : "sm:col-span-2"}
                 >
                   <CircleCheckIcon />
@@ -87,6 +109,11 @@ export function EstadoTrabalhoBotoes({ trabalhoId, estado, podeGerir, picagem }:
             />
           )}
         </div>
+      )}
+      {podeIniciar && picarPrincipal && (
+        <p className="text-sm text-muted-foreground">
+          Iniciar só muda o estado do trabalho. Para contar as horas, use “{nomePicar}”.
+        </p>
       )}
 
       {(podeCancelar || podeReabrir) && (

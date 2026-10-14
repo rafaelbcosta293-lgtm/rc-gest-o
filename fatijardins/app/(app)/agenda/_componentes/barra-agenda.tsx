@@ -7,7 +7,7 @@ import { ChevronLeftIcon, ChevronRightIcon, LoaderCircleIcon } from "lucide-reac
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { eDataValida, formatarDiaLongo, inicioDaSemana, somarDiasData } from "@/lib/datas"
+import { DATA_MAXIMA, DATA_MINIMA, eDataValida, formatarDiaLongo, inicioDaSemana, somarDiasData } from "@/lib/datas"
 import { hojeEmLisboa } from "@/lib/formatar"
 import { cn } from "@/lib/utils"
 import { deslocar, lerParametrosAgenda, urlAgenda, type ParametrosAgenda, type Vista } from "./tipos"
@@ -50,6 +50,10 @@ export function BarraAgenda() {
   const incluiHoje =
     atual.vista === "semana" ? inicioDaSemana(atual.data) === inicioDaSemana(hoje) : atual.data === hoje
   const nomePasso = atual.vista === "semana" ? "Semana" : "Dia"
+  // Dia ou semana mostrados: no limite das datas aceites, a seta fica desativada.
+  const periodo = ({ vista, data }: ParametrosAgenda) => (vista === "semana" ? inicioDaSemana(data) : data)
+  const anterior = deslocar(atual, -1)
+  const seguinte = deslocar(atual, 1)
 
   function irParaData(data: string) {
     if (!eDataValida(data) || data === atual.data) return
@@ -59,24 +63,22 @@ export function BarraAgenda() {
   return (
     <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 items-center gap-2">
-        <Button asChild variant="outline" size="icon-lg">
-          <Link href={urlAgenda(deslocar(atual, -1), hoje)} aria-label={`${nomePasso} anterior`} scroll={false}>
-            <ChevronLeftIcon className="size-5" />
-          </Link>
-        </Button>
+        <BotaoPasso
+          href={periodo(anterior) === periodo(atual) ? null : urlAgenda(anterior, hoje)}
+          rotulo={`${nomePasso} anterior`}
+        >
+          <ChevronLeftIcon className="size-5" />
+        </BotaoPasso>
         <h2 className="min-w-0 flex-1 text-center text-base font-semibold text-balance lg:order-last lg:ml-2 lg:flex-none lg:text-left lg:text-lg">
           {rotulo(atual)}
           {aNavegar && <LoaderCircleIcon className="ml-2 inline size-4 animate-spin text-muted-foreground" />}
         </h2>
-        <Button asChild variant="outline" size="icon-lg">
-          <Link
-            href={urlAgenda(deslocar(atual, 1), hoje)}
-            aria-label={`${nomePasso} seguinte`}
-            scroll={false}
-          >
-            <ChevronRightIcon className="size-5" />
-          </Link>
-        </Button>
+        <BotaoPasso
+          href={periodo(seguinte) === periodo(atual) ? null : urlAgenda(seguinte, hoje)}
+          rotulo={`${nomePasso} seguinte`}
+        >
+          <ChevronRightIcon className="size-5" />
+        </BotaoPasso>
       </div>
 
       <div className="flex items-center gap-2">
@@ -90,6 +92,8 @@ export function BarraAgenda() {
           // Volta a montar quando a data do endereço muda (o Next.js guarda a página escondida).
           key={atual.data}
           type="date"
+          min={DATA_MINIMA}
+          max={DATA_MAXIMA}
           defaultValue={atual.data}
           onChange={(evento) => irParaData(evento.target.value)}
           aria-label="Ir para a data"
@@ -97,6 +101,24 @@ export function BarraAgenda() {
         />
       </div>
     </div>
+  )
+}
+
+/** Seta anterior/seguinte (sem href: desativada). */
+function BotaoPasso({ href, rotulo, children }: { href: string | null; rotulo: string; children: React.ReactNode }) {
+  if (!href) {
+    return (
+      <Button variant="outline" size="icon-lg" disabled aria-label={rotulo}>
+        {children}
+      </Button>
+    )
+  }
+  return (
+    <Button asChild variant="outline" size="icon-lg">
+      <Link href={href} aria-label={rotulo} scroll={false}>
+        {children}
+      </Link>
+    </Button>
   )
 }
 

@@ -15,7 +15,6 @@ import {
 
 import { CabecalhoPagina } from "@/components/cabecalho-pagina"
 import { ProvedorPicagem } from "@/components/horas/contexto-picagem"
-import { PicarAqui } from "@/components/horas/picar-aqui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { exigirSessao } from "@/lib/auth"
@@ -130,6 +129,9 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
   const aberto = abertoR.data
   const abertoHoje = aberto !== null && dataEmLisboa(aberto.entrada) === hoje
   const podePicar = trabalho.data === hoje && (trabalho.estado === "agendado" || trabalho.estado === "em_curso")
+  const picagem = podePicar
+    ? { atual: abertoHoje && aberto?.trabalho_id === trabalho.id, aTrabalhar: abertoHoje }
+    : null
 
   const fotosGaleria: FotoGaleria[] = fotos.map((foto) => ({
     id: foto.id,
@@ -217,21 +219,12 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <div className="grid gap-4">
           <Secao id="titulo-estado" titulo="Estado" icone={FlagIcon}>
-            <ProvedorPicagem>
+            <ProvedorPicagem colaboradorId={sessao.colaborador.id}>
               <EstadoTrabalhoBotoes
                 trabalhoId={trabalho.id}
                 estado={trabalho.estado}
                 podeGerir={podeGerir}
-                picagem={
-                  podePicar && (
-                    <PicarAqui
-                      trabalhoId={trabalho.id}
-                      atual={abertoHoje && aberto?.trabalho_id === trabalho.id}
-                      aTrabalhar={abertoHoje}
-                      className="w-full"
-                    />
-                  )
-                }
+                picagem={picagem}
               />
             </ProvedorPicagem>
           </Secao>
@@ -265,6 +258,7 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
               trabalhoId={trabalho.id}
               tarefasFeitas={registo?.tarefas_feitas ?? null}
               notas={registo?.notas ?? null}
+              versao={registo?.updated_at ?? null}
               atualizado={atualizado}
             />
           </Secao>

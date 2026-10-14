@@ -9,7 +9,7 @@
  * - Dias úteis: até 8 h são normais, o resto é extra. Fins de semana e
  *   feriados nacionais: todas as horas são extra.
  */
-import { diasEntre, eDataValida, eFimDeSemana, feriadoNacional, ultimoDiaDoMes } from "@/lib/datas"
+import { diasEntre, eDataReal, eFimDeSemana, feriadoNacional, ultimoDiaDoMes } from "@/lib/datas"
 import { FUSO_HORARIO, hojeEmLisboa } from "@/lib/formatar"
 
 export const HORAS_NORMAIS_DIA = 8
@@ -56,7 +56,7 @@ export function eHoraValida(hora: string | null | undefined): hora is string {
  * (já na hora de inverno).
  */
 export function instanteLisboa(data: string, hora: string): Date {
-  if (!eDataValida(data) || !eHoraValida(hora)) throw new Error(`Data/hora inválida: ${data} ${hora}`)
+  if (!eDataReal(data) || !eHoraValida(hora)) throw new Error(`Data/hora inválida: ${data} ${hora}`)
   const [ano, mes, dia] = data.split("-").map(Number)
   const [horas, minutos] = hora.split(":").map(Number)
   const local = Date.UTC(ano, mes - 1, dia, horas, minutos)

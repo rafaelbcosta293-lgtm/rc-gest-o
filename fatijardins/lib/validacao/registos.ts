@@ -25,6 +25,12 @@ export const esquemaRegisto = z.object({
 export type CamposRegisto = z.input<typeof esquemaRegisto>
 export type DadosRegisto = z.output<typeof esquemaRegisto>
 
+/** Versão do registo que o formulário carregou (updated_at); null se ainda não existia. */
+export const esquemaVersaoRegisto = z.iso.datetime({ offset: true }).nullable()
+
+export const MENSAGEM_CONFLITO_REGISTO =
+  "Outra pessoa alterou este registo entretanto. Copie o seu texto, recarregue a página e volte a guardar."
+
 // ---------------------------------------------------------------------
 // Materiais gastos
 // ---------------------------------------------------------------------
@@ -32,8 +38,11 @@ export type DadosRegisto = z.output<typeof esquemaRegisto>
 export const UNIDADES_MATERIAL = ["un", "kg", "g", "L", "mL", "m", "m²", "m³", "saco", "caixa", "h"] as const
 export type UnidadeMaterial = (typeof UNIDADES_MATERIAL)[number]
 
-/** Quantidade com vírgula ("2,5"), maior do que zero e com até 2 casas decimais (numeric(10,2)). */
-const quantidadeObrigatoria = numeroOpcional({ max: 100_000 })
+/**
+ * Quantidade maior do que zero e com até 2 casas decimais (numeric(10,2)).
+ * O ponto é sempre decimal, como a vírgula: no campo, "1.250" é 1,25 e não mil.
+ */
+const quantidadeObrigatoria = numeroOpcional({ max: 100_000, pontoDecimal: true })
   .transform((valor, ctx) => {
     if (valor === null) {
       ctx.addIssue({ code: "custom", message: "Indique a quantidade." })

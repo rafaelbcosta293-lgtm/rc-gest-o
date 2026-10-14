@@ -57,12 +57,29 @@ export type PeriodoMapa = PeriodoBase & {
    * com visivel = false (não se pode abrir a ficha).
    */
   trabalho: { titulo: string; data: string; cliente: string | null; visivel: boolean } | null
+  /** Onde picou a entrada/saída (só se lê para o gerente; null sem localização). */
+  localEntrada: Coordenadas | null
+  localSaida: Coordenadas | null
+}
+
+export type Coordenadas = { latitude: number; longitude: number }
+
+function coordenadas(latitude: number | null, longitude: number | null): Coordenadas | null {
+  return latitude !== null && longitude !== null ? { latitude, longitude } : null
 }
 
 const TAMANHO_PAGINA = 1000
 
-/** Períodos do mês (pela data da entrada em Lisboa) de uma pessoa, ou de todas (null). */
-export async function periodosDoMes(supabase: Supabase, mes: string, colaboradorId: string | null): Promise<PeriodoMapa[]> {
+/**
+ * Períodos do mês (pela data da entrada em Lisboa) de uma pessoa, ou de todas (null).
+ * A localização da picagem só vem com comLocalizacao (o gerente).
+ */
+export async function periodosDoMes(
+  supabase: Supabase,
+  mes: string,
+  colaboradorId: string | null,
+  { comLocalizacao = false }: { comLocalizacao?: boolean } = {}
+): Promise<PeriodoMapa[]> {
   const { desde, ate, primeiro, ultimo } = intervaloDoMes(mes)
   const periodos: PeriodoMapa[] = []
   // A API devolve no máximo 1000 linhas de cada vez.
@@ -70,7 +87,9 @@ export async function periodosDoMes(supabase: Supabase, mes: string, colaborador
     let consulta = supabase
       .from("registos_horas")
       .select(
-        "id, colaborador_id, entrada, saida, trabalho_id, a_rever, origem, notas, trabalho:trabalhos(titulo, data, cliente:clientes(nome))"
+        `id, colaborador_id, entrada, saida, trabalho_id, a_rever, origem, notas,
+         entrada_latitude, entrada_longitude, saida_latitude, saida_longitude,
+         trabalho:trabalhos(titulo, data, cliente:clientes(nome))`
       )
       .gte("entrada", desde)
       .lt("entrada", ate)
@@ -98,6 +117,8 @@ export async function periodosDoMes(supabase: Supabase, mes: string, colaborador
               visivel: true,
             }
           : null,
+        localEntrada: comLocalizacao ? coordenadas(registo.entrada_latitude, registo.entrada_longitude) : null,
+        localSaida: comLocalizacao ? coordenadas(registo.saida_latitude, registo.saida_longitude) : null,
       })
     }
     if (data.length < TAMANHO_PAGINA) break

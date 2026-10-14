@@ -47,6 +47,46 @@ export const NOMES_RECORRENCIA: Record<Recorrencia, string> = {
   mensal: "Todos os meses",
 }
 
+/** Trabalho na ordem de passagem de um dia de uma equipa (hora "08:30" ou null). */
+export type ItemOrdem = { id: string; ordem: number; hora: string | null; titulo: string }
+
+/** Ordem de passagem; depois a hora (sem hora no fim) e o título. */
+export function compararOrdem(a: ItemOrdem, b: ItemOrdem) {
+  if (a.ordem !== b.ordem) return a.ordem - b.ordem
+  if (a.hora !== b.hora) {
+    if (a.hora === null) return 1
+    if (b.hora === null) return -1
+    return a.hora < b.hora ? -1 : 1
+  }
+  return a.titulo.localeCompare(b.titulo, "pt")
+}
+
+/**
+ * Lugar de um trabalho que entra num dia de uma equipa (novo, ou vindo de
+ * outro dia/equipa): antes do primeiro com hora posterior ou sem hora; sem
+ * hora fica no fim. Os seguintes são empurrados uma posição; a ordem dos
+ * outros entre si (que pode ter sido mudada à mão) mantém-se.
+ */
+export function lugarNaOrdem(
+  trabalhos: ItemOrdem[],
+  hora: string | null
+): { ordem: number; empurrados: { id: string; ordem: number }[] } {
+  const lista = [...trabalhos].sort(compararOrdem)
+  const nova = hora?.slice(0, 5) ?? null
+  let i = nova === null ? -1 : lista.findIndex((t) => t.hora === null || t.hora.slice(0, 5) > nova)
+  if (i === -1) i = lista.length
+
+  const ordem = i === 0 ? Math.min(1, lista[0]?.ordem ?? 1) : lista[i - 1].ordem + 1
+  const empurrados: { id: string; ordem: number }[] = []
+  let anterior = ordem
+  for (const trabalho of lista.slice(i)) {
+    const seguinte = Math.max(trabalho.ordem, anterior + 1)
+    if (seguinte !== trabalho.ordem) empurrados.push({ id: trabalho.id, ordem: seguinte })
+    anterior = seguinte
+  }
+  return { ordem, empurrados }
+}
+
 /** Máximo de trabalhos criados de uma vez por uma repetição (cerca de um ano semanal). */
 export const MAXIMO_REPETICOES = 53
 

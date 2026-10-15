@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
   // A app vive numa subpasta de outro repositório: fixar a raiz aqui para o
   // Next.js não usar o package-lock.json nem a configuração da pasta-mãe.
   outputFileTracingRoot: path.join(__dirname),
+  // O PDF dos orçamentos lê a fonte Geist do disco (lib/pdf/fontes.ts).
+  outputFileTracingIncludes: {
+    "/orcamentos/*/pdf": ["./node_modules/geist/dist/fonts/geist-sans/Geist-{Regular,SemiBold,Bold}.ttf"],
+  },
   turbopack: {
     root: path.join(__dirname),
     rules: {

@@ -1,5 +1,6 @@
 import { Suspense } from "react"
-import { LogOutIcon, SmartphoneIcon } from "lucide-react"
+import Link from "next/link"
+import { Building2Icon, LogOutIcon, SmartphoneIcon } from "lucide-react"
 
 import { CabecalhoPagina } from "@/components/cabecalho-pagina"
 import { FormularioPalavraPasse } from "@/components/formulario-palavra-passe"
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { exigirSessao } from "@/lib/auth"
-import { NOMES_PERFIL } from "@/lib/perfis"
+import { eGerente, NOMES_PERFIL } from "@/lib/perfis"
 import { createClient } from "@/lib/supabase/server"
 
 export const metadata = { title: "Perfil" }
@@ -32,6 +33,10 @@ export default function PaginaPerfil() {
             <FormularioPalavraPasse redirecionar={false} />
           </CardContent>
         </Card>
+
+        <Suspense fallback={null}>
+          <CartaoEmpresa />
+        </Suspense>
 
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -86,6 +91,35 @@ async function DadosPerfil() {
             Terminar sessão
           </Button>
         </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+/** Só o gerente: ligação para os dados da empresa (usados no PDF dos orçamentos). */
+async function CartaoEmpresa() {
+  const sessao = await exigirSessao()
+  if (!eGerente(sessao.colaborador.perfil)) return null
+
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Building2Icon className="size-5" />
+          Empresa
+        </CardTitle>
+        <CardDescription>
+          Nome, NIF, morada, contactos e IBAN que aparecem no PDF dos orçamentos, e a validade e as condições
+          propostas para os orçamentos novos.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button asChild variant="outline" size="lg" className="w-full sm:w-fit">
+          <Link href="/empresa">
+            <Building2Icon />
+            Dados da empresa
+          </Link>
+        </Button>
       </CardContent>
     </Card>
   )

@@ -1,5 +1,8 @@
 import type { Enums } from "@/lib/supabase/database.types"
 import { somarDiasData, somarMeses } from "@/lib/datas"
+import type { createClient } from "@/lib/supabase/server"
+
+type Supabase = Awaited<ReturnType<typeof createClient>>
 
 export type EstadoTrabalho = Enums<"estado_trabalho">
 export type TipoTrabalho = Enums<"tipo_trabalho">
@@ -96,6 +99,52 @@ export function lugarNaOrdem(
     anterior = seguinte
   }
   return { ordem, empurrados }
+}
+
+/**
+ * Lugar na ordem de passagem (ver lugarNaOrdem) de um trabalho que entra em
+ * cada dia de uma equipa (ou de "por atribuir"), com a hora de início que
+ * terá nesse dia. Devolve null se a leitura falhar. Usado ao criar, mover e
+ * converter um orçamento em trabalho (só no servidor).
+ */
+export async function lugaresNaOrdem(
+  supabase: Supabase,
+  equipaId: string | null,
+  entradas: { data: string; hora: string | null }[],
+  excluir: string[] = []
+): Promise<Map<string, ReturnType<typeof lugarNaOrdem>> | null> {
+  let consulta = supabase
+    .from("trabalhos")
+    .select("id, data, ordem, hora_inicio, titulo")
+    .in("data", entradas.map((e) => e.data))
+  consulta = equipaId ? consulta.eq("equipa_id", equipaId) : consulta.is("equipa_id", null)
+  const { data, error } = await consulta
+  if (error) {
+    console.error("Erro da base de dados:", error.code, error.message)
+    return null
+  }
+  const outros = data.filter((t) => !excluir.includes(t.id))
+  return new Map(
+    entradas.map(({ data: dia, hora }) => [
+      dia,
+      lugarNaOrdem(
+        outros
+          .filter((t) => t.data === dia)
+          .map((t) => ({ id: t.id, ordem: t.ordem, hora: t.hora_inicio, titulo: t.titulo })),
+        hora
+      ),
+    ])
+  )
+}
+
+/** Grava ordens de passagem (os trabalhos empurrados); não é crítico se falhar (desempata a hora). */
+export async function gravarOrdens(supabase: Supabase, ordens: { id: string; ordem: number }[]) {
+  const resultados = await Promise.all(
+    ordens.map((t) => supabase.from("trabalhos").update({ ordem: t.ordem }).eq("id", t.id))
+  )
+  for (const { error } of resultados) {
+    if (error) console.error("Erro da base de dados:", error.code, error.message)
+  }
 }
 
 /** Máximo de trabalhos criados de uma vez por uma repetição (cerca de um ano semanal). */

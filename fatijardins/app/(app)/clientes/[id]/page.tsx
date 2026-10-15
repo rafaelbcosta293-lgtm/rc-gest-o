@@ -29,6 +29,7 @@ import { apagarCliente } from "../acoes"
 import { BotaoApagar } from "../botao-apagar"
 import { BotaoEstadoCliente } from "../botao-estado-cliente"
 import { EsqueletoFicha } from "../esqueletos"
+import { EsqueletoCartaoHistorico, OrcamentosCliente, TrabalhosCliente, VisitasCliente } from "./historico"
 
 export const metadata = { title: "Cliente" }
 
@@ -215,19 +216,27 @@ async function FichaCliente({ params }: { params: PageProps<"/clientes/[id]">["p
       </section>
 
       <section aria-labelledby="titulo-historico" className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle id="titulo-historico" className="flex items-center gap-2">
-              <HistoryIcon className="size-5" />
-              Histórico
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Os trabalhos, orçamentos e pagamentos deste cliente vão aparecer aqui.
-            </p>
-          </CardContent>
-        </Card>
+        <h2 id="titulo-historico" className="mb-3 flex items-center gap-2 text-lg font-semibold">
+          <HistoryIcon className="size-5" aria-hidden="true" />
+          Histórico
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          <div className="min-w-0 lg:col-span-2">
+            <Suspense fallback={<EsqueletoCartaoHistorico />}>
+              <TrabalhosCliente clienteId={cliente.id} chefe={!gerente} />
+            </Suspense>
+          </div>
+          <div className="min-w-0">
+            <Suspense fallback={<EsqueletoCartaoHistorico />}>
+              <VisitasCliente clienteId={cliente.id} nomeCliente={cliente.nome} />
+            </Suspense>
+          </div>
+          <div className="min-w-0">
+            <Suspense fallback={<EsqueletoCartaoHistorico />}>
+              <OrcamentosCliente clienteId={cliente.id} />
+            </Suspense>
+          </div>
+        </div>
       </section>
     </>
   )

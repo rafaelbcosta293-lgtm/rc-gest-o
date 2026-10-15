@@ -21,6 +21,7 @@ import { exigirSessao } from "@/lib/auth"
 import { formatarDiaLongo } from "@/lib/datas"
 import { dataEmLisboa } from "@/lib/horas"
 import { formatarData, formatarDataHora, formatarDuracao, formatarHora, formatarNumero, hojeEmLisboa } from "@/lib/formatar"
+import { formatarNumeroOrcamento } from "@/lib/orcamentos"
 import { eGerenteOuChefe } from "@/lib/perfis"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -66,6 +67,7 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
     .select(
       `id, titulo, descricao, tipo, origem, data, hora_inicio, duracao_prevista_min, estado,
        equipa:equipas(id, nome, cor),
+       orcamento:orcamentos!trabalhos_orcamento_id_fkey(id, ano, numero),
        local:locais(nome, morada, codigo_postal, localidade, latitude, longitude, area_m2, notas),
        cliente:clientes(id, nome, pessoa_contacto, telemovel, telefone)`
     )
@@ -238,12 +240,25 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
             titulo="Tarefas previstas"
             icone={ClipboardListIcon}
             descricao={[
-              NOMES_ORIGEM_TRABALHO[trabalho.origem],
+              // Com o orçamento de origem visível, a ligação abaixo já diz a origem.
+              !(podeGerir && trabalho.orcamento) && NOMES_ORIGEM_TRABALHO[trabalho.origem],
               trabalho.duracao_prevista_min && `duração prevista ${formatarDuracao(trabalho.duracao_prevista_min)}`,
             ]
               .filter(Boolean)
               .join(" · ")}
           >
+            {/* Orçamento de origem: só gerente e chefe (o colaborador não vê orçamentos; a RLS também não os mostra). */}
+            {podeGerir && trabalho.orcamento && (
+              <p className="text-sm">
+                Origem:{" "}
+                <Link
+                  href={`/orcamentos/${trabalho.orcamento.id}`}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Orçamento {formatarNumeroOrcamento(trabalho.orcamento.ano, trabalho.orcamento.numero)}
+                </Link>
+              </p>
+            )}
             {trabalho.descricao ? (
               <p className="text-sm whitespace-pre-line">{trabalho.descricao}</p>
             ) : (

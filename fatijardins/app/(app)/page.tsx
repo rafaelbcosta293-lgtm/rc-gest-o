@@ -14,6 +14,7 @@ import {
 import { ATrabalharAgora, HojePorEquipa, HorasARever, PicagemGerente } from "./_inicio/gerente"
 import { OMeuDia } from "./_inicio/o-meu-dia"
 import { Resumo } from "./_inicio/resumo"
+import { ProximasVisitas } from "./_inicio/visitas"
 
 export const metadata = { title: "Início" }
 
@@ -68,6 +69,9 @@ async function ConteudoInicio() {
             </Suspense>
           </div>
           <Suspense fallback={<EsqueletoCartao />}>
+            <ProximasVisitas />
+          </Suspense>
+          <Suspense fallback={<EsqueletoCartao />}>
             <ProximasAusencias />
           </Suspense>
         </div>
@@ -77,9 +81,14 @@ async function ConteudoInicio() {
             <OMeuDia sessao={sessao} />
           </Suspense>
           {perfil === "chefe_equipa" && (
-            <Suspense fallback={<EsqueletoResumo />}>
-              <Resumo />
-            </Suspense>
+            <>
+              <Suspense fallback={<EsqueletoResumo />}>
+                <Resumo />
+              </Suspense>
+              <Suspense fallback={<EsqueletoCartao />}>
+                <ProximasVisitas />
+              </Suspense>
+            </>
           )}
           <Suspense fallback={<EsqueletoCartao />}>
             <ProximasAusencias />

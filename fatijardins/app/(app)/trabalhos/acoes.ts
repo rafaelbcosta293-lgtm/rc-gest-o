@@ -10,7 +10,7 @@ import { eDataValida } from "@/lib/datas"
 import { eGerente, eGerenteOuChefe } from "@/lib/perfis"
 import type { TablesInsert, TablesUpdate } from "@/lib/supabase/database.types"
 import { createClient } from "@/lib/supabase/server"
-import { datasDaSerie, lugarNaOrdem } from "@/lib/trabalhos"
+import { datasDaSerie, gravarOrdens, lugaresNaOrdem, lugarNaOrdem } from "@/lib/trabalhos"
 import { idObrigatorio } from "@/lib/validacao/comum"
 import { esquemaTrabalho, type CamposTrabalho, type DadosTrabalho } from "@/lib/validacao/trabalhos"
 
@@ -63,53 +63,6 @@ function erroCampo(campo: keyof CamposTrabalho, mensagem: string): ResultadoAcao
 }
 
 type Lugar = ReturnType<typeof lugarNaOrdem>
-type NovaOrdem = { id: string; ordem: number }
-
-/**
- * Lugar na ordem de passagem (ver lugarNaOrdem) de um trabalho que entra em
- * cada dia de uma equipa (ou de "por atribuir"), com a hora de início que
- * terá nesse dia. Devolve null se a leitura falhar.
- */
-async function lugaresNaOrdem(
-  supabase: Supabase,
-  equipaId: string | null,
-  entradas: { data: string; hora: string | null }[],
-  excluir: string[] = []
-): Promise<Map<string, Lugar> | null> {
-  let consulta = supabase
-    .from("trabalhos")
-    .select("id, data, ordem, hora_inicio, titulo")
-    .in("data", entradas.map((e) => e.data))
-  consulta = equipaId ? consulta.eq("equipa_id", equipaId) : consulta.is("equipa_id", null)
-  const { data, error } = await consulta
-  if (error) {
-    console.error("Erro da base de dados:", error.code, error.message)
-    return null
-  }
-  const outros = data.filter((t) => !excluir.includes(t.id))
-  return new Map(
-    entradas.map(({ data: dia, hora }) => [
-      dia,
-      lugarNaOrdem(
-        outros
-          .filter((t) => t.data === dia)
-          .map((t) => ({ id: t.id, ordem: t.ordem, hora: t.hora_inicio, titulo: t.titulo })),
-        hora
-      ),
-    ])
-  )
-}
-
-/** Grava ordens de passagem (os trabalhos empurrados); não é crítico se falhar (desempata a hora). */
-async function gravarOrdens(supabase: Supabase, ordens: NovaOrdem[]) {
-  const resultados = await Promise.all(
-    ordens.map((t) => supabase.from("trabalhos").update({ ordem: t.ordem }).eq("id", t.id))
-  )
-  for (const { error } of resultados) {
-    if (error) console.error("Erro da base de dados:", error.code, error.message)
-  }
-}
-
 /** O local tem de pertencer ao cliente escolhido (e estar ativo, salvo se já era o do trabalho). */
 async function validarLocal(
   supabase: Supabase,

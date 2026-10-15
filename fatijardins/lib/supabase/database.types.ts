@@ -185,6 +185,54 @@ export type Database = {
           },
         ]
       }
+      empresa: {
+        Row: {
+          codigo_postal: string | null
+          condicoes_orcamento: string | null
+          email: string | null
+          iban: string | null
+          id: boolean
+          localidade: string | null
+          morada: string | null
+          nif: string | null
+          nome: string
+          telefone: string | null
+          updated_at: string
+          validade_orcamento_dias: number
+          website: string | null
+        }
+        Insert: {
+          codigo_postal?: string | null
+          condicoes_orcamento?: string | null
+          email?: string | null
+          iban?: string | null
+          id?: boolean
+          localidade?: string | null
+          morada?: string | null
+          nif?: string | null
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
+          validade_orcamento_dias?: number
+          website?: string | null
+        }
+        Update: {
+          codigo_postal?: string | null
+          condicoes_orcamento?: string | null
+          email?: string | null
+          iban?: string | null
+          id?: boolean
+          localidade?: string | null
+          morada?: string | null
+          nif?: string | null
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
+          validade_orcamento_dias?: number
+          website?: string | null
+        }
+        Relationships: []
+      }
       equipas: {
         Row: {
           ativa: boolean
@@ -238,6 +286,7 @@ export type Database = {
           momento: Database["public"]["Enums"]["momento_foto"]
           tamanho_bytes: number | null
           trabalho_id: string | null
+          visita_id: string | null
         }
         Insert: {
           altura?: number | null
@@ -250,6 +299,7 @@ export type Database = {
           momento?: Database["public"]["Enums"]["momento_foto"]
           tamanho_bytes?: number | null
           trabalho_id?: string | null
+          visita_id?: string | null
         }
         Update: {
           altura?: number | null
@@ -262,6 +312,7 @@ export type Database = {
           momento?: Database["public"]["Enums"]["momento_foto"]
           tamanho_bytes?: number | null
           trabalho_id?: string | null
+          visita_id?: string | null
         }
         Relationships: [
           {
@@ -276,6 +327,13 @@ export type Database = {
             columns: ["trabalho_id"]
             isOneToOne: false
             referencedRelation: "trabalhos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fotos_visita_id_fkey"
+            columns: ["visita_id"]
+            isOneToOne: false
+            referencedRelation: "visitas"
             referencedColumns: ["id"]
           },
         ]
@@ -332,6 +390,170 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orcamento_linhas: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          orcamento_id: string
+          ordem: number
+          preco_unitario: number
+          quantidade: number
+          taxa_iva: number
+          tipo: Database["public"]["Enums"]["tipo_linha_orcamento"]
+          total: number | null
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          orcamento_id: string
+          ordem?: number
+          preco_unitario: number
+          quantidade: number
+          taxa_iva?: number
+          tipo?: Database["public"]["Enums"]["tipo_linha_orcamento"]
+          total?: never
+          unidade?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          orcamento_id?: string
+          ordem?: number
+          preco_unitario?: number
+          quantidade?: number
+          taxa_iva?: number
+          tipo?: Database["public"]["Enums"]["tipo_linha_orcamento"]
+          total?: never
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orcamento_linhas_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "orcamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orcamentos: {
+        Row: {
+          ano: number
+          cliente_id: string
+          condicoes: string | null
+          created_at: string
+          criado_por: string | null
+          data: string
+          descricao: string | null
+          enviado_em: string | null
+          estado: Database["public"]["Enums"]["estado_orcamento"]
+          id: string
+          local_id: string
+          notas_internas: string | null
+          numero: number
+          respondido_em: string | null
+          subtotal: number
+          titulo: string
+          total: number
+          total_iva: number
+          trabalho_id: string | null
+          updated_at: string
+          validade: string
+          visita_id: string | null
+        }
+        Insert: {
+          ano: number
+          cliente_id: string
+          condicoes?: string | null
+          created_at?: string
+          criado_por?: string | null
+          data?: string
+          descricao?: string | null
+          enviado_em?: string | null
+          estado?: Database["public"]["Enums"]["estado_orcamento"]
+          id?: string
+          local_id: string
+          notas_internas?: string | null
+          numero: number
+          respondido_em?: string | null
+          subtotal?: number
+          titulo: string
+          total?: number
+          total_iva?: number
+          trabalho_id?: string | null
+          updated_at?: string
+          validade: string
+          visita_id?: string | null
+        }
+        Update: {
+          ano?: number
+          cliente_id?: string
+          condicoes?: string | null
+          created_at?: string
+          criado_por?: string | null
+          data?: string
+          descricao?: string | null
+          enviado_em?: string | null
+          estado?: Database["public"]["Enums"]["estado_orcamento"]
+          id?: string
+          local_id?: string
+          notas_internas?: string | null
+          numero?: number
+          respondido_em?: string | null
+          subtotal?: number
+          titulo?: string
+          total?: number
+          total_iva?: number
+          trabalho_id?: string | null
+          updated_at?: string
+          validade?: string
+          visita_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orcamentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orcamentos_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orcamentos_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "locais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orcamentos_trabalho_id_fkey"
+            columns: ["trabalho_id"]
+            isOneToOne: true
+            referencedRelation: "trabalhos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orcamentos_visita_id_fkey"
+            columns: ["visita_id"]
+            isOneToOne: false
+            referencedRelation: "visitas"
             referencedColumns: ["id"]
           },
         ]
@@ -507,6 +729,7 @@ export type Database = {
           hora_inicio: string | null
           id: string
           local_id: string
+          orcamento_id: string | null
           ordem: number
           origem: Database["public"]["Enums"]["origem_trabalho"]
           serie_id: string | null
@@ -526,6 +749,7 @@ export type Database = {
           hora_inicio?: string | null
           id?: string
           local_id: string
+          orcamento_id?: string | null
           ordem?: number
           origem?: Database["public"]["Enums"]["origem_trabalho"]
           serie_id?: string | null
@@ -545,6 +769,7 @@ export type Database = {
           hora_inicio?: string | null
           id?: string
           local_id?: string
+          orcamento_id?: string | null
           ordem?: number
           origem?: Database["public"]["Enums"]["origem_trabalho"]
           serie_id?: string | null
@@ -581,6 +806,87 @@ export type Database = {
             referencedRelation: "locais"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "trabalhos_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "orcamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visitas: {
+        Row: {
+          area_m2: number | null
+          cliente_id: string
+          created_at: string
+          criado_por: string | null
+          data: string
+          hora: string | null
+          id: string
+          local_id: string
+          medidas: string | null
+          notas: string | null
+          responsavel_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          area_m2?: number | null
+          cliente_id: string
+          created_at?: string
+          criado_por?: string | null
+          data: string
+          hora?: string | null
+          id?: string
+          local_id: string
+          medidas?: string | null
+          notas?: string | null
+          responsavel_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area_m2?: number | null
+          cliente_id?: string
+          created_at?: string
+          criado_por?: string | null
+          data?: string
+          hora?: string | null
+          id?: string
+          local_id?: string
+          medidas?: string | null
+          notas?: string | null
+          responsavel_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "locais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -588,6 +894,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      converter_orcamento: {
+        Args: {
+          p_data: string
+          p_equipa_id?: string
+          p_hora?: string
+          p_orcamento_id: string
+          p_ordem?: number
+          p_tipo?: Database["public"]["Enums"]["tipo_trabalho"]
+        }
+        Returns: string
+      }
       detalhes_trabalhos_das_horas: {
         Args: { p_fim: string; p_inicio: string }
         Returns: {
@@ -654,12 +971,15 @@ export type Database = {
       }
     }
     Enums: {
+      estado_orcamento: "rascunho" | "enviado" | "aceite" | "recusado"
       estado_trabalho: "agendado" | "em_curso" | "concluido" | "cancelado"
       momento_foto: "antes" | "depois" | "outra"
       origem_registo_horas: "picagem" | "manual"
       origem_trabalho: "avulso" | "contrato" | "orcamento"
       perfil_utilizador: "gerente" | "chefe_equipa" | "colaborador"
       tipo_ausencia: "ferias" | "doenca" | "formacao" | "falta" | "outro"
+      tipo_linha_orcamento:
+        "mao_de_obra" | "material" | "equipamento" | "outros"
       tipo_trabalho: "manutencao" | "obra"
     }
     CompositeTypes: {
@@ -703,8 +1023,7 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -728,8 +1047,7 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -753,8 +1071,7 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
   EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -788,12 +1105,19 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      estado_orcamento: ["rascunho", "enviado", "aceite", "recusado"],
       estado_trabalho: ["agendado", "em_curso", "concluido", "cancelado"],
       momento_foto: ["antes", "depois", "outra"],
       origem_registo_horas: ["picagem", "manual"],
       origem_trabalho: ["avulso", "contrato", "orcamento"],
       perfil_utilizador: ["gerente", "chefe_equipa", "colaborador"],
       tipo_ausencia: ["ferias", "doenca", "formacao", "falta", "outro"],
+      tipo_linha_orcamento: [
+        "mao_de_obra",
+        "material",
+        "equipamento",
+        "outros",
+      ],
       tipo_trabalho: ["manutencao", "obra"],
     },
   },

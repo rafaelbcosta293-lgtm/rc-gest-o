@@ -11,6 +11,7 @@ import { LigacoesInferiores, LigacoesLaterais } from "./ligacoes-navegacao"
 export async function Navegacao() {
   const sessao = await exigirSessao()
   const itens = itensParaPerfil(sessao.colaborador.perfil)
+  const barra = itensBarraInferior(itens)
 
   return (
     <>
@@ -29,7 +30,7 @@ export async function Navegacao() {
           </p>
         </Link>
       </aside>
-      <LigacoesInferiores itens={itensBarraInferior(itens)} />
+      <LigacoesInferiores itens={barra.principais} mais={barra.mais} />
     </>
   )
 }

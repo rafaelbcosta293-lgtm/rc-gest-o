@@ -173,3 +173,71 @@ from d cross join (values
   ('c0000000-0000-4000-8000-000000000006', 'b0000000-0000-4000-8000-000000000007', '08:00', '13:00'),
   ('c0000000-0000-4000-8000-000000000006', null, '14:00', '17:00')
 ) as v(colaborador, trabalho, entrada, saida);
+
+-- =====================================================================
+-- Fase 3 — visitas e orçamentos de exemplo (datas relativas a hoje)
+-- =====================================================================
+with l as (
+  select l.id, l.nome, c.nome as cliente
+  from public.locais l join public.clientes c on c.id = l.cliente_id
+)
+insert into public.visitas (id, local_id, cliente_id, data, hora, responsavel_id, medidas, area_m2, notas, criado_por)
+select v.id::uuid, l.id, '00000000-0000-0000-0000-000000000000', v.data, v.hora::time, v.responsavel::uuid,
+  v.medidas, v.area, v.notas, v.responsavel::uuid
+from (values
+  ('a2000000-0000-4000-8000-000000000001', 'Margarida Coelho', 'Quintinha', current_date - 5, '10:00',
+   'c0000000-0000-4000-8000-000000000002',
+   'Relvado: 180 m²' || chr(10) || 'Sebe a plantar ao longo do muro: 20 m' || chr(10) || 'Canteiro da entrada: 12 m²',
+   212.00, 'A cliente quer rega automática no relvado. Terreno com declive ligeiro para sul; há uma torneira junto à garagem.'),
+  ('a2000000-0000-4000-8000-000000000002', 'Ricardo Sousa', 'Pátio e terraço', current_date + 2, '15:00',
+   'c0000000-0000-4000-8000-000000000001',
+   null, null, 'Avaliar a substituição dos vasos grandes e um sistema de rega gota a gota no terraço.')
+) as v(id, cliente, local, data, hora, responsavel, medidas, area, notas)
+join l on l.cliente = v.cliente and l.nome = v.local;
+
+with l as (
+  select l.id, l.nome, c.nome as cliente
+  from public.locais l join public.clientes c on c.id = l.cliente_id
+)
+insert into public.orcamentos (id, local_id, cliente_id, visita_id, titulo, descricao, data, validade, condicoes, notas_internas, criado_por)
+select o.id::uuid, l.id, '00000000-0000-0000-0000-000000000000', o.visita::uuid, o.titulo, o.descricao, o.data, o.data + 30,
+  'Pagamento: 50% na adjudicação e 50% na conclusão dos trabalhos.', o.notas, o.autor::uuid
+from (values
+  ('a3000000-0000-4000-8000-000000000001', 'Margarida Coelho', 'Quintinha', 'a2000000-0000-4000-8000-000000000001',
+   'Plantação de sebe e rega automática do relvado',
+   'Fornecimento e plantação de sebe de eleagnus ao longo do muro e instalação de rega automática no relvado, conforme a visita.',
+   current_date - 4, 'Confirmar a pressão da água antes de começar.', 'c0000000-0000-4000-8000-000000000001'),
+  ('a3000000-0000-4000-8000-000000000002', 'Hotel Quinta das Palmeiras, Lda.', 'Horta e pomar', null,
+   'Renovação da horta e poda do pomar',
+   'Limpeza e preparação dos canteiros da horta, poda de formação das árvores de fruto e remoção dos verdes.',
+   current_date - 2, null, 'c0000000-0000-4000-8000-000000000001'),
+  ('a3000000-0000-4000-8000-000000000003', 'Condomínio Monte Estoril', 'Piscina e envolvente', null,
+   'Arranjo dos canteiros da piscina', null,
+   current_date, 'Falta confirmar a quantidade de plantas com o administrador.', 'c0000000-0000-4000-8000-000000000002'),
+  ('a3000000-0000-4000-8000-000000000004', 'João e Teresa Antunes', 'Casa de férias', null,
+   'Relvado sintético no terraço', 'Fornecimento e colocação de relva sintética de 30 mm no terraço.',
+   current_date - 20, null, 'c0000000-0000-4000-8000-000000000001')
+) as o(id, cliente, local, visita, titulo, descricao, data, notas, autor)
+join l on l.cliente = o.cliente and l.nome = o.local
+order by o.data;
+
+insert into public.orcamento_linhas (orcamento_id, ordem, tipo, descricao, quantidade, unidade, preco_unitario, taxa_iva) values
+  ('a3000000-0000-4000-8000-000000000001', 1, 'mao_de_obra', 'Abertura de vala e plantação da sebe', 12, 'h', 25.00, 23),
+  ('a3000000-0000-4000-8000-000000000001', 2, 'mao_de_obra', 'Instalação da rega automática do relvado', 10, 'h', 25.00, 23),
+  ('a3000000-0000-4000-8000-000000000001', 3, 'material', 'Eleagnus ebbingei, vaso 60–80 cm', 40, 'un', 6.50, 6),
+  ('a3000000-0000-4000-8000-000000000001', 4, 'material', 'Programador de rega, 6 aspersores, tubo e acessórios', 1, 'un', 285.00, 23),
+  ('a3000000-0000-4000-8000-000000000001', 5, 'equipamento', 'Aluguer de mini-escavadora (1 dia)', 1, 'dia', 120.00, 23),
+  ('a3000000-0000-4000-8000-000000000002', 1, 'mao_de_obra', 'Limpeza e preparação dos canteiros da horta', 16, 'h', 22.50, 23),
+  ('a3000000-0000-4000-8000-000000000002', 2, 'mao_de_obra', 'Poda de formação das árvores de fruto', 8, 'h', 25.00, 23),
+  ('a3000000-0000-4000-8000-000000000002', 3, 'material', 'Composto orgânico (saco de 50 L)', 30, 'un', 8.90, 23),
+  ('a3000000-0000-4000-8000-000000000002', 4, 'outros', 'Remoção de verdes para o ecocentro', 1, 'un', 90.00, 23),
+  ('a3000000-0000-4000-8000-000000000003', 1, 'mao_de_obra', 'Limpeza e replantação dos canteiros', 8, 'h', 25.00, 23),
+  ('a3000000-0000-4000-8000-000000000003', 2, 'material', 'Plantas mediterrânicas (alecrim, lavanda, santolina)', 60, 'un', 3.20, 6),
+  ('a3000000-0000-4000-8000-000000000004', 1, 'material', 'Relva sintética 30 mm', 45, 'm²', 18.50, 23),
+  ('a3000000-0000-4000-8000-000000000004', 2, 'mao_de_obra', 'Preparação da base e colocação', 12, 'h', 25.00, 23);
+
+-- Estados: 001 aceite (por converter em trabalho), 002 enviado, 003 rascunho, 004 recusado.
+update public.orcamentos set estado = 'enviado'
+where id in ('a3000000-0000-4000-8000-000000000001', 'a3000000-0000-4000-8000-000000000002', 'a3000000-0000-4000-8000-000000000004');
+update public.orcamentos set estado = 'aceite' where id = 'a3000000-0000-4000-8000-000000000001';
+update public.orcamentos set estado = 'recusado' where id = 'a3000000-0000-4000-8000-000000000004';

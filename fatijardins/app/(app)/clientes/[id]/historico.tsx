@@ -10,17 +10,13 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
+import { BadgeEstadoOrcamento, BadgeExpirado } from "@/app/(app)/orcamentos/_componentes/badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatarData, formatarHora, formatarMoeda, hojeEmLisboa } from "@/lib/formatar"
-import {
-  estaExpirado,
-  formatarNumeroOrcamento,
-  NOMES_ESTADO_ORCAMENTO,
-  VARIANTE_ESTADO_ORCAMENTO,
-} from "@/lib/orcamentos"
+import { estaExpirado, formatarNumeroOrcamento } from "@/lib/orcamentos"
 import { createClient } from "@/lib/supabase/server"
 import { NOMES_ESTADO_TRABALHO, VARIANTE_ESTADO_TRABALHO } from "@/lib/trabalhos"
 import { formatarQuandoVisita } from "@/lib/visitas"
@@ -355,15 +351,9 @@ export async function OrcamentosCliente({ clienteId }: { clienteId: string }) {
               titulo={orcamento.titulo}
               detalhes={
                 <>
-                  <span className="tabular-nums">Nº {formatarNumeroOrcamento(orcamento.ano, orcamento.numero)}</span>
-                  <Badge variant={VARIANTE_ESTADO_ORCAMENTO[orcamento.estado]}>
-                    {NOMES_ESTADO_ORCAMENTO[orcamento.estado]}
-                  </Badge>
-                  {estaExpirado(orcamento, hoje) && (
-                    <Badge variant="outline" className="text-destructive">
-                      Expirado
-                    </Badge>
-                  )}
+                  <span className="tabular-nums">N.º {formatarNumeroOrcamento(orcamento.ano, orcamento.numero)}</span>
+                  <BadgeEstadoOrcamento estado={orcamento.estado} />
+                  {estaExpirado(orcamento, hoje) && <BadgeExpirado />}
                 </>
               }
               fim={<span className="shrink-0 font-semibold tabular-nums">{formatarMoeda(orcamento.total)}</span>}

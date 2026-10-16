@@ -12,17 +12,13 @@ import { Button } from "@/components/ui/button"
 import { exigirPerfil } from "@/lib/auth"
 import { formatarDiaLongo } from "@/lib/datas"
 import { formatarArea, formatarData, formatarDataHora, formatarHora, formatarMoeda, hojeEmLisboa } from "@/lib/formatar"
-import {
-  estaExpirado,
-  formatarNumeroOrcamento,
-  NOMES_ESTADO_ORCAMENTO,
-  VARIANTE_ESTADO_ORCAMENTO,
-} from "@/lib/orcamentos"
+import { estaExpirado, formatarNumeroOrcamento } from "@/lib/orcamentos"
 import { eGerente } from "@/lib/perfis"
 import { createClient } from "@/lib/supabase/server"
 import { BUCKET_FOTOS } from "@/lib/trabalhos"
 import { idObrigatorio } from "@/lib/validacao/comum"
 import { nomeSitioVisita } from "@/lib/visitas"
+import { BadgeEstadoOrcamento, BadgeExpirado } from "../../_componentes/badges"
 import { EsqueletoVisita } from "../_componentes/esqueletos"
 import { apagarVisita } from "../acoes"
 import { FotosVisita, type FotoVisita } from "./_componentes/fotos-visita"
@@ -213,15 +209,9 @@ async function FichaVisita({ params }: { params: PageProps<"/orcamentos/visitas/
                       <span className="min-w-0 flex-1">
                         <span className="block font-medium break-words">{orcamento.titulo}</span>
                         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                          <span className="tabular-nums">Nº {formatarNumeroOrcamento(orcamento.ano, orcamento.numero)}</span>
-                          <Badge variant={VARIANTE_ESTADO_ORCAMENTO[orcamento.estado]}>
-                            {NOMES_ESTADO_ORCAMENTO[orcamento.estado]}
-                          </Badge>
-                          {estaExpirado(orcamento, hoje) && (
-                            <Badge variant="outline" className="text-destructive">
-                              Expirado
-                            </Badge>
-                          )}
+                          <span className="tabular-nums">N.º {formatarNumeroOrcamento(orcamento.ano, orcamento.numero)}</span>
+                          <BadgeEstadoOrcamento estado={orcamento.estado} />
+                          {estaExpirado(orcamento, hoje) && <BadgeExpirado />}
                         </span>
                       </span>
                       <span className="shrink-0 font-semibold tabular-nums">{formatarMoeda(orcamento.total)}</span>

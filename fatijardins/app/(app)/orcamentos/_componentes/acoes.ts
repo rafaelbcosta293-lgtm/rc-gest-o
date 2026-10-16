@@ -62,9 +62,10 @@ async function sessaoGestor(): Promise<Sessao | null> {
   return sessao && eGerenteOuChefe(sessao.colaborador.perfil) ? sessao : null
 }
 
-/** A lista, as fichas dos orçamentos (e das visitas, que os mostram) e o Início. */
+/** A lista, as fichas dos orçamentos (e das visitas, que os mostram), o histórico do cliente e o Início. */
 function revalidarOrcamentos() {
   revalidatePath("/orcamentos", "layout")
+  revalidatePath("/clientes/[id]", "page")
   revalidatePath("/")
 }
 

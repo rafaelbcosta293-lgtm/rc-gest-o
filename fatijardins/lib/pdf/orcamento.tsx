@@ -13,7 +13,7 @@ import {
   type TipoLinhaOrcamento,
 } from "@/lib/orcamentos"
 import type { Tables } from "@/lib/supabase/database.types"
-import { registarFontes } from "./fontes"
+import { registarFontes, type FontePdf } from "./fontes"
 
 export type DadosPdfOrcamento = {
   orcamento: Pick<
@@ -48,7 +48,8 @@ const FOLHA = "M47 15C30 15 18 24 18 38c0 4 1 7 3 10 2-9 8-17 17-22-7 6-11 13-13
 // ---------------------------------------------------------------------
 // Texto: o Intl pode usar espaços finos (U+202F, U+2009…) nos milhares e
 // antes do "€", e há carateres que a fonte não tem (hífen inseparável,
-// espaços especiais, hífen condicional…): trocam-se por equivalentes.
+// espaços especiais, hífen condicional, emojis…): trocam-se por
+// equivalentes ou saem.
 // ---------------------------------------------------------------------
 
 const ESPACOS_ESPECIAIS = /[\u2000-\u200A\u202F\u205F\u3000]/g
@@ -58,6 +59,8 @@ const INVISIVEIS = /[\u00AD\u200B\u2060\uFEFF]/g
 function texto(valor: string | null | undefined): string {
   if (!valor) return ""
   return valor
+    // Acentos escritos à parte (e + ´, como alguns teclados os gravam) juntam-se à letra.
+    .normalize("NFC")
     .replace(/\r\n?/g, "\n")
     .replace(/\t/g, "    ")
     .replace(ESPACOS_ESPECIAIS, " ")
@@ -66,6 +69,37 @@ function texto(valor: string | null | undefined): string {
     .replace(/\u2012/g, "\u2013")
     .replace(/\u2300/g, "\u00D8")
     .trim()
+}
+
+/**
+ * Só os carateres que a fonte tem: os outros passam à forma compatível
+ * (™ → TM, ﬁ → fi) se a fonte a tiver, senão saem (emojis, ideogramas…),
+ * para não aparecerem quadrados ou símbolos trocados no PDF.
+ */
+function soCarateresDaFonte(valor: string, temCarater: FontePdf["temCarater"]): string {
+  let resultado = ""
+  let retirados = false
+  for (const carater of valor) {
+    if (carater === "\n" || temCarater(carater.codePointAt(0) ?? 0)) {
+      resultado += carater
+      continue
+    }
+    const compativel = carater.normalize("NFKC")
+    if (compativel !== carater && [...compativel].every((c) => temCarater(c.codePointAt(0) ?? 0))) {
+      resultado += compativel
+    } else {
+      retirados = true
+    }
+  }
+  // Sem espaços duplos onde estava um emoji.
+  return retirados ? resultado.replace(/ {2,}/g, " ").trim() : resultado
+}
+
+/** Aplica a limpeza a todos os textos de um registo (os outros valores ficam iguais). */
+function limparRegisto<T extends object>(registo: T, limpar: (valor: string) => string): T {
+  return Object.fromEntries(
+    Object.entries(registo).map(([chave, valor]) => [chave, typeof valor === "string" ? limpar(valor) : valor])
+  ) as T
 }
 
 /** Números formatados: os espaços dos milhares e antes do "€" ficam inseparáveis. */
@@ -517,8 +551,17 @@ function DocumentoOrcamento({ dados, fonte }: { dados: DadosPdfOrcamento; fonte:
 
 /** Gera o PDF do orçamento (A4) e devolve-o num Buffer. */
 export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Buffer> {
-  const fonte = await registarFontes()
-  return renderToBuffer(<DocumentoOrcamento dados={dados} fonte={fonte} />)
+  const { familia, temCarater } = await registarFontes()
+  // Os textos escritos pelas pessoas ficam só com carateres que a fonte desenha.
+  const limpar = (valor: string) => soCarateresDaFonte(texto(valor), temCarater)
+  const limpos: DadosPdfOrcamento = {
+    orcamento: limparRegisto(dados.orcamento, limpar),
+    linhas: dados.linhas.map((linha) => limparRegisto(linha, limpar)),
+    cliente: dados.cliente && limparRegisto(dados.cliente, limpar),
+    local: dados.local && limparRegisto(dados.local, limpar),
+    empresa: dados.empresa && limparRegisto(dados.empresa, limpar),
+  }
+  return renderToBuffer(<DocumentoOrcamento dados={limpos} fonte={familia} />)
 }
 
 /** "Orcamento-2026-0002.pdf" (sem acentos nem barras, para qualquer telemóvel). */

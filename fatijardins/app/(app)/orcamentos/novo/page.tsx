@@ -100,7 +100,8 @@ async function NovoOrcamento({ searchParams }: { searchParams: ParametrosPesquis
       locais={opcoes.locais}
       validadeDias={opcoes.validadeDias}
       visita={visita && visitaOrigem(visita)}
-      cancelarHref={visita ? `/orcamentos/visitas/${visita.id}` : "/orcamentos"}
+      // Vindo da visita ou da ficha do cliente, "Cancelar" volta para lá.
+      cancelarHref={visita ? `/orcamentos/visitas/${visita.id}` : clienteId ? `/clientes/${clienteId}` : "/orcamentos"}
     />
   )
 }

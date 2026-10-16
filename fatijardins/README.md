@@ -261,7 +261,7 @@ com a palavra-passe **`Fatijardins2026!`**:
 (O Jorge Dias, da Equipa Terra, é um colaborador **sem** conta de acesso.)
 
 As datas dos trabalhos e das horas de exemplo são calculadas a partir do dia em que a seed corre
-(no projeto já criado, 14/10/2026). Para testar noutro dia — por exemplo, para os colaboradores
+(no projeto já criado, 16/10/2026). Para testar noutro dia — por exemplo, para os colaboradores
 verem trabalhos em “O meu dia” —, cole `supabase/exemplos_para_hoje.sql` no **SQL Editor** e clique
 **Run**: os trabalhos e as horas de exemplo passam para o dia de hoje (o último e o próximo dia útil
 ficam à mesma distância). Só mexe nos dados de exemplo e pode correr-se as vezes que for preciso.
@@ -532,7 +532,8 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
   Continente); o IVA é calculado por taxa sobre a soma das linhas, como numa fatura, e os totais são
   calculados pela base de dados (a app mostra exatamente o mesmo). Não há linha de desconto (a base
   de dados não aceita preços negativos): para fazer um desconto, baixa-se o preço das linhas.
-  Números sequenciais por ano (2026/0001, 2026/0002…).
+  Números sequenciais por ano (2026/0001, 2026/0002…); o número de um orçamento apagado nunca volta a
+  ser usado. Um rascunho com a validade já ultrapassada não se envia (atualiza-se a data primeiro).
 - **Fase 3 — PDF:** gerado no momento em que se abre (não se guarda uma cópia): como um orçamento
   enviado já não muda, o PDF é sempre o mesmo. Os rascunhos levam a marca “RASCUNHO”. Inclui “Este
   documento não é uma fatura”.

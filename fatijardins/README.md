@@ -2,10 +2,10 @@
 
 Aplicação de gestão interna da **Fatijardins**, empresa de manutenção e construção de jardins.
 Serve para organizar a **equipa**, os **clientes** e os **locais**, a **agenda** dos trabalhos, o
-**registo** do que se faz no local e as **horas** de cada pessoa. Foi pensada primeiro para o
+**registo** do que se faz no local, as **horas** de cada pessoa, as **visitas** e os **orçamentos**. Foi pensada primeiro para o
 **telemóvel** (pode ser instalada como uma app) e funciona também no **PC**.
 
-> **Estado:** fases 1 (Base) e 2 (Campo) concluídas. Ver o [roteiro](#12-roteiro-das-fases) no fim.
+> **Estado:** fases 1 (Base), 2 (Campo) e 3 (Orçamentos) concluídas. Ver o [roteiro](#12-roteiro-das-fases) no fim.
 
 **Índice:** [O que faz](#o-que-a-app-faz) ·
 [Tecnologia](#tecnologia) ·
@@ -52,6 +52,16 @@ Serve para organizar a **equipa**, os **clientes** e os **locais**, a **agenda**
   por pessoa com horas por dia e por trabalho, horas extra (acima de 8 h nos dias úteis e todas as
   horas em fins de semana e feriados), exportação para Excel (CSV) individual ou da equipa, e
   correções feitas pelo gerente.
+- **Visitas** (gerente e chefes): visita ao local do cliente para orçamentar, com fotos tiradas com a
+  câmara, medidas, área e notas; próximas visitas no Início.
+- **Orçamentos** (gerente e chefes): numerados por ano (ex.: 2026/0002), com linhas de mão de obra,
+  material, equipamento e outros, IVA por linha (23%, 13%, 6% ou isento), validade e condições;
+  estados rascunho → enviado → aceite ou recusado; **PDF** com o logótipo e os dados da empresa;
+  o orçamento aceite **converte-se em trabalho** (ou obra) com um clique, já na agenda da equipa.
+  O chefe faz visitas e rascunhos; o gerente envia, marca aceite/recusado e converte.
+- **Ficha do cliente** com o histórico de trabalhos, visitas e orçamentos.
+- **Dados da empresa** (gerente): nome, NIF, morada, contactos, IBAN e a validade e as condições
+  propostas para os orçamentos novos — aparecem no PDF.
 - **App instalável** no telemóvel (PWA), com uma página “Sem ligação à internet” quando não há rede.
 
 ## Tecnologia
@@ -76,6 +86,8 @@ fatijardins/
 │   │   ├── _inicio/          Início: “O meu dia” e o resumo do gerente
 │   │   ├── agenda/           Calendário semanal e diário por equipa
 │   │   ├── trabalhos/        Criar/editar trabalhos (+ acoes.ts) e a ficha com o registo diário
+│   │   ├── orcamentos/       Orçamentos (lista, editor, estados, conversão, PDF) e visitas/
+│   │   ├── empresa/          Dados da empresa para o PDF (só gerente)
 │   │   ├── horas/            Mapa mensal, correções e exportação CSV (+ picagem em acoes.ts)
 │   │   ├── clientes/         Clientes e os seus locais (+ acoes.ts: gravar na base de dados)
 │   │   ├── equipa/           Colaboradores, equipas, ausências e acessos (+ acoes.ts)
@@ -87,6 +99,7 @@ fatijardins/
 │   └── layout.tsx            Estrutura comum a todas as páginas
 ├── components/               Peças reutilizáveis (cabeçalho, logótipo, menu…)
 │   ├── horas/                Picagem de horas (usada no Início e na ficha do trabalho)
+│   ├── fotos/                Envio e visualização de fotos (trabalhos e visitas)
 │   └── ui/                   Botões, campos, cartões, diálogos (shadcn/ui)
 ├── hooks/                    use-acao-formulario.ts (envio de formulários)
 ├── lib/                      Lógica partilhada
@@ -96,6 +109,9 @@ fatijardins/
 │   ├── formatar.ts, datas.ts Datas, horas, euros, semanas e feriados nacionais
 │   ├── trabalhos.ts          Estados, tipos e repetições dos trabalhos
 │   ├── horas.ts              Contas das horas (por dia, extras, por trabalho)
+│   ├── orcamentos.ts         Estados, tipos de linha, IVA e totais dos orçamentos
+│   ├── visitas.ts            Caminhos das fotos das visitas
+│   ├── pdf/                  PDF do orçamento (react-pdf, fonte Geist)
 │   └── fotos.ts              Compressão das fotos no telemóvel antes de enviar
 ├── public/
 │   ├── icons/                Ícones da app instalada
@@ -103,9 +119,10 @@ fatijardins/
 ├── scripts/gerar-icones.mjs  Volta a gerar os ícones a partir do símbolo
 ├── supabase/
 │   ├── migrations/           SQL que cria as tabelas e as permissões (por ordem de data)
-│   ├── seed.sql              Dados de exemplo (contas, equipas, clientes, locais, trabalhos, horas)
+│   ├── seed.sql              Dados de exemplo (contas, equipas, clientes, locais, trabalhos, horas,
+│   │                         visitas e orçamentos)
 │   ├── exemplos_para_hoje.sql Põe os trabalhos e as horas de exemplo no dia de hoje
-│   └── tests/                Testes das permissões (rls_fase1.sql, rls_fase2.sql)
+│   └── tests/                Testes das permissões (rls_fase1.sql, rls_fase2.sql, rls_fase3.sql)
 ├── proxy.ts                  Envia para /login quem não tem sessão
 ├── .env.example              Modelo das variáveis de ambiente
 └── package.json              Dependências e comandos (npm run …)
@@ -138,6 +155,12 @@ acesso** (email e palavra-passe) ligada à sua ficha. Há três perfis:
 | Ver horas | de todos | da sua equipa | só as suas |
 | Ver o local onde se picou | ✅ | — | — |
 | Corrigir horas à mão, exportar a equipa | ✅ | — | — |
+| Ver, criar e alterar visitas (com fotos) | ✅ | ✅ | — |
+| Ver orçamentos e o PDF | ✅ | ✅ | — |
+| Criar e alterar orçamentos em rascunho | ✅ | ✅ | — |
+| Enviar, marcar aceite/recusado, converter em trabalho | ✅ | — | — |
+| Apagar visitas e rascunhos de orçamento | ✅ | os que criou | — |
+| Alterar os dados da empresa | ✅ | — | — |
 | Mudar a própria palavra-passe | ✅ | ✅ | ✅ |
 
 **Onde são aplicadas** (do mais importante para o menos importante):
@@ -222,8 +245,9 @@ até 3 MB por ficheiro). Não é preciso configurar nada no painel. Com a compre
 
 Para experimentar a app, cole o conteúdo de `supabase/seed.sql` no **SQL Editor** e clique **Run**.
 Cria 2 equipas, 7 colaboradores, 8 clientes, 12 locais, trabalhos (hoje, no último e no próximo dia
-útil, mais uma série semanal), 2 registos com materiais, horas do último dia útil e estas contas,
-todas com a palavra-passe **`Fatijardins2026!`**:
+útil, mais uma série semanal), 2 registos com materiais, horas do último dia útil, 2 visitas, 4
+orçamentos (um rascunho, um enviado, um aceite por converter e um recusado) e estas contas, todas
+com a palavra-passe **`Fatijardins2026!`**:
 
 | Email | Nome | Perfil | Equipa |
 | --- | --- | --- | --- |
@@ -284,8 +308,8 @@ A partir daí, o gerente cria os restantes colaboradores e acessos na própria a
 ### Testes de permissões
 
 Com os dados de exemplo no dia de hoje (os testes da fase 2 contam os trabalhos de “hoje”; se
-preciso, corra antes `supabase/exemplos_para_hoje.sql`), cole `supabase/tests/rls_fase1.sql` e depois `supabase/tests/rls_fase2.sql` no
-**SQL Editor** e clique **Run**. O teste corre dentro de uma transação e desfaz tudo no fim (*rollback*), por isso **não
+preciso, corra antes `supabase/exemplos_para_hoje.sql`), cole `supabase/tests/rls_fase1.sql`, depois `supabase/tests/rls_fase2.sql` e por fim
+`supabase/tests/rls_fase3.sql` no **SQL Editor** e clique **Run** em cada um. O teste corre dentro de uma transação e desfaz tudo no fim (*rollback*), por isso **não
 altera dados**. Se alguma regra estiver errada aparece um erro `FALHOU: …`; se tudo estiver bem,
 termina sem erros.
 
@@ -400,6 +424,8 @@ npm run build       # compila como na Vercel; se passar aqui, deve passar lá
 6. Recomendado: em **Settings → Functions → Function Region** escolha **Paris (cdg1)**, a mesma
    região do Supabase (a app fica mais rápida).
 7. No Supabase, atualize **Site URL** e **Redirect URLs** com o endereço final (passo 4).
+8. Entre como gerente e preencha **Perfil → Dados da empresa** (nome, NIF, morada, contactos, IBAN,
+   validade e condições dos orçamentos): é o que aparece no PDF dos orçamentos.
 
 As variáveis `NEXT_PUBLIC_…` ficam gravadas na compilação: se as mudar, faça **Redeploy**.
 
@@ -494,6 +520,25 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
   - o chefe, pela API, consegue ler a localização arredondada das picagens da sua equipa;
   - ficheiros enviados para o Storage sem foto associada ficam lá até serem apagados no painel
     (o limite de 3 MB por ficheiro reduz o impacto).
+- **Fase 3 — visitas:** uma visita é uma ida ao local do cliente para preparar um orçamento (fotos,
+  medidas em texto livre, área e notas); não aparece na agenda das equipas. As fotos ficam no mesmo
+  espaço privado das fotos dos trabalhos (pasta `visitas/`).
+- **Fase 3 — orçamentos:** o chefe prepara visitas e rascunhos; só o gerente envia ao cliente, marca
+  como aceite ou recusado e converte em trabalho (regras na base de dados). Só o rascunho se altera:
+  para corrigir um orçamento enviado, volta-se a pô-lo em rascunho. Enviar não manda emails: o
+  gerente abre o PDF e envia-o como quiser (email, WhatsApp…) e marca-o como enviado. O estado
+  “Expirado” só aparece (o orçamento não muda sozinho de estado).
+- **Fase 3 — valores:** cada linha tem a sua taxa de IVA (23%, 13%, 6% ou isento — taxas do
+  Continente); o IVA é calculado por taxa sobre a soma das linhas, como numa fatura, e os totais são
+  calculados pela base de dados (a app mostra exatamente o mesmo). Não há linha de desconto (a base
+  de dados não aceita preços negativos): para fazer um desconto, baixa-se o preço das linhas.
+  Números sequenciais por ano (2026/0001, 2026/0002…).
+- **Fase 3 — PDF:** gerado no momento em que se abre (não se guarda uma cópia): como um orçamento
+  enviado já não muda, o PDF é sempre o mesmo. Os rascunhos levam a marca “RASCUNHO”. Inclui “Este
+  documento não é uma fatura”.
+- **Fase 3 — conversão:** o orçamento aceite passa a um trabalho (obra ou manutenção) num dia e
+  numa equipa à escolha, com as linhas de mão de obra como tarefas previstas; fica ligado ao
+  orçamento e cada orçamento só se converte uma vez.
 - **Português de Portugal** em toda a interface: datas `dd/mm/aaaa`, euros `1 234,56 €`, fuso
   horário de Lisboa.
 - **A app não emite faturas.** Em Portugal as faturas têm de ser emitidas por software certificado
@@ -506,8 +551,8 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
    colaboradores, equipas e ausências, app instalável, dados de exemplo.
 2. **Campo** ✅ — agenda/calendário por equipa, “O meu dia” para o colaborador, registo diário com
    fotos e materiais, picagem de horas.
-3. **Orçamentos** — visitas com fotos, editor de orçamento, PDF com logótipo, conversão do orçamento
-   aceite em trabalho.
+3. **Orçamentos** ✅ — visitas com fotos, editor de orçamento, PDF com logótipo, conversão do
+   orçamento aceite em trabalho.
 4. **Recursos** — equipamentos e manutenções, consumíveis e stock ligado aos trabalhos.
 5. **Dinheiro** — pagamentos, dívidas por cliente, contratos de manutenção recorrentes com geração
    automática de agendamentos e cobranças.

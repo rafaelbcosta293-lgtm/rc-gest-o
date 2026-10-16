@@ -1,9 +1,10 @@
 -- =====================================================================
--- Põe os dados de exemplo da fase 2 no dia de hoje.
+-- Põe os dados de exemplo no dia de hoje.
 -- Os trabalhos de exemplo foram criados para o dia em que a seed correu;
--- este script desloca-os (e as horas de exemplo) para que os trabalhos
+-- este script desloca-os (e as horas, os prazos dos equipamentos, as
+-- manutenções e os movimentos de stock de exemplo) para que os trabalhos
 -- "de hoje" voltem a ser de hoje, mantendo o último e o próximo dia útil
--- à mesma distância. Só mexe nos dados de exemplo (ids fixos da seed) e
+-- e os alertas à mesma distância. Só mexe nos dados de exemplo (ids fixos da seed) e
 -- pode correr-se as vezes que for preciso (no SQL Editor: colar e Run).
 -- NÃO use numa base de dados com dados reais da empresa.
 -- =====================================================================
@@ -40,6 +41,31 @@ where d.dias <> 0
     h.trabalho_id::text like 'b0000000-0000-4000-8000-%'
     or (h.trabalho_id is null and (h.entrada at time zone 'Europe/Lisbon')::date = d.dia_das_horas)
   );
+
+-- Fase 4: prazos dos equipamentos, manutenções e compras de exemplo andam
+-- os mesmos dias; as saídas dos materiais ficam no dia do seu trabalho.
+update public.equipamentos e
+set data_aquisicao = e.data_aquisicao + d.dias,
+    proxima_revisao = e.proxima_revisao + d.dias,
+    seguro_ate = e.seguro_ate + d.dias,
+    ipo_ate = e.ipo_ate + d.dias
+from desvio d
+where d.dias <> 0 and e.id::text like 'a4000000-0000-4000-8000-%';
+
+update public.manutencoes_equipamento m
+set data = m.data + d.dias
+from desvio d
+where d.dias <> 0 and m.equipamento_id::text like 'a4000000-0000-4000-8000-%';
+
+update public.movimentos_stock m
+set data = m.data + d.dias
+from desvio d
+where d.dias <> 0 and m.registo_material_id is null and m.consumivel_id::text like 'a5000000-0000-4000-8000-%';
+
+update public.movimentos_stock m
+set data = t.data
+from public.trabalhos t
+where m.registo_material_id is not null and m.trabalho_id = t.id and m.data <> t.data;
 
 select dias as dias_deslocados from desvio;
 commit;

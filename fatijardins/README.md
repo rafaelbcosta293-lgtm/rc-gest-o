@@ -2,10 +2,11 @@
 
 Aplicação de gestão interna da **Fatijardins**, empresa de manutenção e construção de jardins.
 Serve para organizar a **equipa**, os **clientes** e os **locais**, a **agenda** dos trabalhos, o
-**registo** do que se faz no local, as **horas** de cada pessoa, as **visitas** e os **orçamentos**. Foi pensada primeiro para o
+**registo** do que se faz no local, as **horas** de cada pessoa, as **visitas**, os **orçamentos**, os
+**equipamentos** e o **stock** de consumíveis. Foi pensada primeiro para o
 **telemóvel** (pode ser instalada como uma app) e funciona também no **PC**.
 
-> **Estado:** fases 1 (Base), 2 (Campo) e 3 (Orçamentos) concluídas. Ver o [roteiro](#12-roteiro-das-fases) no fim.
+> **Estado:** fases 1 (Base), 2 (Campo), 3 (Orçamentos) e 4 (Recursos) concluídas. Ver o [roteiro](#12-roteiro-das-fases) no fim.
 
 **Índice:** [O que faz](#o-que-a-app-faz) ·
 [Tecnologia](#tecnologia) ·
@@ -62,6 +63,16 @@ Serve para organizar a **equipa**, os **clientes** e os **locais**, a **agenda**
 - **Ficha do cliente** com o histórico de trabalhos, visitas e orçamentos.
 - **Dados da empresa** (gerente): nome, NIF, morada, contactos, IBAN e a validade e as condições
   propostas para os orçamentos novos — aparecem no PDF.
+- **Equipamentos** (Recursos, gerente e chefes): inventário de viaturas, máquinas e ferramentas com
+  estado (operacional, avariado, em reparação, abatido), atribuição a uma equipa e/ou pessoa, e as
+  datas da próxima revisão, do seguro e da IPO, com alertas 30 dias antes e quando já passaram. O
+  chefe marca avarias nos equipamentos da sua equipa; o gerente regista as **manutenções** (com
+  custo e km/horas), que podem atualizar logo a data do prazo seguinte.
+- **Consumíveis e stock** (Recursos): artigos com categoria, unidade, preço e stock mínimo; entradas
+  (compras), saídas ligadas a trabalhos e acertos de inventário pelo stock contado; alertas de
+  **stock baixo**. Os materiais escolhidos do catálogo na ficha do trabalho **saem do stock
+  sozinhos** (e voltam se forem apagados). Preços, valor em stock e movimentos só o gerente vê.
+- **Alertas no Início** (gerente e chefes): equipamentos a precisar de atenção e stock baixo.
 - **App instalável** no telemóvel (PWA), com uma página “Sem ligação à internet” quando não há rede.
 
 ## Tecnologia
@@ -88,6 +99,7 @@ fatijardins/
 │   │   ├── trabalhos/        Criar/editar trabalhos (+ acoes.ts) e a ficha com o registo diário
 │   │   ├── orcamentos/       Orçamentos (lista, editor, estados, conversão, PDF) e visitas/
 │   │   ├── empresa/          Dados da empresa para o PDF (só gerente)
+│   │   ├── recursos/         Equipamentos e manutenções; consumiveis/ (stock e movimentos)
 │   │   ├── horas/            Mapa mensal, correções e exportação CSV (+ picagem em acoes.ts)
 │   │   ├── clientes/         Clientes e os seus locais (+ acoes.ts: gravar na base de dados)
 │   │   ├── equipa/           Colaboradores, equipas, ausências e acessos (+ acoes.ts)
@@ -111,6 +123,7 @@ fatijardins/
 │   ├── horas.ts              Contas das horas (por dia, extras, por trabalho)
 │   ├── orcamentos.ts         Estados, tipos de linha, IVA e totais dos orçamentos
 │   ├── visitas.ts            Caminhos das fotos das visitas
+│   ├── recursos.ts           Estados dos equipamentos, alertas de prazos e stock baixo
 │   ├── pdf/                  PDF do orçamento (react-pdf, fonte Geist)
 │   └── fotos.ts              Compressão das fotos no telemóvel antes de enviar
 ├── public/
@@ -120,9 +133,9 @@ fatijardins/
 ├── supabase/
 │   ├── migrations/           SQL que cria as tabelas e as permissões (por ordem de data)
 │   ├── seed.sql              Dados de exemplo (contas, equipas, clientes, locais, trabalhos, horas,
-│   │                         visitas e orçamentos)
+│   │                         visitas, orçamentos, equipamentos e consumíveis)
 │   ├── exemplos_para_hoje.sql Põe os trabalhos e as horas de exemplo no dia de hoje
-│   └── tests/                Testes das permissões (rls_fase1.sql, rls_fase2.sql, rls_fase3.sql)
+│   └── tests/                Testes das permissões (rls_fase1.sql … rls_fase4.sql)
 ├── proxy.ts                  Envia para /login quem não tem sessão
 ├── .env.example              Modelo das variáveis de ambiente
 └── package.json              Dependências e comandos (npm run …)
@@ -161,6 +174,13 @@ acesso** (email e palavra-passe) ligada à sua ficha. Há três perfis:
 | Enviar, marcar aceite/recusado, converter em trabalho | ✅ | — | — |
 | Apagar visitas e rascunhos de orçamento | ✅ | os que criou | — |
 | Alterar os dados da empresa | ✅ | — | — |
+| Ver equipamentos e o stock dos consumíveis | ✅ | ✅ | — |
+| Criar, alterar, abater e apagar equipamentos | ✅ | — | — |
+| Mudar o estado (avaria) e as notas de um equipamento | ✅ | da sua equipa ou sem equipa | — |
+| Ver e registar manutenções (custos) | ✅ | — | — |
+| Criar e alterar consumíveis; ver preços, valor e movimentos | ✅ | — | — |
+| Registar entradas, saídas e acertos de stock | ✅ | — | — |
+| Escolher consumíveis do catálogo nos materiais do trabalho | ✅ | ✅ | nos trabalhos de hoje |
 | Mudar a própria palavra-passe | ✅ | ✅ | ✅ |
 
 **Onde são aplicadas** (do mais importante para o menos importante):
@@ -247,7 +267,9 @@ até 3 MB por ficheiro). Não é preciso configurar nada no painel. Com a compre
 Para experimentar a app, cole o conteúdo de `supabase/seed.sql` no **SQL Editor** e clique **Run**.
 Cria 2 equipas, 7 colaboradores, 8 clientes, 12 locais, trabalhos (hoje, no último e no próximo dia
 útil, mais uma série semanal), 2 registos com materiais, horas do último dia útil, 2 visitas, 4
-orçamentos (um rascunho, um enviado, um aceite por converter e um recusado) e estas contas, todas
+orçamentos (um rascunho, um enviado, um aceite por converter e um recusado), 8 equipamentos (com
+prazos a vencer, uma IPO vencida, uma avaria e um em reparação), 9 consumíveis com compras e stock
+(dois abaixo do mínimo) e estas contas, todas
 com a palavra-passe **`Fatijardins2026!`**:
 
 | Email | Nome | Perfil | Equipa |
@@ -309,8 +331,8 @@ A partir daí, o gerente cria os restantes colaboradores e acessos na própria a
 ### Testes de permissões
 
 Com os dados de exemplo no dia de hoje (os testes da fase 2 contam os trabalhos de “hoje”; se
-preciso, corra antes `supabase/exemplos_para_hoje.sql`), cole `supabase/tests/rls_fase1.sql`, depois `supabase/tests/rls_fase2.sql` e por fim
-`supabase/tests/rls_fase3.sql` no **SQL Editor** e clique **Run** em cada um. O teste corre dentro de uma transação e desfaz tudo no fim (*rollback*), por isso **não
+preciso, corra antes `supabase/exemplos_para_hoje.sql`), cole `supabase/tests/rls_fase1.sql`, depois `rls_fase2.sql`,
+`rls_fase3.sql` e por fim `rls_fase4.sql` no **SQL Editor** e clique **Run** em cada um. O teste corre dentro de uma transação e desfaz tudo no fim (*rollback*), por isso **não
 altera dados**. Se alguma regra estiver errada aparece um erro `FALHOU: …`; se tudo estiver bem,
 termina sem erros.
 
@@ -515,8 +537,8 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
   acima de 8 h por dia útil, e todas as horas em fins de semana e feriados nacionais (os feriados
   municipais não estão incluídos). O CSV usa `;` e vírgula decimal, para abrir bem no Excel português,
   e traz também os minutos exatos (o total em horas é calculado a partir deles).
-- **Fase 2 — materiais:** registados como texto (descrição, quantidade, unidade); na fase 4 passam a
-  ligar-se aos consumíveis e ao stock.
+- **Fase 2 — materiais:** registados como texto (descrição, quantidade, unidade); desde a fase 4
+  escolhem-se de preferência do catálogo de consumíveis (e saem do stock).
 - **Fase 2 — fotos:** comprimidas no telemóvel antes de enviar; guardadas num espaço privado e
   mostradas com ligações temporárias (1 hora).
 - **Fase 2 — trabalhos já começados:** um trabalho com horas, registo do dia ou fotos não muda de
@@ -558,6 +580,21 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
 - **Fase 3 — conversão:** o orçamento aceite passa a um trabalho (obra ou manutenção) num dia e
   numa equipa à escolha, com as linhas de mão de obra como tarefas previstas; fica ligado ao
   orçamento e cada orçamento só se converte uma vez.
+- **Fase 4 — equipamentos:** cada equipamento pode ficar atribuído a uma equipa e/ou a uma pessoa
+  (sem nenhuma, aparece como “Armazém”). Os alertas de revisão, seguro e IPO aparecem 30 dias antes
+  e ficam até a data ser atualizada (o mais simples: registar a manutenção com a nova data). O chefe
+  só muda o estado (avariado, em reparação, operacional) e acrescenta notas — com a data e o nome —
+  nos equipamentos da sua equipa ou sem equipa; abater é do gerente, e abater é preferível a apagar
+  (apagar leva também as manutenções). As manutenções têm custos e por isso só o gerente as vê.
+- **Fase 4 — stock:** o stock de cada consumível é a soma dos movimentos (entradas positivas,
+  saídas negativas, acertos com qualquer sinal); não se guarda um total à parte. Um acerto regista a
+  diferença entre o stock contado e o da app. As saídas dos materiais escolhidos do catálogo são
+  criadas e acompanhadas pela base de dados (não se editam à mão); material escrito à mão
+  (“Outro”) não mexe no stock. Stock baixo = no mínimo ou abaixo dele. A unidade de um consumível
+  com movimentos já não muda (cria-se outro e desativa-se este); um consumível com movimentos não se
+  apaga, desativa-se (deixa de aparecer nos materiais). O preço é o da última compra (a entrada pode
+  atualizá-lo) e o valor em stock usa esse preço. O stock pode ficar negativo (a app avisa e pede um
+  acerto).
 - **Português de Portugal** em toda a interface: datas `dd/mm/aaaa`, euros `1 234,56 €`, fuso
   horário de Lisboa.
 - **A app não emite faturas.** Em Portugal as faturas têm de ser emitidas por software certificado
@@ -572,7 +609,8 @@ Para trocar o símbolo pelo logótipo oficial: altere o desenho em `components/l
    fotos e materiais, picagem de horas.
 3. **Orçamentos** ✅ — visitas com fotos, editor de orçamento, PDF com logótipo, conversão do
    orçamento aceite em trabalho.
-4. **Recursos** — equipamentos e manutenções, consumíveis e stock ligado aos trabalhos.
+4. **Recursos** ✅ — equipamentos e manutenções com alertas de revisão, seguro e IPO; consumíveis
+   e stock ligado aos materiais dos trabalhos, com alertas de stock baixo.
 5. **Dinheiro** — pagamentos, dívidas por cliente, contratos de manutenção recorrentes com geração
    automática de agendamentos e cobranças.
 6. **Extras** — rotas do dia, obras com orçado vs. real, relatórios, calendário sazonal.

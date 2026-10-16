@@ -185,6 +185,71 @@ export type Database = {
           },
         ]
       }
+      consumiveis: {
+        Row: {
+          ativo: boolean
+          categoria: string | null
+          created_at: string
+          id: string
+          nome: string
+          notas: string | null
+          stock_minimo: number
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          notas?: string | null
+          stock_minimo?: number
+          unidade?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          notas?: string | null
+          stock_minimo?: number
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      consumiveis_precos: {
+        Row: {
+          consumivel_id: string
+          created_at: string
+          preco_unitario: number
+          updated_at: string
+        }
+        Insert: {
+          consumivel_id: string
+          created_at?: string
+          preco_unitario?: number
+          updated_at?: string
+        }
+        Update: {
+          consumivel_id?: string
+          created_at?: string
+          preco_unitario?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumiveis_precos_consumivel_id_fkey"
+            columns: ["consumivel_id"]
+            isOneToOne: true
+            referencedRelation: "consumiveis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresa: {
         Row: {
           codigo_postal: string | null
@@ -232,6 +297,81 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      equipamentos: {
+        Row: {
+          colaborador_id: string | null
+          created_at: string
+          data_aquisicao: string | null
+          equipa_id: string | null
+          estado: Database["public"]["Enums"]["estado_equipamento"]
+          id: string
+          ipo_ate: string | null
+          marca: string | null
+          matricula: string | null
+          modelo: string | null
+          nome: string
+          notas: string | null
+          numero_serie: string | null
+          proxima_revisao: string | null
+          seguro_ate: string | null
+          tipo: Database["public"]["Enums"]["tipo_equipamento"]
+          updated_at: string
+        }
+        Insert: {
+          colaborador_id?: string | null
+          created_at?: string
+          data_aquisicao?: string | null
+          equipa_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_equipamento"]
+          id?: string
+          ipo_ate?: string | null
+          marca?: string | null
+          matricula?: string | null
+          modelo?: string | null
+          nome: string
+          notas?: string | null
+          numero_serie?: string | null
+          proxima_revisao?: string | null
+          seguro_ate?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_equipamento"]
+          updated_at?: string
+        }
+        Update: {
+          colaborador_id?: string | null
+          created_at?: string
+          data_aquisicao?: string | null
+          equipa_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_equipamento"]
+          id?: string
+          ipo_ate?: string | null
+          marca?: string | null
+          matricula?: string | null
+          modelo?: string | null
+          nome?: string
+          notas?: string | null
+          numero_serie?: string | null
+          proxima_revisao?: string | null
+          seguro_ate?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_equipamento"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipamentos_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipamentos_equipa_id_fkey"
+            columns: ["equipa_id"]
+            isOneToOne: false
+            referencedRelation: "equipas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       equipas: {
         Row: {
@@ -390,6 +530,134 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manutencoes_equipamento: {
+        Row: {
+          colaborador_id: string | null
+          contador: number | null
+          created_at: string
+          custo: number | null
+          data: string
+          descricao: string | null
+          equipamento_id: string
+          id: string
+          tipo: Database["public"]["Enums"]["tipo_manutencao"]
+          updated_at: string
+        }
+        Insert: {
+          colaborador_id?: string | null
+          contador?: number | null
+          created_at?: string
+          custo?: number | null
+          data?: string
+          descricao?: string | null
+          equipamento_id: string
+          id?: string
+          tipo?: Database["public"]["Enums"]["tipo_manutencao"]
+          updated_at?: string
+        }
+        Update: {
+          colaborador_id?: string | null
+          contador?: number | null
+          created_at?: string
+          custo?: number | null
+          data?: string
+          descricao?: string | null
+          equipamento_id?: string
+          id?: string
+          tipo?: Database["public"]["Enums"]["tipo_manutencao"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manutencoes_equipamento_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manutencoes_equipamento_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "equipamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      movimentos_stock: {
+        Row: {
+          colaborador_id: string | null
+          consumivel_id: string
+          created_at: string
+          data: string
+          id: string
+          notas: string | null
+          preco_unitario: number | null
+          quantidade: number
+          registo_material_id: string | null
+          tipo: Database["public"]["Enums"]["tipo_movimento_stock"]
+          trabalho_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          colaborador_id?: string | null
+          consumivel_id: string
+          created_at?: string
+          data?: string
+          id?: string
+          notas?: string | null
+          preco_unitario?: number | null
+          quantidade: number
+          registo_material_id?: string | null
+          tipo: Database["public"]["Enums"]["tipo_movimento_stock"]
+          trabalho_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          colaborador_id?: string | null
+          consumivel_id?: string
+          created_at?: string
+          data?: string
+          id?: string
+          notas?: string | null
+          preco_unitario?: number | null
+          quantidade?: number
+          registo_material_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_movimento_stock"]
+          trabalho_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentos_stock_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_stock_consumivel_id_fkey"
+            columns: ["consumivel_id"]
+            isOneToOne: false
+            referencedRelation: "consumiveis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_stock_registo_material_fkey"
+            columns: ["registo_material_id"]
+            isOneToOne: true
+            referencedRelation: "registo_materiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_stock_trabalho_id_fkey"
+            columns: ["trabalho_id"]
+            isOneToOne: false
+            referencedRelation: "trabalhos"
             referencedColumns: ["id"]
           },
         ]
@@ -560,6 +828,7 @@ export type Database = {
       }
       registo_materiais: {
         Row: {
+          consumivel_id: string | null
           created_at: string
           descricao: string
           id: string
@@ -569,6 +838,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          consumivel_id?: string | null
           created_at?: string
           descricao: string
           id?: string
@@ -578,6 +848,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          consumivel_id?: string | null
           created_at?: string
           descricao?: string
           id?: string
@@ -587,6 +858,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "registo_materiais_consumivel_id_fkey"
+            columns: ["consumivel_id"]
+            isOneToOne: false
+            referencedRelation: "consumiveis"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "registo_materiais_registo_id_fkey"
             columns: ["registo_id"]
@@ -969,8 +1247,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      stock_consumiveis: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          consumivel_id: string
+          stock: number
+        }[]
+      }
     }
     Enums: {
+      estado_equipamento:
+        "operacional" | "avariado" | "em_reparacao" | "abatido"
       estado_orcamento: "rascunho" | "enviado" | "aceite" | "recusado"
       estado_trabalho: "agendado" | "em_curso" | "concluido" | "cancelado"
       momento_foto: "antes" | "depois" | "outra"
@@ -978,8 +1265,11 @@ export type Database = {
       origem_trabalho: "avulso" | "contrato" | "orcamento"
       perfil_utilizador: "gerente" | "chefe_equipa" | "colaborador"
       tipo_ausencia: "ferias" | "doenca" | "formacao" | "falta" | "outro"
+      tipo_equipamento: "viatura" | "maquina" | "ferramenta" | "outro"
       tipo_linha_orcamento:
         "mao_de_obra" | "material" | "equipamento" | "outros"
+      tipo_manutencao: "revisao" | "reparacao" | "ipo" | "seguro" | "outra"
+      tipo_movimento_stock: "entrada" | "saida" | "ajuste"
       tipo_trabalho: "manutencao" | "obra"
     }
     CompositeTypes: {
@@ -1105,6 +1395,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      estado_equipamento: [
+        "operacional",
+        "avariado",
+        "em_reparacao",
+        "abatido",
+      ],
       estado_orcamento: ["rascunho", "enviado", "aceite", "recusado"],
       estado_trabalho: ["agendado", "em_curso", "concluido", "cancelado"],
       momento_foto: ["antes", "depois", "outra"],
@@ -1112,12 +1408,15 @@ export const Constants = {
       origem_trabalho: ["avulso", "contrato", "orcamento"],
       perfil_utilizador: ["gerente", "chefe_equipa", "colaborador"],
       tipo_ausencia: ["ferias", "doenca", "formacao", "falta", "outro"],
+      tipo_equipamento: ["viatura", "maquina", "ferramenta", "outro"],
       tipo_linha_orcamento: [
         "mao_de_obra",
         "material",
         "equipamento",
         "outros",
       ],
+      tipo_manutencao: ["revisao", "reparacao", "ipo", "seguro", "outra"],
+      tipo_movimento_stock: ["entrada", "saida", "ajuste"],
       tipo_trabalho: ["manutencao", "obra"],
     },
   },

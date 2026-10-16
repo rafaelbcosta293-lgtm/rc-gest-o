@@ -241,3 +241,71 @@ update public.orcamentos set estado = 'enviado'
 where id in ('a3000000-0000-4000-8000-000000000001', 'a3000000-0000-4000-8000-000000000002', 'a3000000-0000-4000-8000-000000000004');
 update public.orcamentos set estado = 'aceite' where id = 'a3000000-0000-4000-8000-000000000001';
 update public.orcamentos set estado = 'recusado' where id = 'a3000000-0000-4000-8000-000000000004';
+
+-- =====================================================================
+-- Fase 4 — equipamentos, manutenções, consumíveis e stock de exemplo
+-- =====================================================================
+insert into public.equipamentos (id, nome, tipo, marca, modelo, numero_serie, matricula, estado, equipa_id, colaborador_id,
+  data_aquisicao, proxima_revisao, seguro_ate, ipo_ate, notas) values
+  ('a4000000-0000-4000-8000-000000000001', 'Carrinha Ford Transit', 'viatura', 'Ford', 'Transit 350 L2', null, 'AA-12-BC',
+   'operacional', 'e0000000-0000-4000-8000-000000000001', null, current_date - 900, current_date + 45, current_date + 20,
+   current_date + 120, 'Leva o atrelado da Equipa Verde.'),
+  ('a4000000-0000-4000-8000-000000000002', 'Carrinha Renault Master', 'viatura', 'Renault', 'Master 2.3 dCi', null, 'BD-34-EF',
+   'operacional', 'e0000000-0000-4000-8000-000000000002', null, current_date - 1500, current_date + 10, current_date + 200,
+   current_date - 3, null),
+  ('a4000000-0000-4000-8000-000000000003', 'Corta-relva Honda', 'maquina', 'Honda', 'HRX 537', 'MZCG-1234567', null,
+   'operacional', 'e0000000-0000-4000-8000-000000000001', null, current_date - 400, current_date + 90, null, null, null),
+  ('a4000000-0000-4000-8000-000000000004', 'Roçadora Stihl', 'maquina', 'Stihl', 'FS 131', '533 456 789', null,
+   'operacional', 'e0000000-0000-4000-8000-000000000001', null, current_date - 700, current_date + 15, null, null, null),
+  ('a4000000-0000-4000-8000-000000000005', 'Motosserra Stihl', 'maquina', 'Stihl', 'MS 251', '178 222 401', null,
+   'avariado', 'e0000000-0000-4000-8000-000000000002', null, current_date - 1100, current_date + 60, null, null,
+   'Corrente solta e travão da corrente a falhar; aguarda peça.'),
+  ('a4000000-0000-4000-8000-000000000006', 'Soprador Echo', 'maquina', 'Echo', 'PB-580', null, null,
+   'operacional', null, null, current_date - 300, null, null, null, 'Fica no armazém; requisitar ao gerente.'),
+  ('a4000000-0000-4000-8000-000000000007', 'Escarificador', 'maquina', 'Sabo', '38-EL', null, null,
+   'em_reparacao', null, null, current_date - 2000, null, null, null, 'Na oficina desde a semana passada.'),
+  ('a4000000-0000-4000-8000-000000000008', 'Tesoura de poda Felco', 'ferramenta', 'Felco', 'Felco 2', null, null,
+   'operacional', null, 'c0000000-0000-4000-8000-000000000004', current_date - 200, null, null, null, null);
+
+insert into public.manutencoes_equipamento (equipamento_id, data, tipo, descricao, custo, contador, colaborador_id) values
+  ('a4000000-0000-4000-8000-000000000001', current_date - 60, 'revisao', 'Revisão dos 150 000 km: óleo, filtros e pastilhas.', 285.40, 152340, 'c0000000-0000-4000-8000-000000000001'),
+  ('a4000000-0000-4000-8000-000000000004', current_date - 150, 'revisao', 'Afinação, vela e filtro de ar.', 38.50, 210, 'c0000000-0000-4000-8000-000000000001'),
+  ('a4000000-0000-4000-8000-000000000005', current_date - 5, 'reparacao', 'Diagnóstico na oficina: travão da corrente; peça encomendada.', null, null, 'c0000000-0000-4000-8000-000000000001');
+
+insert into public.consumiveis (id, nome, categoria, unidade, stock_minimo, ativo) values
+  ('a5000000-0000-4000-8000-000000000001', 'Fio de roçadora 3 mm', 'Ferramentas', 'm', 50, true),
+  ('a5000000-0000-4000-8000-000000000002', 'Sacos de recolha de verdes', 'Limpeza', 'un', 20, true),
+  ('a5000000-0000-4000-8000-000000000003', 'Adubo de outono 12-6-24', 'Adubos', 'kg', 25, true),
+  ('a5000000-0000-4000-8000-000000000004', 'Composto orgânico (saco de 50 L)', 'Substratos', 'un', 10, true),
+  ('a5000000-0000-4000-8000-000000000005', 'Mistura 2 tempos (gasolina + óleo)', 'Combustíveis', 'L', 10, true),
+  ('a5000000-0000-4000-8000-000000000006', 'Semente de relva (mistura de sombra)', 'Sementes', 'kg', 5, true),
+  ('a5000000-0000-4000-8000-000000000007', 'Tubo de rega gota a gota 16 mm', 'Rega', 'm', 100, true),
+  ('a5000000-0000-4000-8000-000000000008', 'Aspersor de turbina', 'Rega', 'un', 4, true),
+  ('a5000000-0000-4000-8000-000000000009', 'Herbicida (descontinuado)', 'Fitofármacos', 'L', 0, false);
+
+insert into public.consumiveis_precos (consumivel_id, preco_unitario) values
+  ('a5000000-0000-4000-8000-000000000001', 0.32),
+  ('a5000000-0000-4000-8000-000000000002', 1.10),
+  ('a5000000-0000-4000-8000-000000000003', 1.85),
+  ('a5000000-0000-4000-8000-000000000004', 5.40),
+  ('a5000000-0000-4000-8000-000000000005', 1.95),
+  ('a5000000-0000-4000-8000-000000000006', 9.50),
+  ('a5000000-0000-4000-8000-000000000007', 0.38),
+  ('a5000000-0000-4000-8000-000000000008', 12.90),
+  ('a5000000-0000-4000-8000-000000000009', 14.00);
+
+-- Compras iniciais (entradas, com preço). O aspersor e a mistura 2 tempos ficam abaixo do mínimo.
+insert into public.movimentos_stock (consumivel_id, tipo, quantidade, data, preco_unitario, notas, colaborador_id) values
+  ('a5000000-0000-4000-8000-000000000001', 'entrada', 200, current_date - 30, 0.32, 'Rolo de 200 m', 'c0000000-0000-4000-8000-000000000001'),
+  ('a5000000-0000-4000-8000-000000000002', 'entrada', 100, current_date - 30, 1.10, null, 'c0000000-0000-4000-8000-000000000001'),
+  ('a5000000-0000-4000-8000-000000000003', 'entrada', 100, current_date - 30, 1.85, '4 sacos de 25 kg', 'c0000000-0000-4000-8000-000000000001'),
+  ('a5000000-0000-4000-8000-000000000004', 'entrada', 30, current_date - 30, 5.40, null, 'c0000000-0000-4000-8000-000000000001'),
+  ('a5000000-0000-4000-8000-000000000005', 'entrada', 8, current_date - 30, 1.95, null, 'c0000000-0000-4000-8000-000000000001'),
+  ('a5000000-0000-4000-8000-000000000006', 'entrada', 15, current_date - 30, 9.50, null, 'c0000000-0000-4000-8000-000000000001'),
+  ('a5000000-0000-4000-8000-000000000007', 'entrada', 300, current_date - 30, 0.38, null, 'c0000000-0000-4000-8000-000000000001'),
+  ('a5000000-0000-4000-8000-000000000008', 'entrada', 2, current_date - 30, 12.90, null, 'c0000000-0000-4000-8000-000000000001');
+
+-- Os materiais de exemplo da fase 2 passam a estar ligados ao catálogo (geram as saídas de stock).
+update public.registo_materiais set consumivel_id = 'a5000000-0000-4000-8000-000000000002' where descricao = 'Sacos de recolha de verdes';
+update public.registo_materiais set consumivel_id = 'a5000000-0000-4000-8000-000000000001' where descricao = 'Fio de roçadora 3 mm';
+update public.registo_materiais set consumivel_id = 'a5000000-0000-4000-8000-000000000003' where descricao = 'Adubo de outono 12-6-24';

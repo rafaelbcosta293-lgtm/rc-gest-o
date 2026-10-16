@@ -82,7 +82,8 @@ create trigger visitas_cliente_do_local
   for each row execute function app.trabalho_cliente_do_local();
 
 -- Quem cria é sempre o utilizador da sessão (pedidos sem sessão, como a
--- seed, mantêm o valor indicado).
+-- seed, mantêm o valor indicado) e o autor não se altera depois — exceto
+-- quando o colaborador é apagado (on delete set null).
 create or replace function app.definir_criado_por()
 returns trigger
 language plpgsql
@@ -92,7 +93,10 @@ as $$
 begin
   if tg_op = 'INSERT' then
     new.criado_por := coalesce(app.colaborador_atual(), new.criado_por);
-  else
+  elsif not (
+    new.criado_por is null
+    and not exists (select 1 from public.colaboradores c where c.id = old.criado_por)
+  ) then
     new.criado_por := old.criado_por;
   end if;
   return new;
@@ -159,6 +163,14 @@ create trigger orcamentos_criado_por
   before insert or update on public.orcamentos
   for each row execute function app.definir_criado_por();
 
+-- Último número usado em cada ano. Nunca desce: um número que já foi para
+-- um cliente (mesmo de um orçamento depois apagado) não volta a ser usado.
+create table app.contadores_orcamento (
+  ano integer primary key,
+  ultimo integer not null check (ultimo > 0)
+);
+alter table app.contadores_orcamento enable row level security;
+
 -- Número do orçamento: o seguinte do ano da data. Sem validade indicada,
 -- usa a validade proposta nos dados da empresa.
 create or replace function app.numerar_orcamento()
@@ -173,9 +185,12 @@ begin
     new.data + coalesce((select e.validade_orcamento_dias from public.empresa e), 30)
   );
   new.ano := extract(year from new.data)::integer;
-  -- Um orçamento de cada vez por ano, para não haver números repetidos.
-  perform pg_advisory_xact_lock(hashtext('orcamentos'), new.ano);
-  select coalesce(max(o.numero), 0) + 1 into new.numero from public.orcamentos o where o.ano = new.ano;
+  -- A linha do contador fica bloqueada até ao fim da transação: dois
+  -- orçamentos criados ao mesmo tempo nunca recebem o mesmo número.
+  insert into app.contadores_orcamento as c (ano, ultimo)
+  values (new.ano, 1)
+  on conflict (ano) do update set ultimo = c.ultimo + 1
+  returning c.ultimo into new.numero;
   return new;
 end;
 $$;
@@ -210,7 +225,9 @@ begin
   end if;
 
   if old.estado <> 'rascunho' and (
-    new.local_id, new.cliente_id, new.visita_id, new.titulo, new.descricao, new.data, new.validade, new.condicoes
+    -- Tirar a visita (ao apagá-la: on delete set null) é permitido.
+    new.local_id, new.cliente_id, coalesce(new.visita_id, old.visita_id), new.titulo, new.descricao, new.data,
+    new.validade, new.condicoes
   ) is distinct from (
     old.local_id, old.cliente_id, old.visita_id, old.titulo, old.descricao, old.data, old.validade, old.condicoes
   ) then
@@ -341,6 +358,25 @@ alter table public.trabalhos
 comment on column public.trabalhos.orcamento_id is 'Orçamento que deu origem a este trabalho (origem = orcamento).';
 
 create index trabalhos_orcamento_id_idx on public.trabalhos (orcamento_id) where orcamento_id is not null;
+
+-- A ligação ao orçamento só é escrita por converter_orcamento (que corre
+-- como dono da tabela): quem usa a app/API não a cria nem a muda.
+create or replace function app.proteger_orcamento_do_trabalho()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if current_user in ('authenticated', 'anon') then
+    new.orcamento_id := case when tg_op = 'INSERT' then null else old.orcamento_id end;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trabalhos_proteger_orcamento
+  before insert or update on public.trabalhos
+  for each row execute function app.proteger_orcamento_do_trabalho();
 
 -- Converte um orçamento aceite num trabalho (um clique). Só o gerente.
 -- p_ordem: lugar no dia da equipa (a app calcula-o pela hora; null = no fim).
@@ -564,10 +600,13 @@ grant execute on function public.converter_orcamento(uuid, date, uuid, public.ti
 
 revoke all on function app.definir_criado_por() from public;
 revoke all on function app.numerar_orcamento() from public;
+revoke all on function app.proteger_orcamento_do_trabalho() from public;
+revoke all on app.contadores_orcamento from public, anon, authenticated;
 revoke all on function app.regras_orcamento() from public;
 revoke all on function app.recalcular_totais_orcamento(uuid) from public;
 revoke all on function app.linhas_mudaram() from public;
 revoke all on function app.visita_do_caminho(text) from public;
+grant execute on function app.proteger_orcamento_do_trabalho() to authenticated, service_role;
 grant execute on function app.definir_criado_por(), app.numerar_orcamento(), app.regras_orcamento(),
   app.linhas_mudaram(), app.visita_do_caminho(text) to authenticated, service_role;
 grant execute on function app.recalcular_totais_orcamento(uuid) to service_role;

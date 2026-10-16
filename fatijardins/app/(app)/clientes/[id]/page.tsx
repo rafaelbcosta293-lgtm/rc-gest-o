@@ -233,7 +233,7 @@ async function FichaCliente({ params }: { params: PageProps<"/clientes/[id]">["p
           </div>
           <div className="min-w-0">
             <Suspense fallback={<EsqueletoCartaoHistorico />}>
-              <OrcamentosCliente clienteId={cliente.id} />
+              <OrcamentosCliente clienteId={cliente.id} nomeCliente={cliente.nome} />
             </Suspense>
           </div>
         </div>

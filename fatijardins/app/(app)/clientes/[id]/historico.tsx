@@ -312,7 +312,7 @@ export async function VisitasCliente({ clienteId, nomeCliente }: { clienteId: st
 // ---------------------------------------------------------------------
 
 /** Os últimos orçamentos (do número mais recente para o mais antigo). */
-export async function OrcamentosCliente({ clienteId }: { clienteId: string }) {
+export async function OrcamentosCliente({ clienteId, nomeCliente }: { clienteId: string; nomeCliente: string }) {
   const supabase = await createClient()
   const { data, count, error } = await supabase
     .from("orcamentos")
@@ -332,12 +332,22 @@ export async function OrcamentosCliente({ clienteId }: { clienteId: string }) {
       icone={FileTextIcon}
       descricao={total > LIMITE ? `Os ${LIMITE} mais recentes de ${total}.` : undefined}
       acao={
-        <Button asChild size="lg" variant="outline" className="w-full sm:w-fit">
-          <Link href={`/orcamentos/novo?cliente=${clienteId}`}>
-            <FilePlusIcon />
-            Novo orçamento
-          </Link>
-        </Button>
+        <>
+          <Button asChild size="lg" variant="outline" className="w-full sm:w-fit">
+            <Link href={`/orcamentos/novo?cliente=${clienteId}`}>
+              <FilePlusIcon />
+              Novo orçamento
+            </Link>
+          </Button>
+          {total > LIMITE && (
+            <Button asChild variant="ghost" size="lg" className="w-full sm:w-fit">
+              <Link href={`/orcamentos?${new URLSearchParams({ q: nomeCliente })}`}>
+                Ver todos os orçamentos
+                <ChevronRightIcon />
+              </Link>
+            </Button>
+          )}
+        </>
       }
     >
       {data.length === 0 ? (

@@ -169,6 +169,16 @@ select pg_temp.recusado(
   $q$delete from public.clientes where nome = 'Margarida Coelho'$q$,
   'cliente com orçamentos e visitas não se apaga'
 );
+insert into public.orcamentos (local_id, titulo)
+  select local_id, 'Teste Fase3 número A' from public.orcamentos where id = 'a3000000-0000-4000-8000-000000000002';
+delete from public.orcamentos where titulo = 'Teste Fase3 número A';
+insert into public.orcamentos (local_id, titulo)
+  select local_id, 'Teste Fase3 número B' from public.orcamentos where id = 'a3000000-0000-4000-8000-000000000002';
+select pg_temp.verificar(
+  (select numero = (select max(numero) from public.orcamentos o2 where o2.ano = o.ano and o2.titulo <> 'Teste Fase3 número B') + 2
+   from public.orcamentos o where titulo = 'Teste Fase3 número B'),
+  'o número de um orçamento apagado não volta a ser usado'
+);
 update public.empresa set nif = '509999999', validade_orcamento_dias = 45;
 select pg_temp.verificar((select validade_orcamento_dias = 45 from public.empresa), 'gerente altera os dados da empresa');
 reset role;
@@ -232,6 +242,21 @@ select pg_temp.verificar(
   'chefe apaga os seus rascunhos'
 );
 
+update public.trabalhos set orcamento_id = 'a3000000-0000-4000-8000-000000000002', origem = 'orcamento'
+  where id = 'b0000000-0000-4000-8000-000000000009';
+select pg_temp.verificar(
+  (select orcamento_id is null from public.trabalhos where id = 'b0000000-0000-4000-8000-000000000009'),
+  'chefe NÃO liga trabalhos a orçamentos (só a conversão o faz)'
+);
+insert into public.trabalhos (local_id, titulo, data, equipa_id, orcamento_id)
+  select local_id, 'Teste Fase3 trabalho ligado', current_date, 'e0000000-0000-4000-8000-000000000001',
+    'a3000000-0000-4000-8000-000000000002'
+  from public.trabalhos where id = 'b0000000-0000-4000-8000-000000000001';
+select pg_temp.verificar(
+  (select orcamento_id is null from public.trabalhos where titulo = 'Teste Fase3 trabalho ligado'),
+  'trabalho novo não nasce ligado a um orçamento'
+);
+
 -- Fotos de visitas (tabela e Storage)
 insert into public.fotos (visita_id, caminho)
   values ('a2000000-0000-4000-8000-000000000001', 'visitas/a2000000-0000-4000-8000-000000000001/teste.jpg');
@@ -292,5 +317,35 @@ select pg_temp.recusado(
   'colaborador NÃO envia fotos de visitas'
 );
 reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- ---------------------------------------------------------------------
+-- Apagar visitas com orçamentos já enviados e colaboradores que criaram
+-- visitas ou orçamentos
+-- ---------------------------------------------------------------------
+select pg_temp.entrar('a0000000-0000-4000-8000-000000000001');
+delete from public.fotos where visita_id = 'a2000000-0000-4000-8000-000000000001';
+delete from public.visitas where id = 'a2000000-0000-4000-8000-000000000001';
+select pg_temp.verificar(
+  (select count(*) from public.visitas where id = 'a2000000-0000-4000-8000-000000000001') = 0
+  and (select visita_id is null and estado = 'aceite' from public.orcamentos where id = 'a3000000-0000-4000-8000-000000000001'),
+  'gerente apaga uma visita com orçamento aceite (o orçamento fica sem visita)'
+);
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+insert into public.colaboradores (id, nome, funcao, perfil)
+  values ('c0000000-0000-4000-8000-0000000000f3', 'Teste Fase3 chefe a apagar', 'Chefe', 'chefe_equipa');
+insert into public.visitas (local_id, data, criado_por)
+  select local_id, current_date, 'c0000000-0000-4000-8000-0000000000f3'
+  from public.orcamentos where id = 'a3000000-0000-4000-8000-000000000002';
+insert into public.orcamentos (local_id, titulo, criado_por)
+  select local_id, 'Teste Fase3 do chefe a apagar', 'c0000000-0000-4000-8000-0000000000f3'
+  from public.orcamentos where id = 'a3000000-0000-4000-8000-000000000002';
+delete from public.colaboradores where id = 'c0000000-0000-4000-8000-0000000000f3';
+select pg_temp.verificar(
+  (select criado_por is null from public.orcamentos where titulo = 'Teste Fase3 do chefe a apagar'),
+  'apagar um colaborador que criou visitas e orçamentos deixa-os sem autor'
+);
 
 rollback;

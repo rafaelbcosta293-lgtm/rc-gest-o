@@ -181,6 +181,12 @@ async function FichaOrcamento({ params }: { params: PageProps<"/orcamentos/[id]"
                     linhas.
                   </p>
                 ))}
+              {orcamento.estado === "rascunho" && orcamento.validade < hoje && (
+                <p className="font-medium text-destructive">
+                  A validade ({formatarData(orcamento.validade)}) já passou: atualize a data e a validade antes de o
+                  enviar.
+                </p>
+              )}
               {orcamento.estado === "enviado" && (
                 <p>
                   Enviado ao cliente em {formatarData(orcamento.enviado_em)}. Válido até{" "}
@@ -206,7 +212,7 @@ async function FichaOrcamento({ params }: { params: PageProps<"/orcamentos/[id]"
                     ? "Para alterar, volte a pô-lo em rascunho."
                     : "Para alterar, o gerente tem de o voltar a pôr em rascunho."}
                   {/* Do aceite só se volta a enviado (e daí a rascunho). */}
-                  {orcamento.estado === "aceite" && " Primeiro, volte a marcá-lo como enviado."}
+                  {gerente && orcamento.estado === "aceite" && " Primeiro, anule a aceitação (volta a enviado)."}
                 </p>
               )}
               {gerente && !convertido && (

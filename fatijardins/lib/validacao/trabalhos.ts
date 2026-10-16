@@ -57,7 +57,7 @@ export function esquemaTrabalho({ equipaObrigatoria }: { equipaObrigatoria: bool
     .object({
       cliente_id: idEscolhido("Escolha o cliente."),
       local_id: idEscolhido("Escolha o local."),
-      titulo: textoObrigatorio("Indique o título (ex.: Manutenção).", 120),
+      titulo: textoObrigatorio("Indique o título (ex.: Manutenção).", 160),
       tipo: z.enum(TIPOS_TRABALHO, { error: "Escolha o tipo." }),
       data: dataValida("Indique a data."),
       hora_inicio: horaOpcional,
@@ -69,7 +69,8 @@ export function esquemaTrabalho({ equipaObrigatoria }: { equipaObrigatoria: bool
           "Escolha a equipa."
         )
         .transform((valor) => (valor === "" ? null : valor)),
-      descricao: textoOpcional(4000),
+      // Os trabalhos vindos de um orçamento levam a descrição e as linhas de mão de obra.
+      descricao: textoOpcional(20000),
       repetir: z.enum(RECORRENCIAS, { error: "Escolha se o trabalho se repete." }),
       ate: z.string().transform((valor) => (valor === "" ? null : valor)),
     })

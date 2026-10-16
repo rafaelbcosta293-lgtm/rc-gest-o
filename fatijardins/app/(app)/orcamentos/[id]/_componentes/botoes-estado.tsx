@@ -54,7 +54,9 @@ export function BotoesEstado({ orcamentoId, estado, convertido, numero, total }:
     const Icone = ICONE_ESTADO[para]
     // O passo seguinte natural é o botão principal.
     const principal = (estado === "rascunho" && para === "enviado") || para === "aceite"
-    const comConfirmacao = para === "aceite" || para === "recusado"
+    // Do aceite para enviado anula a aceitação do cliente: também pede confirmação.
+    const anularAceitacao = estado === "aceite" && para === "enviado"
+    const comConfirmacao = para === "aceite" || para === "recusado" || anularAceitacao
     const botao = (
       <Button
         key={para}
@@ -64,9 +66,25 @@ export function BotoesEstado({ orcamentoId, estado, convertido, numero, total }:
         onClick={comConfirmacao ? undefined : () => mudar(para)}
       >
         {aCorrer ? <LoaderCircleIcon className="animate-spin" /> : <Icone />}
-        {ACAO_ESTADO_ORCAMENTO[para]}
+        {anularAceitacao ? "Anular aceitação" : ACAO_ESTADO_ORCAMENTO[para]}
       </Button>
     )
+    if (anularAceitacao) {
+      return (
+        <Confirmar
+          key={para}
+          gatilho={botao}
+          titulo="Anular a aceitação?"
+          descricao={
+            <>
+              O orçamento <strong>{numero}</strong> volta a enviado e a data em que o cliente o aceitou perde-se.
+            </>
+          }
+          confirmar="Anular aceitação"
+          acao={() => mudarEstadoOrcamento(orcamentoId, "enviado")}
+        />
+      )
+    }
     if (para === "aceite") {
       return (
         <Confirmar

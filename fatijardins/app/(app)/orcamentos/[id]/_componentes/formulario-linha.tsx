@@ -98,7 +98,8 @@ export function FormularioLinha({
         const taxa = Number(taxa_iva)
         form.reset(valoresIniciais(undefined, tipo, taxa))
         aoAcrescentar?.(tipo, taxa)
-        form.setFocus("descricao")
+        // Depois do reset os campos voltam a registar-se no render seguinte: só então se dá o foco.
+        setTimeout(() => form.setFocus("descricao"))
       },
     }
   )

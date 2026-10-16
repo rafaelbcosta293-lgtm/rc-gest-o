@@ -101,12 +101,8 @@ async function FichaVisita({ params }: { params: PageProps<"/orcamentos/visitas/
   const dataExtenso = formatarDiaLongo(visita.data)
   const sitio = nomeSitioVisita(visita.cliente?.nome, visita.local?.nome)
 
-  // Apaga o gerente ou quem criou a visita. Os orçamentos já enviados, aceites ou recusados não
-  // podem ficar sem visita (a BD não os deixa alterar): com eles, a visita não se apaga.
-  const rascunhos = orcamentos.filter((orcamento) => orcamento.estado === "rascunho").length
-  const podeApagar =
-    (eGerente(sessao.colaborador.perfil) || visita.criado_por === sessao.colaborador.id) &&
-    rascunhos === orcamentos.length
+  // Apaga o gerente ou quem criou a visita; os orçamentos feitos a partir dela ficam sem visita.
+  const podeApagar = eGerente(sessao.colaborador.perfil) || visita.criado_por === sessao.colaborador.id
 
   return (
     <>
@@ -149,10 +145,10 @@ async function FichaVisita({ params }: { params: PageProps<"/orcamentos/visitas/
                   <>
                     Vai apagar a visita de {formatarData(visita.data)} a <strong>{sitio}</strong>
                     {fotos.length > 0 && (fotos.length === 1 ? ", com a sua foto" : `, com as suas ${fotos.length} fotos`)}.
-                    {rascunhos > 0 &&
-                      (rascunhos === 1
+                    {orcamentos.length > 0 &&
+                      (orcamentos.length === 1
                         ? " O orçamento feito a partir desta visita não é apagado: fica sem visita."
-                        : ` Os ${rascunhos} orçamentos feitos a partir desta visita não são apagados: ficam sem visita.`)}{" "}
+                        : ` Os ${orcamentos.length} orçamentos feitos a partir desta visita não são apagados: ficam sem visita.`)}{" "}
                     Esta ação não pode ser desfeita.
                   </>
                 }

@@ -6,6 +6,7 @@ import { z } from "zod"
 
 import { erroBD, erroValidacao, SEM_PERMISSAO, type ResultadoAcao } from "@/lib/acoes"
 import { obterSessao, type Sessao } from "@/lib/auth"
+import { formatarData, hojeEmLisboa } from "@/lib/formatar"
 import { ESTADOS_ORCAMENTO, NOMES_ESTADO_ORCAMENTO, podeMudarEstado, type EstadoOrcamento } from "@/lib/orcamentos"
 import { eGerente, eGerenteOuChefe } from "@/lib/perfis"
 import type { TablesInsert, TablesUpdate } from "@/lib/supabase/database.types"
@@ -34,9 +35,17 @@ const LINHA_NAO_EXISTE: ResultadoAcao<never> = {
   erro: "A linha já não existe. Atualize a página.",
 }
 
-const SO_RASCUNHO: ResultadoAcao<never> = {
-  ok: false,
-  erro: "Só um orçamento em rascunho pode ser alterado. Volte a pô-lo em rascunho primeiro.",
+/**
+ * O orçamento deixou de estar em rascunho (ex.: o gerente enviou-o enquanto a
+ * página estava aberta): atualiza a página e explica, sem pedir ao chefe uma
+ * ação que só o gerente pode fazer.
+ */
+function soRascunho(): ResultadoAcao<never> {
+  revalidarOrcamentos()
+  return {
+    ok: false,
+    erro: "Este orçamento já não está em rascunho (foi enviado entretanto) e não pode ser alterado. A página foi atualizada.",
+  }
 }
 
 const ALTERADO_ENTRETANTO: ResultadoAcao<never> = {
@@ -157,7 +166,7 @@ export async function atualizarOrcamento(id: string, valores: CamposOrcamento): 
     .maybeSingle()
   if (erroLer) return erroBD(erroLer)
   if (!atual) return NAO_EXISTE
-  if (atual.estado !== "rascunho") return SO_RASCUNHO
+  if (atual.estado !== "rascunho") return soRascunho()
 
   const problema = await validarLocalEVisita(supabase, dados.data, atual.local_id)
   if (problema) return problema
@@ -171,7 +180,7 @@ export async function atualizarOrcamento(id: string, valores: CamposOrcamento): 
     .select("id")
   // A BD recusa mudar a data para outro ano (o número é desse ano) com uma mensagem clara.
   if (error) return erroBD(error, { emUso: "O local ou a visita já não existem. Atualize a página." })
-  if (linhas.length === 0) return SO_RASCUNHO
+  if (linhas.length === 0) return soRascunho()
 
   revalidarOrcamentos()
   return { ok: true, mensagem: "Orçamento guardado." }
@@ -221,12 +230,19 @@ export async function mudarEstadoOrcamento(id: string, estado: EstadoOrcamento):
   const supabase = await createClient()
   const { data: atual, error: erroLer } = await supabase
     .from("orcamentos")
-    .select("id, estado, trabalho_id")
+    .select("id, estado, trabalho_id, validade")
     .eq("id", pedido.data.id)
     .maybeSingle()
   if (erroLer) return erroBD(erroLer)
   if (!atual) return NAO_EXISTE
   if (atual.estado === novo) return { ok: true, mensagem: "O orçamento já estava neste estado." }
+  // Um rascunho antigo seria enviado já fora de validade.
+  if (atual.estado === "rascunho" && novo === "enviado" && atual.validade < hojeEmLisboa()) {
+    return {
+      ok: false,
+      erro: `A validade (${formatarData(atual.validade)}) já passou: atualize a data e a validade antes de enviar.`,
+    }
+  }
   if (!podeMudarEstado(atual.estado, novo, atual.trabalho_id !== null)) {
     revalidarOrcamentos()
     return {
@@ -263,14 +279,14 @@ async function exigirRascunho(supabase: Supabase, orcamentoId: string): Promise<
   const { data, error } = await supabase.from("orcamentos").select("estado").eq("id", orcamentoId).maybeSingle()
   if (error) return erroBD(error)
   if (!data) return NAO_EXISTE
-  return data.estado === "rascunho" ? null : SO_RASCUNHO
+  return data.estado === "rascunho" ? null : soRascunho()
 }
 
 /** A RLS recusa (42501) mexer nas linhas de um orçamento que deixou de estar em rascunho. */
 function erroLinha(erro: PostgrestError): ResultadoAcao<never> {
   if (erro.code === "42501") {
     console.error("Erro da base de dados:", erro.code, erro.message)
-    return SO_RASCUNHO
+    return soRascunho()
   }
   return erroBD(erro, { emUso: "O orçamento já não existe. Atualize a página." })
 }

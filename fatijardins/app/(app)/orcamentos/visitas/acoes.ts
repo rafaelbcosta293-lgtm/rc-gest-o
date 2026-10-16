@@ -146,6 +146,20 @@ export async function atualizarVisita(id: string, valores: CamposVisita): Promis
 
   const local = await validarLocal(supabase, visita, atual.local_id)
   if (!local.ok) return local.resultado
+  // Os orçamentos feitos a partir da visita são do local dela: com orçamentos, o local já não muda.
+  if (visita.local_id !== atual.local_id) {
+    const { count, error: erroOrcamentos } = await supabase
+      .from("orcamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("visita_id", atual.id)
+    if (erroOrcamentos) return erroBD(erroOrcamentos)
+    if (count) {
+      return erroCampo(
+        "local_id",
+        "Esta visita já tem orçamentos: o cliente e o local já não se mudam. Para outro local, crie uma visita nova."
+      )
+    }
+  }
   const problemaResponsavel = await validarResponsavel(supabase, visita.responsavel_id, atual.responsavel_id)
   if (problemaResponsavel) return problemaResponsavel
 
@@ -169,8 +183,7 @@ export async function atualizarVisita(id: string, valores: CamposVisita): Promis
 
 /**
  * Apaga a visita: primeiro as fotos (linhas e ficheiros), depois a visita.
- * Os orçamentos em rascunho feitos a partir dela ficam sem visita; os já
- * enviados, aceites ou recusados não se alteram, por isso a visita fica.
+ * Os orçamentos feitos a partir dela não são apagados: ficam sem visita.
  */
 export async function apagarVisita(id: string): Promise<ResultadoAcao> {
   const sessao = await sessaoGestor()
@@ -190,18 +203,6 @@ export async function apagarVisita(id: string): Promise<ResultadoAcao> {
   // Apaga o gerente ou quem criou a visita (a BD também o impõe). Verificado antes de apagar as fotos.
   if (!eGerente(sessao.colaborador.perfil) && visita.criado_por !== sessao.colaborador.id) {
     return { ok: false, erro: "Só o gerente ou quem criou a visita a pode apagar." }
-  }
-
-  const { data: orcamentos, error: erroOrcamentos } = await supabase
-    .from("orcamentos")
-    .select("id, estado")
-    .eq("visita_id", visita.id)
-  if (erroOrcamentos) return erroBD(erroOrcamentos)
-  if (orcamentos.some((orcamento) => orcamento.estado !== "rascunho")) {
-    return {
-      ok: false,
-      erro: "Esta visita não pode ser apagada: tem orçamentos já enviados, aceites ou recusados, que não podem ser alterados.",
-    }
   }
 
   // 1. As linhas das fotos (a BD não deixa apagar uma visita com fotos).
@@ -228,7 +229,7 @@ export async function apagarVisita(id: string): Promise<ResultadoAcao> {
     if (erroRemover) console.error("Não foi possível apagar os ficheiros da visita:", visita.id, erroRemover.message)
   }
 
-  // 3. A visita (a BD tira-a dos orçamentos em rascunho).
+  // 3. A visita (a BD tira-a dos orçamentos feitos a partir dela).
   const { data, error } = await supabase.from("visitas").delete().eq("id", visita.id).select("id")
   if (error) {
     revalidarVisitas()

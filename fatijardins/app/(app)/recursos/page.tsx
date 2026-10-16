@@ -10,17 +10,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { exigirPerfil, obterSessao } from "@/lib/auth"
 import { hojeEmLisboa } from "@/lib/formatar"
 import { eGerente } from "@/lib/perfis"
-import {
-  alertasEquipamento,
-  DIAS_AVISO,
-  NOMES_TIPO_EQUIPAMENTO,
-  type AlertaPrazo,
-  type EstadoEquipamento,
-} from "@/lib/recursos"
+import { alertasEquipamento, DIAS_AVISO, NOMES_TIPO_EQUIPAMENTO } from "@/lib/recursos"
 import { createClient } from "@/lib/supabase/server"
 import { normalizarPesquisa } from "@/lib/texto"
 import { cn } from "@/lib/utils"
 import { SeparadoresRecursos } from "./_componentes/separadores"
+import { temAlerta, urgenciaEquipamento } from "./_equipamentos/alertas"
 import { EsqueletoListaEquipamentos } from "./_equipamentos/esqueletos"
 import {
   Atribuicao,
@@ -70,23 +65,6 @@ function corresponde(equipamento: EquipamentoPesquisavel, pesquisa: string) {
     .split(" ")
     .filter(Boolean)
   return palavras.every((palavra) => texto.includes(palavra))
-}
-
-/** Avariado ou em reparação também conta como alerta (além dos prazos). */
-function temAlerta(estado: EstadoEquipamento, alertas: AlertaPrazo[]) {
-  return alertas.length > 0 || estado === "avariado" || estado === "em_reparacao"
-}
-
-/**
- * Urgência (menor = mais urgente): prazos vencidos primeiro (os mais
- * antigos à frente), depois avariados (como um prazo que vence hoje), os
- * prazos a vencer e, no fim, os que já estão em reparação.
- */
-function urgencia(estado: EstadoEquipamento, alertas: AlertaPrazo[]) {
-  const valores = alertas.map((alerta) => alerta.dias)
-  if (estado === "avariado") valores.push(0)
-  if (estado === "em_reparacao") valores.push(DIAS_AVISO + 1)
-  return Math.min(...valores)
 }
 
 async function BotaoNovoEquipamento() {
@@ -157,7 +135,7 @@ async function ListaEquipamentos({ searchParams }: { searchParams: ParametrosPes
     ativos: pesquisados.filter((equipamento) => equipamento.estado !== "abatido"),
     alertas: pesquisados
       .filter((equipamento) => temAlerta(equipamento.estado, equipamento.alertas))
-      .sort((a, b) => urgencia(a.estado, a.alertas) - urgencia(b.estado, b.alertas)),
+      .sort((a, b) => urgenciaEquipamento(a.estado, a.alertas) - urgenciaEquipamento(b.estado, b.alertas)),
     abatidos: pesquisados.filter((equipamento) => equipamento.estado === "abatido"),
   }
   const equipamentos = porFiltro[filtro]
@@ -206,7 +184,7 @@ async function ListaEquipamentos({ searchParams }: { searchParams: ParametrosPes
                       ativo
                         ? "bg-primary-foreground/20"
                         : valor === "alertas" && porFiltro.alertas.length > 0
-                          ? "bg-destructive/10 text-destructive"
+                          ? "bg-destructive text-white"
                           : "bg-muted text-muted-foreground"
                     )}
                   >

@@ -1,17 +1,18 @@
 import Link from "next/link"
 import { ChevronRightIcon, PackageIcon, TriangleAlertIcon } from "lucide-react"
 
+import { temAlerta, urgenciaEquipamento } from "@/app/(app)/recursos/_equipamentos/alertas"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Sessao } from "@/lib/auth"
 import { hojeEmLisboa } from "@/lib/formatar"
+import { eGerente } from "@/lib/perfis"
 import {
   alertasEquipamento,
   descreverAlerta,
   eStockBaixo,
   formatarQuantidade,
   NOMES_ESTADO_EQUIPAMENTO,
-  type AlertaPrazo,
   type EstadoEquipamento,
 } from "@/lib/recursos"
 import { createClient } from "@/lib/supabase/server"
@@ -45,21 +46,6 @@ function Rodape({ href, mais }: { href: string; mais: number }) {
 
 const ESTADOS_ATENCAO: EstadoEquipamento[] = ["avariado", "em_reparacao"]
 
-type EquipamentoAtencao = {
-  id: string
-  nome: string
-  estado: EstadoEquipamento
-  alertas: AlertaPrazo[]
-}
-
-/** Primeiro os prazos vencidos, depois os avariados/em reparação, depois os prazos a vencer. */
-function urgencia(equipamento: EquipamentoAtencao): [number, number] {
-  const prazo = equipamento.alertas[0]
-  if (prazo?.vencido) return [0, prazo.dias]
-  if (ESTADOS_ATENCAO.includes(equipamento.estado)) return [1, equipamento.estado === "avariado" ? 0 : 1]
-  return [2, prazo?.dias ?? 0]
-}
-
 /**
  * Prazos de revisão, seguro e IPO a 30 dias ou vencidos e equipamentos
  * avariados ou em reparação. O gerente vê todos; o chefe os das equipas
@@ -74,7 +60,7 @@ export async function EquipamentosAtencao({ sessao }: { sessao: Sessao }) {
     .neq("estado", "abatido")
   if (error) throw new Error(`Não foi possível carregar os equipamentos: ${error.message}`)
 
-  const gerente = sessao.colaborador.perfil === "gerente"
+  const gerente = eGerente(sessao.colaborador.perfil)
   const lista = data
     .filter((equipamento) => gerente || !equipamento.equipa_id || equipamento.equipa?.chefe_id === sessao.colaborador.id)
     .map((equipamento) => ({
@@ -83,12 +69,13 @@ export async function EquipamentosAtencao({ sessao }: { sessao: Sessao }) {
       estado: equipamento.estado,
       alertas: alertasEquipamento(equipamento, hoje),
     }))
-    .filter((equipamento) => equipamento.alertas.length > 0 || ESTADOS_ATENCAO.includes(equipamento.estado))
-    .sort((a, b) => {
-      const [grupoA, diasA] = urgencia(a)
-      const [grupoB, diasB] = urgencia(b)
-      return grupoA - grupoB || diasA - diasB || a.nome.localeCompare(b.nome, "pt")
-    })
+    .filter((equipamento) => temAlerta(equipamento.estado, equipamento.alertas))
+    // A mesma ordem de /recursos?filtro=alertas.
+    .sort(
+      (a, b) =>
+        urgenciaEquipamento(a.estado, a.alertas) - urgenciaEquipamento(b.estado, b.alertas) ||
+        a.nome.localeCompare(b.nome, "pt")
+    )
   if (lista.length === 0) return null
 
   return (

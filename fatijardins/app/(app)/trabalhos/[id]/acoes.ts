@@ -220,10 +220,12 @@ export async function guardarRegisto(
 // Materiais gastos
 // ---------------------------------------------------------------------
 
+const MENSAGEM_ARTIGO_INDISPONIVEL = "Este artigo já não está no catálogo. Escolha outro."
+
 const ARTIGO_INDISPONIVEL: ResultadoAcao<never> = {
   ok: false,
-  erro: "Este artigo já não está no catálogo. Escolha outro.",
-  campos: { consumivel_id: ["Este artigo já não está no catálogo. Escolha outro."] },
+  erro: MENSAGEM_ARTIGO_INDISPONIVEL,
+  campos: { consumivel_id: [MENSAGEM_ARTIGO_INDISPONIVEL] },
 }
 
 /** Os materiais do catálogo mexem no stock: atualiza também as páginas dos consumíveis. */
@@ -251,7 +253,11 @@ export async function adicionarMaterial(id: string, valores: CamposMaterial): Pr
       .eq("id", consumivel_id)
       .maybeSingle()
     if (error) return erroBD(error)
-    if (!consumivel?.ativo) return ARTIGO_INDISPONIVEL
+    if (!consumivel?.ativo) {
+      // Desativado (ou apagado) depois de a ficha abrir: a ficha volta a carregar o catálogo.
+      revalidatePath(`/trabalhos/${trabalhoId}`)
+      return ARTIGO_INDISPONIVEL
+    }
     descricao ??= consumivel.nome
     unidade = consumivel.unidade
   }
@@ -263,7 +269,9 @@ export async function adicionarMaterial(id: string, valores: CamposMaterial): Pr
   const { error } = await supabase
     .from("registo_materiais")
     .insert({ registo_id: registo.id, consumivel_id, descricao, quantidade, unidade })
-  if (error) return erroBD(error)
+  // Desativado entretanto: a BD recusa com "Este consumível está desativado. Escolha outro." (23514);
+  // apagado entretanto: 23503.
+  if (error) return erroBD(error, { emUso: MENSAGEM_ARTIGO_INDISPONIVEL })
 
   revalidarMateriais(trabalhoId)
   return { ok: true, mensagem: "Material adicionado." }

@@ -51,6 +51,8 @@ function agruparPorCategoria(catalogo: ArtigoCatalogo[]) {
   return [...grupos.entries()]
     .sort(([a], [b]) => (a === null ? 1 : b === null ? -1 : a.localeCompare(b, "pt")))
     .map(([categoria, artigos]) => ({
+      // Chave à parte: uma categoria pode chamar-se "Outros artigos".
+      chave: categoria === null ? "sem-categoria" : `categoria:${categoria}`,
       categoria: categoria ?? SEM_CATEGORIA,
       artigos: artigos.sort((a, b) => a.nome.localeCompare(b.nome, "pt")),
     }))
@@ -86,8 +88,16 @@ export function Materiais({
 
   const { submeter, aGuardar } = useAcaoFormulario(
     form,
-    // Com artigo do catálogo, a descrição é o nome dele (o que se escreveu em "Outro" não conta).
-    (campos) => adicionarMaterial(trabalhoId, campos.consumivel_id === MATERIAL_OUTRO ? campos : { ...campos, descricao: "" }),
+    async (campos) => {
+      // Com artigo do catálogo, a descrição é o nome dele (o que se escreveu em "Outro" não conta).
+      const resultado = await adicionarMaterial(
+        trabalhoId,
+        campos.consumivel_id === MATERIAL_OUTRO ? campos : { ...campos, descricao: "" }
+      )
+      // O artigo saiu do catálogo entretanto: volta a "Escolha o material…" (com o erro no campo).
+      if (!resultado.ok && resultado.campos?.consumivel_id) form.setValue("consumivel_id", "")
+      return resultado
+    },
     {
       // Fica pronto para o material seguinte.
       aoConcluir: () => form.reset(vazio),
@@ -149,12 +159,13 @@ export function Materiais({
                 <FormItem>
                   <FormLabel>Material *</FormLabel>
                   <FormControl>
-                    <NativeSelect {...field}>
+                    {/* Um artigo que entretanto saiu do catálogo mostra "Escolha o material…". */}
+                    <NativeSelect {...field} value={artigo || outro ? field.value : ""}>
                       <option value="" disabled>
                         Escolha o material…
                       </option>
                       {agruparPorCategoria(catalogo).map((grupo) => (
-                        <optgroup key={grupo.categoria} label={grupo.categoria}>
+                        <optgroup key={grupo.chave} label={grupo.categoria}>
                           {grupo.artigos.map((item) => (
                             <option key={item.id} value={item.id}>
                               {item.nome} ({item.unidade})

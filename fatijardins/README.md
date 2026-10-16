@@ -286,9 +286,8 @@ com a palavra-passe **`Fatijardins2026!`**:
 As datas dos trabalhos e das horas de exemplo são calculadas a partir do dia em que a seed corre
 (no projeto já criado, 16/10/2026). Para testar noutro dia — por exemplo, para os colaboradores
 verem trabalhos em “O meu dia” —, cole `supabase/exemplos_para_hoje.sql` no **SQL Editor** e clique
-**Run**: os trabalhos e as horas de exemplo passam para o dia de hoje (e os prazos dos equipamentos e o
-stock de exemplo acompanham) (o último e o próximo dia útil
-ficam à mesma distância). Só mexe nos dados de exemplo e pode correr-se as vezes que for preciso.
+**Run**: os trabalhos e as horas de exemplo passam para o dia de hoje (o último e o próximo dia útil
+ficam à mesma distância), e os prazos dos equipamentos e o stock de exemplo acompanham. Só mexe nos dados de exemplo e pode correr-se as vezes que for preciso.
 
 > ⚠️ **Antes de usar a app a sério**, apague estas contas (ou mude-lhes a palavra-passe) — toda a
 > gente conhece esta palavra-passe. Ordem sugerida:

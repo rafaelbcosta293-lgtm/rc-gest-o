@@ -203,10 +203,11 @@ região **eu-west-3 (Paris)**, com as migrações e os dados de exemplo já apli
 `https://iodjvvtumuhlvdsemhbb.supabase.co`. Se vai usar este projeto, passe ao
 [passo 4](#4-configurar-a-autenticação-no-painel-do-supabase), mas leia primeiro o aviso abaixo.
 
-> 🔒 **Contas de demonstração.** Este projeto tem as 6 contas de exemplo (incluindo um **gerente**)
-> com a palavra-passe `Fatijardins2026!`, que está escrita neste repositório **público**. Servem
-> para testar no computador. **Antes de publicar a app na Vercel** (passo 9), apague-as ou mude-lhes
-> a palavra-passe, seguindo os passos em [Dados de exemplo](#dados-de-exemplo).
+> 🔒 **Contas de demonstração.** Este projeto tem as 6 contas de exemplo (incluindo um **gerente**).
+> Como a app já está publicada (passo 9), a palavra-passe delas **foi mudada** e já não é a
+> `Fatijardins2026!` da seed (que está escrita neste repositório público): a nova foi entregue ao
+> responsável e não fica no repositório. Antes de usar a app a sério, apague estas contas, seguindo
+> os passos em [Dados de exemplo](#dados-de-exemplo).
 
 **Para criar um projeto de raiz:**
 
@@ -382,7 +383,8 @@ npm run dev
 ```
 
 Abra [http://localhost:3000](http://localhost:3000) e entre, por exemplo, com
-`gerente@example.com` / `Fatijardins2026!`. As páginas atualizam-se sozinhas quando se altera o
+`gerente@example.com` (palavra-passe `Fatijardins2026!` num projeto novo com a seed; no projeto já
+criado foi mudada — ver o aviso no passo 2). As páginas atualizam-se sozinhas quando se altera o
 código.
 
 O service worker (app instalável e página offline) só é ativado na versão de produção. Para o
@@ -411,9 +413,25 @@ npm run build       # compila como na Vercel; se passar aqui, deve passar lá
 
 ## 9) Publicar na Vercel
 
-> ⚠️ **Antes de publicar:** apague as contas de demonstração ou mude-lhes a palavra-passe (ver
-> [Dados de exemplo](#dados-de-exemplo)). Depois de publicada, qualquer pessoa pode abrir a página de
-> entrada, e a palavra-passe de exemplo é pública.
+**Já está publicada** em **https://fatijardins.vercel.app** (projeto Vercel `fatijardins`, pasta
+`fatijardins`, região Paris), ligada ao projeto Supabase acima, para se irem vendo as fases à medida
+que ficam prontas. Notas:
+
+- O endereço de produção é público (no plano Hobby a Vercel só protege os endereços de
+  pré-visualização); por isso a palavra-passe das contas de demonstração foi mudada (ver o aviso no
+  passo 2).
+- O ramo de trabalho não é o ramo principal do repositório: cada `git push` cria uma
+  pré-visualização (só abre a quem tem sessão iniciada na conta Vercel) e a versão de produção é
+  atualizada à mão no fim de cada fase (**Deployments → … → Promote to Production**).
+- Falta configurar `SUPABASE_SECRET_KEY` (só para o gerente criar acessos e repor palavras-passe) e,
+  no Supabase, o **Site URL** e os **Redirect URLs** com este endereço (passo 4, para os emails de
+  recuperação da palavra-passe).
+
+> ⚠️ **Antes de publicar um projeto novo:** apague as contas de demonstração ou mude-lhes a
+> palavra-passe (ver [Dados de exemplo](#dados-de-exemplo)). Depois de publicada, qualquer pessoa
+> pode abrir a página de entrada, e a palavra-passe de exemplo é pública.
+
+Para publicar de raiz noutra conta:
 
 1. Em [vercel.com](https://vercel.com) → **Add New… → Project** → importe o repositório do GitHub.
 2. Em **Root Directory** clique **Edit** e escolha **`fatijardins`**.

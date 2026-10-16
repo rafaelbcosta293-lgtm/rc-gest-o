@@ -1,6 +1,6 @@
 import type { Perfil } from "@/lib/perfis"
 
-export type IconeNavegacao = "inicio" | "agenda" | "orcamentos" | "clientes" | "equipa" | "horas" | "perfil"
+export type IconeNavegacao = "inicio" | "agenda" | "orcamentos" | "clientes" | "recursos" | "equipa" | "horas" | "perfil"
 
 export type ItemNavegacao = {
   href: string
@@ -15,6 +15,7 @@ const ITENS: ItemNavegacao[] = [
   { href: "/agenda", rotulo: "Agenda", icone: "agenda", perfis: ["gerente", "chefe_equipa"] },
   { href: "/orcamentos", rotulo: "Orçamentos", icone: "orcamentos", perfis: ["gerente", "chefe_equipa"] },
   { href: "/clientes", rotulo: "Clientes", icone: "clientes", perfis: ["gerente", "chefe_equipa"] },
+  { href: "/recursos", rotulo: "Recursos", icone: "recursos", perfis: ["gerente", "chefe_equipa"] },
   { href: "/horas", rotulo: "Horas", icone: "horas", perfis: ["gerente", "chefe_equipa", "colaborador"] },
   { href: "/equipa", rotulo: "Equipa", icone: "equipa", perfis: ["gerente", "chefe_equipa", "colaborador"] },
   { href: "/perfil", rotulo: "Perfil", icone: "perfil", perfis: ["gerente", "chefe_equipa", "colaborador"] },

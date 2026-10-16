@@ -11,6 +11,7 @@ import {
   TreesIcon,
   UserRoundIcon,
   UsersIcon,
+  WrenchIcon,
   type LucideIcon,
 } from "lucide-react"
 
@@ -28,6 +29,7 @@ const ICONES: Record<IconeNavegacao, LucideIcon> = {
   agenda: CalendarDaysIcon,
   orcamentos: FileTextIcon,
   clientes: TreesIcon,
+  recursos: WrenchIcon,
   horas: ClockIcon,
   equipa: UsersIcon,
   perfil: UserRoundIcon,

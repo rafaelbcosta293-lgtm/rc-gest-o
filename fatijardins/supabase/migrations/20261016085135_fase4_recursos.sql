@@ -317,9 +317,18 @@ create policy "consumiveis: apagar (gerente)" on public.consumiveis
 create policy "precos: tudo (gerente)" on public.consumiveis_precos
   for all to authenticated using ((select app.e_gerente())) with check ((select app.e_gerente()));
 
--- Movimentos: só o gerente (as saídas dos trabalhos são criadas pela BD).
-create policy "movimentos: tudo (gerente)" on public.movimentos_stock
-  for all to authenticated using ((select app.e_gerente())) with check ((select app.e_gerente()));
+-- Movimentos: só o gerente. As saídas dos materiais dos trabalhos são da BD
+-- (acompanham o material): não se alteram nem apagam à mão.
+create policy "movimentos: ver (gerente)" on public.movimentos_stock
+  for select to authenticated using ((select app.e_gerente()));
+create policy "movimentos: criar (gerente)" on public.movimentos_stock
+  for insert to authenticated with check ((select app.e_gerente()) and registo_material_id is null);
+create policy "movimentos: alterar (gerente)" on public.movimentos_stock
+  for update to authenticated
+  using ((select app.e_gerente()) and registo_material_id is null)
+  with check ((select app.e_gerente()) and registo_material_id is null);
+create policy "movimentos: apagar (gerente)" on public.movimentos_stock
+  for delete to authenticated using ((select app.e_gerente()) and registo_material_id is null);
 
 -- ---------------------------------------------------------------------
 -- Grants para a Data API (o acesso real é decidido pela RLS)

@@ -95,6 +95,12 @@ select pg_temp.recusado(
   $q$delete from public.consumiveis where id = 'a5000000-0000-4000-8000-000000000001'$q$,
   'consumível com movimentos não se apaga (desativa-se)'
 );
+update public.movimentos_stock set quantidade = -1 where registo_material_id is not null;
+delete from public.movimentos_stock where registo_material_id is not null;
+select pg_temp.verificar(
+  (select count(*) = 3 and bool_and(quantidade <= -6) from public.movimentos_stock where registo_material_id is not null),
+  'as saídas dos materiais não se alteram nem apagam à mão'
+);
 reset role;
 select set_config('request.jwt.claims', '', true);
 

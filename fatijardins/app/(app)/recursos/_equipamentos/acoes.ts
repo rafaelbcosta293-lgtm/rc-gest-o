@@ -180,7 +180,7 @@ export async function atualizarEquipamento(
     revalidarEquipamentos()
     return {
       ok: false,
-      erro: "O equipamento foi alterado entretanto (por exemplo, o chefe mudou o estado ou acrescentou uma nota). A página foi atualizada: reveja e guarde de novo.",
+      erro: "O equipamento foi alterado entretanto (por exemplo, o chefe mudou o estado ou acrescentou uma nota) e as suas alterações não foram guardadas. O formulário já mostra os dados novos: volte a fazer as alterações e guarde.",
     }
   }
 

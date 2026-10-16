@@ -192,6 +192,11 @@ export async function atualizarConsumivel(id: string, valores: CamposConsumivel)
     .update(colunasConsumivel(dados.data))
     .eq("id", atual.id)
     .select("id")
+  if (error?.code === "23514" && dados.data.unidade !== atual.unidade) {
+    // Entrou um movimento depois da verificação acima: a BD recusa mudar a unidade.
+    revalidarConsumiveis()
+    return erroCampo("unidade", UNIDADE_BLOQUEADA)
+  }
   if (error) return erroGravarConsumivel(error)
   if (alterados.length === 0) return NAO_EXISTE
 

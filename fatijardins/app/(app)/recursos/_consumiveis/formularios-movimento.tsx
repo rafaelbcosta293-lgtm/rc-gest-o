@@ -360,8 +360,8 @@ export function FormularioSaida({ consumivelId, unidade, hoje, stock, trabalhos,
               </NativeSelect>
             </FormControl>
             <FormDescription>
-              Opcional: trabalhos dos últimos 30 dias e dos próximos 7. O material que a equipa regista na ficha
-              do trabalho já sai do stock sozinho: registe aqui só o que não for registado lá.
+              Opcional: trabalhos dos últimos 30 dias e dos próximos 7. O material escolhido do stock na ficha do
+              trabalho (marcado “Do stock”) já sai sozinho: registe aqui só o resto.
             </FormDescription>
             <FormMessage />
           </FormItem>

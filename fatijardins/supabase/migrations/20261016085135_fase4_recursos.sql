@@ -169,6 +169,28 @@ create index movimentos_stock_colaborador_id_idx on public.movimentos_stock (col
 create trigger movimentos_stock_updated_at before update on public.movimentos_stock
   for each row execute function app.definir_updated_at();
 
+-- Com movimentos, a unidade do consumível já não muda (o stock é a soma
+-- das quantidades, todas nessa unidade).
+create or replace function app.unidade_consumivel_fixa()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.unidade is distinct from old.unidade
+     and exists (select 1 from public.movimentos_stock where consumivel_id = old.id) then
+    raise exception 'Já há movimentos de stock nesta unidade, por isso não a pode mudar.'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger consumiveis_unidade_fixa
+  before update of unidade on public.consumiveis
+  for each row execute function app.unidade_consumivel_fixa();
+
 -- Stock atual de cada consumível (gerente e chefes; o colaborador não vê).
 create or replace function public.stock_consumiveis()
 returns table (consumivel_id uuid, stock numeric)
@@ -352,5 +374,6 @@ grant execute on function public.stock_consumiveis() to authenticated, service_r
 revoke all on function app.restringir_alteracoes_equipamento() from public;
 revoke all on function app.preparar_material() from public;
 revoke all on function app.sincronizar_saida_material() from public;
+revoke all on function app.unidade_consumivel_fixa() from public;
 grant execute on function app.restringir_alteracoes_equipamento(), app.preparar_material(),
-  app.sincronizar_saida_material() to authenticated, service_role;
+  app.sincronizar_saida_material(), app.unidade_consumivel_fixa() to authenticated, service_role;

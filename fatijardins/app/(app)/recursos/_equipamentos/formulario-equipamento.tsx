@@ -39,8 +39,9 @@ type Props = {
   valoresIniciais: CamposEquipamento
   equipas: Opcao[]
   colaboradores: Opcao[]
-  /** Ao editar: o equipamento (sem ele, o formulário cria). */
+  /** Ao editar: o equipamento e a versão lida (updated_at); sem eles, o formulário cria. */
   equipamentoId?: string
+  versao?: string
   cancelarHref: string
 }
 
@@ -48,7 +49,14 @@ const OPCOES_TIPO = TIPOS_EQUIPAMENTO.map((tipo) => ({ valor: tipo, nome: NOMES_
 const OPCOES_ESTADO = ESTADOS_EQUIPAMENTO.map((estado) => ({ valor: estado, nome: NOMES_ESTADO_EQUIPAMENTO[estado] }))
 
 /** Criar ou editar um equipamento (só o gerente). */
-export function FormularioEquipamento({ valoresIniciais, equipas, colaboradores, equipamentoId, cancelarHref }: Props) {
+export function FormularioEquipamento({
+  valoresIniciais,
+  equipas,
+  colaboradores,
+  equipamentoId,
+  versao,
+  cancelarHref,
+}: Props) {
   const form = useForm<CamposEquipamento, unknown, DadosEquipamento>({
     resolver: zodResolver(esquemaEquipamento),
     defaultValues: valoresIniciais,
@@ -56,7 +64,7 @@ export function FormularioEquipamento({ valoresIniciais, equipas, colaboradores,
 
   const { submeter, aGuardar } = useAcaoFormulario(
     form,
-    (valores) => (equipamentoId ? atualizarEquipamento(equipamentoId, valores) : criarEquipamento(valores)),
+    (valores) => (equipamentoId ? atualizarEquipamento(equipamentoId, versao ?? "", valores) : criarEquipamento(valores)),
     // A página "Novo equipamento" fica guardada pelo Next.js: limpar depois de criar.
     { aoConcluir: () => (equipamentoId ? undefined : form.reset()) }
   )

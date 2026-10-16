@@ -92,6 +92,16 @@ select pg_temp.recusado(
   'ninguém liga movimentos a materiais à mão'
 );
 select pg_temp.recusado(
+  $q$update public.consumiveis set unidade = 'kg' where id = 'a5000000-0000-4000-8000-000000000001'$q$,
+  'a unidade de um consumível com movimentos não muda'
+);
+insert into public.consumiveis (nome, unidade) values ('Teste Fase4 artigo sem movimentos', 'kg');
+update public.consumiveis set unidade = 'L' where nome = 'Teste Fase4 artigo sem movimentos';
+select pg_temp.verificar(
+  (select unidade = 'L' from public.consumiveis where nome = 'Teste Fase4 artigo sem movimentos'),
+  'a unidade de um consumível sem movimentos muda'
+);
+select pg_temp.recusado(
   $q$delete from public.consumiveis where id = 'a5000000-0000-4000-8000-000000000001'$q$,
   'consumível com movimentos não se apaga (desativa-se)'
 );
@@ -112,7 +122,7 @@ select pg_temp.verificar((select count(*) from public.equipamentos) = 9, 'chefe 
 select pg_temp.verificar((select count(*) from public.manutencoes_equipamento) = 0, 'chefe NÃO vê as manutenções (custos)');
 select pg_temp.verificar((select count(*) from public.consumiveis_precos) = 0, 'chefe NÃO vê os preços');
 select pg_temp.verificar((select count(*) from public.movimentos_stock) = 0, 'chefe NÃO vê os movimentos (preços)');
-select pg_temp.verificar((select count(*) from public.stock_consumiveis()) = 10, 'chefe vê o stock de cada consumível');
+select pg_temp.verificar((select count(*) from public.stock_consumiveis()) = 11, 'chefe vê o stock de cada consumível');
 update public.equipamentos set estado = 'avariado', notas = 'Teste Fase4: lâmina partida'
   where id = 'a4000000-0000-4000-8000-000000000003';
 select pg_temp.verificar(
@@ -157,7 +167,7 @@ select set_config('request.jwt.claims', '', true);
 -- ---------------------------------------------------------------------
 select pg_temp.entrar('a0000000-0000-4000-8000-000000000004');
 select pg_temp.verificar((select count(*) from public.equipamentos) = 0, 'colaborador NÃO vê equipamentos');
-select pg_temp.verificar((select count(*) from public.consumiveis) = 9, 'colaborador vê os consumíveis ativos (para os materiais)');
+select pg_temp.verificar((select count(*) from public.consumiveis) = 10, 'colaborador vê os consumíveis ativos (para os materiais)');
 select pg_temp.verificar(
   (select count(*) from public.consumiveis where not ativo) = 0,
   'colaborador NÃO vê consumíveis desativados'

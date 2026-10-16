@@ -359,7 +359,10 @@ export function FormularioSaida({ consumivelId, unidade, hoje, stock, trabalhos,
                 ))}
               </NativeSelect>
             </FormControl>
-            <FormDescription>Opcional: trabalhos dos últimos 30 dias e dos próximos 7.</FormDescription>
+            <FormDescription>
+              Opcional: trabalhos dos últimos 30 dias e dos próximos 7. O material que a equipa regista na ficha
+              do trabalho já sai do stock sozinho: registe aqui só o que não for registado lá.
+            </FormDescription>
             <FormMessage />
           </FormItem>
         )}
@@ -374,7 +377,7 @@ export function FormularioSaida({ consumivelId, unidade, hoje, stock, trabalhos,
               <Textarea
                 rows={2}
                 className="min-h-16 bg-background"
-                placeholder="Ex.: Levado para a carrinha da Equipa Verde"
+                placeholder="Ex.: Estragado, oferecido ao cliente"
                 {...field}
               />
             </FormControl>
@@ -527,8 +530,9 @@ export function FormularioEditarAcerto({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Diferença *</FormLabel>
+              {/* Teclado de texto: o teclado decimal do iPhone não tem o sinal menos. */}
               <FormControl>
-                <InputComSufixo sufixo={unidade} placeholder="Ex.: -3" autoFocus {...field} />
+                <InputComSufixo sufixo={unidade} inputMode="text" placeholder="Ex.: -3" autoFocus {...field} />
               </FormControl>
               <FormDescription>Positiva soma ao stock; negativa (com -) tira.</FormDescription>
               <FormMessage />

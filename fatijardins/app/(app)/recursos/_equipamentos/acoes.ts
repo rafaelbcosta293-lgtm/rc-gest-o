@@ -140,11 +140,20 @@ export async function criarEquipamento(valores: CamposEquipamento): Promise<Resu
   return { ok: true, mensagem: "Equipamento criado.", redirecionar: `/recursos/equipamentos/${data.id}` }
 }
 
-export async function atualizarEquipamento(id: string, valores: CamposEquipamento): Promise<ResultadoAcao> {
+/**
+ * Grava só sobre a versão (updated_at) que o formulário abriu: o chefe pode
+ * ter mudado o estado ou acrescentado uma nota entretanto, e o formulário
+ * traz o estado e as notas antigos.
+ */
+export async function atualizarEquipamento(
+  id: string,
+  versao: string,
+  valores: CamposEquipamento
+): Promise<ResultadoAcao> {
   if (!(await sessaoGerente())) return SO_GERENTE
 
   const equipamentoId = idObrigatorio.safeParse(id)
-  if (!equipamentoId.success) return NAO_EXISTE
+  if (!equipamentoId.success || typeof versao !== "string" || !versao) return NAO_EXISTE
   const dados = esquemaEquipamento.safeParse(valores)
   if (!dados.success) return erroValidacao(dados.error)
 
@@ -164,9 +173,16 @@ export async function atualizarEquipamento(id: string, valores: CamposEquipament
     .from("equipamentos")
     .update({ ...colunasEquipamento(dados.data), estado: dados.data.estado })
     .eq("id", atual.id)
+    .eq("updated_at", versao)
     .select("id")
   if (error) return erroGravarEquipamento(error)
-  if (data.length === 0) return NAO_EXISTE
+  if (data.length === 0) {
+    revalidarEquipamentos()
+    return {
+      ok: false,
+      erro: "O equipamento foi alterado entretanto (por exemplo, o chefe mudou o estado ou acrescentou uma nota). A página foi atualizada: reveja e guarde de novo.",
+    }
+  }
 
   revalidarEquipamentos()
   return { ok: true, mensagem: "Equipamento guardado.", redirecionar: `/recursos/equipamentos/${atual.id}` }

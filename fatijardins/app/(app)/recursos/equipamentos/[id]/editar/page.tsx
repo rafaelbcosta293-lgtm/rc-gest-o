@@ -75,6 +75,7 @@ async function EditarEquipamento({ params }: { params: Parametros }) {
         equipas={opcoes.equipas}
         colaboradores={opcoes.colaboradores}
         equipamentoId={equipamento.id}
+        versao={equipamento.updated_at}
         cancelarHref={`/recursos/equipamentos/${equipamento.id}`}
       />
     </div>

@@ -76,13 +76,13 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
   if (error) throw new Error(`Não foi possível carregar o trabalho: ${error.message}`)
   if (!trabalho) notFound()
 
-  const [registoR, fotosR, horasR, abertoR] = await Promise.all([
+  const [registoR, fotosR, horasR, abertoR, catalogoR] = await Promise.all([
     supabase
       .from("registos_trabalho")
       .select(
         `id, tarefas_feitas, notas, assinatura_caminho, assinatura_nome, assinado_em, updated_at,
          autor:colaboradores(nome),
-         materiais:registo_materiais(id, descricao, quantidade, unidade, created_at)`
+         materiais:registo_materiais(id, descricao, quantidade, unidade, consumivel_id, created_at)`
       )
       .eq("trabalho_id", id)
       .maybeSingle(),
@@ -103,8 +103,15 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
       .eq("colaborador_id", sessao.colaborador.id)
       .is("saida", null)
       .maybeSingle(),
+    // Catálogo para o formulário dos materiais: só os consumíveis ativos (sem preços nem stock).
+    supabase
+      .from("consumiveis")
+      .select("id, nome, categoria, unidade")
+      .eq("ativo", true)
+      .order("categoria", { nullsFirst: false })
+      .order("nome"),
   ])
-  for (const resultado of [registoR, fotosR, horasR, abertoR]) {
+  for (const resultado of [registoR, fotosR, horasR, abertoR, catalogoR]) {
     if (resultado.error) throw new Error(`Não foi possível carregar o trabalho: ${resultado.error.message}`)
   }
   const registo = registoR.data
@@ -153,7 +160,9 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
       descricao: material.descricao,
       quantidade: formatarNumero(material.quantidade),
       unidade: material.unidade,
+      doStock: material.consumivel_id !== null,
     }))
+  const catalogo = catalogoR.data ?? []
 
   let atualizado: string | null = null
   if (registo) {
@@ -279,7 +288,7 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
           </Secao>
 
           <Secao id="titulo-materiais" titulo="Materiais gastos" icone={PackageIcon}>
-            <Materiais trabalhoId={trabalho.id} materiais={materiais} />
+            <Materiais trabalhoId={trabalho.id} materiais={materiais} catalogo={catalogo} />
           </Secao>
         </div>
       </div>

@@ -220,6 +220,18 @@ export async function guardarRegisto(
 // Materiais gastos
 // ---------------------------------------------------------------------
 
+const ARTIGO_INDISPONIVEL: ResultadoAcao<never> = {
+  ok: false,
+  erro: "Este artigo já não está no catálogo. Escolha outro.",
+  campos: { consumivel_id: ["Este artigo já não está no catálogo. Escolha outro."] },
+}
+
+/** Os materiais do catálogo mexem no stock: atualiza também as páginas dos consumíveis. */
+function revalidarMateriais(trabalhoId: string) {
+  revalidar(trabalhoId)
+  revalidatePath("/recursos/consumiveis", "layout")
+}
+
 export async function adicionarMaterial(id: string, valores: CamposMaterial): Promise<ResultadoAcao> {
   const preparado = await prepararTrabalho(id)
   if ("falha" in preparado) return preparado.falha
@@ -227,14 +239,33 @@ export async function adicionarMaterial(id: string, valores: CamposMaterial): Pr
 
   const dados = esquemaMaterial.safeParse(valores)
   if (!dados.success) return erroValidacao(dados.error)
+  const { consumivel_id, quantidade } = dados.data
+  let { descricao, unidade }: { descricao: string | null; unidade: string } = dados.data
+
+  // Artigo do catálogo: tem de existir e estar ativo (a RLS só mostra os ativos ao
+  // colaborador; a BD volta a confirmar e impõe a unidade). A saída de stock é da BD.
+  if (consumivel_id) {
+    const { data: consumivel, error } = await supabase
+      .from("consumiveis")
+      .select("nome, unidade, ativo")
+      .eq("id", consumivel_id)
+      .maybeSingle()
+    if (error) return erroBD(error)
+    if (!consumivel?.ativo) return ARTIGO_INDISPONIVEL
+    descricao ??= consumivel.nome
+    unidade = consumivel.unidade
+  }
+  if (!descricao) return { ok: false, erro: "Escreva o material.", campos: { descricao: ["Escreva o material."] } }
 
   const registo = await obterOuCriarRegisto(preparado.contexto)
   if ("erro" in registo) return registo.erro
 
-  const { error } = await supabase.from("registo_materiais").insert({ registo_id: registo.id, ...dados.data })
+  const { error } = await supabase
+    .from("registo_materiais")
+    .insert({ registo_id: registo.id, consumivel_id, descricao, quantidade, unidade })
   if (error) return erroBD(error)
 
-  revalidar(trabalhoId)
+  revalidarMateriais(trabalhoId)
   return { ok: true, mensagem: "Material adicionado." }
 }
 
@@ -263,7 +294,8 @@ export async function apagarMaterial(id: string, materialId: string): Promise<Re
   if (error) return erroBD(error)
   if (data.length === 0) return { ok: false, erro: "O material já não existe." }
 
-  revalidar(trabalhoId)
+  // A saída de stock do material (se for do catálogo) é apagada pela BD.
+  revalidarMateriais(trabalhoId)
   return { ok: true, mensagem: "Material apagado." }
 }
 

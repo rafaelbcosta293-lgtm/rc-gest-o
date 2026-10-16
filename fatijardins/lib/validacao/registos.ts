@@ -53,11 +53,32 @@ const quantidadeObrigatoria = numeroOpcional({ max: 100_000, pontoDecimal: true 
   .refine((valor) => valor > 0, "A quantidade tem de ser maior do que zero.")
   .refine((valor) => Math.abs(valor * 100 - Math.round(valor * 100)) < 1e-6, "Use no máximo 2 casas decimais.")
 
-export const esquemaMaterial = z.object({
-  descricao: textoObrigatorio("Indique o material.", 200),
-  quantidade: quantidadeObrigatoria,
-  unidade: z.enum(UNIDADES_MATERIAL, "Escolha a unidade."),
-})
+/** Valor da opção "Outro (escrever)" do seletor de artigo: material fora do catálogo. */
+export const MATERIAL_OUTRO = "outro"
+
+/**
+ * Material gasto: um artigo do catálogo (consumível, que gera a saída de
+ * stock) ou "Outro", com descrição livre e unidade. Com artigo, a descrição
+ * por omissão é o nome dele e a unidade é sempre a dele (o servidor e a BD
+ * impõem-na). Sem consumivel_id, o material é "Outro".
+ */
+export const esquemaMaterial = z
+  .object({
+    consumivel_id: z
+      .string()
+      .default(MATERIAL_OUTRO)
+      .refine((valor) => valor === MATERIAL_OUTRO || z.uuid().safeParse(valor).success, "Escolha o material.")
+      .transform((valor) => (valor === MATERIAL_OUTRO ? null : valor)),
+    descricao: textoOpcional(200),
+    quantidade: quantidadeObrigatoria,
+    unidade: z.enum(UNIDADES_MATERIAL, "Escolha a unidade."),
+  })
+  .refine((dados) => dados.consumivel_id !== null || dados.descricao !== null, {
+    path: ["descricao"],
+    message: "Escreva o material.",
+    // Corre mesmo com erros noutros campos (ex.: quantidade), para os mostrar todos de uma vez.
+    when: ({ issues }) => !issues.some((erro) => erro.path?.[0] === "consumivel_id" || erro.path?.[0] === "descricao"),
+  })
 export type CamposMaterial = z.input<typeof esquemaMaterial>
 export type DadosMaterial = z.output<typeof esquemaMaterial>
 

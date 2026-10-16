@@ -13,6 +13,7 @@ import {
 } from "./_inicio/esqueletos"
 import { ATrabalharAgora, HojePorEquipa, HorasARever, PicagemGerente } from "./_inicio/gerente"
 import { OMeuDia } from "./_inicio/o-meu-dia"
+import { EquipamentosAtencao, StockBaixo } from "./_inicio/recursos"
 import { Resumo } from "./_inicio/resumo"
 import { ProximasVisitas } from "./_inicio/visitas"
 
@@ -61,6 +62,13 @@ async function ConteudoInicio() {
             <Suspense fallback={<EsqueletoCartao />}>
               <ATrabalharAgora />
             </Suspense>
+            {/* Recursos: só aparecem quando há alguma coisa a tratar. */}
+            <Suspense fallback={<EsqueletoCartao />}>
+              <EquipamentosAtencao sessao={sessao} />
+            </Suspense>
+            <Suspense fallback={<EsqueletoCartao />}>
+              <StockBaixo />
+            </Suspense>
             <Suspense fallback={<EsqueletoCartao />}>
               <HorasARever />
             </Suspense>
@@ -82,6 +90,15 @@ async function ConteudoInicio() {
           </Suspense>
           {perfil === "chefe_equipa" && (
             <>
+              {/* Recursos: só aparecem quando há alguma coisa a tratar (sem nada, o bloco fica vazio e escondido). */}
+              <div className="grid gap-6 empty:hidden lg:grid-cols-2">
+                <Suspense fallback={<EsqueletoCartao />}>
+                  <EquipamentosAtencao sessao={sessao} />
+                </Suspense>
+                <Suspense fallback={<EsqueletoCartao />}>
+                  <StockBaixo />
+                </Suspense>
+              </div>
               <Suspense fallback={<EsqueletoResumo />}>
                 <Resumo />
               </Suspense>

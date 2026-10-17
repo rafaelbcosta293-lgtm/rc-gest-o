@@ -42,7 +42,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
         <span className="mx-1 h-5 w-px shrink-0 bg-border-subtle" />
         {MODULOS.map((m) =>
           podeAceder(m) ? (
-            <NavLinkMobile key={m.id} href={`/painel/${slug}/${m.id}`} icone={m.icone} nome={m.nome} cor={m.cor} />
+            <NavLinkMobile key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
           ) : (
             <span
               key={m.id}
@@ -65,7 +65,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
         <nav className="flex flex-col gap-0.5 px-3">
           {MODULOS.map((m) =>
             podeAceder(m) ? (
-              <NavLinkDesktop key={m.id} href={`/painel/${slug}/${m.id}`} icone={m.icone} nome={m.nome} cor={m.cor} />
+              <NavLinkDesktop key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
             ) : (
               <span
                 key={m.id}

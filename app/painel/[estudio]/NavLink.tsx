@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { LucideIcon } from 'lucide-react'
-import { PALETA } from '@/lib/data/constantes'
+import { MODULOS, PALETA } from '@/lib/data/constantes'
 
 // Destaca o módulo atual no menu — sem isto, a barra lateral/superior
 // não dava nenhuma pista de "estás aqui", em toda a navegação da app.
@@ -11,17 +10,15 @@ function estaAtivo(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function NavLinkDesktop({
-  href,
-  icone: Icone,
-  nome,
-  cor,
-}: {
-  href: string
-  icone: LucideIcon
-  nome: string
-  cor: keyof typeof PALETA
-}) {
+// Recebe só o id (uma string) e procura o ícone/cor aqui dentro — um
+// componente de ícone (função) não pode atravessar a fronteira
+// servidor→cliente como prop, só dados simples podem.
+function moduloPorId(id: string) {
+  return MODULOS.find((m) => m.id === id)!
+}
+
+export function NavLinkDesktop({ href, id, nome }: { href: string; id: string; nome: string }) {
+  const { icone: Icone, cor } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
   return (
     <Link
@@ -41,17 +38,8 @@ export function NavLinkDesktop({
   )
 }
 
-export function NavLinkMobile({
-  href,
-  icone: Icone,
-  nome,
-  cor,
-}: {
-  href: string
-  icone: LucideIcon
-  nome: string
-  cor: keyof typeof PALETA
-}) {
+export function NavLinkMobile({ href, id, nome }: { href: string; id: string; nome: string }) {
+  const { icone: Icone, cor } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
   return (
     <Link

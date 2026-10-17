@@ -51,13 +51,18 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Renova a sessão se estiver expirada. Necessário para os
-  // Server Components conseguirem ler os cookies de autenticação.
+  // getSession() lê a sessão da cookie sem ir à rede, e só contacta a
+  // Supabase para renovar o token quando este já expirou (ou está perto
+  // disso) — ao contrário de getUser(), que valida sempre no servidor,
+  // em todos os pedidos. Isto é seguro aqui porque o proxy só decide se
+  // mostra a página ou redireciona para /login; a verificação a sério
+  // continua a acontecer sempre (lib/data/sessao.ts chama getUser(), e
+  // a RLS de cada tabela nunca confia em nada que venha de aqui).
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
 
-  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+  if (!session && !isPublicPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

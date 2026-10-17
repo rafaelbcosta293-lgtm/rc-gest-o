@@ -4,6 +4,7 @@ import { CabecalhoPagina } from "@/components/cabecalho-pagina"
 import { exigirSessao } from "@/lib/auth"
 import { formatarDataExtenso } from "@/lib/formatar"
 import { ProximasAusencias } from "./_inicio/ausencias"
+import { CobrancasAtraso } from "./_inicio/cobrancas"
 import {
   EsqueletoCartao,
   EsqueletoInicio,
@@ -62,7 +63,10 @@ async function ConteudoInicio() {
             <Suspense fallback={<EsqueletoCartao />}>
               <ATrabalharAgora />
             </Suspense>
-            {/* Recursos: só aparecem quando há alguma coisa a tratar. */}
+            {/* Alertas (cobranças e recursos): só aparecem quando há alguma coisa a tratar. */}
+            <Suspense fallback={<EsqueletoCartao />}>
+              <CobrancasAtraso />
+            </Suspense>
             <Suspense fallback={<EsqueletoCartao />}>
               <EquipamentosAtencao sessao={sessao} />
             </Suspense>

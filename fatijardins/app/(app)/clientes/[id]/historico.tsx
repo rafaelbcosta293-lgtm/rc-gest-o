@@ -29,7 +29,7 @@ import { formatarQuandoVisita } from "@/lib/visitas"
 /** Quantos se mostram em cada cartão. */
 const LIMITE = 5
 
-function CartaoHistorico({
+export function CartaoHistorico({
   id,
   titulo,
   icone: Icone,
@@ -63,7 +63,7 @@ function CartaoHistorico({
 }
 
 /** Linha de uma lista do histórico (ligação para a ficha). */
-function Linha({
+export function Linha({
   href,
   titulo,
   detalhes,
@@ -90,7 +90,7 @@ function Linha({
   )
 }
 
-function SemRegistos({ children }: { children: React.ReactNode }) {
+export function SemRegistos({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-muted-foreground">{children}</p>
 }
 

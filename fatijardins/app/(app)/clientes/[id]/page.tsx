@@ -30,6 +30,7 @@ import { BotaoApagar } from "../botao-apagar"
 import { BotaoEstadoCliente } from "../botao-estado-cliente"
 import { EsqueletoFicha } from "../esqueletos"
 import { EsqueletoCartaoHistorico, OrcamentosCliente, TrabalhosCliente, VisitasCliente } from "./historico"
+import { SeccaoPagamentos } from "./pagamentos"
 
 export const metadata = { title: "Cliente" }
 
@@ -214,6 +215,9 @@ async function FichaCliente({ params }: { params: PageProps<"/clientes/[id]">["p
           </div>
         )}
       </section>
+
+      {/* Valores e pagamentos: só o gerente (para os outros nem se fazem as consultas). */}
+      {gerente && <SeccaoPagamentos clienteId={cliente.id} />}
 
       <section aria-labelledby="titulo-historico" className="mt-8">
         <h2 id="titulo-historico" className="mb-3 flex items-center gap-2 text-lg font-semibold">

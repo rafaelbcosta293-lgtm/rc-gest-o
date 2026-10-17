@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { fmt, MESES } from '@/lib/data/presencas'
@@ -88,7 +89,9 @@ export default async function AdminPage({
               />
               <h2 className="text-lg font-semibold text-black dark:text-zinc-50">{estudio.nome}</h2>
             </div>
-            <PainelAdminEstudio estudio={estudio} sp={sp} />
+            <Suspense fallback={<EsqueletoEstudio />}>
+              <PainelAdminEstudio estudio={estudio} sp={sp} />
+            </Suspense>
           </section>
         ))}
       </div>
@@ -110,6 +113,22 @@ export default async function AdminPage({
         <span className="text-sm text-black dark:text-zinc-50">Palavra-passe das contas de login dos estúdios</span>
         <span className="text-sm text-zinc-400">→</span>
       </Link>
+    </div>
+  )
+}
+
+// Mostra já a estrutura da secção (os títulos a cinzento, sem dados)
+// enquanto as consultas deste estúdio correm — a página não fica em
+// branco à espera do estúdio mais lento.
+function EsqueletoEstudio() {
+  return (
+    <div className="mt-2 animate-pulse space-y-8">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i}>
+          <div className="h-3 w-24 rounded bg-zinc-200 dark:bg-zinc-800" />
+          <div className="mt-2 h-16 rounded-xl border border-black/10 bg-zinc-100 dark:border-white/10 dark:bg-zinc-900" />
+        </div>
+      ))}
     </div>
   )
 }

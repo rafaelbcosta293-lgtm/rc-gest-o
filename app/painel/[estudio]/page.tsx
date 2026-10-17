@@ -19,10 +19,14 @@ export default async function EstudioPage({
     notFound()
   }
 
-  const { data: clientes } = await supabase
-    .from('clientes')
-    .select('id, estado, inicio_contrato')
-    .eq('estudio_id', estudio.id)
+  // Estas três só precisam do estúdio, não umas das outras — correm
+  // todas ao mesmo tempo em vez de à vez.
+  const [{ data: clientes }, { data: pagamentosEstadoData }, { data: leadsParadasData }] =
+    await Promise.all([
+      supabase.from('clientes').select('id, estado, inicio_contrato').eq('estudio_id', estudio.id),
+      supabase.from('v_estado_pagamento').select('em_dia').eq('estudio_id', estudio.id),
+      supabase.from('v_leads_paradas').select('id').eq('estudio_id', estudio.id),
+    ])
 
   const { ehAdmin, ehGestao } = papeisDaSessao(sessao)
   const podeAceder = (m: (typeof MODULOS)[number]) =>
@@ -33,40 +37,33 @@ export default async function EstudioPage({
   const suspensos = todosClientes.filter((c) => c.estado === 'Suspenso').length
   const inativos = todosClientes.filter((c) => c.estado === 'Ex-cliente').length
 
+  const mensalidadesEmDivida = (pagamentosEstadoData ?? []).filter((p) => !p.em_dia).length
+  const leadsContactoAtrasado = (leadsParadasData ?? []).length
+
+  // Estas duas só precisam dos ids dos clientes ativos — também correm
+  // em paralelo entre si.
   const clientesAtivos = todosClientes.filter((c) => c.estado === 'Ativo')
   const idsClientesAtivos = clientesAtivos.map((c) => c.id)
-  const { data: segurosPagosData } = idsClientesAtivos.length
-    ? await supabase
-        .from('pagamentos')
-        .select('cliente_id, data_pagamento')
-        .in('cliente_id', idsClientesAtivos)
-        .eq('inclui_seguro', true)
-    : { data: [] }
-  const { data: reativacoesData } = idsClientesAtivos.length
-    ? await supabase
-        .from('pagamentos')
-        .select('cliente_id, data_pagamento')
-        .in('cliente_id', idsClientesAtivos)
-        .eq('inclui_reativacao', true)
-    : { data: [] }
+  const [{ data: segurosPagosData }, { data: reativacoesData }] = idsClientesAtivos.length
+    ? await Promise.all([
+        supabase
+          .from('pagamentos')
+          .select('cliente_id, data_pagamento')
+          .in('cliente_id', idsClientesAtivos)
+          .eq('inclui_seguro', true),
+        supabase
+          .from('pagamentos')
+          .select('cliente_id, data_pagamento')
+          .in('cliente_id', idsClientesAtivos)
+          .eq('inclui_reativacao', true),
+      ])
+    : [{ data: [] }, { data: [] }]
   const segurosEmDivida = segurosPorPagar(
     clientesAtivos,
     new Date(),
     segurosPagosData ?? [],
     reativacoesData ?? []
   ).length
-
-  const { data: pagamentosEstadoData } = await supabase
-    .from('v_estado_pagamento')
-    .select('em_dia')
-    .eq('estudio_id', estudio.id)
-  const mensalidadesEmDivida = (pagamentosEstadoData ?? []).filter((p) => !p.em_dia).length
-
-  const { data: leadsParadasData } = await supabase
-    .from('v_leads_paradas')
-    .select('id')
-    .eq('estudio_id', estudio.id)
-  const leadsContactoAtrasado = (leadsParadasData ?? []).length
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">

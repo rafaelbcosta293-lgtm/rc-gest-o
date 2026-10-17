@@ -22,7 +22,7 @@ import { formatarDiaLongo } from "@/lib/datas"
 import { dataEmLisboa } from "@/lib/horas"
 import { formatarData, formatarDataHora, formatarDuracao, formatarHora, formatarNumero, hojeEmLisboa } from "@/lib/formatar"
 import { formatarNumeroOrcamento } from "@/lib/orcamentos"
-import { eGerenteOuChefe } from "@/lib/perfis"
+import { eGerente, eGerenteOuChefe } from "@/lib/perfis"
 import { createClient } from "@/lib/supabase/server"
 import {
   BUCKET_FOTOS,
@@ -68,6 +68,7 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
       `id, titulo, descricao, tipo, origem, data, hora_inicio, duracao_prevista_min, estado,
        equipa:equipas(id, nome, cor),
        orcamento:orcamentos!trabalhos_orcamento_id_fkey(id, ano, numero),
+       contrato:contratos(id, titulo),
        local:locais(nome, morada, codigo_postal, localidade, latitude, longitude, area_m2, notas),
        cliente:clientes(id, nome, pessoa_contacto, telemovel, telefone)`
     )
@@ -134,6 +135,8 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
   const hoje = hojeEmLisboa(agora)
   const perfil = sessao.colaborador.perfil
   const podeGerir = eGerenteOuChefe(perfil)
+  // Contrato de origem: só o gerente (a RLS também não o mostra aos outros).
+  const contrato = eGerente(perfil) ? trabalho.contrato : null
   // Picar aqui: só nos trabalhos de hoje ainda por fazer (a função da BD confirma a equipa).
   const aberto = abertoR.data
   const abertoHoje = aberto !== null && dataEmLisboa(aberto.entrada) === hoje
@@ -249,8 +252,8 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
             titulo="Tarefas previstas"
             icone={ClipboardListIcon}
             descricao={[
-              // Com o orçamento de origem visível, a ligação abaixo já diz a origem.
-              !(podeGerir && trabalho.orcamento) && NOMES_ORIGEM_TRABALHO[trabalho.origem],
+              // Com o orçamento ou o contrato de origem visível, a ligação abaixo já diz a origem.
+              !((podeGerir && trabalho.orcamento) || contrato) && NOMES_ORIGEM_TRABALHO[trabalho.origem],
               trabalho.duracao_prevista_min && `duração prevista ${formatarDuracao(trabalho.duracao_prevista_min)}`,
             ]
               .filter(Boolean)
@@ -265,6 +268,17 @@ async function FichaTrabalho({ params }: { params: PageProps<"/trabalhos/[id]">[
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
                   Orçamento {formatarNumeroOrcamento(trabalho.orcamento.ano, trabalho.orcamento.numero)}
+                </Link>
+              </p>
+            )}
+            {contrato && (
+              <p className="text-sm">
+                Origem:{" "}
+                <Link
+                  href={`/financas/contratos/${contrato.id}`}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Contrato {contrato.titulo}
                 </Link>
               </p>
             )}

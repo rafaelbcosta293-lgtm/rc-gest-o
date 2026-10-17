@@ -7,6 +7,7 @@ import { BotaoApagar } from "@/app/(app)/clientes/botao-apagar"
 import { CabecalhoPagina } from "@/components/cabecalho-pagina"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { exigirPerfil } from "@/lib/auth"
 import { formatarData, formatarMoeda, hojeEmLisboa } from "@/lib/formatar"
 import { moradaCompleta } from "@/lib/mapas"
@@ -20,6 +21,7 @@ import { BadgeEstadoOrcamento, BadgeExpirado } from "../_componentes/badges"
 import { carregarOpcoesOrcamento, proximoDiaUtil, visitaOrigem } from "../_componentes/dados"
 import { EsqueletoOrcamento } from "../_componentes/esqueletos"
 import { BotoesEstado } from "./_componentes/botoes-estado"
+import { CobrancasOrcamento } from "./_componentes/cobrancas-orcamento"
 import { ConverterTrabalho } from "./_componentes/converter-trabalho"
 import { DadosOrcamento } from "./_componentes/dados-orcamento"
 import { LinhasOrcamento } from "./_componentes/linhas-orcamento"
@@ -236,6 +238,17 @@ async function FichaOrcamento({ params }: { params: PageProps<"/orcamentos/[id]"
             </CardContent>
           </Card>
         </section>
+
+        {/* Cobranças do orçamento: só o gerente vê dinheiro. */}
+        {gerente && (
+          <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}>
+            <CobrancasOrcamento
+              orcamentoId={orcamento.id}
+              aceite={orcamento.estado === "aceite"}
+              total={Number(orcamento.total)}
+            />
+          </Suspense>
+        )}
 
         <section aria-labelledby="titulo-linhas">
           <Card>

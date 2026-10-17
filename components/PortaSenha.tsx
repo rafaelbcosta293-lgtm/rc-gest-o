@@ -14,10 +14,10 @@ export default function PortaSenha({
 }) {
   return (
     <div className="mx-auto flex max-w-sm flex-col items-center px-4 py-24 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/15 text-brand-strong">
-        <Lock className="h-5 w-5" strokeWidth={2} />
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/15 text-brand-strong shadow-pop">
+        <Lock className="h-6 w-6" strokeWidth={2.25} />
       </span>
-      <h1 className="mt-4 text-lg font-semibold tracking-tight text-foreground">{titulo}</h1>
+      <h1 className="mt-5 text-xl font-bold tracking-tight text-foreground">{titulo}</h1>
       <p className="mt-1 text-sm text-muted">
         Esta área está protegida por password.
       </p>

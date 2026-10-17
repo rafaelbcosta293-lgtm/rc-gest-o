@@ -70,7 +70,7 @@ export default async function EstudioPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Estúdio de {estudio.nome}
           </h1>
           <p className="mt-1 text-sm text-muted">
@@ -81,14 +81,14 @@ export default async function EstudioPage({
           {ehGestao && (
             <Link
               href={`/painel/${slug}/equipa`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-3.5 py-2 text-sm font-medium text-foreground/80 transition-colors hover:border-border-strong hover:bg-brand/[.06]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground/80 shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
             >
               <UsersRound className="h-4 w-4" /> Equipa
             </Link>
           )}
           <Link
             href="/painel"
-            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-3.5 py-2 text-sm font-medium text-foreground/80 transition-colors hover:border-border-strong hover:bg-brand/[.06]"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground/80 shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
           >
             <ArrowLeftRight className="h-4 w-4" /> Mudar estúdio
           </Link>
@@ -101,15 +101,15 @@ export default async function EstudioPage({
             <Link
               key={m.id}
               href={`/painel/${slug}/${m.id}`}
-              className="group rounded-xl border border-border-subtle bg-surface p-5 shadow-sm shadow-black/[.02] transition-all hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md hover:shadow-black/[.04]"
+              className="group rounded-2xl border border-border-subtle bg-surface p-5 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-border-strong hover:shadow-card-hover"
             >
               <span
-                className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform group-hover:scale-105"
+                className="flex h-12 w-12 items-center justify-center rounded-2xl shadow-pop transition-transform duration-300 group-hover:scale-110"
                 style={{ background: PALETA[m.cor].bg, color: PALETA[m.cor].tx }}
               >
-                <m.icone className="h-5 w-5" strokeWidth={2} />
+                <m.icone className="h-5 w-5" strokeWidth={2.25} />
               </span>
-              <h2 className="mt-3 font-semibold text-foreground">
+              <h2 className="mt-3.5 font-bold tracking-tight text-foreground">
                 {m.nome}
               </h2>
               <p className="mt-1 text-xs text-muted">{m.desc}</p>

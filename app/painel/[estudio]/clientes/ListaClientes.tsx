@@ -45,16 +45,16 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
           placeholder="Procurar por nome ou nº de sócio…"
-          className="w-full rounded-lg border border-border-subtle bg-surface py-2.5 pl-9 pr-3.5 text-sm outline-none transition-colors focus:border-brand/60"
+          className="w-full rounded-2xl border border-border-subtle bg-surface py-3 pl-10 pr-3.5 text-sm outline-none transition-colors focus:border-brand/60"
         />
       </div>
 
-      <div className="mt-4 flex flex-col overflow-hidden rounded-xl border border-border-subtle shadow-sm shadow-black/[.02]">
+      <div className="mt-4 flex flex-col overflow-hidden rounded-2xl border border-border-subtle shadow-card">
         {linhasFiltradas.map((l, i) => (
           <Link
             key={l.id}
             href={`/painel/${slug}/clientes/${l.id}`}
-            className={`flex flex-col gap-1.5 bg-surface px-4 py-3 text-sm transition-colors hover:bg-brand/[.06] ${
+            className={`flex flex-col gap-1.5 bg-surface px-4 py-3.5 text-sm transition-colors hover:bg-brand/[.06] ${
               i > 0 ? 'border-t border-border-subtle' : ''
             }`}
           >
@@ -64,7 +64,7 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
               </span>
               <span className="flex min-w-[160px] flex-1 items-center gap-2">
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: l.alertaDot }} />
-                <span className="truncate font-medium text-foreground">{l.nome}</span>
+                <span className="truncate font-semibold text-foreground">{l.nome}</span>
               </span>
               <span
                 className="w-24 shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-medium"

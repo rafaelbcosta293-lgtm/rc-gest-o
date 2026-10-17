@@ -20,10 +20,10 @@ export default async function LoginPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface p-8 shadow-xl shadow-black/[.03]">
+      <div className="w-full max-w-sm rounded-3xl border border-border-subtle bg-surface p-8 shadow-card-hover">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="RC Private Fitness Studio" className="mx-auto h-9 w-auto" />
-        <h1 className="mt-6 text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="mt-6 text-3xl font-bold tracking-tight text-foreground">
           Iniciar sessão
         </h1>
         <p className="mt-1 text-sm text-muted">

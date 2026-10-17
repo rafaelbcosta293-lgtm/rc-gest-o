@@ -185,7 +185,7 @@ export default async function PagamentosPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">Pagamentos</h1>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Pagamentos</h1>
       <p className="mt-1 text-sm text-muted">
         {estudio.nome} · {atrasados.length} {atrasados.length === 1 ? 'atrasado' : 'atrasados'} de{' '}
         {clientes.length} clientes ativos

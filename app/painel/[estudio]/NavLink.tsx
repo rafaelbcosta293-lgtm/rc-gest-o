@@ -24,15 +24,15 @@ export function NavLinkDesktop({ href, id, nome }: { href: string; id: string; n
   return (
     <Link
       href={href}
-      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
-        ativo ? 'bg-brand/15 text-foreground' : 'text-foreground/75 hover:bg-brand/[.07] hover:text-foreground'
+      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold tracking-tight transition-colors ${
+        ativo ? 'bg-brand/15 text-foreground' : 'text-foreground/70 hover:bg-brand/[.07] hover:text-foreground'
       }`}
     >
       <span
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
         style={{ background: PALETA[cor].bg, color: PALETA[cor].tx }}
       >
-        <Icone className="h-3.5 w-3.5" strokeWidth={2.25} />
+        <Icone className="h-4 w-4" strokeWidth={2.25} />
       </span>
       {nome}
     </Link>

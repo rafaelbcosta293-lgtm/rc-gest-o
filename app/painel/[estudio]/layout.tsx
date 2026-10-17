@@ -32,7 +32,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
           estúdio — os módulos ficam na barra de separadores do fundo,
           sempre ao alcance do polegar, ao estilo iOS. */}
-      <div className="sticky top-0 z-10 flex items-center justify-end border-b border-border-subtle bg-background px-4 py-2 md:hidden">
+      <div className="sticky top-0 z-10 flex items-center justify-end border-b border-border-subtle bg-background/80 px-4 py-2 backdrop-blur-xl md:hidden">
         <Link
           href="/painel"
           title="Mudar estúdio"
@@ -46,7 +46,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       {/* Tablet (768–1023px): barra lateral estreita, só com ícones —
           mantém a navegação sempre visível sem ocupar tanto ecrã como a
           versão completa. */}
-      <aside className="hidden border-border-subtle md:sticky md:top-0 md:flex md:h-screen md:w-20 md:flex-col md:items-center md:gap-1 md:border-r md:py-5 lg:hidden">
+      <aside className="hidden border-border-subtle bg-surface/70 backdrop-blur-xl md:sticky md:top-0 md:flex md:h-screen md:w-20 md:flex-col md:items-center md:gap-1 md:border-r md:py-5 lg:hidden">
         <Link href="/painel" className="mb-3 flex items-center justify-center p-1.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="RC Private Fitness Studio" className="h-7 w-auto" />
@@ -68,12 +68,12 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
 
       {/* Computador (≥1024px): barra lateral completa, com nomes por
           extenso. */}
-      <aside className="hidden shrink-0 border-border-subtle lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:flex-col lg:border-r">
-        <Link href="/painel" className="flex items-center px-5 py-6">
+      <aside className="hidden shrink-0 border-border-subtle bg-surface/70 backdrop-blur-xl lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col lg:border-r">
+        <Link href="/painel" className="flex items-center px-6 py-7">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="RC Private Fitness Studio" className="h-10 w-auto" />
         </Link>
-        <nav className="flex flex-col gap-0.5 px-3">
+        <nav className="flex flex-col gap-1 px-4">
           {MODULOS.map((m) =>
             podeAceder(m) ? (
               <NavLinkDesktop key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
@@ -98,7 +98,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
 
       {/* Telemóvel: barra de separadores fixa no fundo, ao estilo iOS. */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around overflow-x-auto border-t border-border-subtle bg-background/95 px-1 py-1 backdrop-blur-sm md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around overflow-x-auto border-t border-border-subtle bg-background/80 px-1 py-1 shadow-[0_-8px_24px_rgba(24,24,27,0.06)] backdrop-blur-xl md:hidden">
         {MODULOS.map((m) =>
           podeAceder(m) ? (
             <NavLinkPhone key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} />

@@ -232,7 +232,7 @@ export default async function ClientesPage({
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Clientes</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Clientes</h1>
           <p className="mt-1 text-sm text-muted">
             {estudio.nome} · {clientes.length} {clientes.length === 1 ? 'cliente' : 'clientes'} ·
             a ficha completa de cada um, num só sítio
@@ -241,20 +241,22 @@ export default async function ClientesPage({
         <div className="flex items-center gap-2">
           <Link
             href={`/painel/${slug}/clientes/aniversarios`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-4 py-2 text-sm font-medium transition-colors hover:border-border-strong hover:bg-brand/[.06]"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
           >
             <Cake className="h-4 w-4" /> Aniversários
           </Link>
           <Link
             href={`/painel/${slug}/treinos/novo`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-black shadow-sm hover:bg-brand-strong"
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
           >
             <Plus className="h-4 w-4" /> Cliente
           </Link>
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-1.5">
+      {/* Controlo segmentado, ao estilo iOS — uma só faixa, com o filtro
+          ativo a "flutuar" lá dentro, em vez de pílulas soltas. */}
+      <div className="mt-6 flex flex-wrap gap-1.5 rounded-full bg-border-subtle p-1">
         {FILTROS.map((f) => {
           const ativo = estado === f.valor
           const href = `/painel/${slug}/clientes${construirQuery(
@@ -265,10 +267,8 @@ export default async function ClientesPage({
             <Link
               key={f.valor}
               href={href}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
-                ativo
-                  ? 'border-brand bg-brand text-black'
-                  : 'border-border-subtle text-muted hover:border-border-strong'
+              className={`flex-1 rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-all ${
+                ativo ? 'bg-surface text-foreground shadow-pop' : 'text-muted hover:text-foreground'
               }`}
             >
               {f.label} ({contagens[f.valor]})
@@ -277,8 +277,8 @@ export default async function ClientesPage({
         })}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-        <span className="font-medium">Ordenar por:</span>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+        <span className="font-semibold">Ordenar por:</span>
         {ORDENS.map((o) => {
           const ativo = ordem === o.valor
           const href = `/painel/${slug}/clientes${construirQuery(
@@ -289,7 +289,7 @@ export default async function ClientesPage({
             <Link
               key={o.valor}
               href={href}
-              className={`rounded-full border px-3 py-1.5 font-medium ${
+              className={`rounded-full border px-3 py-1.5 font-semibold transition-colors ${
                 ativo
                   ? 'border-brand bg-brand text-black'
                   : 'border-border-subtle text-muted hover:border-border-strong'
@@ -304,7 +304,7 @@ export default async function ClientesPage({
             { estado, ordem: ordemParam },
             { dir: direcao === 'asc' ? 'desc' : 'asc' }
           )}`}
-          className="flex items-center rounded-full border border-border-subtle px-2.5 py-1.5 font-medium text-muted hover:border-border-strong"
+          className="flex items-center rounded-full border border-border-subtle px-2.5 py-1.5 font-semibold text-muted transition-colors hover:border-border-strong"
           title={direcao === 'asc' ? 'Ordem crescente — trocar para decrescente' : 'Ordem decrescente — trocar para crescente'}
         >
           {direcao === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}

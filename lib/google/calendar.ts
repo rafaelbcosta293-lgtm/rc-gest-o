@@ -166,12 +166,16 @@ export type EventoComCor = {
   // o Google devolve (já no fuso do calendário) — não se converte para
   // UTC para não arriscar deslizar de dia perto da meia-noite.
   data: string
+  hora: string
   fim: Date
   // undefined/null = evento sem cor própria, a mostrar na cor
   // predefinida do calendário. Qualquer valor = cor escolhida à mão
   // para aquele evento específico, substituindo a predefinida.
   colorId: string | null
   texto: string
+  // Título por extenso (não normalizado) — só para diagnóstico humano;
+  // a comparação usa sempre "texto".
+  resumo: string
 }
 
 // Eventos com hora marcada (exclui eventos de dia inteiro, que não têm
@@ -199,9 +203,11 @@ export async function eventosComCorNoIntervalo(
     eventos.push({
       id: ev.id,
       data: ev.start.dateTime.slice(0, 10),
+      hora: ev.start.dateTime.slice(11, 16),
       fim: new Date(ev.end.dateTime),
       colorId: ev.colorId ?? null,
       texto: normalizar(`${ev.summary ?? ''} ${ev.description ?? ''}`),
+      resumo: ev.summary ?? '(sem título)',
     })
   }
   return eventos

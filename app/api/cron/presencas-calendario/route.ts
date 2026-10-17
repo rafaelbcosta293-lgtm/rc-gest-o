@@ -24,6 +24,16 @@ export async function GET(request: Request) {
     return new Response('unauthorized', { status: 401 })
   }
 
+  // "detalhe=1" inclui, por estúdio, os eventos ignorados (sem cliente
+  // reconhecido) com título por extenso — só para diagnóstico manual.
+  // Nunca é pedido pela corrida agendada (que não leva estes parâmetros),
+  // por isso não muda o que fica no log do GitHub Actions a cada 30 min.
+  // Importante: quem chamar isto com detalhe=1 vê nomes de clientes na
+  // resposta — nunca correr assim a partir de um sítio com log público.
+  const url = new URL(request.url)
+  const comDetalhe = url.searchParams.get('detalhe') === '1'
+  const estudioFiltro = url.searchParams.get('estudio')
+
   const admin = createAdminClient()
   const estudios = await getEstudios(admin)
 
@@ -31,11 +41,22 @@ export async function GET(request: Request) {
   const timeMin = new Date(agora.getTime() - DIAS_PARA_TRAS * 24 * 60 * 60 * 1000).toISOString()
   const timeMax = agora.toISOString()
 
-  const porEstudio: Record<string, { marcadas: number; desmarcadas: number; ignorados: number }> = {}
+  const porEstudio: Record<
+    string,
+    {
+      marcadas: number
+      desmarcadas: number
+      ignorados: number
+      ignoradosDetalhe?: { data: string; hora: string; resumo: string }[]
+    }
+  > = {}
 
   for (const estudio of estudios) {
     const calendarId = calendarIdDoEstudio(estudio.slug)
     if (!calendarId) {
+      continue
+    }
+    if (estudioFiltro && estudio.slug !== estudioFiltro) {
       continue
     }
 
@@ -56,11 +77,15 @@ export async function GET(request: Request) {
     let marcadas = 0
     let desmarcadas = 0
     let ignorados = 0
+    const ignoradosDetalhe: { data: string; hora: string; resumo: string }[] = []
 
     for (const evento of eventos) {
       const cliente = clienteExatoDoEvento(evento.texto, clientes)
       if (!cliente) {
         ignorados++
+        if (comDetalhe) {
+          ignoradosDetalhe.push({ data: evento.data, hora: evento.hora, resumo: evento.resumo })
+        }
         continue
       }
 
@@ -115,7 +140,12 @@ export async function GET(request: Request) {
       }
     }
 
-    porEstudio[estudio.slug] = { marcadas, desmarcadas, ignorados }
+    porEstudio[estudio.slug] = {
+      marcadas,
+      desmarcadas,
+      ignorados,
+      ...(comDetalhe ? { ignoradosDetalhe } : {}),
+    }
   }
 
   return Response.json({ ok: true, porEstudio })

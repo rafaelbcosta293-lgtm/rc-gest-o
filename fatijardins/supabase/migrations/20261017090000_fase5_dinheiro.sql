@@ -267,6 +267,7 @@ declare
   v_desde date;
   v_data date;
   v_n integer := 0;
+  v_ordem integer;
   v_mes date;
   v_ultimo_mes date;
   v_criado date;
@@ -295,12 +296,25 @@ begin
       end;
       exit when v_data > v_ate;
       if v_data >= v_desde then
+        -- Lugar na ordem do dia como na app: antes do primeiro trabalho com
+        -- hora posterior (e os seguintes descem um lugar); sem hora, no fim.
+        v_ordem := null;
+        if c.hora_inicio is not null then
+          select min(t.ordem) into v_ordem from public.trabalhos t
+          where t.data = v_data and t.equipa_id is not distinct from c.equipa_id
+            and t.hora_inicio > c.hora_inicio;
+        end if;
+        if v_ordem is null then
+          select coalesce(max(t.ordem), 0) + 1 into v_ordem from public.trabalhos t
+          where t.data = v_data and t.equipa_id is not distinct from c.equipa_id;
+        else
+          update public.trabalhos t set ordem = t.ordem + 1
+          where t.data = v_data and t.equipa_id is not distinct from c.equipa_id and t.ordem >= v_ordem;
+        end if;
         insert into public.trabalhos (local_id, cliente_id, titulo, descricao, tipo, origem, contrato_id, data,
           hora_inicio, duracao_prevista_min, equipa_id, ordem)
         values (c.local_id, c.cliente_id, c.titulo, c.servicos, 'manutencao', 'contrato', c.id, v_data,
-          c.hora_inicio, c.duracao_prevista_min, c.equipa_id,
-          (select coalesce(max(t.ordem), 0) + 1 from public.trabalhos t
-           where t.data = v_data and t.equipa_id is not distinct from c.equipa_id));
+          c.hora_inicio, c.duracao_prevista_min, c.equipa_id, v_ordem);
         trabalhos := trabalhos + 1;
       end if;
       v_n := v_n + 1;

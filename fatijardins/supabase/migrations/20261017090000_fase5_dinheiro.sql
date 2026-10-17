@@ -177,10 +177,12 @@ create trigger pagamentos_updated_at before update on public.pagamentos
 
 -- Os pagamentos de uma cobrança não passam do seu valor (e o valor da
 -- cobrança não desce abaixo do que já foi pago).
+-- Corre com as permissões de quem grava (security invoker): quem não pode ler
+-- a cobrança não fica a saber o valor em dívida pela mensagem de erro.
 create or replace function app.limitar_pagamentos()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare
@@ -295,14 +297,23 @@ begin
         else c.data_inicio + 7 * v_n
       end;
       exit when v_data > v_ate;
-      if v_data >= v_desde then
-        -- Lugar na ordem do dia como na app: antes do primeiro trabalho com
-        -- hora posterior (e os seguintes descem um lugar); sem hora, no fim.
+      -- Um dia que já tem uma visita deste contrato (mesmo cancelada ou já
+      -- começada) não recebe outra.
+      if v_data >= v_desde and not exists
+         (select 1 from public.trabalhos t where t.contrato_id = c.id and t.data = v_data) then
+        -- Lugar na ordem do dia como na app (lugarNaOrdem): antes do primeiro
+        -- trabalho com hora posterior; senão logo a seguir ao último com hora
+        -- (os seguintes descem um lugar); sem hora, no fim.
         v_ordem := null;
         if c.hora_inicio is not null then
           select min(t.ordem) into v_ordem from public.trabalhos t
           where t.data = v_data and t.equipa_id is not distinct from c.equipa_id
             and t.hora_inicio > c.hora_inicio;
+          if v_ordem is null then
+            select max(t.ordem) + 1 into v_ordem from public.trabalhos t
+            where t.data = v_data and t.equipa_id is not distinct from c.equipa_id
+              and t.hora_inicio is not null;
+          end if;
         end if;
         if v_ordem is null then
           select coalesce(max(t.ordem), 0) + 1 into v_ordem from public.trabalhos t
@@ -323,8 +334,9 @@ begin
   end if;
 
   -- Cobranças: uma por mês, desde o mês de início (mas não antes do mês em
-  -- que o contrato foi registado) até ao mês atual (ou ao do fim).
-  if c.valor_mensal > 0 then
+  -- que o contrato foi registado) até ao mês atual (ou ao do fim). Os meses
+  -- sem valor também contam como tratados (não se cobram mais tarde).
+  begin
     v_mes := greatest(
       date_trunc('month', c.data_inicio)::date,
       date_trunc('month', v_criado)::date,
@@ -332,21 +344,23 @@ begin
     );
     v_ultimo_mes := date_trunc('month', least(v_hoje, coalesce(c.data_fim, v_hoje)))::date;
     while v_mes <= v_ultimo_mes loop
-      insert into public.cobrancas (cliente_id, local_id, origem, contrato_id, descricao, periodo, data_emissao,
-        data_vencimento, valor)
-      values (c.cliente_id, c.local_id, 'contrato', c.id,
-        'Avença de ' || v_meses[extract(month from v_mes)::integer] || ' de ' || extract(year from v_mes)::integer
-          || ' — ' || c.titulo,
-        v_mes, v_mes,
-        greatest(make_date(extract(year from v_mes)::integer, extract(month from v_mes)::integer, c.dia_cobranca), v_criado),
-        round(c.valor_mensal * (1 + c.taxa_iva / 100), 2))
-      on conflict (contrato_id, periodo) do nothing;
-      get diagnostics v_inseridas = row_count;
-      cobrancas := cobrancas + v_inseridas;
+      if c.valor_mensal > 0 then
+        insert into public.cobrancas (cliente_id, local_id, origem, contrato_id, descricao, periodo, data_emissao,
+          data_vencimento, valor)
+        values (c.cliente_id, c.local_id, 'contrato', c.id,
+          'Avença de ' || v_meses[extract(month from v_mes)::integer] || ' de ' || extract(year from v_mes)::integer
+            || ' — ' || c.titulo,
+          v_mes, v_mes,
+          greatest(make_date(extract(year from v_mes)::integer, extract(month from v_mes)::integer, c.dia_cobranca), v_criado),
+          round(c.valor_mensal * (1 + c.taxa_iva / 100), 2))
+        on conflict (contrato_id, periodo) do nothing;
+        get diagnostics v_inseridas = row_count;
+        cobrancas := cobrancas + v_inseridas;
+      end if;
       update public.contratos set cobrado_ate = v_mes where id = c.id;
       v_mes := (v_mes + interval '1 month')::date;
     end loop;
-  end if;
+  end;
 end;
 $$;
 
@@ -414,11 +428,14 @@ as $$
 declare
   v_hoje date := app.hoje();
 begin
-  if (new.estado, new.frequencia, new.data_inicio, new.data_fim, new.equipa_id, new.hora_inicio,
-      new.duracao_prevista_min, new.titulo, new.servicos, new.local_id)
+  -- Só o título, os serviços ou a duração: atualizam-se as visitas futuras
+  -- agendadas (sem refazer a série, que perderia mudanças feitas na agenda).
+  if (new.estado, new.frequencia, new.data_inicio, new.data_fim, new.equipa_id, new.hora_inicio, new.local_id)
      is not distinct from
-     (old.estado, old.frequencia, old.data_inicio, old.data_fim, old.equipa_id, old.hora_inicio,
-      old.duracao_prevista_min, old.titulo, old.servicos, old.local_id) then
+     (old.estado, old.frequencia, old.data_inicio, old.data_fim, old.equipa_id, old.hora_inicio, old.local_id) then
+    update public.trabalhos t
+    set titulo = new.titulo, descricao = new.servicos, duracao_prevista_min = new.duracao_prevista_min
+    where t.contrato_id = new.id and t.data > v_hoje and t.estado = 'agendado';
     return null;
   end if;
 
@@ -432,8 +449,11 @@ begin
 
   update public.contratos
   set agendado_ate = v_hoje,
+      -- Reativar (ou prolongar um contrato que já tinha acabado): os meses
+      -- parados não são cobrados.
       cobrado_ate = case
-        when old.estado <> 'ativo' and new.estado = 'ativo'
+        when (old.estado <> 'ativo' and new.estado = 'ativo')
+          or (old.data_fim < date_trunc('month', v_hoje) and new.data_fim is distinct from old.data_fim)
           then greatest(cobrado_ate, (date_trunc('month', v_hoje) - interval '1 month')::date)
         else cobrado_ate
       end
@@ -450,6 +470,48 @@ create trigger contratos_alterado
   after update of estado, frequencia, data_inicio, data_fim, equipa_id, hora_inicio, duracao_prevista_min,
     titulo, servicos, local_id on public.contratos
   for each row execute function app.contrato_alterado();
+
+-- Apaga um contrato criado por engano (só o gerente), tudo ou nada: as
+-- visitas de hoje em diante ainda agendadas e sem registos/horas/fotos, as
+-- cobranças sem pagamentos nem fatura e o contrato. Se houver mais alguma
+-- coisa (visitas feitas, cobranças pagas ou faturadas), não apaga nada.
+create or replace function public.apagar_contrato(p_contrato_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_hoje date := app.hoje();
+begin
+  if not app.e_gerente() then
+    raise exception 'Só o gerente pode apagar contratos.' using errcode = 'insufficient_privilege';
+  end if;
+  perform 1 from public.contratos where id = p_contrato_id for update;
+  if not found then
+    return false;
+  end if;
+  if exists (
+    select 1 from public.trabalhos t
+    where t.contrato_id = p_contrato_id
+      and (t.estado in ('em_curso', 'concluido') or (t.data < v_hoje and t.estado <> 'cancelado')
+        or exists (select 1 from public.registos_trabalho r where r.trabalho_id = t.id)
+        or exists (select 1 from public.registos_horas h where h.trabalho_id = t.id)
+        or exists (select 1 from public.fotos f where f.trabalho_id = t.id))
+  ) or exists (
+    select 1 from public.cobrancas c
+    where c.contrato_id = p_contrato_id
+      and (c.fatura_referencia is not null or exists (select 1 from public.pagamentos p where p.cobranca_id = c.id))
+  ) then
+    raise exception 'Este contrato já tem cobranças ou visitas feitas: termine-o em vez de o apagar.'
+      using errcode = 'check_violation';
+  end if;
+  delete from public.trabalhos where contrato_id = p_contrato_id;
+  delete from public.cobrancas where contrato_id = p_contrato_id;
+  delete from public.contratos where id = p_contrato_id;
+  return true;
+end;
+$$;
 
 -- Todos os dias de manhã (pg_cron). Se a extensão não estiver disponível,
 -- a geração continua a correr ao gravar contratos e com "Gerar agora".
@@ -503,8 +565,8 @@ grant select on public.cobrancas_com_saldo, public.dividas_clientes to authentic
 grant all on public.contratos, public.cobrancas, public.pagamentos to service_role;
 grant select on public.cobrancas_com_saldo, public.dividas_clientes to service_role;
 
-revoke all on function public.gerar_contratos() from public, anon;
-grant execute on function public.gerar_contratos() to authenticated, service_role;
+revoke all on function public.gerar_contratos(), public.apagar_contrato(uuid) from public, anon;
+grant execute on function public.gerar_contratos(), public.apagar_contrato(uuid) to authenticated, service_role;
 
 revoke all on function app.gerar_contrato(uuid), app.gerar_contratos() from public, authenticated;
 revoke all on function app.proteger_contrato_do_trabalho(), app.preparar_cobranca(), app.limitar_pagamentos(),

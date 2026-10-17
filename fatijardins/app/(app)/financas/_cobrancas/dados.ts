@@ -107,7 +107,10 @@ export function ordenarCobrancas(cobrancas: CobrancaSaldo[]): CobrancaSaldo[] {
       Number(b.estado === "atrasada") - Number(a.estado === "atrasada") ||
       b.diasAtraso - a.diasAtraso ||
       Number(a.estado === "paga") - Number(b.estado === "paga") ||
-      a.dataVencimento.localeCompare(b.dataVencimento)
+      // Em aberto: a vencer primeiro; pagas: as mais recentes primeiro.
+      (a.estado === "paga" && b.estado === "paga"
+        ? b.dataVencimento.localeCompare(a.dataVencimento)
+        : a.dataVencimento.localeCompare(b.dataVencimento))
   )
 }
 

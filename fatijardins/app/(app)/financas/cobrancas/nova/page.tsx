@@ -87,7 +87,7 @@ async function NovaCobranca({ searchParams }: { searchParams: ParametrosPesquisa
       local_id: "",
       orcamento_id: dados.id,
       descricao: `Orçamento ${dados.numero} — ${dados.titulo}`,
-      valor: valorParaCampo(dados.jaCobrado > 0 && falta > 0 ? falta : dados.total),
+      valor: dados.jaCobrado > 0 ? (falta > 0 ? valorParaCampo(falta) : "") : valorParaCampo(dados.total),
     }
     return (
       <FormularioCobranca

@@ -5,8 +5,8 @@ import { z } from "zod"
 
 import { erroBD, erroValidacao, SEM_PERMISSAO, type ResultadoAcao } from "@/lib/acoes"
 import { obterSessao } from "@/lib/auth"
-import { ESTADOS_CONTRATO, type EstadoContrato } from "@/lib/financas"
-import { hojeEmLisboa } from "@/lib/formatar"
+import { ESTADOS_CONTRATO, formatarMes, type EstadoContrato } from "@/lib/financas"
+import { formatarMoeda, hojeEmLisboa } from "@/lib/formatar"
 import { eGerente } from "@/lib/perfis"
 import type { TablesInsert } from "@/lib/supabase/database.types"
 import { createClient } from "@/lib/supabase/server"
@@ -123,10 +123,16 @@ export async function criarContrato(valores: CamposContrato): Promise<ResultadoA
   if (error) return erroBD(error, JA_NAO_EXISTE)
 
   const visitas = await contarVisitasFuturas(supabase, data.id)
+  const { data: cobrancas } = await supabase.from("cobrancas").select("periodo, valor").eq("contrato_id", data.id)
+  const cobranca = cobrancas?.length === 1 && cobrancas[0].periodo ? cobrancas[0] : null
   revalidarContratos()
+  const partes = [
+    visitas === null ? null : descreverVisitas(visitas),
+    cobranca ? `cobrança de ${formatarMes(cobranca.periodo!)} (${formatarMoeda(cobranca.valor)}) criada` : null,
+  ].filter(Boolean)
   return {
     ok: true,
-    mensagem: visitas === null ? "Contrato criado." : `Contrato criado: ${descreverVisitas(visitas)}.`,
+    mensagem: partes.length ? `Contrato criado: ${partes.join(" e ")}.` : "Contrato criado.",
     redirecionar: `/financas/contratos/${data.id}`,
   }
 }
@@ -204,10 +210,11 @@ export async function alterarEstadoContrato(id: string, estado: EstadoContrato):
 }
 
 /**
- * Apaga um contrato criado por engano: primeiro as visitas de hoje em diante
- * ainda agendadas e sem horas, registo nem fotos, e as cobranças sem
- * pagamentos nem fatura (criadas automaticamente); depois o contrato. Se
- * houver visitas feitas, cobranças pagas ou faturadas, não apaga nada.
+ * Apaga um contrato criado por engano, tudo ou nada, numa só transação na BD
+ * (public.apagar_contrato): as visitas de hoje em diante ainda agendadas e
+ * sem horas, registo nem fotos, as cobranças sem pagamentos nem fatura e o
+ * contrato. Se houver visitas feitas, cobranças pagas ou faturadas, a BD
+ * recusa com a mensagem para o terminar em vez de apagar.
  */
 export async function apagarContrato(id: string): Promise<ResultadoAcao> {
   if (!(await sessaoGerente())) return SEM_PERMISSAO
@@ -216,51 +223,9 @@ export async function apagarContrato(id: string): Promise<ResultadoAcao> {
   if (!contratoId.success) return NAO_EXISTE
 
   const supabase = await createClient()
-  const hoje = hojeEmLisboa()
-  const [trabalhosR, cobrancasR] = await Promise.all([
-    supabase.from("trabalhos").select("id, data, estado").eq("contrato_id", contratoId.data),
-    supabase.from("cobrancas_com_saldo").select("id, pago, fatura_referencia").eq("contrato_id", contratoId.data),
-  ])
-  if (trabalhosR.error) return erroBD(trabalhosR.error)
-  if (cobrancasR.error) return erroBD(cobrancasR.error)
-
-  const candidatas = trabalhosR.data.filter((t) => t.data >= hoje && t.estado === "agendado").map((t) => t.id)
-  let comAtividade = new Set<string>()
-  if (candidatas.length > 0) {
-    const atividade = await Promise.all(
-      (["registos_trabalho", "registos_horas", "fotos"] as const).map((tabela) =>
-        supabase.from(tabela).select("trabalho_id").in("trabalho_id", candidatas)
-      )
-    )
-    for (const resultado of atividade) if (resultado.error) return erroBD(resultado.error)
-    comAtividade = new Set(
-      atividade.flatMap((resultado) => (resultado.data ?? []).flatMap((r) => (r.trabalho_id ? [r.trabalho_id] : [])))
-    )
-  }
-  const visitasApagaveis = candidatas.filter((trabalhoId) => !comAtividade.has(trabalhoId))
-  const cobrancasApagaveis = cobrancasR.data
-    .filter((c) => Number(c.pago ?? 0) === 0 && !c.fatura_referencia)
-    .map((c) => c.id as string)
-
-  // Algo que não se pode apagar: não mexer em nada.
-  if (
-    visitasApagaveis.length < trabalhosR.data.length ||
-    cobrancasApagaveis.length < cobrancasR.data.length
-  ) {
-    return { ok: false, erro: NAO_SE_APAGA }
-  }
-
-  if (visitasApagaveis.length > 0) {
-    const { error } = await supabase.from("trabalhos").delete().in("id", visitasApagaveis)
-    if (error) return erroBD(error, { emUso: NAO_SE_APAGA })
-  }
-  if (cobrancasApagaveis.length > 0) {
-    const { error } = await supabase.from("cobrancas").delete().in("id", cobrancasApagaveis)
-    if (error) return erroBD(error, { emUso: NAO_SE_APAGA })
-  }
-  const { data: linhas, error } = await supabase.from("contratos").delete().eq("id", contratoId.data).select("id")
+  const { data: apagado, error } = await supabase.rpc("apagar_contrato", { p_contrato_id: contratoId.data })
   if (error) return erroBD(error, { emUso: NAO_SE_APAGA })
-  if (linhas.length === 0) return NAO_EXISTE
+  if (!apagado) return NAO_EXISTE
 
   revalidarContratos()
   return { ok: true, mensagem: "Contrato apagado.", redirecionar: "/financas/contratos" }

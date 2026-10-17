@@ -225,7 +225,12 @@ export function FormularioCobranca({ valoresIniciais, clientes = [], locais = []
                     <FormControl>
                       <InputEuros placeholder="Ex.: 553,50" {...field} />
                     </FormControl>
-                    {orcamento && (
+                    {orcamento && orcamento.jaCobrado > 0 && falta <= 0 && (
+                      <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                        Este orçamento já foi todo cobrado.
+                      </p>
+                    )}
+                    {orcamento && (orcamento.jaCobrado === 0 || falta > 0) && (
                       <div className="flex flex-wrap gap-2">
                         <Button type="button" variant="outline" className="h-11 md:h-10" onClick={() => definirValor(orcamento.total)}>
                           100%

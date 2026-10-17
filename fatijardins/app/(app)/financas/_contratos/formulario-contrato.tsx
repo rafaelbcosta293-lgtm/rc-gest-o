@@ -522,7 +522,8 @@ export function FormularioContrato({ valoresIniciais, clientes, locais, equipas,
             <CalendarSyncIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>
               As visitas das próximas {SEMANAS_AGENDADAS} semanas aparecem na agenda e a cobrança de cada mês é criada
-              no início do mês.
+              no início do mês. A do mês da 1.ª visita (valor completo) é criada logo ao gravar e vence no dia de
+              cobrança, ou hoje se esse dia já passou.
             </span>
           </p>
           {contratoId && (

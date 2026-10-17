@@ -1493,6 +1493,7 @@ export type Database = {
       }
     }
     Functions: {
+      apagar_contrato: { Args: { p_contrato_id: string }; Returns: boolean }
       converter_orcamento: {
         Args: {
           p_data: string

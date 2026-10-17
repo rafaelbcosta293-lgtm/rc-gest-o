@@ -116,6 +116,39 @@ select pg_temp.recusado(
   'contrato com visitas ou cobranças não se apaga (termina-se)'
 );
 
+-- Revisão: mudar só o título não refaz a série (uma visita cancelada não volta).
+update public.trabalhos set estado = 'cancelado'
+where id = (select id from public.trabalhos where contrato_id = (select id from public.contratos where titulo = 'Teste Fase5 avença')
+            and data > current_date order by data limit 1);
+update public.contratos set titulo = 'Teste Fase5 avença', servicos = 'Corte' where titulo = 'Teste Fase5 avença';
+select pg_temp.verificar(
+  (select count(*) = 5 and count(*) filter (where estado = 'cancelado') = 1 and bool_and(descricao = 'Corte' or estado <> 'agendado' or data <= current_date)
+   from public.trabalhos where contrato_id = (select id from public.contratos where titulo = 'Teste Fase5 avença')),
+  'mudar os serviços atualiza as visitas sem ressuscitar as canceladas'
+);
+-- Revisão: apagar um contrato criado por engano (tudo ou nada).
+select pg_temp.verificar(
+  (select public.apagar_contrato((select id from public.contratos where titulo = 'Teste Fase5 avença'))),
+  'contrato criado por engano apaga-se com as visitas e a cobrança automática'
+);
+select pg_temp.recusado(
+  $q$select public.apagar_contrato('a6000000-0000-4000-8000-000000000001')$q$,
+  'contrato com cobranças pagas não se apaga'
+);
+-- Revisão: um contrato que esteve a 0 € não cobra os meses passados quando ganha valor.
+-- (registado há 4 meses: só a BD escreve created_at)
+reset role;
+insert into public.contratos (local_id, titulo, data_inicio, valor_mensal, created_at)
+select l.id, 'Teste Fase5 sem valor', current_date - 120, 0, now() - interval '4 months'
+from public.locais l where l.nome = 'Pátio e terraço';
+select pg_temp.entrar('a0000000-0000-4000-8000-000000000001');
+update public.contratos set valor_mensal = 50 where titulo = 'Teste Fase5 sem valor';
+select public.gerar_contratos();
+select pg_temp.verificar(
+  (select count(*) from public.cobrancas where contrato_id = (select id from public.contratos where titulo = 'Teste Fase5 sem valor')) = 0,
+  'meses sem valor não são cobrados mais tarde'
+);
+
 -- Cobranças e pagamentos.
 select pg_temp.recusado(
   $q$insert into public.cobrancas (cliente_id, origem, descricao, valor)
@@ -176,6 +209,18 @@ select pg_temp.verificar(
   'chefe vê na agenda as visitas dos contratos da sua equipa'
 );
 select pg_temp.recusado($q$select public.gerar_contratos()$q$, 'chefe NÃO gera contratos');
+do $$
+begin
+  insert into public.pagamentos (cobranca_id, valor) values ('a7000000-0000-4000-8000-000000000001', 9999999);
+  raise exception 'FALHOU: chefe registou um pagamento';
+exception when others then
+  if sqlstate <> '42501' or sqlerrm like '%€%' then
+    raise exception 'FALHOU: o erro ao chefe revela valores (%: %)', sqlstate, sqlerrm;
+  end if;
+  raise notice 'ok — chefe não descobre o valor em dívida pelo erro de um pagamento';
+end;
+$$;
+select pg_temp.recusado($q$select public.apagar_contrato('a6000000-0000-4000-8000-000000000001')$q$, 'chefe NÃO apaga contratos');
 select pg_temp.recusado($q$select app.gerar_contratos()$q$, 'a geração interna não está exposta');
 select pg_temp.recusado(
   $q$insert into public.contratos (local_id, titulo, data_inicio, valor_mensal)

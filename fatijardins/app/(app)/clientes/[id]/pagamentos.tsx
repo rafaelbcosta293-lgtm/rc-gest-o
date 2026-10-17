@@ -27,7 +27,7 @@ import { CartaoHistorico, EsqueletoCartaoHistorico, Linha, SemRegistos } from ".
  */
 
 /** Quantos pagamentos se mostram. */
-const LIMITE = 5
+const LIMITE = 50
 
 export function SeccaoPagamentos({ clienteId }: { clienteId: string }) {
   return (

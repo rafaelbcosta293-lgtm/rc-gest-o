@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrowRight, ArrowLeft } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
@@ -69,7 +70,7 @@ export default async function PainelPage({
                 {n} {n === 1 ? 'cliente ativo' : 'clientes ativos'}
               </p>
               <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-foreground transition-transform group-hover:translate-x-0.5">
-                Entrar →
+                Entrar <ArrowRight className="h-4 w-4" />
               </span>
             </Link>
           )
@@ -124,9 +125,9 @@ export default async function PainelPage({
 
       <Link
         href="/"
-        className="text-sm font-medium text-muted underline decoration-border-strong underline-offset-2 hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground"
       >
-        Voltar ao início
+        <ArrowLeft className="h-4 w-4" /> Voltar ao início
       </Link>
     </div>
   )

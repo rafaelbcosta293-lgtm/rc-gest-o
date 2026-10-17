@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Home } from 'lucide-react'
 import { MODULOS } from '@/lib/data/constantes'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
+import { NavLinkDesktop, NavLinkMobile } from './NavLink'
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
@@ -28,42 +30,34 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   return (
     <div className="flex min-h-full flex-col md:flex-row">
       {/* Telemóvel/tablet: barra fixa no topo, só com ícones */}
-      <div className="sticky top-0 z-10 flex items-center gap-1 overflow-x-auto border-b border-black/10 bg-background px-4 py-2 md:hidden dark:border-white/10">
+      <div className="sticky top-0 z-10 flex items-center gap-1 overflow-x-auto border-b border-border-subtle bg-background px-4 py-2 md:hidden">
         <Link
           href="/painel"
           title="Início"
           aria-label="Início"
-          className="shrink-0 rounded-md px-2 py-1.5 text-lg hover:bg-black/[.04] dark:hover:bg-white/[.08]"
+          className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
         >
-          🏠
+          <Home className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </Link>
-        <span className="mx-1 h-5 w-px shrink-0 bg-black/10 dark:bg-white/10" />
+        <span className="mx-1 h-5 w-px shrink-0 bg-border-subtle" />
         {MODULOS.map((m) =>
           podeAceder(m) ? (
-            <Link
-              key={m.id}
-              href={`/painel/${slug}/${m.id}`}
-              title={m.nome}
-              aria-label={m.nome}
-              className="shrink-0 rounded-md px-2 py-1.5 text-lg hover:bg-black/[.04] dark:hover:bg-white/[.08]"
-            >
-              {m.icone}
-            </Link>
+            <NavLinkMobile key={m.id} href={`/painel/${slug}/${m.id}`} icone={m.icone} nome={m.nome} cor={m.cor} />
           ) : (
             <span
               key={m.id}
               title={tituloBloqueado(m)}
               aria-label={tituloBloqueado(m)}
-              className="shrink-0 cursor-not-allowed rounded-md px-2 py-1.5 text-lg opacity-30"
+              className="flex shrink-0 cursor-not-allowed items-center justify-center rounded-full p-2 text-muted opacity-40"
             >
-              {m.icone}
+              <m.icone className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </span>
           )
         )}
       </div>
 
       {/* Computador: menu lateral fixo, com nomes por extenso */}
-      <aside className="hidden shrink-0 border-black/10 md:sticky md:top-0 md:flex md:h-screen md:w-60 md:flex-col md:border-r dark:border-white/10">
+      <aside className="hidden shrink-0 border-border-subtle md:sticky md:top-0 md:flex md:h-screen md:w-60 md:flex-col md:border-r">
         <Link href="/painel" className="flex items-center px-5 py-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="RC Private Fitness Studio" className="h-10 w-auto" />
@@ -71,20 +65,17 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
         <nav className="flex flex-col gap-0.5 px-3">
           {MODULOS.map((m) =>
             podeAceder(m) ? (
-              <Link
-                key={m.id}
-                href={`/painel/${slug}/${m.id}`}
-                className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-black/[.04] dark:text-zinc-300 dark:hover:bg-white/[.08]"
-              >
-                <span className="text-lg leading-none">{m.icone}</span> {m.nome}
-              </Link>
+              <NavLinkDesktop key={m.id} href={`/painel/${slug}/${m.id}`} icone={m.icone} nome={m.nome} cor={m.cor} />
             ) : (
               <span
                 key={m.id}
                 title={tituloBloqueado(m)}
-                className="flex cursor-not-allowed items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-zinc-400 opacity-60"
+                className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted opacity-50"
               >
-                <span className="text-lg leading-none">{m.icone}</span> {m.nome}
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-border-subtle">
+                  <m.icone className="h-3.5 w-3.5" strokeWidth={2.25} />
+                </span>
+                {m.nome}
               </span>
             )
           )}

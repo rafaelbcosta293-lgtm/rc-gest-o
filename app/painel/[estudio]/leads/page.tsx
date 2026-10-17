@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
@@ -67,9 +68,9 @@ export default async function LeadsPage({
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Voltar
+        <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">

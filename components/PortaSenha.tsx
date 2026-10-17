@@ -1,3 +1,4 @@
+import { Lock } from 'lucide-react'
 import SubmitButton from '@/components/SubmitButton'
 
 export default function PortaSenha({
@@ -13,8 +14,8 @@ export default function PortaSenha({
 }) {
   return (
     <div className="mx-auto flex max-w-sm flex-col items-center px-4 py-24 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/15 text-2xl">
-        🔒
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/15 text-brand-strong">
+        <Lock className="h-5 w-5" strokeWidth={2} />
       </span>
       <h1 className="mt-4 text-lg font-semibold tracking-tight text-foreground">{titulo}</h1>
       <p className="mt-1 text-sm text-muted">

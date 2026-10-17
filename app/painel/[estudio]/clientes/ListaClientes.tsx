@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { Search } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
 
 export type LinhaCliente = {
@@ -37,7 +38,7 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
     <>
       <div className="relative mt-4">
         <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-muted">
-          🔍
+          <Search className="h-4 w-4" />
         </span>
         <input
           type="text"

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { ArrowLeft, Cake, Plus, ArrowUp, ArrowDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { ESTADOS_CLIENTE, ALERTAS } from '@/lib/data/constantes'
@@ -224,9 +225,9 @@ export default async function ClientesPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
-        className="text-sm text-muted underline decoration-border-strong underline-offset-2 hover:text-foreground"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Voltar
+        <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
@@ -240,15 +241,15 @@ export default async function ClientesPage({
         <div className="flex items-center gap-2">
           <Link
             href={`/painel/${slug}/clientes/aniversarios`}
-            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-medium transition-colors hover:border-border-strong hover:bg-brand/[.06]"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-4 py-2 text-sm font-medium transition-colors hover:border-border-strong hover:bg-brand/[.06]"
           >
-            🎂 Aniversários
+            <Cake className="h-4 w-4" /> Aniversários
           </Link>
           <Link
             href={`/painel/${slug}/treinos/novo`}
-            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-black shadow-sm hover:bg-brand-strong"
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-black shadow-sm hover:bg-brand-strong"
           >
-            + Cliente
+            <Plus className="h-4 w-4" /> Cliente
           </Link>
         </div>
       </div>
@@ -303,10 +304,10 @@ export default async function ClientesPage({
             { estado, ordem: ordemParam },
             { dir: direcao === 'asc' ? 'desc' : 'asc' }
           )}`}
-          className="rounded-full border border-border-subtle px-3 py-1.5 font-medium text-muted hover:border-border-strong"
+          className="flex items-center rounded-full border border-border-subtle px-2.5 py-1.5 font-medium text-muted hover:border-border-strong"
           title={direcao === 'asc' ? 'Ordem crescente — trocar para decrescente' : 'Ordem decrescente — trocar para crescente'}
         >
-          {direcao === 'asc' ? '↑' : '↓'}
+          {direcao === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
         </Link>
       </div>
 

@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { ArrowLeftRight, UsersRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { MODULOS } from '@/lib/data/constantes'
+import { MODULOS, PALETA } from '@/lib/data/constantes'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { segurosPorPagar } from '@/lib/data/clientes'
 
@@ -76,20 +77,20 @@ export default async function EstudioPage({
             Escolhe a área onde queres trabalhar.
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {ehGestao && (
             <Link
               href={`/painel/${slug}/equipa`}
-              className="text-sm font-medium text-muted underline decoration-border-strong underline-offset-2 hover:text-foreground"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-3.5 py-2 text-sm font-medium text-foreground/80 transition-colors hover:border-border-strong hover:bg-brand/[.06]"
             >
-              Equipa
+              <UsersRound className="h-4 w-4" /> Equipa
             </Link>
           )}
           <Link
             href="/painel"
-            className="text-sm font-medium text-muted underline decoration-border-strong underline-offset-2 hover:text-foreground"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-3.5 py-2 text-sm font-medium text-foreground/80 transition-colors hover:border-border-strong hover:bg-brand/[.06]"
           >
-            ⇄ Mudar estúdio
+            <ArrowLeftRight className="h-4 w-4" /> Mudar estúdio
           </Link>
         </div>
       </div>
@@ -102,8 +103,13 @@ export default async function EstudioPage({
               href={`/painel/${slug}/${m.id}`}
               className="group rounded-xl border border-border-subtle bg-surface p-5 shadow-sm shadow-black/[.02] transition-all hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md hover:shadow-black/[.04]"
             >
-              <span className="text-2xl">{m.icone}</span>
-              <h2 className="mt-2 font-semibold text-foreground">
+              <span
+                className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform group-hover:scale-105"
+                style={{ background: PALETA[m.cor].bg, color: PALETA[m.cor].tx }}
+              >
+                <m.icone className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <h2 className="mt-3 font-semibold text-foreground">
                 {m.nome}
               </h2>
               <p className="mt-1 text-xs text-muted">{m.desc}</p>
@@ -130,8 +136,10 @@ export default async function EstudioPage({
               key={m.id}
               className="rounded-xl border border-dashed border-border-subtle bg-surface/50 p-5 opacity-60"
             >
-              <span className="text-2xl">{m.icone}</span>
-              <h2 className="mt-2 font-semibold text-foreground">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-border-subtle text-muted">
+                <m.icone className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <h2 className="mt-3 font-semibold text-foreground">
                 {m.nome}
               </h2>
               <p className="mt-1 text-xs text-muted">{m.desc}</p>

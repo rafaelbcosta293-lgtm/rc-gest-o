@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
@@ -64,8 +65,11 @@ export default async function AdminPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
-      <Link href="/painel" className="text-sm text-zinc-600 underline dark:text-zinc-400">
-        ← Voltar
+      <Link
+        href="/painel"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
       <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Administração</h1>

@@ -1,17 +1,18 @@
 import type { ReactNode } from 'react'
+import { PALETA } from '@/lib/data/constantes'
 
-// Paleta só para identificar rapidamente de que assunto trata cada
-// secção (sobretudo em Coordenação/Administração, que têm muitas
-// seguidas) — reaproveita as mesmas cores já usadas noutros sítios da
-// app (alertas, leads, etc.), para manter tudo coerente.
+// Mesma paleta usada em alertas, estados e leads — para que uma secção
+// "âmbar" aqui seja exatamente o mesmo âmbar de um alerta ou badge,
+// não uma variante parecida escolhida à parte.
 export const CORES_SECCAO = {
-  teal: '#0E9594',
-  roxo: '#5B3FA0',
-  azul: '#1F6FB2',
-  ambar: '#9C6B00',
-  verde: '#1E7145',
-  vermelho: '#B3261E',
-  neutro: '#6B7688',
+  teal: PALETA.teal.tx,
+  roxo: PALETA.roxo.tx,
+  azul: PALETA.azul.tx,
+  ambar: PALETA.ambar.tx,
+  verde: PALETA.verde.tx,
+  vermelho: PALETA.vermelho.tx,
+  neutro: PALETA.neutro.tx,
+  laranja: PALETA.laranja.tx,
 } as const
 
 export default function TituloSeccao({

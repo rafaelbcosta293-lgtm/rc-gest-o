@@ -21,7 +21,7 @@ export default function SubmitButton({
       type="submit"
       disabled={pending || disabled}
       aria-busy={pending}
-      className={`${className} disabled:cursor-not-allowed disabled:opacity-60`}
+      className={`${className} inline-flex items-center justify-center shadow-sm active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100`}
       {...rest}
     >
       {pending && (

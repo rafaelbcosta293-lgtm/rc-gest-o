@@ -32,18 +32,18 @@ export default async function PainelPage({
     (clientes ?? []).filter((c) => c.estudio_id === estudioId && c.estado === 'Ativo').length
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-zinc-50 px-4 py-16 dark:bg-black">
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-16">
       <div className="text-center">
-        <h1 className="text-3xl font-semibold text-black dark:text-zinc-50">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           Em que estúdio estás?
         </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-1 text-sm text-muted">
           Sessão iniciada como {userData.user.email}
         </p>
       </div>
 
       {erro === 'sem-acesso' && (
-        <p className="w-full max-w-2xl rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <p className="w-full max-w-2xl rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           A tua conta não tem acesso a essa área.
         </p>
       )}
@@ -56,19 +56,19 @@ export default async function PainelPage({
             <Link
               key={e.id}
               href={`/painel/${e.slug}`}
-              className="rounded-2xl border border-black/10 bg-white p-6 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+              className="group rounded-2xl border border-border-subtle bg-surface p-6 shadow-sm shadow-black/[.02] transition-all hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md hover:shadow-black/[.04]"
             >
               <span
                 className="block h-1.5 w-10 rounded-full"
                 style={{ background: cor.cor }}
               />
-              <h2 className="mt-4 text-2xl font-semibold text-black dark:text-zinc-50">
+              <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
                 {e.nome}
               </h2>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="mt-1 text-sm text-muted">
                 {n} {n === 1 ? 'cliente ativo' : 'clientes ativos'}
               </p>
-              <span className="mt-4 inline-block text-sm font-medium text-zinc-950 dark:text-zinc-50">
+              <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-foreground transition-transform group-hover:translate-x-0.5">
                 Entrar →
               </span>
             </Link>
@@ -78,16 +78,16 @@ export default async function PainelPage({
         {temCoordenacao && (
           <Link
             href="/painel/coordenacao"
-            className="rounded-2xl border border-black/10 bg-white p-6 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+            className="group rounded-2xl border border-border-subtle bg-surface p-6 shadow-sm shadow-black/[.02] transition-all hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md hover:shadow-black/[.04]"
           >
             <span className="block h-1.5 w-10 rounded-full bg-[#1F6FB2]" />
-            <h2 className="mt-4 text-2xl font-semibold text-black dark:text-zinc-50">
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
               Coordenação
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-muted">
               Fátima e Leiria, na mesma página.
             </p>
-            <span className="mt-4 inline-block text-sm font-medium text-zinc-950 dark:text-zinc-50">
+            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-foreground transition-transform group-hover:translate-x-0.5">
               Entrar →
             </span>
           </Link>
@@ -95,16 +95,16 @@ export default async function PainelPage({
         {temAdmin && (
           <Link
             href="/painel/admin"
-            className="rounded-2xl border border-black/10 bg-white p-6 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+            className="group rounded-2xl border border-border-subtle bg-surface p-6 shadow-sm shadow-black/[.02] transition-all hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md hover:shadow-black/[.04]"
           >
             <span className="block h-1.5 w-10 rounded-full bg-[#5B3FA0]" />
-            <h2 className="mt-4 text-2xl font-semibold text-black dark:text-zinc-50">
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
               Administração
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-muted">
               Fátima e Leiria, na mesma página.
             </p>
-            <span className="mt-4 inline-block text-sm font-medium text-zinc-950 dark:text-zinc-50">
+            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-foreground transition-transform group-hover:translate-x-0.5">
               Entrar →
             </span>
           </Link>
@@ -112,19 +112,19 @@ export default async function PainelPage({
       </div>
 
       {estudios.length === 0 && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted">
           Ainda não há nenhum estúdio configurado na base de dados.
         </p>
       )}
       {estudios.length > 0 && estudiosVisiveis.length === 0 && !temCoordenacao && !temAdmin && (
-        <p className="max-w-md text-center text-sm text-zinc-500">
+        <p className="max-w-md text-center text-sm text-muted">
           A tua conta ainda não tem acesso a nenhuma área desta app. Contacta a administração.
         </p>
       )}
 
       <Link
         href="/"
-        className="text-sm font-medium text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm font-medium text-muted underline decoration-border-strong underline-offset-2 hover:text-foreground"
       >
         Voltar ao início
       </Link>

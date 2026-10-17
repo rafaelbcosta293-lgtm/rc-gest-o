@@ -69,10 +69,10 @@ export default async function EstudioPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Estúdio de {estudio.nome}
           </h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-muted">
             Escolhe a área onde queres trabalhar.
           </p>
         </div>
@@ -80,14 +80,14 @@ export default async function EstudioPage({
           {ehGestao && (
             <Link
               href={`/painel/${slug}/equipa`}
-              className="text-sm font-medium text-zinc-600 underline dark:text-zinc-400"
+              className="text-sm font-medium text-muted underline decoration-border-strong underline-offset-2 hover:text-foreground"
             >
               Equipa
             </Link>
           )}
           <Link
             href="/painel"
-            className="text-sm font-medium text-zinc-600 underline dark:text-zinc-400"
+            className="text-sm font-medium text-muted underline decoration-border-strong underline-offset-2 hover:text-foreground"
           >
             ⇄ Mudar estúdio
           </Link>
@@ -100,13 +100,13 @@ export default async function EstudioPage({
             <Link
               key={m.id}
               href={`/painel/${slug}/${m.id}`}
-              className="rounded-xl border border-black/10 bg-white p-5 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+              className="group rounded-xl border border-border-subtle bg-surface p-5 shadow-sm shadow-black/[.02] transition-all hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md hover:shadow-black/[.04]"
             >
               <span className="text-2xl">{m.icone}</span>
-              <h2 className="mt-2 font-semibold text-black dark:text-zinc-50">
+              <h2 className="mt-2 font-semibold text-foreground">
                 {m.nome}
               </h2>
-              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{m.desc}</p>
+              <p className="mt-1 text-xs text-muted">{m.desc}</p>
               {m.id === 'clientes' && (
                 <p className="mt-3 text-xs font-medium text-teal-700 dark:text-teal-400">
                   {ativos} ativos · {suspensos} suspensos · {inativos} inativos
@@ -128,14 +128,14 @@ export default async function EstudioPage({
           ) : (
             <div
               key={m.id}
-              className="rounded-xl border border-dashed border-black/10 bg-white/50 p-5 opacity-60 dark:border-white/10 dark:bg-zinc-950/50"
+              className="rounded-xl border border-dashed border-border-subtle bg-surface/50 p-5 opacity-60"
             >
               <span className="text-2xl">{m.icone}</span>
-              <h2 className="mt-2 font-semibold text-black dark:text-zinc-50">
+              <h2 className="mt-2 font-semibold text-foreground">
                 {m.nome}
               </h2>
-              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{m.desc}</p>
-              <p className="mt-3 text-xs font-medium text-zinc-400">
+              <p className="mt-1 text-xs text-muted">{m.desc}</p>
+              <p className="mt-3 text-xs font-medium text-muted">
                 {!m.pronto
                   ? 'Brevemente'
                   : m.restrito === 'admin'

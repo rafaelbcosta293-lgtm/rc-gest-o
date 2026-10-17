@@ -224,15 +224,15 @@ export default async function ClientesPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline decoration-border-strong underline-offset-2 hover:text-foreground"
       >
         ← Voltar
       </Link>
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Clientes</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Clientes</h1>
+          <p className="mt-1 text-sm text-muted">
             {estudio.nome} · {clientes.length} {clientes.length === 1 ? 'cliente' : 'clientes'} ·
             a ficha completa de cada um, num só sítio
           </p>
@@ -240,13 +240,13 @@ export default async function ClientesPage({
         <div className="flex items-center gap-2">
           <Link
             href={`/painel/${slug}/clientes/aniversarios`}
-            className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-medium transition-colors hover:border-border-strong hover:bg-brand/[.06]"
           >
             🎂 Aniversários
           </Link>
           <Link
             href={`/painel/${slug}/treinos/novo`}
-            className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-black shadow-sm hover:bg-brand-strong"
           >
             + Cliente
           </Link>
@@ -267,7 +267,7 @@ export default async function ClientesPage({
               className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
                 ativo
                   ? 'border-brand bg-brand text-black'
-                  : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+                  : 'border-border-subtle text-muted hover:border-border-strong'
               }`}
             >
               {f.label} ({contagens[f.valor]})
@@ -276,7 +276,7 @@ export default async function ClientesPage({
         })}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted">
         <span className="font-medium">Ordenar por:</span>
         {ORDENS.map((o) => {
           const ativo = ordem === o.valor
@@ -291,7 +291,7 @@ export default async function ClientesPage({
               className={`rounded-full border px-3 py-1.5 font-medium ${
                 ativo
                   ? 'border-brand bg-brand text-black'
-                  : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+                  : 'border-border-subtle text-muted hover:border-border-strong'
               }`}
             >
               {o.label}
@@ -303,7 +303,7 @@ export default async function ClientesPage({
             { estado, ordem: ordemParam },
             { dir: direcao === 'asc' ? 'desc' : 'asc' }
           )}`}
-          className="rounded-full border border-black/10 px-3 py-1.5 font-medium text-zinc-600 dark:border-white/10 dark:text-zinc-400"
+          className="rounded-full border border-border-subtle px-3 py-1.5 font-medium text-muted hover:border-border-strong"
           title={direcao === 'asc' ? 'Ordem crescente — trocar para decrescente' : 'Ordem decrescente — trocar para crescente'}
         >
           {direcao === 'asc' ? '↑' : '↓'}

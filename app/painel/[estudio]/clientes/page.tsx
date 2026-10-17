@@ -111,17 +111,33 @@ export default async function ClientesPage({
     query = query.eq('estado', estado)
   }
 
+  const anoAtual = agora.getFullYear()
+  const mesAtual = agora.getMonth() + 1
+  const { inicio, fimExclusivo } = intervaloMes(anoAtual, mesAtual)
+
+  // Todas estas só precisam do estúdio, não dos resultados umas das
+  // outras — correm todas ao mesmo tempo. As presenças filtram pelo
+  // estúdio do cliente (clientes!inner) em vez de por uma lista de ids,
+  // precisamente para não terem de esperar pela consulta de clientes.
   const [
     { data, error },
     { data: todosData, error: erroTodos },
     { data: pagamentosData, error: erroPagamentos },
+    { data: presencasData, error: erroPresencas },
   ] = await Promise.all([
     query,
     supabase.from('clientes').select('estado').eq('estudio_id', estudio.id),
     supabase.from('v_estado_pagamento').select('cliente_id, valido_ate, em_dia').eq('estudio_id', estudio.id),
+    supabase
+      .from('presencas')
+      .select('cliente_id, clientes!inner(estudio_id)')
+      .eq('clientes.estudio_id', estudio.id)
+      .eq('estado', 'Presente')
+      .gte('data', inicio)
+      .lt('data', fimExclusivo),
   ])
-  if (error || erroTodos || erroPagamentos) {
-    throw new Error((error ?? erroTodos ?? erroPagamentos)!.message)
+  if (error || erroTodos || erroPagamentos || erroPresencas) {
+    throw new Error((error ?? erroTodos ?? erroPagamentos ?? erroPresencas)!.message)
   }
   const clientes = (data ?? []) as ClienteLista[]
 
@@ -161,22 +177,6 @@ export default async function ClientesPage({
     ((pagamentosData ?? []) as PagamentoResumo[]).map((p) => [p.cliente_id, p])
   )
 
-  const anoAtual = agora.getFullYear()
-  const mesAtual = agora.getMonth() + 1
-  const { inicio, fimExclusivo } = intervaloMes(anoAtual, mesAtual)
-  const idsClientes = clientes.map((c) => c.id)
-  const { data: presencasData, error: erroPresencas } = idsClientes.length
-    ? await supabase
-        .from('presencas')
-        .select('cliente_id')
-        .in('cliente_id', idsClientes)
-        .eq('estado', 'Presente')
-        .gte('data', inicio)
-        .lt('data', fimExclusivo)
-    : { data: [], error: null }
-  if (erroPresencas) {
-    throw new Error(erroPresencas.message)
-  }
   const feitosPorCliente = new Map<string, number>()
   for (const p of presencasData ?? []) {
     feitosPorCliente.set(p.cliente_id, (feitosPorCliente.get(p.cliente_id) ?? 0) + 1)

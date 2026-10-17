@@ -309,3 +309,67 @@ insert into public.movimentos_stock (consumivel_id, tipo, quantidade, data, prec
 update public.registo_materiais set consumivel_id = 'a5000000-0000-4000-8000-000000000002' where descricao = 'Sacos de recolha de verdes';
 update public.registo_materiais set consumivel_id = 'a5000000-0000-4000-8000-000000000001' where descricao = 'Fio de roçadora 3 mm';
 update public.registo_materiais set consumivel_id = 'a5000000-0000-4000-8000-000000000003' where descricao = 'Adubo de outono 12-6-24';
+
+-- =====================================================================
+-- Fase 5 — contratos, cobranças e pagamentos de exemplo
+-- Os contratos geram sozinhos as visitas (próximas 8 semanas, nunca hoje)
+-- e as cobranças mensais desde o mês em que foram registados.
+-- =====================================================================
+insert into public.contratos (id, local_id, titulo, servicos, frequencia, equipa_id, hora_inicio, duracao_prevista_min,
+  data_inicio, valor_mensal, taxa_iva, dia_cobranca, notas, created_at)
+select v.id::uuid, l.id, v.titulo, v.servicos, v.frequencia::public.frequencia_contrato, v.equipa_id::uuid, v.hora::time,
+  v.duracao, v.data_inicio, v.valor, 23, v.dia, v.notas, v.criado
+from (values
+  ('a6000000-0000-4000-8000-000000000001', 'Espaços verdes comuns', 'Avença de manutenção dos espaços verdes',
+   'Corte da relva' || chr(10) || 'Limpeza de canteiros e folhas' || chr(10) || 'Poda ligeira de arbustos' || chr(10) || 'Verificação da rega',
+   'semanal', 'e0000000-0000-4000-8000-000000000001', '08:00', 240, current_date - 89, 450.00, 8,
+   'Contactar a administração (Sr. Paulo) antes de mexer na rega.', now() - interval '3 months'),
+  ('a6000000-0000-4000-8000-000000000002', 'Moradia', 'Manutenção quinzenal do jardim',
+   'Corte da relva' || chr(10) || 'Limpeza e mondas' || chr(10) || 'Poda das sebes (março e setembro)',
+   'quinzenal', 'e0000000-0000-4000-8000-000000000001', '09:00', 180, current_date - 59, 120.00, 28, null,
+   now() - interval '2 months'),
+  ('a6000000-0000-4000-8000-000000000003', 'Horta e pomar', 'Manutenção mensal da horta e do pomar',
+   'Limpeza da horta' || chr(10) || 'Tratamento das árvores de fruto' || chr(10) || 'Revisão da rega gota a gota',
+   'mensal', 'e0000000-0000-4000-8000-000000000002', '08:30', 300, (current_date - interval '4 months' + interval '3 days')::date,
+   95.00, 15, null, now() - interval '4 months')
+) as v(id, local, titulo, servicos, frequencia, equipa_id, hora, duracao, data_inicio, valor, dia, notas, criado)
+join public.locais l on l.nome = v.local;
+
+-- Cobranças avulsas: adjudicação do orçamento aceite (por pagar, em atraso) e uma revisão da rega (paga).
+insert into public.cobrancas (id, orcamento_id, origem, descricao, data_emissao, data_vencimento, valor, fatura_referencia, fatura_data)
+select 'a7000000-0000-4000-8000-000000000001', o.id, 'orcamento',
+  'Adjudicação (50%) do orçamento ' || o.ano || '/' || lpad(o.numero::text, 4, '0'),
+  current_date - 20, current_date - 5, round(o.total / 2, 2), 'FT 2026/41', current_date - 20
+from public.orcamentos o where o.id = 'a3000000-0000-4000-8000-000000000001';
+
+insert into public.cobrancas (id, local_id, origem, descricao, data_emissao, data_vencimento, valor, fatura_referencia, fatura_data)
+select 'a7000000-0000-4000-8000-000000000002', l.id, 'avulsa', 'Revisão da rega e substituição de 2 aspersores',
+  current_date - 30, current_date - 15, 85.00, 'FT 2026/38', current_date - 30
+from public.locais l where l.nome = 'Casa principal';
+
+-- Pagamentos: o condomínio tem o mês passado pago só em parte e o atual por pagar.
+insert into public.pagamentos (cobranca_id, data, valor, metodo, referencia, colaborador_id)
+select c.id, c.data_vencimento - 2, c.valor, 'transferencia', 'TRF ' || to_char(c.periodo, 'YYYY-MM'),
+  'c0000000-0000-4000-8000-000000000001'
+from public.cobrancas c
+where c.contrato_id = 'a6000000-0000-4000-8000-000000000001' and c.periodo < date_trunc('month', current_date) - interval '1 month';
+
+insert into public.pagamentos (cobranca_id, data, valor, metodo, referencia, notas, colaborador_id)
+select c.id, current_date - 6, 300.00, 'transferencia', 'TRF parcial', 'Disseram que pagam o resto com o próximo mês.',
+  'c0000000-0000-4000-8000-000000000001'
+from public.cobrancas c
+where c.contrato_id = 'a6000000-0000-4000-8000-000000000001' and c.periodo = date_trunc('month', current_date) - interval '1 month';
+
+insert into public.pagamentos (cobranca_id, data, valor, metodo, colaborador_id)
+select c.id, least(c.data_vencimento, current_date), c.valor, 'mbway', 'c0000000-0000-4000-8000-000000000001'
+from public.cobrancas c
+where c.contrato_id = 'a6000000-0000-4000-8000-000000000002' and c.periodo < date_trunc('month', current_date);
+
+insert into public.pagamentos (cobranca_id, data, valor, metodo, referencia, colaborador_id)
+select c.id, least(c.data_vencimento, current_date), c.valor, 'transferencia', 'TRF hotel', 'c0000000-0000-4000-8000-000000000001'
+from public.cobrancas c
+where c.contrato_id = 'a6000000-0000-4000-8000-000000000003';
+
+insert into public.pagamentos (cobranca_id, data, valor, metodo, referencia, colaborador_id)
+values ('a7000000-0000-4000-8000-000000000002', current_date - 20, 85.00, 'mbway', 'MB WAY 912 345 678',
+  'c0000000-0000-4000-8000-000000000001');

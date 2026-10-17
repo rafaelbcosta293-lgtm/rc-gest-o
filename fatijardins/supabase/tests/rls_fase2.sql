@@ -54,7 +54,7 @@ grant execute on function pg_temp.recusado(text, text) to authenticated;
 -- Gerente
 -- ---------------------------------------------------------------------
 select pg_temp.entrar('a0000000-0000-4000-8000-000000000001');
-select pg_temp.verificar((select count(*) from public.trabalhos) = 17, 'gerente vê todos os trabalhos');
+select pg_temp.verificar((select count(*) from public.trabalhos where contrato_id is null) = 17, 'gerente vê todos os trabalhos (sem os dos contratos)');
 select pg_temp.verificar((select count(*) from public.registos_horas) = 8, 'gerente vê todas as horas');
 insert into public.trabalhos (local_id, cliente_id, titulo, data)
   select id, cliente_id, 'Teste sem equipa', current_date from public.locais limit 1;
@@ -68,7 +68,7 @@ reset role;
 -- Chefe da Equipa Verde (Rui)
 -- ---------------------------------------------------------------------
 select pg_temp.entrar('a0000000-0000-4000-8000-000000000002');
-select pg_temp.verificar((select count(*) from public.trabalhos) = 5, 'chefe vê só os trabalhos da sua equipa (todas as datas)');
+select pg_temp.verificar((select count(*) from public.trabalhos where contrato_id is null) = 5, 'chefe vê só os trabalhos da sua equipa (todas as datas, sem os dos contratos)');
 select pg_temp.verificar((select count(*) from public.registos_trabalho) = 1, 'chefe vê só os registos da sua equipa');
 select pg_temp.verificar((select count(*) from public.registos_horas) = 5, 'chefe vê as horas da sua equipa');
 select pg_temp.recusado(
@@ -102,7 +102,7 @@ reset role;
 -- Colaborador da Equipa Verde (Tiago)
 -- ---------------------------------------------------------------------
 select pg_temp.entrar('a0000000-0000-4000-8000-000000000004');
-select pg_temp.verificar((select count(*) from public.trabalhos) = 3, 'colaborador vê só os trabalhos de hoje da sua equipa');
+select pg_temp.verificar((select count(*) from public.trabalhos where contrato_id is null) = 3, 'colaborador vê só os trabalhos de hoje da sua equipa');
 select pg_temp.verificar((select count(*) from public.clientes) = 3, 'colaborador vê os clientes dos trabalhos de hoje');
 select pg_temp.verificar((select count(*) from public.locais) = 3, 'colaborador vê os locais dos trabalhos de hoje');
 select pg_temp.verificar((select count(*) from public.registos_trabalho) = 0, 'colaborador não vê registos de outros dias');

@@ -106,6 +106,92 @@ export type Database = {
         }
         Relationships: []
       }
+      cobrancas: {
+        Row: {
+          cliente_id: string
+          contrato_id: string | null
+          created_at: string
+          data_emissao: string
+          data_vencimento: string
+          descricao: string
+          fatura_data: string | null
+          fatura_referencia: string | null
+          id: string
+          local_id: string | null
+          notas: string | null
+          orcamento_id: string | null
+          origem: Database["public"]["Enums"]["origem_cobranca"]
+          periodo: string | null
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          cliente_id: string
+          contrato_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_vencimento?: string
+          descricao: string
+          fatura_data?: string | null
+          fatura_referencia?: string | null
+          id?: string
+          local_id?: string | null
+          notas?: string | null
+          orcamento_id?: string | null
+          origem?: Database["public"]["Enums"]["origem_cobranca"]
+          periodo?: string | null
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          cliente_id?: string
+          contrato_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_vencimento?: string
+          descricao?: string
+          fatura_data?: string | null
+          fatura_referencia?: string | null
+          id?: string
+          local_id?: string | null
+          notas?: string | null
+          orcamento_id?: string | null
+          origem?: Database["public"]["Enums"]["origem_cobranca"]
+          periodo?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobrancas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobrancas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobrancas_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "locais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobrancas_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "orcamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       colaboradores: {
         Row: {
           ativo: boolean
@@ -246,6 +332,97 @@ export type Database = {
             columns: ["consumivel_id"]
             isOneToOne: true
             referencedRelation: "consumiveis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contratos: {
+        Row: {
+          agendado_ate: string | null
+          cliente_id: string
+          cobrado_ate: string | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          dia_cobranca: number
+          duracao_prevista_min: number | null
+          equipa_id: string | null
+          estado: Database["public"]["Enums"]["estado_contrato"]
+          frequencia: Database["public"]["Enums"]["frequencia_contrato"]
+          hora_inicio: string | null
+          id: string
+          local_id: string
+          notas: string | null
+          servicos: string | null
+          taxa_iva: number
+          titulo: string
+          updated_at: string
+          valor_mensal: number
+        }
+        Insert: {
+          agendado_ate?: string | null
+          cliente_id: string
+          cobrado_ate?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          dia_cobranca?: number
+          duracao_prevista_min?: number | null
+          equipa_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_contrato"]
+          frequencia?: Database["public"]["Enums"]["frequencia_contrato"]
+          hora_inicio?: string | null
+          id?: string
+          local_id: string
+          notas?: string | null
+          servicos?: string | null
+          taxa_iva?: number
+          titulo: string
+          updated_at?: string
+          valor_mensal: number
+        }
+        Update: {
+          agendado_ate?: string | null
+          cliente_id?: string
+          cobrado_ate?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          dia_cobranca?: number
+          duracao_prevista_min?: number | null
+          equipa_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_contrato"]
+          frequencia?: Database["public"]["Enums"]["frequencia_contrato"]
+          hora_inicio?: string | null
+          id?: string
+          local_id?: string
+          notas?: string | null
+          servicos?: string | null
+          taxa_iva?: number
+          titulo?: string
+          updated_at?: string
+          valor_mensal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_equipa_id_fkey"
+            columns: ["equipa_id"]
+            isOneToOne: false
+            referencedRelation: "equipas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "locais"
             referencedColumns: ["id"]
           },
         ]
@@ -826,6 +1003,67 @@ export type Database = {
           },
         ]
       }
+      pagamentos: {
+        Row: {
+          cobranca_id: string
+          colaborador_id: string | null
+          created_at: string
+          data: string
+          id: string
+          metodo: Database["public"]["Enums"]["metodo_pagamento"]
+          notas: string | null
+          referencia: string | null
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          cobranca_id: string
+          colaborador_id?: string | null
+          created_at?: string
+          data?: string
+          id?: string
+          metodo?: Database["public"]["Enums"]["metodo_pagamento"]
+          notas?: string | null
+          referencia?: string | null
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          cobranca_id?: string
+          colaborador_id?: string | null
+          created_at?: string
+          data?: string
+          id?: string
+          metodo?: Database["public"]["Enums"]["metodo_pagamento"]
+          notas?: string | null
+          referencia?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "cobrancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "cobrancas_com_saldo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registo_materiais: {
         Row: {
           consumivel_id: string | null
@@ -997,6 +1235,7 @@ export type Database = {
       trabalhos: {
         Row: {
           cliente_id: string
+          contrato_id: string | null
           created_at: string
           criado_por: string | null
           data: string
@@ -1017,6 +1256,7 @@ export type Database = {
         }
         Insert: {
           cliente_id: string
+          contrato_id?: string | null
           created_at?: string
           criado_por?: string | null
           data: string
@@ -1037,6 +1277,7 @@ export type Database = {
         }
         Update: {
           cliente_id?: string
+          contrato_id?: string | null
           created_at?: string
           criado_por?: string | null
           data?: string
@@ -1061,6 +1302,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trabalhos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
             referencedColumns: ["id"]
           },
           {
@@ -1169,7 +1417,80 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      cobrancas_com_saldo: {
+        Row: {
+          cliente_id: string | null
+          contrato_id: string | null
+          created_at: string | null
+          data_emissao: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          dias_atraso: number | null
+          em_divida: number | null
+          estado: Database["public"]["Enums"]["estado_cobranca"] | null
+          fatura_data: string | null
+          fatura_referencia: string | null
+          id: string | null
+          local_id: string | null
+          notas: string | null
+          orcamento_id: string | null
+          origem: Database["public"]["Enums"]["origem_cobranca"] | null
+          pago: number | null
+          periodo: string | null
+          updated_at: string | null
+          valor: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobrancas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobrancas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobrancas_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "locais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobrancas_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "orcamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dividas_clientes: {
+        Row: {
+          cliente_id: string | null
+          cobrancas_abertas: number | null
+          cobrancas_atrasadas: number | null
+          em_atraso: number | null
+          em_divida: number | null
+          nome: string | null
+          vencida_desde: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobrancas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       converter_orcamento: {
@@ -1192,6 +1513,10 @@ export type Database = {
           titulo: string
           trabalho_id: string
         }[]
+      }
+      gerar_contratos: {
+        Args: Record<PropertyKey, never>
+        Returns: Record<string, unknown>
       }
       picar_entrada: {
         Args: {
@@ -1256,11 +1581,22 @@ export type Database = {
       }
     }
     Enums: {
+      estado_cobranca: "por_pagar" | "parcial" | "paga" | "atrasada"
+      estado_contrato: "ativo" | "suspenso" | "terminado"
       estado_equipamento:
         "operacional" | "avariado" | "em_reparacao" | "abatido"
       estado_orcamento: "rascunho" | "enviado" | "aceite" | "recusado"
       estado_trabalho: "agendado" | "em_curso" | "concluido" | "cancelado"
+      frequencia_contrato: "semanal" | "quinzenal" | "mensal"
+      metodo_pagamento:
+        | "transferencia"
+        | "mbway"
+        | "multibanco"
+        | "numerario"
+        | "cheque"
+        | "outro"
       momento_foto: "antes" | "depois" | "outra"
+      origem_cobranca: "contrato" | "orcamento" | "avulsa"
       origem_registo_horas: "picagem" | "manual"
       origem_trabalho: "avulso" | "contrato" | "orcamento"
       perfil_utilizador: "gerente" | "chefe_equipa" | "colaborador"
@@ -1395,6 +1731,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      estado_cobranca: ["por_pagar", "parcial", "paga", "atrasada"],
+      estado_contrato: ["ativo", "suspenso", "terminado"],
       estado_equipamento: [
         "operacional",
         "avariado",
@@ -1403,7 +1741,17 @@ export const Constants = {
       ],
       estado_orcamento: ["rascunho", "enviado", "aceite", "recusado"],
       estado_trabalho: ["agendado", "em_curso", "concluido", "cancelado"],
+      frequencia_contrato: ["semanal", "quinzenal", "mensal"],
+      metodo_pagamento: [
+        "transferencia",
+        "mbway",
+        "multibanco",
+        "numerario",
+        "cheque",
+        "outro",
+      ],
       momento_foto: ["antes", "depois", "outra"],
+      origem_cobranca: ["contrato", "orcamento", "avulsa"],
       origem_registo_horas: ["picagem", "manual"],
       origem_trabalho: ["avulso", "contrato", "orcamento"],
       perfil_utilizador: ["gerente", "chefe_equipa", "colaborador"],

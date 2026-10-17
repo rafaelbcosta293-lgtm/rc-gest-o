@@ -48,15 +48,42 @@ export default async function PagamentosPage({
   const idsClientes = clientes.map((c) => c.cliente_id)
   const hoje = new Date().toISOString().slice(0, 10)
 
-  const { data: pagamentosData, error: erroPagamentosDetalhe } = idsClientes.length
-    ? await supabase
-        .from('pagamentos')
-        .select('cliente_id, data_pagamento, valido_ate, plano:planos(nome, sessoes_por_semana)')
-        .in('cliente_id', idsClientes)
-        .order('data_pagamento', { ascending: false })
-    : { data: [], error: null }
-  if (erroPagamentosDetalhe) {
-    throw new Error(erroPagamentosDetalhe.message)
+  // Estas quatro só precisam dos ids dos clientes, não dos resultados
+  // umas das outras — correm todas ao mesmo tempo.
+  const [
+    { data: pagamentosData, error: erroPagamentosDetalhe },
+    { data: clientesInicioData, error: erroClientesInicio },
+    { data: segurosPagosData, error: erroSegurosPagos },
+    { data: reativacoesData, error: erroReativacoesSeguro },
+  ] = idsClientes.length
+    ? await Promise.all([
+        supabase
+          .from('pagamentos')
+          .select('cliente_id, data_pagamento, valido_ate, plano:planos(nome, sessoes_por_semana)')
+          .in('cliente_id', idsClientes)
+          .order('data_pagamento', { ascending: false }),
+        supabase.from('clientes').select('id, inicio_contrato').in('id', idsClientes),
+        supabase
+          .from('pagamentos')
+          .select('cliente_id, data_pagamento')
+          .in('cliente_id', idsClientes)
+          .eq('inclui_seguro', true),
+        supabase
+          .from('pagamentos')
+          .select('cliente_id, data_pagamento')
+          .in('cliente_id', idsClientes)
+          .eq('inclui_reativacao', true),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ]
+  if (erroPagamentosDetalhe || erroClientesInicio || erroSegurosPagos || erroReativacoesSeguro) {
+    throw new Error(
+      (erroPagamentosDetalhe ?? erroClientesInicio ?? erroSegurosPagos ?? erroReativacoesSeguro)!.message
+    )
   }
 
   // A consulta já vem ordenada por data decrescente, por isso a primeira
@@ -112,35 +139,9 @@ export default async function PagamentosPage({
   const emDia = clientesComResumo.filter((c) => c.em_dia)
   const atrasados = clientesComResumo.filter((c) => !c.em_dia)
 
-  const { data: clientesInicioData, error: erroClientesInicio } = idsClientes.length
-    ? await supabase.from('clientes').select('id, inicio_contrato').in('id', idsClientes)
-    : { data: [], error: null }
-  if (erroClientesInicio) {
-    throw new Error(erroClientesInicio.message)
-  }
   const inicioContratoPorCliente = new Map(
     (clientesInicioData ?? []).map((c) => [c.id, c.inicio_contrato])
   )
-  const { data: segurosPagosData, error: erroSegurosPagos } = idsClientes.length
-    ? await supabase
-        .from('pagamentos')
-        .select('cliente_id, data_pagamento')
-        .in('cliente_id', idsClientes)
-        .eq('inclui_seguro', true)
-    : { data: [], error: null }
-  if (erroSegurosPagos) {
-    throw new Error(erroSegurosPagos.message)
-  }
-  const { data: reativacoesData, error: erroReativacoesSeguro } = idsClientes.length
-    ? await supabase
-        .from('pagamentos')
-        .select('cliente_id, data_pagamento')
-        .in('cliente_id', idsClientes)
-        .eq('inclui_reativacao', true)
-    : { data: [], error: null }
-  if (erroReativacoesSeguro) {
-    throw new Error(erroReativacoesSeguro.message)
-  }
   const clientesParaSeguro = clientes.map((c) => ({
     id: c.cliente_id,
     nome: c.nome,
@@ -184,8 +185,8 @@ export default async function PagamentosPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Pagamentos</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">Pagamentos</h1>
+      <p className="mt-1 text-sm text-muted">
         {estudio.nome} · {atrasados.length} {atrasados.length === 1 ? 'atrasado' : 'atrasados'} de{' '}
         {clientes.length} clientes ativos
         {segurosARenovar.length > 0 &&

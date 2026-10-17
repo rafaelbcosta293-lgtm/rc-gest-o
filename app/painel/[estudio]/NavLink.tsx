@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MODULOS, PALETA } from '@/lib/data/constantes'
 
-// Destaca o módulo atual no menu — sem isto, a barra lateral/superior
-// não dava nenhuma pista de "estás aqui", em toda a navegação da app.
+// Destaca o módulo atual no menu — sem isto, a navegação não dava
+// nenhuma pista de "estás aqui".
 function estaAtivo(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
@@ -17,6 +17,7 @@ function moduloPorId(id: string) {
   return MODULOS.find((m) => m.id === id)!
 }
 
+// Computador (≥1024px): barra lateral completa, ícone + nome.
 export function NavLinkDesktop({ href, id, nome }: { href: string; id: string; nome: string }) {
   const { icone: Icone, cor } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
@@ -38,7 +39,9 @@ export function NavLinkDesktop({ href, id, nome }: { href: string; id: string; n
   )
 }
 
-export function NavLinkMobile({ href, id, nome }: { href: string; id: string; nome: string }) {
+// Tablet (768–1023px): barra lateral estreita, só com ícone — cabe mais
+// ecrã de conteúdo sem perder a navegação sempre visível.
+export function NavLinkTablet({ href, id, nome }: { href: string; id: string; nome: string }) {
   const { icone: Icone, cor } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
   return (
@@ -46,12 +49,31 @@ export function NavLinkMobile({ href, id, nome }: { href: string; id: string; no
       href={href}
       title={nome}
       aria-label={nome}
-      className={`flex shrink-0 items-center justify-center rounded-full p-2 transition-colors ${
-        ativo ? '' : 'hover:bg-brand/[.07]'
-      }`}
-      style={ativo ? { background: PALETA[cor].bg, color: PALETA[cor].tx } : undefined}
+      className="flex items-center justify-center rounded-xl p-3 transition-colors"
+      style={{
+        background: ativo ? PALETA[cor].bg : undefined,
+        color: ativo ? PALETA[cor].tx : 'var(--muted)',
+      }}
     >
-      <Icone className="h-[18px] w-[18px]" strokeWidth={2.25} />
+      <Icone className="h-5 w-5" strokeWidth={2.25} />
+    </Link>
+  )
+}
+
+// Telemóvel (<768px): barra fixa no fundo, ao estilo iOS — ícone +
+// legenda pequena, sempre ao alcance do polegar.
+export function NavLinkPhone({ href, id }: { href: string; id: string }) {
+  const { icone: Icone, cor, nome, curto } = moduloPorId(id)
+  const ativo = estaAtivo(usePathname(), href)
+  return (
+    <Link
+      href={href}
+      aria-label={nome}
+      className="flex min-w-14 shrink-0 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5"
+      style={{ color: ativo ? PALETA[cor].tx : 'var(--muted)' }}
+    >
+      <Icone className="h-[22px] w-[22px]" strokeWidth={ativo ? 2.5 : 2} />
+      <span className={`text-[10px] ${ativo ? 'font-semibold' : 'font-medium'}`}>{curto ?? nome}</span>
     </Link>
   )
 }

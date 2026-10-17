@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Home } from 'lucide-react'
+import { ArrowLeftRight } from 'lucide-react'
 import { MODULOS } from '@/lib/data/constantes'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
-import { NavLinkDesktop, NavLinkMobile } from './NavLink'
+import { NavLinkDesktop, NavLinkTablet, NavLinkPhone } from './NavLink'
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
@@ -28,36 +28,47 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       : `${m.nome} — só para ${m.restrito === 'admin' ? 'administradores' : 'gestão'}`
 
   return (
-    <div className="flex min-h-full flex-col md:flex-row">
-      {/* Telemóvel/tablet: barra fixa no topo, só com ícones */}
-      <div className="sticky top-0 z-10 flex items-center gap-1 overflow-x-auto border-b border-border-subtle bg-background px-4 py-2 md:hidden">
+    <div className="flex min-h-full flex-col lg:flex-row">
+      {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
+          estúdio — os módulos ficam na barra de separadores do fundo,
+          sempre ao alcance do polegar, ao estilo iOS. */}
+      <div className="sticky top-0 z-10 flex items-center justify-end border-b border-border-subtle bg-background px-4 py-2 md:hidden">
         <Link
           href="/painel"
-          title="Início"
-          aria-label="Início"
-          className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+          title="Mudar estúdio"
+          aria-label="Mudar estúdio"
+          className="flex items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
         >
-          <Home className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          <ArrowLeftRight className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </Link>
-        <span className="mx-1 h-5 w-px shrink-0 bg-border-subtle" />
+      </div>
+
+      {/* Tablet (768–1023px): barra lateral estreita, só com ícones —
+          mantém a navegação sempre visível sem ocupar tanto ecrã como a
+          versão completa. */}
+      <aside className="hidden border-border-subtle md:sticky md:top-0 md:flex md:h-screen md:w-20 md:flex-col md:items-center md:gap-1 md:border-r md:py-5 lg:hidden">
+        <Link href="/painel" className="mb-3 flex items-center justify-center p-1.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-7 w-auto" />
+        </Link>
         {MODULOS.map((m) =>
           podeAceder(m) ? (
-            <NavLinkMobile key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
+            <NavLinkTablet key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
           ) : (
             <span
               key={m.id}
               title={tituloBloqueado(m)}
-              aria-label={tituloBloqueado(m)}
-              className="flex shrink-0 cursor-not-allowed items-center justify-center rounded-full p-2 text-muted opacity-40"
+              className="flex cursor-not-allowed items-center justify-center rounded-xl p-3 text-muted opacity-40"
             >
-              <m.icone className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              <m.icone className="h-5 w-5" strokeWidth={2.25} />
             </span>
           )
         )}
-      </div>
+      </aside>
 
-      {/* Computador: menu lateral fixo, com nomes por extenso */}
-      <aside className="hidden shrink-0 border-border-subtle md:sticky md:top-0 md:flex md:h-screen md:w-60 md:flex-col md:border-r">
+      {/* Computador (≥1024px): barra lateral completa, com nomes por
+          extenso. */}
+      <aside className="hidden shrink-0 border-border-subtle lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:flex-col lg:border-r">
         <Link href="/painel" className="flex items-center px-5 py-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="RC Private Fitness Studio" className="h-10 w-auto" />
@@ -82,7 +93,27 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
         </nav>
       </aside>
 
-      <div className="min-w-0 flex-1">{children}</div>
+      {/* O conteúdo ganha espaço extra no fundo, no telemóvel, para a
+          barra de separadores fixa não tapar o fim da página. */}
+      <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
+
+      {/* Telemóvel: barra de separadores fixa no fundo, ao estilo iOS. */}
+      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around overflow-x-auto border-t border-border-subtle bg-background/95 px-1 py-1 backdrop-blur-sm md:hidden">
+        {MODULOS.map((m) =>
+          podeAceder(m) ? (
+            <NavLinkPhone key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} />
+          ) : (
+            <span
+              key={m.id}
+              title={tituloBloqueado(m)}
+              className="flex min-w-14 shrink-0 cursor-not-allowed flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-muted opacity-40"
+            >
+              <m.icone className="h-[22px] w-[22px]" strokeWidth={2} />
+              <span className="text-[10px] font-medium">{m.curto ?? m.nome}</span>
+            </span>
+          )
+        )}
+      </nav>
     </div>
   )
 }

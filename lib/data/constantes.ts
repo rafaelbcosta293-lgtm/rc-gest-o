@@ -115,6 +115,9 @@ export const BLOCO_COR: Record<BlocoTipo, string> = {
 type Modulo = {
   id: string
   nome: string
+  // Nome curto para a barra de separadores do telemóvel — alguns nomes
+  // completos ("Abertura / Fecho") não cabem por baixo de um ícone.
+  curto?: string
   icone: LucideIcon
   cor: keyof typeof PALETA
   desc: string
@@ -129,7 +132,7 @@ export const MODULOS: Modulo[] = [
   { id: 'avaliacoes', nome: 'Avaliações', icone: Ruler, cor: 'azul', desc: 'Avaliações, reavaliações e evolução', pronto: true },
   { id: 'leads', nome: 'Leads', icone: Megaphone, cor: 'laranja', desc: 'Contactos, origem e seguimento', pronto: true },
   { id: 'pagamentos', nome: 'Pagamentos', icone: CreditCard, cor: 'ambar', desc: 'Quem tem o pagamento em dia', pronto: true },
-  { id: 'checklist', nome: 'Abertura / Fecho', icone: KeyRound, cor: 'neutro', desc: 'Checklist diária do estúdio', pronto: true },
+  { id: 'checklist', nome: 'Abertura / Fecho', curto: 'Checklist', icone: KeyRound, cor: 'neutro', desc: 'Checklist diária do estúdio', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: Clock, cor: 'vermelho', desc: 'Escala da semana e ausências da equipa', pronto: true },
 ]
 

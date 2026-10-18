@@ -120,14 +120,24 @@ export default async function NovoEventoPage({
             <input type="time" name="hora_inicio" defaultValue="09:00" required className={inputCls} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-muted">Duração</label>
-            <select name="duracao_min" defaultValue="40" className={inputCls}>
+            <label className="text-xs font-semibold text-muted">Duração (min)</label>
+            <input
+              type="number"
+              name="duracao_min"
+              min={5}
+              max={240}
+              step={1}
+              list="duracoes-comuns"
+              defaultValue={40}
+              required
+              className={inputCls}
+              title="Qualquer duração em minutos — as sugestões são só atalhos"
+            />
+            <datalist id="duracoes-comuns">
               {[30, 40, 45, 60, 90, 120].map((min) => (
-                <option key={min} value={min}>
-                  {min} min
-                </option>
+                <option key={min} value={min} />
               ))}
-            </select>
+            </datalist>
           </div>
         </div>
 

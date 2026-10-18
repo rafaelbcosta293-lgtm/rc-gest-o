@@ -1,12 +1,11 @@
 'use client'
 
-import { Fragment, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { X, Trash2, Ban, RotateCcw } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import { corTipoEvento, TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
-import { chaveSlot, BLOCOS_HORARIO } from '@/lib/data/horarios'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import {
   criarEventoRapido,
@@ -28,24 +27,25 @@ type PtOpcao = { id: string; nome: string }
 const inputCls =
   'w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
 
+const DURACOES_COMUNS = [30, 40, 45, 60, 90, 120]
+
 function rotuloEvento(e: EventoComNomes) {
   return e.cliente?.nome ?? e.titulo ?? e.tipo
 }
 
-function horaFim(horaInicio: string, duracaoMin: number) {
-  const [h, m] = horaInicio.slice(0, 5).split(':').map(Number)
-  const totalMin = h * 60 + m + duracaoMin
-  const hf = Math.floor(totalMin / 60) % 24
-  const mf = totalMin % 60
-  return `${String(hf).padStart(2, '0')}:${String(mf).padStart(2, '0')}`
+function minutosParaHora(minutos: number) {
+  const h = Math.floor(minutos / 60) % 24
+  const m = minutos % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-// A grelha de semana só tem blocos de 30 em 30 min — um evento criado a
-// outra hora qualquer aparece arredondado para baixo, só para efeitos de
-// onde é mostrado na grelha (a hora real gravada não muda).
-function blocoArredondado(horaInicio: string) {
+function minutosDoDia(horaInicio: string) {
   const [h, m] = horaInicio.slice(0, 5).split(':').map(Number)
-  return { hora: h, minuto: m < 30 ? 0 : 30 }
+  return h * 60 + m
+}
+
+function horaFim(horaInicio: string, duracaoMin: number) {
+  return minutosParaHora(minutosDoDia(horaInicio) + duracaoMin)
 }
 
 type EstadoModal =
@@ -72,7 +72,7 @@ export default function AgendaInterativa({
 }) {
   const router = useRouter()
   const [modal, setModal] = useState<EstadoModal>({ aberto: false })
-  const [dragOver, setDragOver] = useState<string | null>(null)
+  const [dragOverDia, setDragOverDia] = useState<string | null>(null)
   const [aPendente, iniciarTransicao] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
 
@@ -153,13 +153,11 @@ export default function AgendaInterativa({
     })
   }
 
-  const slots: Record<string, EventoComNomes[]> = {}
+  const porDia: Record<string, EventoComNomes[]> = {}
   for (const e of eventos) {
-    const { hora, minuto } = blocoArredondado(e.hora_inicio)
-    const chave = chaveSlot(e.data, hora, minuto)
-    const lista = slots[chave] ?? []
+    const lista = porDia[e.data] ?? []
     lista.push(e)
-    slots[chave] = lista
+    porDia[e.data] = lista
   }
 
   return (
@@ -173,21 +171,14 @@ export default function AgendaInterativa({
       ) : (
         <GrelhaSemanaInterativa
           dias={dias}
-          slots={slots}
-          dragOver={dragOver}
-          onDragOverChave={setDragOver}
-          onDrop={(id, dia, hora, minuto) => {
-            setDragOver(null)
-            mover(id, dia, `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`)
+          porDia={porDia}
+          dragOverDia={dragOverDia}
+          onDragOverDia={setDragOverDia}
+          onDrop={(id, dia, horaInicio) => {
+            setDragOverDia(null)
+            mover(id, dia, horaInicio)
           }}
-          onClickCelulaVazia={(dia, hora, minuto) =>
-            setModal({
-              aberto: true,
-              modo: 'criar',
-              data: dia,
-              horaInicio: `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`,
-            })
-          }
+          onClickVazio={(dia, horaInicio) => setModal({ aberto: true, modo: 'criar', data: dia, horaInicio })}
           onAbrirEvento={(e) => setModal({ aberto: true, modo: 'editar', evento: e })}
         />
       )}
@@ -273,98 +264,199 @@ function ListaDiaInterativa({
   )
 }
 
+// A grelha mostra das 7h às 21h, em contínuo — cada evento fica
+// posicionado exatamente à sua hora e minuto (não há mais blocos fixos
+// de 30 em 30 min a condicionar onde um evento pode ficar).
+const GRADE_HORA_INICIO = 7
+const GRADE_HORA_FIM = 21
+const PX_POR_MINUTO = 1.3
+const GRADE_MIN_INICIO = GRADE_HORA_INICIO * 60
+const GRADE_ALTURA = (GRADE_HORA_FIM - GRADE_HORA_INICIO) * 60 * PX_POR_MINUTO
+const HORAS_GRADE = Array.from(
+  { length: GRADE_HORA_FIM - GRADE_HORA_INICIO + 1 },
+  (_, i) => GRADE_HORA_INICIO + i
+)
+
+type EventoPosicionado = { evento: EventoComNomes; coluna: number; colunas: number }
+
+// Dispõe os eventos do dia numa grelha contínua: eventos que se
+// sobrepõem no tempo ficam lado a lado (como no Google Calendar), em
+// vez de empilhados uns sobre os outros.
+function disporEventosDoDia(eventosDia: EventoComNomes[]): EventoPosicionado[] {
+  const ordenados = [...eventosDia].sort(
+    (a, b) => minutosDoDia(a.hora_inicio) - minutosDoDia(b.hora_inicio)
+  )
+  const fimPorColuna: number[] = []
+  const base = ordenados.map((evento) => {
+    const inicio = minutosDoDia(evento.hora_inicio)
+    const fim = inicio + evento.duracao_min
+    let coluna = fimPorColuna.findIndex((f) => f <= inicio)
+    if (coluna === -1) {
+      coluna = fimPorColuna.length
+      fimPorColuna.push(fim)
+    } else {
+      fimPorColuna[coluna] = fim
+    }
+    return { evento, coluna, inicio, fim }
+  })
+  return base.map((p) => {
+    const simultaneos = base.filter((q) => q.inicio < p.fim && q.fim > p.inicio)
+    const colunas = Math.max(...simultaneos.map((q) => q.coluna + 1))
+    return { evento: p.evento, coluna: p.coluna, colunas }
+  })
+}
+
+function minutoNoClique(clienteY: number, rectTop: number) {
+  const minutos = GRADE_MIN_INICIO + Math.round((clienteY - rectTop) / PX_POR_MINUTO)
+  return Math.max(GRADE_MIN_INICIO, Math.min(GRADE_HORA_FIM * 60 - 1, minutos))
+}
+
 function GrelhaSemanaInterativa({
   dias,
-  slots,
-  dragOver,
-  onDragOverChave,
+  porDia,
+  dragOverDia,
+  onDragOverDia,
   onDrop,
-  onClickCelulaVazia,
+  onClickVazio,
   onAbrirEvento,
 }: {
   dias: string[]
-  slots: Record<string, EventoComNomes[]>
-  dragOver: string | null
-  onDragOverChave: (chave: string | null) => void
-  onDrop: (id: string, dia: string, hora: number, minuto: number) => void
-  onClickCelulaVazia: (dia: string, hora: number, minuto: number) => void
+  porDia: Record<string, EventoComNomes[]>
+  dragOverDia: string | null
+  onDragOverDia: (dia: string | null) => void
+  onDrop: (id: string, dia: string, horaInicio: string) => void
+  onClickVazio: (dia: string, horaInicio: string) => void
   onAbrirEvento: (evento: EventoComNomes) => void
 }) {
   return (
     <div className="mt-4 overflow-x-auto">
       <p className="mb-2 text-xs text-muted">
-        Clica num espaço vazio para criar, clica num evento para editar, arrasta um evento para o
-        mover.
+        Clica num espaço vazio para criar à hora exata, clica num evento para editar, arrasta um
+        evento para o mover — tudo minuto a minuto, sem ficar preso a blocos de meia hora.
       </p>
-      <div
-        className="grid min-w-[760px] gap-px overflow-hidden rounded-xl border border-border-subtle bg-border-subtle text-xs"
-        style={{ gridTemplateColumns: '56px repeat(7, 1fr)' }}
-      >
-        <div className="bg-brand/[.05] p-1" />
-        {dias.map((d, i) => (
-          <div key={d} className="bg-brand/[.05] p-1 text-center font-semibold text-foreground">
-            {DIAS_SEMANA[i]}
-            <br />
-            <span className="font-normal text-muted">{fmt(d)}</span>
-          </div>
-        ))}
-        {BLOCOS_HORARIO.map((bloco) => (
-          <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-            <div className="flex items-center bg-surface p-1 text-muted">{bloco.label}</div>
-            {dias.map((dia) => {
-              const chave = chaveSlot(dia, bloco.hora, bloco.minuto)
-              const atual = slots[chave] ?? []
-              const emDrag = dragOver === chave
-              return (
+      <div className="min-w-[760px]">
+        <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
+          <div />
+          {dias.map((d, i) => (
+            <div key={d} className="rounded-t-lg bg-brand/[.05] p-1 text-center text-xs font-semibold text-foreground">
+              {DIAS_SEMANA[i]}
+              <br />
+              <span className="font-normal text-muted">{fmt(d)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="max-h-[65vh] overflow-y-auto rounded-b-xl border border-border-subtle">
+          <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)', height: GRADE_ALTURA }}>
+            <div className="relative text-[10px] text-muted">
+              {HORAS_GRADE.map((h) => (
                 <div
-                  key={dia}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    onDragOverChave(chave)
-                  }}
-                  onDragLeave={() => onDragOverChave(null)}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    const id = e.dataTransfer.getData('text/plain')
-                    if (id) onDrop(id, dia, bloco.hora, bloco.minuto)
-                  }}
-                  onClick={() => {
-                    if (atual.length === 0) onClickCelulaVazia(dia, bloco.hora, bloco.minuto)
-                  }}
-                  className={`flex min-h-[1.5rem] cursor-pointer flex-col justify-center gap-0.5 bg-surface p-0.5 text-[10px] leading-tight transition-colors hover:bg-brand/[.05] ${
-                    emDrag ? 'bg-brand/[.14]' : ''
-                  }`}
+                  key={h}
+                  className="absolute right-1 -translate-y-1/2"
+                  style={{ top: (h * 60 - GRADE_MIN_INICIO) * PX_POR_MINUTO }}
                 >
-                  {atual.map((e) => {
-                    const cor = corTipoEvento(e.tipo)
-                    return (
-                      <button
-                        key={e.id}
-                        type="button"
-                        draggable
-                        onDragStart={(ev) => {
-                          ev.dataTransfer.setData('text/plain', e.id)
-                          ev.dataTransfer.effectAllowed = 'move'
-                        }}
-                        onClick={(ev) => {
-                          ev.stopPropagation()
-                          onAbrirEvento(e)
-                        }}
-                        className={`truncate rounded px-1 py-0.5 text-left font-medium ${
-                          e.estado === 'Cancelado' ? 'opacity-50 line-through' : ''
-                        }`}
-                        style={{ background: cor.bg, color: cor.tx }}
-                      >
-                        {rotuloEvento(e)}
-                      </button>
-                    )
-                  })}
+                  {String(h).padStart(2, '0')}:00
                 </div>
-              )
-            })}
-          </Fragment>
-        ))}
+              ))}
+            </div>
+            {dias.map((dia) => (
+              <ColunaDia
+                key={dia}
+                eventos={porDia[dia] ?? []}
+                emDrag={dragOverDia === dia}
+                onDragOver={() => onDragOverDia(dia)}
+                onDragLeave={() => onDragOverDia(null)}
+                onDrop={(id, horaInicio) => onDrop(id, dia, horaInicio)}
+                onClickVazio={(horaInicio) => onClickVazio(dia, horaInicio)}
+                onAbrirEvento={onAbrirEvento}
+              />
+            ))}
+          </div>
+        </div>
       </div>
+    </div>
+  )
+}
+
+function ColunaDia({
+  eventos,
+  emDrag,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onClickVazio,
+  onAbrirEvento,
+}: {
+  eventos: EventoComNomes[]
+  emDrag: boolean
+  onDragOver: () => void
+  onDragLeave: () => void
+  onDrop: (id: string, horaInicio: string) => void
+  onClickVazio: (horaInicio: string) => void
+  onAbrirEvento: (evento: EventoComNomes) => void
+}) {
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault()
+        onDragOver()
+      }}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => {
+        e.preventDefault()
+        const id = e.dataTransfer.getData('text/plain')
+        const rect = e.currentTarget.getBoundingClientRect()
+        if (id) onDrop(id, minutosParaHora(minutoNoClique(e.clientY, rect.top)))
+      }}
+      onClick={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect()
+        onClickVazio(minutosParaHora(minutoNoClique(e.clientY, rect.top)))
+      }}
+      className={`relative cursor-pointer border-l border-border-subtle bg-surface transition-colors ${
+        emDrag ? 'bg-brand/[.1]' : ''
+      }`}
+    >
+      {HORAS_GRADE.map((h) => (
+        <div
+          key={h}
+          className="absolute inset-x-0 border-t border-border-subtle/60"
+          style={{ top: (h * 60 - GRADE_MIN_INICIO) * PX_POR_MINUTO }}
+        />
+      ))}
+      {disporEventosDoDia(eventos).map(({ evento, coluna, colunas }) => {
+        const cor = corTipoEvento(evento.tipo)
+        const inicioMin = minutosDoDia(evento.hora_inicio)
+        return (
+          <button
+            key={evento.id}
+            type="button"
+            draggable
+            onDragStart={(ev) => {
+              ev.dataTransfer.setData('text/plain', evento.id)
+              ev.dataTransfer.effectAllowed = 'move'
+            }}
+            onClick={(ev) => {
+              ev.stopPropagation()
+              onAbrirEvento(evento)
+            }}
+            className={`absolute overflow-hidden rounded px-1 py-0.5 text-left leading-tight ${
+              evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''
+            }`}
+            style={{
+              top: (inicioMin - GRADE_MIN_INICIO) * PX_POR_MINUTO,
+              height: Math.max(evento.duracao_min * PX_POR_MINUTO, 18),
+              left: `${(coluna * 100) / colunas}%`,
+              width: `${100 / colunas}%`,
+              background: cor.bg,
+              color: cor.tx,
+            }}
+          >
+            <span className="block truncate text-[9px] font-semibold">
+              {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
+            </span>
+            <span className="block truncate text-[10px] font-medium">{rotuloEvento(evento)}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -473,13 +565,23 @@ function EventoModalOverlay({
           <div className="grid grid-cols-3 gap-2">
             <input type="date" name="data" defaultValue={dataDefault} required className={inputCls} />
             <input type="time" name="hora_inicio" defaultValue={horaDefault} required className={inputCls} />
-            <select name="duracao_min" defaultValue={String(evento?.duracao_min ?? 40)} className={inputCls}>
-              {[30, 40, 45, 60, 90, 120].map((min) => (
-                <option key={min} value={min}>
-                  {min} min
-                </option>
+            <input
+              type="number"
+              name="duracao_min"
+              min={5}
+              max={240}
+              step={1}
+              list="duracoes-comuns-modal"
+              defaultValue={evento?.duracao_min ?? 40}
+              required
+              className={inputCls}
+              title="Duração em minutos — qualquer valor, não só os sugeridos"
+            />
+            <datalist id="duracoes-comuns-modal">
+              {DURACOES_COMUNS.map((min) => (
+                <option key={min} value={min} />
               ))}
-            </select>
+            </datalist>
           </div>
 
           <textarea

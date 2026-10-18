@@ -107,7 +107,7 @@ export default async function EstudioPage({
                 className="flex h-12 w-12 items-center justify-center rounded-2xl shadow-pop transition-transform duration-300 group-hover:scale-110"
                 style={{ background: PALETA[m.cor].bg, color: PALETA[m.cor].tx }}
               >
-                <m.icone className="h-5 w-5" strokeWidth={2.25} />
+                <m.icone className="h-5 w-5" strokeWidth={2.5} />
               </span>
               <h2 className="mt-3.5 font-bold tracking-tight text-foreground">
                 {m.nome}

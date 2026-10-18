@@ -1,13 +1,13 @@
 import {
-  Users,
+  UsersRound,
   Dumbbell,
   CalendarCheck2,
   CalendarDays,
-  Ruler,
+  Gauge,
   Megaphone,
   CreditCard,
   KeyRound,
-  Clock,
+  AlarmClock,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -127,14 +127,14 @@ type Modulo = {
 }
 
 export const MODULOS: Modulo[] = [
-  { id: 'clientes', nome: 'Clientes', icone: Users, cor: 'teal', desc: 'Ficha completa de cada cliente, tudo num só sítio', pronto: true },
+  { id: 'clientes', nome: 'Clientes', icone: UsersRound, cor: 'teal', desc: 'Ficha completa de cada cliente, tudo num só sítio', pronto: true },
   { id: 'treinos', nome: 'Treinos', icone: Dumbbell, cor: 'roxo', desc: 'Planos, histórico e notas entre PTs', pronto: true },
   { id: 'presencas', nome: 'Presenças', icone: CalendarCheck2, cor: 'verde', desc: 'Quem treinou e quem faltou', pronto: true },
-  { id: 'avaliacoes', nome: 'Avaliações', icone: Ruler, cor: 'azul', desc: 'Avaliações, reavaliações e evolução', pronto: true },
+  { id: 'avaliacoes', nome: 'Avaliações', icone: Gauge, cor: 'azul', desc: 'Avaliações, reavaliações e evolução', pronto: true },
   { id: 'leads', nome: 'Leads', icone: Megaphone, cor: 'laranja', desc: 'Contactos, origem e seguimento', pronto: true },
   { id: 'pagamentos', nome: 'Pagamentos', icone: CreditCard, cor: 'ambar', desc: 'Quem tem o pagamento em dia', pronto: true },
   { id: 'checklist', nome: 'Abertura / Fecho', curto: 'Checklist', icone: KeyRound, cor: 'neutro', desc: 'Checklist diária do estúdio', pronto: true },
-  { id: 'horarios', nome: 'Horários', icone: Clock, cor: 'vermelho', desc: 'Escala da semana e ausências da equipa', pronto: true },
+  { id: 'horarios', nome: 'Horários', icone: AlarmClock, cor: 'vermelho', desc: 'Escala da semana e ausências da equipa', pronto: true },
   { id: 'agenda', nome: 'Agenda', icone: CalendarDays, cor: 'roxo', desc: 'Treinos, avaliações e reuniões — dia, semana e mês', pronto: true },
 ]
 

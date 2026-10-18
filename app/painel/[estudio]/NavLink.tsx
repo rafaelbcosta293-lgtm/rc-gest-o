@@ -32,7 +32,7 @@ export function NavLinkDesktop({ href, id, nome }: { href: string; id: string; n
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
         style={{ background: PALETA[cor].bg, color: PALETA[cor].tx }}
       >
-        <Icone className="h-4 w-4" strokeWidth={2.25} />
+        <Icone className="h-4 w-4" strokeWidth={2.5} />
       </span>
       {nome}
     </Link>
@@ -55,7 +55,7 @@ export function NavLinkTablet({ href, id, nome }: { href: string; id: string; no
         color: ativo ? PALETA[cor].tx : 'var(--muted)',
       }}
     >
-      <Icone className="h-5 w-5" strokeWidth={2.25} />
+      <Icone className="h-5 w-5" strokeWidth={2.5} />
     </Link>
   )
 }
@@ -72,7 +72,7 @@ export function NavLinkPhone({ href, id }: { href: string; id: string }) {
       className="flex min-w-14 shrink-0 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5"
       style={{ color: ativo ? PALETA[cor].tx : 'var(--muted)' }}
     >
-      <Icone className="h-[22px] w-[22px]" strokeWidth={ativo ? 2.5 : 2} />
+      <Icone className="h-[22px] w-[22px]" strokeWidth={ativo ? 2.75 : 2.25} />
       <span className={`text-[10px] ${ativo ? 'font-semibold' : 'font-medium'}`}>{curto ?? nome}</span>
     </Link>
   )

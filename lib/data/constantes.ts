@@ -2,6 +2,7 @@ import {
   Users,
   Dumbbell,
   CalendarCheck2,
+  CalendarDays,
   Ruler,
   Megaphone,
   CreditCard,
@@ -134,6 +135,7 @@ export const MODULOS: Modulo[] = [
   { id: 'pagamentos', nome: 'Pagamentos', icone: CreditCard, cor: 'ambar', desc: 'Quem tem o pagamento em dia', pronto: true },
   { id: 'checklist', nome: 'Abertura / Fecho', curto: 'Checklist', icone: KeyRound, cor: 'neutro', desc: 'Checklist diária do estúdio', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: Clock, cor: 'vermelho', desc: 'Escala da semana e ausências da equipa', pronto: true },
+  { id: 'agenda', nome: 'Agenda', icone: CalendarDays, cor: 'roxo', desc: 'Treinos, avaliações e reuniões — dia, semana e mês', pronto: true },
 ]
 
 // Coordenação e Administração deixaram de ser por estúdio — passaram a

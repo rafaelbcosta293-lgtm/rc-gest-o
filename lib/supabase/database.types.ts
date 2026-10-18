@@ -276,6 +276,27 @@ export type EnvioAniversario = {
   enviado_por: string | null
 }
 
+export type TipoEventoAgenda = 'Treino' | 'Avaliação' | 'Reunião' | 'Outro'
+export type EstadoEventoAgenda = 'Agendado' | 'Cancelado' | 'Concluído'
+
+export type EventoAgenda = {
+  id: string
+  estudio_id: number
+  cliente_id: string | null
+  pt_id: string | null
+  tipo: TipoEventoAgenda
+  titulo: string | null
+  data: string
+  hora_inicio: string
+  duracao_min: number
+  estado: EstadoEventoAgenda
+  serie_id: string | null
+  nota: string | null
+  motivo_cancelamento: string | null
+  criado_por: string | null
+  criado_em: string
+}
+
 export type Avaliacao = {
   id: string
   cliente_id: string

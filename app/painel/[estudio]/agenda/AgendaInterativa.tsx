@@ -54,7 +54,6 @@ type EstadoModal =
   | { aberto: true; modo: 'editar'; evento: EventoComNomes }
 
 export default function AgendaInterativa({
-  vista,
   slug,
   estudioId,
   dias,
@@ -62,7 +61,6 @@ export default function AgendaInterativa({
   clientes,
   pts,
 }: {
-  vista: 'dia' | 'semana'
   slug: string
   estudioId: number
   dias: string[]
@@ -162,26 +160,18 @@ export default function AgendaInterativa({
 
   return (
     <>
-      {vista === 'dia' ? (
-        <ListaDiaInterativa
-          eventos={eventos}
-          onAbrirEvento={(e) => setModal({ aberto: true, modo: 'editar', evento: e })}
-          onNovoEvento={() => setModal({ aberto: true, modo: 'criar', data: dias[0], horaInicio: '09:00' })}
-        />
-      ) : (
-        <GrelhaSemanaInterativa
-          dias={dias}
-          porDia={porDia}
-          dragOverDia={dragOverDia}
-          onDragOverDia={setDragOverDia}
-          onDrop={(id, dia, horaInicio) => {
-            setDragOverDia(null)
-            mover(id, dia, horaInicio)
-          }}
-          onClickVazio={(dia, horaInicio) => setModal({ aberto: true, modo: 'criar', data: dia, horaInicio })}
-          onAbrirEvento={(e) => setModal({ aberto: true, modo: 'editar', evento: e })}
-        />
-      )}
+      <GrelhaInterativa
+        dias={dias}
+        porDia={porDia}
+        dragOverDia={dragOverDia}
+        onDragOverDia={setDragOverDia}
+        onDrop={(id, dia, horaInicio) => {
+          setDragOverDia(null)
+          mover(id, dia, horaInicio)
+        }}
+        onClickVazio={(dia, horaInicio) => setModal({ aberto: true, modo: 'criar', data: dia, horaInicio })}
+        onAbrirEvento={(e) => setModal({ aberto: true, modo: 'editar', evento: e })}
+      />
 
       {modal.aberto && (
         <EventoModalOverlay
@@ -199,68 +189,6 @@ export default function AgendaInterativa({
         />
       )}
     </>
-  )
-}
-
-function ListaDiaInterativa({
-  eventos,
-  onAbrirEvento,
-  onNovoEvento,
-}: {
-  eventos: EventoComNomes[]
-  onAbrirEvento: (evento: EventoComNomes) => void
-  onNovoEvento: () => void
-}) {
-  return (
-    <div className="mt-4 flex flex-col gap-2">
-      <button
-        type="button"
-        onClick={onNovoEvento}
-        className="self-start rounded-full border border-dashed border-border-subtle px-3 py-1.5 text-xs font-medium text-muted hover:border-brand hover:text-brand"
-      >
-        + Clicar para adicionar
-      </button>
-      {eventos.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
-          Sem eventos neste dia.
-        </div>
-      )}
-      {eventos.map((e) => {
-        const cor = corTipoEvento(e.tipo)
-        const cancelado = e.estado === 'Cancelado'
-        return (
-          <button
-            key={e.id}
-            type="button"
-            onClick={() => onAbrirEvento(e)}
-            className={`flex items-center gap-3 rounded-xl border border-border-subtle bg-surface p-3 text-left shadow-card transition-colors hover:bg-brand/[.04] ${
-              cancelado ? 'opacity-50' : ''
-            }`}
-          >
-            <div className="w-14 shrink-0 text-xs font-medium text-muted">
-              {e.hora_inicio.slice(0, 5)}
-              <br />
-              {horaFim(e.hora_inicio, e.duracao_min)}
-            </div>
-            <span
-              className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-              style={{ background: cor.bg, color: cor.tx }}
-            >
-              {e.tipo}
-            </span>
-            <span
-              className={`flex-1 truncate text-sm font-semibold text-foreground ${
-                cancelado ? 'line-through' : ''
-              }`}
-            >
-              {rotuloEvento(e)}
-            </span>
-            {e.pt && <span className="shrink-0 text-xs text-muted">{e.pt.nome}</span>}
-            {cancelado && <span className="shrink-0 text-xs font-medium text-red-600">Cancelado</span>}
-          </button>
-        )
-      })}
-    </div>
   )
 }
 
@@ -311,7 +239,7 @@ function minutoNoClique(clienteY: number, rectTop: number) {
   return Math.max(GRADE_MIN_INICIO, Math.min(GRADE_HORA_FIM * 60 - 1, minutos))
 }
 
-function GrelhaSemanaInterativa({
+function GrelhaInterativa({
   dias,
   porDia,
   dragOverDia,
@@ -328,25 +256,30 @@ function GrelhaSemanaInterativa({
   onClickVazio: (dia: string, horaInicio: string) => void
   onAbrirEvento: (evento: EventoComNomes) => void
 }) {
+  // Um só dia (vista Dia) ocupa a largura toda; a semana continua a
+  // precisar de largura mínima para as 7 colunas não ficarem espremidas.
+  const colunas = `repeat(${dias.length}, 1fr)`
+  const largura = dias.length > 1 ? 'min-w-[760px]' : 'min-w-[260px]'
+
   return (
     <div className="mt-4 overflow-x-auto">
       <p className="mb-2 text-xs text-muted">
         Clica num espaço vazio para criar à hora exata, clica num evento para editar, arrasta um
         evento para o mover — tudo minuto a minuto, sem ficar preso a blocos de meia hora.
       </p>
-      <div className="min-w-[760px]">
-        <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
+      <div className={largura}>
+        <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}` }}>
           <div />
           {dias.map((d, i) => (
             <div key={d} className="rounded-t-lg bg-brand/[.05] p-1 text-center text-xs font-semibold text-foreground">
-              {DIAS_SEMANA[i]}
+              {dias.length > 1 ? DIAS_SEMANA[i] : DIAS_SEMANA[(new Date(`${d}T00:00:00`).getDay() + 6) % 7]}
               <br />
               <span className="font-normal text-muted">{fmt(d)}</span>
             </div>
           ))}
         </div>
         <div className="max-h-[65vh] overflow-y-auto rounded-b-xl border border-border-subtle">
-          <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)', height: GRADE_ALTURA }}>
+          <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: GRADE_ALTURA }}>
             <div className="relative text-[10px] text-muted">
               {HORAS_GRADE.map((h) => (
                 <div

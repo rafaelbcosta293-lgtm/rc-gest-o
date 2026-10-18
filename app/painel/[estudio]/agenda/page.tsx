@@ -285,7 +285,6 @@ export default async function AgendaPage({
 
       {(vista === 'dia' || vista === 'semana') && (
         <AgendaInterativa
-          vista={vista}
           slug={slug}
           estudioId={estudio.id}
           dias={vista === 'dia' ? [dataSel] : diasSemana}

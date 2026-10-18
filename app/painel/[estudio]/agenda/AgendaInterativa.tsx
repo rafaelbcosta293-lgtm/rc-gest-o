@@ -438,7 +438,7 @@ function ColunaDia({
               ev.stopPropagation()
               onAbrirEvento(evento)
             }}
-            className={`absolute overflow-hidden rounded px-1 py-0.5 text-left leading-tight ${
+            className={`absolute overflow-hidden rounded border px-1 py-0.5 text-left leading-tight ${
               evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''
             }`}
             style={{
@@ -448,6 +448,7 @@ function ColunaDia({
               width: `${100 / colunas}%`,
               background: cor.bg,
               color: cor.tx,
+              borderColor: cor.tx,
             }}
           >
             <span className="block truncate text-[9px] font-semibold">

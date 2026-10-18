@@ -1,10 +1,22 @@
 import Link from 'next/link'
-import { ArrowRight, ArrowLeft, Network, ShieldCheck } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Network, ShieldCheck, Church, Castle, Landmark, type LucideIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { corEstudio } from '@/lib/data/constantes'
 import { podeAcederAdmin, podeAcederCoordenacao, podeAcederEstudio } from '@/lib/data/acessos'
+
+// Um símbolo do estúdio em vez de uma letra solta — o marco que
+// identifica cada cidade (Santuário de Fátima / Castelo de Leiria).
+// Um estúdio novo, sem marco definido ainda, cai no genérico.
+const ICONE_ESTUDIO: Record<string, LucideIcon> = {
+  fatima: Church,
+  leiria: Castle,
+}
+
+function iconeEstudio(slug: string) {
+  return ICONE_ESTUDIO[slug] ?? Landmark
+}
 
 export default async function PainelPage({
   searchParams,
@@ -52,6 +64,7 @@ export default async function PainelPage({
       <div className="grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
         {estudiosVisiveis.map((e) => {
           const cor = corEstudio(e.slug)
+          const Icone = iconeEstudio(e.slug)
           const n = contagem(e.id)
           return (
             <Link
@@ -60,10 +73,12 @@ export default async function PainelPage({
               className="group rounded-3xl border border-border-subtle bg-surface p-7 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-border-strong hover:shadow-card-hover"
             >
               <span
-                className="flex h-11 w-11 items-center justify-center rounded-2xl text-lg font-bold text-white shadow-pop"
-                style={{ background: cor.cor }}
+                className="flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-pop ring-1 ring-[#D9B96A]/40 ring-offset-2 ring-offset-surface transition-transform duration-300 group-hover:scale-105"
+                style={{
+                  background: `linear-gradient(135deg, ${cor.cor}, color-mix(in srgb, ${cor.cor} 100%, black 32%))`,
+                }}
               >
-                {e.nome.charAt(0)}
+                <Icone className="h-7 w-7" strokeWidth={2} />
               </span>
               <h2 className="mt-5 text-2xl font-bold tracking-tight text-foreground">
                 {e.nome}

@@ -1,4 +1,3 @@
-import { Fragment } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { notFound } from 'next/navigation'
@@ -6,8 +5,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt, MESES, DIAS_SEMANA, diasDoMes, offsetPrimeiroDia } from '@/lib/data/presencas'
-import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot, BLOCOS_HORARIO } from '@/lib/data/horarios'
+import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { corTipoEvento } from '@/lib/data/agenda'
+import AgendaInterativa from './AgendaInterativa'
 import type { EventoAgenda } from '@/lib/supabase/database.types'
 
 const VISTAS = ['dia', 'semana', 'mes'] as const
@@ -36,26 +36,6 @@ type EventoComNomes = EventoAgenda & {
   pt: { id: string; nome: string } | null
 }
 
-function rotuloEvento(e: EventoComNomes) {
-  return e.cliente?.nome ?? e.titulo ?? e.tipo
-}
-
-function horaFim(horaInicio: string, duracaoMin: number) {
-  const [h, m] = horaInicio.slice(0, 5).split(':').map(Number)
-  const totalMin = h * 60 + m + duracaoMin
-  const hf = Math.floor(totalMin / 60) % 24
-  const mf = totalMin % 60
-  return `${String(hf).padStart(2, '0')}:${String(mf).padStart(2, '0')}`
-}
-
-// A grelha de semana só tem blocos de 30 em 30 min — um evento que
-// comece, por exemplo, às 09:10 aparece arredondado para baixo, no
-// bloco das 09:00. Não afeta a hora real gravada, só onde é mostrado.
-function blocoArredondado(horaInicio: string) {
-  const [h, m] = horaInicio.slice(0, 5).split(':').map(Number)
-  return { hora: h, minuto: m < 30 ? 0 : 30 }
-}
-
 async function buscarEventos(
   supabase: SupabaseClient,
   estudioId: number,
@@ -76,120 +56,6 @@ async function buscarEventos(
   const { data, error } = await query
   if (error) throw new Error(error.message)
   return (data ?? []) as unknown as EventoComNomes[]
-}
-
-function ListaDia({ eventos, slug }: { eventos: EventoComNomes[]; slug: string }) {
-  if (eventos.length === 0) {
-    return (
-      <div className="mt-4 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
-        Sem eventos neste dia.
-      </div>
-    )
-  }
-  return (
-    <div className="mt-4 flex flex-col gap-2">
-      {eventos.map((e) => {
-        const cor = corTipoEvento(e.tipo)
-        const cancelado = e.estado === 'Cancelado'
-        return (
-          <Link
-            key={e.id}
-            href={`/painel/${slug}/agenda/${e.id}`}
-            className={`flex items-center gap-3 rounded-xl border border-border-subtle bg-surface p-3 shadow-card transition-colors hover:bg-brand/[.04] ${
-              cancelado ? 'opacity-50' : ''
-            }`}
-          >
-            <div className="w-14 shrink-0 text-xs font-medium text-muted">
-              {e.hora_inicio.slice(0, 5)}
-              <br />
-              {horaFim(e.hora_inicio, e.duracao_min)}
-            </div>
-            <span
-              className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-              style={{ background: cor.bg, color: cor.tx }}
-            >
-              {e.tipo}
-            </span>
-            <span
-              className={`flex-1 truncate text-sm font-semibold text-foreground ${
-                cancelado ? 'line-through' : ''
-              }`}
-            >
-              {rotuloEvento(e)}
-            </span>
-            {e.pt && <span className="shrink-0 text-xs text-muted">{e.pt.nome}</span>}
-            {cancelado && <span className="shrink-0 text-xs font-medium text-red-600">Cancelado</span>}
-          </Link>
-        )
-      })}
-    </div>
-  )
-}
-
-function GrelhaSemana({
-  dias,
-  eventos,
-  slug,
-}: {
-  dias: string[]
-  eventos: EventoComNomes[]
-  slug: string
-}) {
-  const slots: Record<string, EventoComNomes[]> = {}
-  for (const e of eventos) {
-    if (e.estado === 'Cancelado') continue
-    const { hora, minuto } = blocoArredondado(e.hora_inicio)
-    const chave = chaveSlot(e.data, hora, minuto)
-    const lista = slots[chave] ?? []
-    lista.push(e)
-    slots[chave] = lista
-  }
-
-  return (
-    <div className="mt-4 overflow-x-auto">
-      <div
-        className="grid min-w-[760px] gap-px overflow-hidden rounded-xl border border-border-subtle bg-border-subtle text-xs"
-        style={{ gridTemplateColumns: '64px repeat(7, 1fr)' }}
-      >
-        <div className="bg-brand/[.05] p-1.5" />
-        {dias.map((d, i) => (
-          <div key={d} className="bg-brand/[.05] p-1.5 text-center font-semibold text-foreground">
-            {DIAS_SEMANA[i]}
-            <br />
-            <span className="font-normal text-muted">{fmt(d)}</span>
-          </div>
-        ))}
-        {BLOCOS_HORARIO.map((bloco) => (
-          <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-            <div className="flex items-center bg-surface p-1.5 text-muted">{bloco.label}</div>
-            {dias.map((dia) => {
-              const atual = slots[chaveSlot(dia, bloco.hora, bloco.minuto)] ?? []
-              return (
-                <div
-                  key={dia}
-                  className="flex min-h-[2.25rem] flex-col justify-center gap-0.5 bg-surface p-1 text-[11px] leading-tight"
-                >
-                  {atual.map((e) => {
-                    const cor = corTipoEvento(e.tipo)
-                    return (
-                      <Link
-                        key={e.id}
-                        href={`/painel/${slug}/agenda/${e.id}`}
-                        className="truncate rounded px-1 py-0.5 font-medium"
-                        style={{ background: cor.bg, color: cor.tx }}
-                      >
-                        {rotuloEvento(e)}
-                      </Link>
-                    )
-                  })}
-                </div>
-              )
-            })}
-          </Fragment>
-        ))}
-      </div>
-    </div>
-  )
 }
 
 function PontosDia({ eventos }: { eventos: EventoComNomes[] }) {
@@ -277,7 +143,19 @@ export default async function AgendaPage({
     notFound()
   }
 
-  const pts = await getEquipaDoEstudio(supabase, estudio.id)
+  const [pts, { data: clientesData, error: erroClientes }] = await Promise.all([
+    getEquipaDoEstudio(supabase, estudio.id),
+    supabase
+      .from('clientes')
+      .select('id, nome')
+      .eq('estudio_id', estudio.id)
+      .neq('estado', 'Ex-cliente')
+      .order('nome'),
+  ])
+  if (erroClientes) {
+    throw new Error(erroClientes.message)
+  }
+  const clientes = (clientesData ?? []) as { id: string; nome: string }[]
   const qsExtra = ptFiltro ? `&pt=${ptFiltro}` : ''
 
   let inicio: string
@@ -405,8 +283,17 @@ export default async function AgendaPage({
         </Link>
       </div>
 
-      {vista === 'dia' && <ListaDia eventos={eventos} slug={slug} />}
-      {vista === 'semana' && <GrelhaSemana dias={diasSemana} eventos={eventos} slug={slug} />}
+      {(vista === 'dia' || vista === 'semana') && (
+        <AgendaInterativa
+          vista={vista}
+          slug={slug}
+          estudioId={estudio.id}
+          dias={vista === 'dia' ? [dataSel] : diasSemana}
+          eventos={eventos}
+          clientes={clientes}
+          pts={pts}
+        />
+      )}
       {vista === 'mes' && (
         <CalendarioMes
           dias={diasMes}

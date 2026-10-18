@@ -17,7 +17,7 @@ function corDoPt(corPorPt: Record<string, CorPt> | undefined, ptId: string): Cor
 function Insignia({ nome, cor }: { nome: string; cor: CorPt }) {
   return (
     <span
-      className="truncate rounded px-1 py-0.5 text-[10px] font-medium"
+      className="truncate rounded px-1 py-px text-[9px] font-medium leading-tight"
       style={{ background: cor.bg, color: cor.tx }}
     >
       {nome}
@@ -57,11 +57,11 @@ export default function GrelhaHorarios(props: PropsSoLeitura | PropsEditavel) {
 function Cabecalho({ dias }: { dias: string[] }) {
   return (
     <>
-      <div className="bg-zinc-50 p-1.5 dark:bg-zinc-900" />
+      <div className="bg-zinc-50 p-0.5 dark:bg-zinc-900" />
       {dias.map((d, i) => (
         <div
           key={d}
-          className="bg-zinc-50 p-1.5 text-center font-medium text-black dark:bg-zinc-900 dark:text-zinc-50"
+          className="bg-zinc-50 p-0.5 text-center text-[10px] font-medium text-black dark:bg-zinc-900 dark:text-zinc-50"
         >
           {DIAS_SEMANA[i].slice(0, 3)}
           <br />
@@ -76,13 +76,13 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
   return (
     <div className="overflow-x-auto">
       <div
-        className="grid min-w-[760px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-xs dark:border-white/10 dark:bg-white/10"
-        style={{ gridTemplateColumns: '64px repeat(7, 1fr)' }}
+        className="grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-[10px] dark:border-white/10 dark:bg-white/10"
+        style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}
       >
         <Cabecalho dias={dias} />
         {BLOCOS_HORARIO.map((bloco) => (
           <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-            <div className="flex items-center bg-white p-1.5 text-zinc-500 dark:bg-zinc-950">
+            <div className="flex items-center bg-white px-1 py-0.5 text-[9px] text-zinc-500 dark:bg-zinc-950">
               {bloco.label}
             </div>
             {dias.map((dia) => {
@@ -90,7 +90,7 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
               return (
                 <div
                   key={dia}
-                  className="flex min-h-[2.25rem] flex-col justify-center gap-0.5 bg-white p-1 text-[11px] leading-tight dark:bg-zinc-950"
+                  className="flex min-h-[1.25rem] flex-col justify-center gap-px bg-white p-0.5 text-[9px] leading-tight dark:bg-zinc-950"
                 >
                   {atual.length === 0 ? (
                     <span className="text-center text-zinc-300 dark:text-zinc-700">—</span>
@@ -170,13 +170,13 @@ function GrelhaEditavel({
     <div>
       <div className="overflow-x-auto">
         <div
-          className="grid min-w-[760px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-xs dark:border-white/10 dark:bg-white/10"
-          style={{ gridTemplateColumns: '64px repeat(7, 1fr)' }}
+          className="grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-[10px] dark:border-white/10 dark:bg-white/10"
+          style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}
         >
           <Cabecalho dias={dias} />
           {BLOCOS_HORARIO.map((bloco) => (
             <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-              <div className="flex items-center bg-white p-1.5 text-zinc-500 dark:bg-zinc-950">
+              <div className="flex items-center bg-white px-1 py-0.5 text-[9px] text-zinc-500 dark:bg-zinc-950">
                 {bloco.label}
               </div>
               {dias.map((dia) => {
@@ -191,7 +191,7 @@ function GrelhaEditavel({
                       className="flex max-h-32 flex-col gap-0.5 overflow-y-auto bg-teal-50 p-1 dark:bg-teal-950"
                     >
                       {pts.map((p) => (
-                        <label key={p.id} className="flex items-center gap-1 text-[11px]">
+                        <label key={p.id} className="flex items-center gap-1 text-[10px]">
                           <input
                             type="checkbox"
                             checked={ptIdsAtuais.includes(p.id)}
@@ -203,7 +203,7 @@ function GrelhaEditavel({
                       <button
                         type="button"
                         onClick={() => setAbertaChave(null)}
-                        className="mt-0.5 self-start text-[10px] text-zinc-500 underline"
+                        className="mt-0.5 self-start text-[9px] text-zinc-500 underline"
                       >
                         Fechar
                       </button>
@@ -216,7 +216,7 @@ function GrelhaEditavel({
                     key={dia}
                     type="button"
                     onClick={() => setAbertaChave(chave)}
-                    className="flex min-h-[2.25rem] flex-col justify-center gap-0.5 bg-white p-1 text-[11px] leading-tight hover:bg-black/[.03] dark:bg-zinc-950 dark:hover:bg-white/[.06]"
+                    className="flex min-h-[1.25rem] flex-col justify-center gap-px bg-white p-0.5 text-[9px] leading-tight hover:bg-black/[.03] dark:bg-zinc-950 dark:hover:bg-white/[.06]"
                   >
                     {ptIdsAtuais.length === 0 ? (
                       <span className="text-center text-zinc-300 dark:text-zinc-700">+</span>

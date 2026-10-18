@@ -161,3 +161,135 @@ export async function apagarEvento(formData: FormData) {
   revalidatePath(`/painel/${estudioSlug}/agenda`)
   redirect(`/painel/${estudioSlug}/agenda?vista=dia&data=${data}`)
 }
+
+// Variantes "rápidas" das ações acima — chamadas diretamente (com
+// argumentos normais, não FormData) pelo modal de edição embutido na
+// própria agenda (AgendaInterativa.tsx). Nunca fazem redirect: devolvem
+// um resultado para o componente cliente decidir o que mostrar e fechar
+// o modal sem sair da página, mantendo o resto da agenda visível.
+export type ResultadoAcaoRapida = { ok: true } | { error: string }
+
+type CamposEvento = {
+  estudioSlug: string
+  tipo: TipoEventoAgenda
+  clienteId: string | null
+  ptId: string | null
+  titulo: string | null
+  data: string
+  horaInicio: string
+  duracaoMin: number
+  nota: string | null
+}
+
+export async function criarEventoRapido(
+  input: CamposEvento & { estudioId: number }
+): Promise<ResultadoAcaoRapida> {
+  const sessao = await getSessaoAtual()
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('agenda_eventos').insert({
+    estudio_id: input.estudioId,
+    cliente_id: input.clienteId,
+    pt_id: input.ptId,
+    tipo: input.tipo,
+    titulo: input.titulo,
+    data: input.data,
+    hora_inicio: input.horaInicio,
+    duracao_min: input.duracaoMin,
+    nota: input.nota,
+    criado_por: sessao.userId,
+  })
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}
+
+export async function atualizarEventoRapido(
+  input: CamposEvento & { id: string }
+): Promise<ResultadoAcaoRapida> {
+  const supabase = await createClient()
+
+  // Tal como atualizarEvento: só esta linha, nunca a série toda.
+  const { error } = await supabase
+    .from('agenda_eventos')
+    .update({
+      tipo: input.tipo,
+      cliente_id: input.clienteId,
+      pt_id: input.ptId,
+      titulo: input.titulo,
+      data: input.data,
+      hora_inicio: input.horaInicio,
+      duracao_min: input.duracaoMin,
+      nota: input.nota,
+    })
+    .eq('id', input.id)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}
+
+export async function moverEventoRapido(input: {
+  estudioSlug: string
+  id: string
+  data: string
+  horaInicio: string
+}): Promise<ResultadoAcaoRapida> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('agenda_eventos')
+    .update({ data: input.data, hora_inicio: input.horaInicio })
+    .eq('id', input.id)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}
+
+export async function desmarcarEventoRapido(input: {
+  estudioSlug: string
+  id: string
+  motivo: string | null
+}): Promise<ResultadoAcaoRapida> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('agenda_eventos')
+    .update({ estado: 'Cancelado', motivo_cancelamento: input.motivo })
+    .eq('id', input.id)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}
+
+export async function reativarEventoRapido(input: {
+  estudioSlug: string
+  id: string
+}): Promise<ResultadoAcaoRapida> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('agenda_eventos')
+    .update({ estado: 'Agendado', motivo_cancelamento: null })
+    .eq('id', input.id)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}
+
+export async function apagarEventoRapido(input: {
+  estudioSlug: string
+  id: string
+}): Promise<ResultadoAcaoRapida> {
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('agenda_eventos').delete().eq('id', input.id)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}

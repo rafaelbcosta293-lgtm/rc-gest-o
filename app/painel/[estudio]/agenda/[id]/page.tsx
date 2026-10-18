@@ -6,7 +6,10 @@ import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { corTipoEvento, TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
 import { atualizarEvento, desmarcarEvento, reativarEvento, apagarEvento } from '../actions'
 import SubmitButton from '@/components/SubmitButton'
+import ClienteCombobox from '@/components/ClienteCombobox'
 import type { EventoAgenda } from '@/lib/supabase/database.types'
+
+type EventoComCliente = EventoAgenda & { cliente: { id: string; nome: string } | null }
 
 const inputCls =
   'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
@@ -29,14 +32,14 @@ export default async function EventoAgendaPage({
 
   const { data: eventoData, error: erroEvento } = await supabase
     .from('agenda_eventos')
-    .select('*')
+    .select('*, cliente:clientes(id, nome)')
     .eq('id', id)
     .eq('estudio_id', estudio.id)
     .maybeSingle()
   if (erroEvento) {
     throw new Error(erroEvento.message)
   }
-  const evento = eventoData as EventoAgenda | null
+  const evento = eventoData as unknown as EventoComCliente | null
   if (!evento) {
     notFound()
   }
@@ -129,14 +132,11 @@ export default async function EventoAgendaPage({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted">Cliente (opcional)</label>
-            <select name="cliente_id" defaultValue={evento.cliente_id ?? ''} className={inputCls}>
-              <option value="">— Reunião / outro (sem cliente) —</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
+            <ClienteCombobox
+              clientes={clientes}
+              defaultValue={evento.cliente}
+              placeholder="— Reunião / outro (sem cliente) —"
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted">Instrutor (opcional)</label>

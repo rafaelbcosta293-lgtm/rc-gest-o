@@ -24,14 +24,23 @@ export default async function EstudioPage({
 
   // Estas três só precisam do estúdio, não umas das outras — correm
   // todas ao mesmo tempo em vez de à vez.
-  const [{ data: clientes }, { data: pagamentosEstadoData }, { data: leadsParadasData }] =
+  const [{ data: clientes }, { data: pagamentosEstadoData }, { data: leadsParadasData }, { data: alertasData }] =
     await Promise.all([
       supabase.from('clientes').select('id, estado, inicio_contrato').eq('estudio_id', estudio.id),
       supabase.from('v_estado_pagamento').select('em_dia').eq('estudio_id', estudio.id),
       supabase.from('v_leads_paradas').select('id').eq('estudio_id', estudio.id),
+      supabase
+        .from('alerts')
+        .select('severidade, papel_destinatario')
+        .eq('estudio_id', estudio.id)
+        .neq('estado', 'Resolvido'),
     ])
 
   const { ehAdmin, ehGestao } = papeisDaSessao(sessao)
+  const alertasVisiveis = (alertasData ?? []).filter(
+    (a) => ehGestao || (a.papel_destinatario && a.papel_destinatario === sessao.perfil?.papel)
+  )
+  const alertasCriticos = alertasVisiveis.filter((a) => a.severidade === 'Crítico').length
   const podeAceder = (m: (typeof MODULOS)[number]) =>
     m.pronto && (!m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao))
 
@@ -156,6 +165,21 @@ export default async function EstudioPage({
                 <p className="mt-3 text-xs font-medium text-amber-700 dark:text-amber-400">
                   {leadsContactoAtrasado} {leadsContactoAtrasado === 1 ? 'lead' : 'leads'} com contacto em
                   atraso
+                </p>
+              )}
+              {m.id === 'alertas' && (
+                <p
+                  className={`mt-3 text-xs font-medium ${
+                    alertasCriticos > 0
+                      ? 'text-red-600 dark:text-red-400'
+                      : alertasVisiveis.length > 0
+                        ? 'text-amber-700 dark:text-amber-400'
+                        : 'text-muted'
+                  }`}
+                >
+                  {alertasVisiveis.length === 0
+                    ? 'Tudo em dia'
+                    : `${alertasVisiveis.length} ${alertasVisiveis.length === 1 ? 'alerta aberto' : 'alertas abertos'}${alertasCriticos > 0 ? ` · ${alertasCriticos} crítico${alertasCriticos === 1 ? '' : 's'}` : ''}`}
                 </p>
               )}
             </Link>

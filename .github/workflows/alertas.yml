@@ -1,0 +1,20 @@
+name: Motor de alertas (CRM)
+
+# Avalia as regras de alertas (secção 5 da especificação) e sincroniza
+# a tabela "alerts" — cria o que é novo, resolve o que deixou de se
+# verificar. De hora a hora é suficiente para a granularidade das
+# regras (a mais apertada é "sem contacto há mais de 2h").
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Avaliar regras e sincronizar alertas
+        run: |
+          curl --fail-with-body -sS -X GET \
+            "${{ secrets.APP_URL }}/api/cron/alertas" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

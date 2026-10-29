@@ -281,6 +281,19 @@ export type KpiSnapshotDiario = {
   criado_em: string
 }
 
+export type TipoMarcoEmpresa = 'Campanha' | 'Preço' | 'Equipa' | 'Meta' | 'Outro'
+
+export type MarcoEmpresa = {
+  id: string
+  estudio_id: number | null
+  tipo: TipoMarcoEmpresa
+  titulo: string
+  descricao: string | null
+  data: string
+  criado_por: string | null
+  criado_em: string
+}
+
 export type LeadContacto = {
   id: string
   lead_id: string

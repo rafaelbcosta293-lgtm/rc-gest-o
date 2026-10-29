@@ -1,0 +1,18 @@
+name: Snapshot diário de KPIs
+
+# Uma vez por dia, perto do fim do dia de trabalho — alimenta
+# kpi_snapshots_daily para a Timeline da empresa ter histórico.
+on:
+  schedule:
+    - cron: '50 21 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gravar o snapshot do dia
+        run: |
+          curl --fail-with-body -sS -X GET \
+            "${{ secrets.APP_URL }}/api/cron/kpi-snapshot" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

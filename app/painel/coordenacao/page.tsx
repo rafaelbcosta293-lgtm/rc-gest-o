@@ -271,6 +271,12 @@ async function PainelCoordenacaoEstudio({
       >
         ver calendário diário/semanal/mensal/anual
       </Link>
+      <Link
+        href="/painel/coordenacao/timeline"
+        className="mt-1 block text-xs text-muted underline hover:text-foreground"
+      >
+        ver timeline da empresa e marcos
+      </Link>
 
       <TituloSeccao cor="ambar">Pendências</TituloSeccao>
       <div className="mt-2 flex flex-col gap-2">

@@ -10,8 +10,11 @@ import { corEstudio } from '@/lib/data/constantes'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { metricasNoIntervalo, METRICAS_MARKETING, type LeadMarketing } from '@/lib/data/marketing'
 import { segurosPorPagar } from '@/lib/data/clientes'
+import { PALETA } from '@/lib/data/constantes'
 import TituloSeccao from '@/components/TituloSeccao'
 import PortaSenha from '@/components/PortaSenha'
+import BarMeter from '@/components/BarMeter'
+import RadialProgress from '@/components/RadialProgress'
 import type {
   Cliente,
   ClienteSemTreino,
@@ -57,9 +60,10 @@ export default async function CoordenacaoPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Coordenação</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        {estudios.map((e) => e.nome).join(' e ')} · o dia de hoje e pendências, lado a lado.
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Coordenação</h1>
+      <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+        <span className="live-dot" aria-hidden />
+        {estudios.map((e) => e.nome).join(' e ')} · o dia de hoje e pendências, ao vivo.
       </p>
 
       {error && (
@@ -70,10 +74,10 @@ export default async function CoordenacaoPage({
 
       <Link
         href="/painel/coordenacao/horarios"
-        className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+        className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-border-strong"
       >
-        <span className="text-sm text-black dark:text-zinc-50">Planeamento da semana e instrutores</span>
-        <span className="text-sm text-zinc-400">→</span>
+        <span className="text-sm text-foreground">Planeamento da semana e instrutores</span>
+        <span className="text-sm text-muted">→</span>
       </Link>
 
       <div className="mt-8 grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2">
@@ -84,7 +88,7 @@ export default async function CoordenacaoPage({
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: corEstudio(estudio.slug).cor }}
               />
-              <h2 className="text-lg font-semibold text-black dark:text-zinc-50">{estudio.nome}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{estudio.nome}</h2>
             </div>
             <Suspense fallback={<EsqueletoEstudio />}>
               <PainelCoordenacaoEstudio estudio={estudio} />
@@ -104,8 +108,8 @@ function EsqueletoEstudio() {
     <div className="mt-2 animate-pulse space-y-8">
       {[0, 1, 2].map((i) => (
         <div key={i}>
-          <div className="h-3 w-24 rounded bg-zinc-200 dark:bg-zinc-800" />
-          <div className="mt-2 h-16 rounded-xl border border-black/10 bg-zinc-100 dark:border-white/10 dark:bg-zinc-900" />
+          <div className="h-3 w-24 rounded bg-border-subtle" />
+          <div className="mt-2 h-16 rounded-xl border border-border-subtle bg-border-subtle" />
         </div>
       ))}
     </div>
@@ -213,65 +217,57 @@ async function PainelCoordenacaoEstudio({
   return (
     <>
       <TituloSeccao cor="teal">Hoje</TituloSeccao>
-      <div className="mt-2">
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <h3 className="text-xs font-semibold text-zinc-500">Checklist</h3>
-          {['Abertura', 'Fecho'].map((tipo) => {
-            const r = checklistHoje.find((c) => c.tipo === tipo)
-            return (
-              <p key={tipo} className="mt-1 text-sm text-black dark:text-zinc-50">
-                {tipo}:{' '}
-                {r ? (
-                  <span className={r.concluidos >= r.total ? 'text-teal-700 dark:text-teal-400' : 'text-amber-600'}>
-                    {r.concluidos} de {r.total}
-                  </span>
-                ) : (
-                  <span className="text-zinc-400">não iniciada</span>
-                )}
-              </p>
-            )
-          })}
+      <div className="mt-2 flex items-center gap-4 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Checklist</h3>
           <Link
             href={`/painel/${slug}/checklist`}
-            className="mt-2 inline-block text-xs text-zinc-500 underline"
+            className="mt-1.5 inline-block text-xs text-muted underline hover:text-foreground"
           >
             abrir checklist
           </Link>
         </div>
+        <div className="ml-auto flex items-center gap-4">
+          {['Abertura', 'Fecho'].map((tipo) => {
+            const r = checklistHoje.find((c) => c.tipo === tipo)
+            const pct = r && r.total > 0 ? (r.concluidos / r.total) * 100 : 0
+            const completa = r && r.concluidos >= r.total && r.total > 0
+            return (
+              <div key={tipo} className="flex flex-col items-center gap-1.5">
+                <RadialProgress
+                  valor={pct}
+                  tamanho={56}
+                  espessura={5}
+                  cor={completa ? PALETA.teal.tx : 'var(--accent)'}
+                />
+                <span className="text-[10px] font-medium text-muted">
+                  {tipo} · {r ? `${r.concluidos}/${r.total}` : '—'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <TituloSeccao cor="roxo">Marketing</TituloSeccao>
-      <p className="mt-2 text-xs text-zinc-500">Funil de hoje, atualizado automaticamente.</p>
-      <div className="mt-2 flex flex-col overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
-        {METRICAS_MARKETING.map((metrica, i) => (
-          <div
+      <p className="mt-2 text-xs text-muted">
+        Funil de hoje, relativo às leads de entrada — atualizado automaticamente.
+      </p>
+      <div className="mt-2 flex flex-col gap-2.5 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+        {METRICAS_MARKETING.map((metrica) => (
+          <BarMeter
             key={metrica.chave}
-            className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm ${
-              metrica.chave === 'totalFechos'
-                ? 'bg-teal-50 dark:bg-teal-950'
-                : 'bg-white dark:bg-zinc-950'
-            } ${i > 0 ? 'border-t border-black/10 dark:border-white/10' : ''}`}
-          >
-            <span
-              className={
-                metrica.chave === 'totalFechos'
-                  ? 'font-medium text-teal-800 dark:text-teal-200'
-                  : 'text-zinc-600 dark:text-zinc-400'
-              }
-            >
-              {metrica.label}
-            </span>
-            <strong
-              className={metrica.chave === 'totalFechos' ? 'text-teal-800 dark:text-teal-200' : 'text-black dark:text-zinc-50'}
-            >
-              {metricasHoje[metrica.chave]}
-            </strong>
-          </div>
+            label={metrica.label}
+            valor={metricasHoje[metrica.chave]}
+            total={Math.max(metricasHoje.leads, 1)}
+            mostrarPct={false}
+            cor={metrica.chave === 'totalFechos' ? PALETA.teal.tx : 'var(--accent)'}
+          />
         ))}
       </div>
       <Link
         href="/painel/coordenacao/marketing"
-        className="mt-2 inline-block text-xs text-zinc-500 underline"
+        className="mt-2 inline-block text-xs text-muted underline hover:text-foreground"
       >
         ver calendário diário/semanal/mensal/anual
       </Link>
@@ -284,7 +280,7 @@ async function PainelCoordenacaoEstudio({
             href={`/painel/${slug}/leads/${l.id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="text-black dark:text-zinc-50">{l.nome} · lead parada</span>
+            <span className="text-foreground">{l.nome} · lead parada</span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {l.dias_sem_contacto} dias sem contacto
             </span>
@@ -296,7 +292,7 @@ async function PainelCoordenacaoEstudio({
             href={`/painel/${slug}/avaliacoes/${r.cliente_id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="text-black dark:text-zinc-50">{r.nome} · reavaliação</span>
+            <span className="text-foreground">{r.nome} · reavaliação</span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {r.ultima_avaliacao ? `última em ${fmt(r.ultima_avaliacao)}` : 'nunca avaliado'}
             </span>
@@ -308,7 +304,7 @@ async function PainelCoordenacaoEstudio({
             href={`/painel/${slug}/pagamentos/${p.cliente_id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="text-black dark:text-zinc-50">{p.nome} · pagamento</span>
+            <span className="text-foreground">{p.nome} · pagamento</span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {p.valido_ate ? `venceu em ${fmt(p.valido_ate)}` : 'sem pagamentos'}
             </span>
@@ -320,7 +316,7 @@ async function PainelCoordenacaoEstudio({
             href={`/painel/${slug}/clientes/${c.cliente_id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="text-black dark:text-zinc-50">{c.nome} · Cliente Inativo / Sem Agendamento</span>
+            <span className="text-foreground">{c.nome} · Cliente Inativo / Sem Agendamento</span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {c.dias_sem_treino} dias sem treinar
             </span>
@@ -332,7 +328,7 @@ async function PainelCoordenacaoEstudio({
             href={`/painel/${slug}/pagamentos/${c.id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="text-black dark:text-zinc-50">{c.nome} · renovação de seguro</span>
+            <span className="text-foreground">{c.nome} · renovação de seguro</span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               em dívida desde {fmt(c.dataRenovacao)}
             </span>
@@ -343,7 +339,7 @@ async function PainelCoordenacaoEstudio({
           pagamentosAtrasados.length +
           clientesInativos.length +
           segurosARenovar.length ===
-          0 && <p className="text-sm text-zinc-500">Nada pendente — tudo em dia.</p>}
+          0 && <p className="text-sm text-muted">Nada pendente — tudo em dia.</p>}
       </div>
     </>
   )

@@ -11,10 +11,19 @@
   --muted: #6b7280;
 
   /* Dourado do logótipo RC Private Fitness Studio — igual em claro/escuro,
-     tal como a marca em si não muda com o tema. */
+     tal como a marca em si não muda com o tema. Continua a ser a cor de
+     ação principal (botões, foco). */
   --brand: #d9b96a;
   --brand-strong: #bfa35d;
   --brand-ring: rgba(217, 185, 106, 0.45);
+
+  /* Acento "tech" — ciano elétrico, só para a camada analítica (gráficos,
+     indicadores ao vivo, tendências) — nunca compete com o dourado como
+     cor de ação, só acompanha dados e performance. */
+  --accent: #0e7490;
+  --accent-glow: #22d3ee;
+  --accent-soft: #ecfeff;
+  --accent-ring: rgba(34, 211, 238, 0.4);
 
   /* Sombras suaves e difusas (duas camadas, como a Apple usa). Em modo
      escuro ficam mais discretas — a profundidade aí vem do contraste
@@ -22,6 +31,7 @@
   --shadow-card-value: 0 1px 2px rgba(24, 24, 27, 0.04), 0 10px 28px -8px rgba(24, 24, 27, 0.1);
   --shadow-card-hover-value: 0 2px 6px rgba(24, 24, 27, 0.06), 0 20px 44px -10px rgba(24, 24, 27, 0.16);
   --shadow-pop-value: 0 1px 2px rgba(24, 24, 27, 0.05), 0 4px 14px -4px rgba(24, 24, 27, 0.12);
+  --shadow-glow-value: 0 0 0 1px rgba(34, 211, 238, 0.14), 0 8px 24px -6px rgba(34, 211, 238, 0.4);
 }
 
 @theme inline {
@@ -33,6 +43,9 @@
   --color-muted: var(--muted);
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
+  --color-accent: var(--accent);
+  --color-accent-glow: var(--accent-glow);
+  --color-accent-soft: var(--accent-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
@@ -47,6 +60,7 @@
   --shadow-card: var(--shadow-card-value);
   --shadow-card-hover: var(--shadow-card-hover-value);
   --shadow-pop: var(--shadow-pop-value);
+  --shadow-glow: var(--shadow-glow-value);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -59,9 +73,15 @@
     --border-subtle: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.16);
     --muted: #9ca3af;
+    /* Em modo escuro o acento passa a ser o próprio ciano vivo (não a
+       variante escurecida para texto em fundo claro) — é aí que o "tech
+       glow" realmente aparece. */
+    --accent: #22d3ee;
+    --accent-soft: rgba(34, 211, 238, 0.1);
     --shadow-card-value: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -8px rgba(0, 0, 0, 0.45);
     --shadow-card-hover-value: 0 2px 6px rgba(0, 0, 0, 0.35), 0 20px 44px -10px rgba(0, 0, 0, 0.55);
     --shadow-pop-value: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px -4px rgba(0, 0, 0, 0.5);
+    --shadow-glow-value: 0 0 0 1px rgba(34, 211, 238, 0.22), 0 8px 28px -4px rgba(34, 211, 238, 0.5);
   }
 }
 
@@ -122,4 +142,54 @@ textarea {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
   background-clip: content-box;
+}
+
+/* Grelha subtil para dar um ar "técnico" ao fundo de secções com dados
+   (resumos, dashboards) — usa a mesma cor quase invisível das bordas,
+   por isso nunca compete com o conteúdo por cima. */
+.bg-tech-grid {
+  background-image:
+    linear-gradient(var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+/* Ponto "ao vivo" com anel a pulsar — usado junto a números que mudam
+   em tempo real (hoje, agora), para reforçar a sensação de performance. */
+.live-dot {
+  position: relative;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent-glow, var(--accent));
+  flex-shrink: 0;
+}
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 999px;
+  background: inherit;
+  opacity: 0.45;
+  animation: live-pulse 1.8s ease-out infinite;
+}
+@keyframes live-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.5;
+  }
+  70% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot::after {
+    animation: none;
+    opacity: 0.25;
+  }
 }

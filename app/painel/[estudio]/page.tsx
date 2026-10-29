@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeftRight, UsersRound } from 'lucide-react'
+import { ArrowLeftRight, UsersRound, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { MODULOS, PALETA } from '@/lib/data/constantes'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { segurosPorPagar } from '@/lib/data/clientes'
+import StatCard from '@/components/StatCard'
+import RadialProgress from '@/components/RadialProgress'
 
 export default async function EstudioPage({
   params,
@@ -66,6 +68,11 @@ export default async function EstudioPage({
     reativacoesData ?? []
   ).length
 
+  const totalPagamentos = (pagamentosEstadoData ?? []).length
+  const emDiaCount = totalPagamentos - mensalidadesEmDivida
+  const pctEmDia = totalPagamentos > 0 ? (emDiaCount / totalPagamentos) * 100 : 100
+  const pendenciasTotais = mensalidadesEmDivida + segurosEmDivida + leadsContactoAtrasado
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -95,7 +102,28 @@ export default async function EstudioPage({
         </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+      <div className="bg-tech-grid mt-6 grid grid-cols-1 gap-3 rounded-2xl p-1 sm:grid-cols-3">
+        <StatCard icone={UsersRound} cor={PALETA.teal} label="Clientes ativos" valor={ativos} aoVivo />
+        <div className="flex items-center gap-4 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+          <RadialProgress valor={pctEmDia} tamanho={52} espessura={5} cor={PALETA.ambar.tx} />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+              Pagamentos em dia
+            </p>
+            <p className="mt-1 font-mono text-xs tabular-nums text-muted">
+              {emDiaCount} de {totalPagamentos}
+            </p>
+          </div>
+        </div>
+        <StatCard
+          icone={AlertTriangle}
+          cor={pendenciasTotais > 0 ? PALETA.vermelho : PALETA.verde}
+          label="Pendências"
+          valor={pendenciasTotais}
+        />
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
         {MODULOS.map((m) =>
           podeAceder(m) ? (
             <Link

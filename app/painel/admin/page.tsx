@@ -1,5 +1,15 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import {
+  ArrowLeft,
+  Megaphone,
+  TrendingUp,
+  UserPlus,
+  Euro,
+  UserCheck,
+  PauseCircle,
+  UserMinus,
+  CalendarCheck2,
+} from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
@@ -7,10 +17,12 @@ import { fmt, MESES } from '@/lib/data/presencas'
 import { inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from './actions'
-import { corEstudio, ESTADOS_LEAD } from '@/lib/data/constantes'
+import { corEstudio, ESTADOS_LEAD, PALETA } from '@/lib/data/constantes'
 import { segurosPorPagar } from '@/lib/data/clientes'
 import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
+import StatCard from '@/components/StatCard'
+import BarMeter from '@/components/BarMeter'
 import type {
   Cliente,
   ClienteSemTreino,
@@ -72,9 +84,10 @@ export default async function AdminPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Administração</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        {estudios.map((e) => e.nome).join(' e ')} · dados do negócio e pendências, lado a lado.
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Administração</h1>
+      <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+        <span className="live-dot" aria-hidden />
+        {estudios.map((e) => e.nome).join(' e ')} · dados do negócio e pendências, ao vivo.
       </p>
 
       {error && (
@@ -91,7 +104,7 @@ export default async function AdminPage({
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: corEstudio(estudio.slug).cor }}
               />
-              <h2 className="text-lg font-semibold text-black dark:text-zinc-50">{estudio.nome}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{estudio.nome}</h2>
             </div>
             <Suspense fallback={<EsqueletoEstudio />}>
               <PainelAdminEstudio estudio={estudio} sp={sp} />
@@ -103,19 +116,19 @@ export default async function AdminPage({
       <TituloSeccao cor="roxo">Serviços / Produtos</TituloSeccao>
       <Link
         href="/painel/admin/servicos"
-        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-border-strong"
       >
-        <span className="text-sm text-black dark:text-zinc-50">Gerir valores, planos e serviços</span>
-        <span className="text-sm text-zinc-400">→</span>
+        <span className="text-sm text-foreground">Gerir valores, planos e serviços</span>
+        <span className="text-sm text-muted">→</span>
       </Link>
 
       <TituloSeccao cor="neutro">Contas</TituloSeccao>
       <Link
         href="/painel/admin/contas"
-        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-border-strong"
       >
-        <span className="text-sm text-black dark:text-zinc-50">Palavra-passe das contas de login dos estúdios</span>
-        <span className="text-sm text-zinc-400">→</span>
+        <span className="text-sm text-foreground">Palavra-passe das contas de login dos estúdios</span>
+        <span className="text-sm text-muted">→</span>
       </Link>
     </div>
   )
@@ -129,8 +142,8 @@ function EsqueletoEstudio() {
     <div className="mt-2 animate-pulse space-y-8">
       {[0, 1, 2, 3].map((i) => (
         <div key={i}>
-          <div className="h-3 w-24 rounded bg-zinc-200 dark:bg-zinc-800" />
-          <div className="mt-2 h-16 rounded-xl border border-black/10 bg-zinc-100 dark:border-white/10 dark:bg-zinc-900" />
+          <div className="h-3 w-24 rounded bg-border-subtle" />
+          <div className="mt-2 h-16 rounded-xl border border-border-subtle bg-border-subtle" />
         </div>
       ))}
     </div>
@@ -348,7 +361,7 @@ async function PainelAdminEstudio({
       <div className="mt-2 flex items-center gap-3">
         <Link
           href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAnteriorParam, [pk('dia')]: diaSessoes })}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           ←
         </Link>
@@ -357,77 +370,60 @@ async function PainelAdminEstudio({
         </span>
         <Link
           href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesSeguinteParam, [pk('dia')]: diaSessoes })}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           →
         </Link>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <strong className="block text-2xl text-black dark:text-zinc-50">{leadsNovas}</strong>
-          <span className="text-xs text-zinc-500">leads novas</span>
-        </div>
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <strong className="block text-2xl text-teal-700 dark:text-teal-400">
-            {leadsConvertidas}
-          </strong>
-          <span className="text-xs text-zinc-500">convertidas</span>
-        </div>
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <strong className="block text-2xl text-black dark:text-zinc-50">{novosClientes}</strong>
-          <span className="text-xs text-zinc-500">novos clientes</span>
-        </div>
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <strong className="block text-2xl text-black dark:text-zinc-50">
-            €{receitaMes.toFixed(0)}
-          </strong>
-          <span className="text-xs text-zinc-500">receita</span>
-        </div>
+      <div className="bg-tech-grid mt-3 grid grid-cols-2 gap-3 rounded-2xl p-1">
+        <StatCard icone={Megaphone} cor={PALETA.laranja} label="Leads novas" valor={leadsNovas} />
+        <StatCard
+          icone={TrendingUp}
+          cor={PALETA.teal}
+          label="Convertidas"
+          valor={leadsConvertidas}
+        />
+        <StatCard icone={UserPlus} cor={PALETA.azul} label="Novos clientes" valor={novosClientes} />
+        <StatCard
+          icone={Euro}
+          cor={PALETA.ambar}
+          label="Receita"
+          valor={`€${receitaMes.toFixed(0)}`}
+        />
       </div>
 
       <TituloSeccao cor="teal">Agora</TituloSeccao>
-      <div className="mt-2 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <strong className="block text-2xl text-teal-700 dark:text-teal-400">
-            {clientesAtivos}
-          </strong>
-          <span className="text-xs text-zinc-500">clientes ativos</span>
-        </div>
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <strong className="block text-2xl text-amber-700 dark:text-amber-400">
-            {clientesSuspensos}
-          </strong>
-          <span className="text-xs text-zinc-500">suspensos</span>
-        </div>
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <strong className="block text-2xl text-zinc-500">{clientesInativos}</strong>
-          <span className="text-xs text-zinc-500">inativos</span>
-        </div>
-        <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <strong className="block text-2xl text-[#5B3FA0]">{sessoesAgendadas}</strong>
-          <span className="text-xs text-zinc-500">sessões experimentais agendadas</span>
-        </div>
+      <div className="bg-tech-grid mt-2 grid grid-cols-2 gap-3 rounded-2xl p-1">
+        <StatCard icone={UserCheck} cor={PALETA.teal} label="Clientes ativos" valor={clientesAtivos} aoVivo />
+        <StatCard icone={PauseCircle} cor={PALETA.ambar} label="Suspensos" valor={clientesSuspensos} />
+        <StatCard icone={UserMinus} cor={PALETA.neutro} label="Inativos" valor={clientesInativos} />
+        <StatCard
+          icone={CalendarCheck2}
+          cor={PALETA.roxo}
+          label="Sessões agendadas"
+          valor={sessoesAgendadas}
+        />
       </div>
 
       <TituloSeccao cor="roxo">Sessões experimentais</TituloSeccao>
       <div className="mt-2 flex items-center gap-3">
         <Link
           href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAtualParam, [pk('dia')]: diaSessoesAnterior })}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           ←
         </Link>
         <span className="text-sm font-medium">{diaSessoesEhHoje ? 'Hoje' : fmt(diaSessoes)}</span>
         <Link
           href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAtualParam, [pk('dia')]: diaSessoesSeguinte })}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           →
         </Link>
         {!diaSessoesEhHoje && (
           <Link
             href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAtualParam, [pk('dia')]: undefined })}`}
-            className="text-xs text-zinc-500 underline"
+            className="text-xs text-muted underline"
           >
             voltar a hoje
           </Link>
@@ -440,13 +436,13 @@ async function PainelAdminEstudio({
             <Link
               key={l.id}
               href={`/painel/${slug}/leads/${l.id}`}
-              className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+              className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm transition-colors hover:border-border-strong"
             >
               <span className="flex items-center gap-2">
                 {l.visita_hora && (
-                  <span className="text-xs text-zinc-400">{l.visita_hora.slice(0, 5)}</span>
+                  <span className="text-xs text-muted">{l.visita_hora.slice(0, 5)}</span>
                 )}
-                <span className="font-medium text-black dark:text-zinc-50">{l.nome}</span>
+                <span className="font-medium text-foreground">{l.nome}</span>
               </span>
               <span
                 className="rounded-full px-2 py-0.5 text-xs font-medium"
@@ -458,23 +454,24 @@ async function PainelAdminEstudio({
           )
         })}
         {sessoesDoDia.length === 0 && (
-          <p className="text-sm text-zinc-500">Nenhuma sessão experimental agendada para este dia.</p>
+          <p className="text-sm text-muted">Nenhuma sessão experimental agendada para este dia.</p>
         )}
       </div>
 
       <TituloSeccao cor="verde">Horas da equipa esta semana</TituloSeccao>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
         {horasEquipa.map((h) => (
-          <div
+          <BarMeter
             key={h.nome}
-            className="flex items-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-950"
-          >
-            <span className="font-medium text-black dark:text-zinc-50">{h.nome}</span>
-            <span className="text-zinc-500">{h.horas}h</span>
-          </div>
+            label={h.nome}
+            valor={h.horas}
+            total={horasEquipa[0].horas}
+            mostrarPct={false}
+            cor={PALETA.verde.tx}
+          />
         ))}
         {horasEquipa.length === 0 && (
-          <p className="text-sm text-zinc-500">Sem registos de horas esta semana.</p>
+          <p className="text-sm text-muted">Sem registos de horas esta semana.</p>
         )}
       </div>
 
@@ -486,8 +483,8 @@ async function PainelAdminEstudio({
             href={`/painel/${slug}/leads/${l.id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="font-medium text-black dark:text-zinc-50">
-              {l.nome} <span className="text-xs text-zinc-500">· lead parada</span>
+            <span className="font-medium text-foreground">
+              {l.nome} <span className="text-xs text-muted">· lead parada</span>
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {l.dias_sem_contacto} dias sem contacto
@@ -500,8 +497,8 @@ async function PainelAdminEstudio({
             href={`/painel/${slug}/avaliacoes/${r.cliente_id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="font-medium text-black dark:text-zinc-50">
-              {r.nome} <span className="text-xs text-zinc-500">· reavaliação</span>
+            <span className="font-medium text-foreground">
+              {r.nome} <span className="text-xs text-muted">· reavaliação</span>
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {r.ultima_avaliacao ? `última em ${fmt(r.ultima_avaliacao)}` : 'nunca avaliado'}
@@ -514,8 +511,8 @@ async function PainelAdminEstudio({
             href={`/painel/${slug}/pagamentos/${p.cliente_id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="font-medium text-black dark:text-zinc-50">
-              {p.nome} <span className="text-xs text-zinc-500">· pagamento</span>
+            <span className="font-medium text-foreground">
+              {p.nome} <span className="text-xs text-muted">· pagamento</span>
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {p.valido_ate ? `venceu em ${fmt(p.valido_ate)}` : 'sem pagamentos'}
@@ -528,8 +525,8 @@ async function PainelAdminEstudio({
             href={`/painel/${slug}/clientes/${c.cliente_id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="font-medium text-black dark:text-zinc-50">
-              {c.nome} <span className="text-xs text-zinc-500">· Cliente Inativo / Sem Agendamento</span>
+            <span className="font-medium text-foreground">
+              {c.nome} <span className="text-xs text-muted">· Cliente Inativo / Sem Agendamento</span>
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {c.dias_sem_treino} dias sem treinar
@@ -542,15 +539,15 @@ async function PainelAdminEstudio({
             href={`/painel/${slug}/pagamentos/${c.id}`}
             className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
           >
-            <span className="font-medium text-black dark:text-zinc-50">
-              {c.nome} <span className="text-xs text-zinc-500">· renovação de seguro</span>
+            <span className="font-medium text-foreground">
+              {c.nome} <span className="text-xs text-muted">· renovação de seguro</span>
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               em dívida desde {fmt(c.dataRenovacao)}
             </span>
           </Link>
         ))}
-        {totalPendencias === 0 && <p className="text-sm text-zinc-500">Nada pendente — tudo em dia.</p>}
+        {totalPendencias === 0 && <p className="text-sm text-muted">Nada pendente — tudo em dia.</p>}
       </div>
     </>
   )

@@ -113,6 +113,15 @@ export default async function AdminPage({
         ))}
       </div>
 
+      <TituloSeccao cor="verde">Financeiro</TituloSeccao>
+      <Link
+        href="/painel/admin/financeiro"
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-border-strong"
+      >
+        <span className="text-sm text-foreground">MRR, ARPU, margem e antiguidade da dívida</span>
+        <span className="text-sm text-muted">→</span>
+      </Link>
+
       <TituloSeccao cor="roxo">Serviços / Produtos</TituloSeccao>
       <Link
         href="/painel/admin/servicos"

@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getSessaoAtual } from '@/lib/data/sessao'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -119,6 +120,58 @@ export async function moverEstadoLeadRapido(input: {
 
   revalidatePath(`/painel/${input.estudioSlug}/leads`)
   return { ok: true }
+}
+
+// "Agendar experimental" junta duas coisas que até aqui existiam
+// separadas: marca a visita na própria lead (como o resto do fluxo já
+// fazia) e cria também o evento correspondente na Agenda interna, para
+// não ter de repetir a marcação em dois sítios. Sem cliente_id — a
+// lead só passa a cliente ao ser convertida.
+export async function agendarExperimental(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const estudioId = Number(formData.get('estudio_id'))
+  const leadId = formData.get('lead_id') as string
+  const nomeLead = formData.get('nome_lead') as string
+  const data = formData.get('data') as string
+  const horaInicio = formData.get('hora_inicio') as string
+  const hoje = new Date().toISOString().slice(0, 10)
+
+  const sessao = await getSessaoAtual()
+  const supabase = await createClient()
+
+  const { error: erroAgenda } = await supabase.from('agenda_eventos').insert({
+    estudio_id: estudioId,
+    tipo: 'Avaliação',
+    titulo: `Experimental — ${nomeLead}`,
+    data,
+    hora_inicio: horaInicio,
+    duracao_min: 40,
+    nota: `Lead: ${nomeLead}`,
+    criado_por: sessao.userId,
+  })
+
+  if (erroAgenda) {
+    redirect(`/painel/${estudioSlug}/leads/${leadId}?error=${encodeURIComponent(erroAgenda.message)}`)
+  }
+
+  const { error: erroLead } = await supabase
+    .from('leads')
+    .update({
+      visita_data: data,
+      visita_hora: horaInicio,
+      visita_marcada_em: hoje,
+      estado: 'Experimental agendada',
+    })
+    .eq('id', leadId)
+
+  if (erroLead) {
+    redirect(`/painel/${estudioSlug}/leads/${leadId}?error=${encodeURIComponent(erroLead.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/leads`)
+  revalidatePath(`/painel/${estudioSlug}/leads/${leadId}`)
+  revalidatePath(`/painel/${estudioSlug}/agenda`)
+  redirect(`/painel/${estudioSlug}/leads/${leadId}`)
 }
 
 export async function adicionarContacto(formData: FormData) {

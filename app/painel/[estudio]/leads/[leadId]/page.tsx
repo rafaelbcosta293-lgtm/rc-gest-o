@@ -1,13 +1,15 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { ESTADOS_LEAD, TIPOS_CONTACTO } from '@/lib/data/constantes'
 import { fmt } from '@/lib/data/presencas'
-import { adicionarContacto, atualizarLead, converterEmCliente } from '../actions'
+import { adicionarContacto, agendarExperimental, atualizarLead, converterEmCliente } from '../actions'
 import LeadForm from '../LeadForm'
+import ContactoRapido from '../ContactoRapido'
 import SubmitButton from '@/components/SubmitButton'
-import type { LeadContacto } from '@/lib/supabase/database.types'
+import type { Activity, LeadContacto } from '@/lib/supabase/database.types'
 
 export default async function LeadPage({
   params,
@@ -20,17 +22,26 @@ export default async function LeadPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const [estudio, { data: lead }, { data: contactosData, error: erroContactos }] =
-    await Promise.all([
-      getEstudioPorSlug(supabase, slug),
-      supabase.from('leads').select('*').eq('id', leadId).maybeSingle(),
-      supabase
-        .from('lead_contactos')
-        .select('*, feito:perfis!feito_por(nome)')
-        .eq('lead_id', leadId)
-        .order('data', { ascending: false })
-        .order('criado_em', { ascending: false }),
-    ])
+  const [
+    estudio,
+    { data: lead },
+    { data: contactosData, error: erroContactos },
+    { data: atividadesData, error: erroAtividades },
+  ] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    supabase.from('leads').select('*').eq('id', leadId).maybeSingle(),
+    supabase
+      .from('lead_contactos')
+      .select('*, feito:perfis!feito_por(nome)')
+      .eq('lead_id', leadId)
+      .order('data', { ascending: false })
+      .order('criado_em', { ascending: false }),
+    supabase
+      .from('activities')
+      .select('*')
+      .eq('lead_id', leadId)
+      .order('criado_em', { ascending: false }),
+  ])
 
   if (!estudio || !lead || lead.estudio_id !== estudio.id) {
     notFound()
@@ -39,13 +50,59 @@ export default async function LeadPage({
   if (erroContactos) {
     throw new Error(erroContactos.message)
   }
+  if (erroAtividades) {
+    throw new Error(erroAtividades.message)
+  }
 
   const pts = await getEquipaDoEstudio(supabase, estudio.id)
 
   const contactos = (contactosData ?? []) as unknown as (LeadContacto & {
     feito: { nome: string } | null
   })[]
+  const atividades = (atividadesData ?? []) as Activity[]
   const cor = ESTADOS_LEAD[lead.estado as keyof typeof ESTADOS_LEAD]
+
+  // Linha do tempo unificada: cada contacto manual e cada transição
+  // automática (registada em "activities" pelo trigger da lead) entram
+  // juntos, ordenados por data, sem duplicar o que já existe em
+  // "lead_contactos".
+  type ItemTimeline = { id: string; criadoEm: string; node: ReactNode }
+  const timeline: ItemTimeline[] = [
+    ...contactos.map((c) => ({
+      id: `contacto-${c.id}`,
+      criadoEm: c.criado_em,
+      node: (
+        <div
+          key={`contacto-${c.id}`}
+          className="rounded-lg border border-black/10 bg-white p-3 text-sm dark:border-white/10 dark:bg-zinc-950"
+        >
+          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+            <span>{fmt(c.data)}</span>
+            <span>· {c.tipo}</span>
+            {c.feito && <span>· {c.feito.nome}</span>}
+          </div>
+          <p className="mt-1 text-black dark:text-zinc-50">{c.resultado}</p>
+          {c.nota && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{c.nota}</p>}
+        </div>
+      ),
+    })),
+    ...atividades.map((a) => ({
+      id: `atividade-${a.id}`,
+      criadoEm: a.criado_em,
+      node: (
+        <div
+          key={`atividade-${a.id}`}
+          className="rounded-lg border border-dashed border-black/10 bg-black/[0.02] p-3 text-sm dark:border-white/10 dark:bg-white/[0.02]"
+        >
+          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+            <span>{fmt(a.criado_em.slice(0, 10))}</span>
+            <span>· {a.tipo}</span>
+          </div>
+          {a.descricao && <p className="mt-1 text-black dark:text-zinc-50">{a.descricao}</p>}
+        </div>
+      ),
+    })),
+  ].sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1))
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -70,6 +127,8 @@ export default async function LeadPage({
         {lead.telefone && ` · ${lead.telefone}`}
         {lead.email && ` · ${lead.email}`}
       </p>
+
+      <ContactoRapido nome={lead.nome} telefone={lead.telefone} />
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -125,6 +184,46 @@ export default async function LeadPage({
               className="self-start rounded-full bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
             >
               Criar cliente a partir deste lead
+            </SubmitButton>
+          </form>
+        </details>
+      )}
+
+      {!lead.cliente_id && lead.estado !== 'Perdida' && (
+        <details className="mt-3 rounded-xl border border-[#5B3FA0]/30 bg-[#EBE6F8] p-4 dark:bg-[#2A2240]">
+          <summary className="cursor-pointer text-sm font-semibold text-[#5B3FA0] dark:text-[#C9B8F0]">
+            Agendar experimental
+          </summary>
+          <form action={agendarExperimental} className="mt-3 flex flex-wrap items-end gap-3">
+            <input type="hidden" name="estudio_slug" value={slug} />
+            <input type="hidden" name="estudio_id" value={estudio.id} />
+            <input type="hidden" name="lead_id" value={lead.id} />
+            <input type="hidden" name="nome_lead" value={lead.nome} />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Dia</label>
+              <input
+                type="date"
+                name="data"
+                required
+                defaultValue={lead.visita_data ?? ''}
+                className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Hora</label>
+              <input
+                type="time"
+                name="hora_inicio"
+                required
+                defaultValue={lead.visita_hora ?? ''}
+                className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+              />
+            </div>
+            <SubmitButton
+              pendingText="A agendar…"
+              className="rounded-full bg-[#5B3FA0] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4A3283]"
+            >
+              Agendar e marcar na Agenda
             </SubmitButton>
           </form>
         </details>
@@ -190,29 +289,14 @@ export default async function LeadPage({
       </form>
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Histórico de contactos ({contactos.length})
+        Linha do tempo ({timeline.length})
       </h2>
-      {contactos.length === 0 && (
+      {timeline.length === 0 && (
         <div className="mt-3 rounded-xl border border-dashed border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10">
-          Ainda não há contactos registados.
+          Ainda não há atividade registada.
         </div>
       )}
-      <div className="mt-3 flex flex-col gap-2">
-        {contactos.map((c) => (
-          <div
-            key={c.id}
-            className="rounded-lg border border-black/10 bg-white p-3 text-sm dark:border-white/10 dark:bg-zinc-950"
-          >
-            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-              <span>{fmt(c.data)}</span>
-              <span>· {c.tipo}</span>
-              {c.feito && <span>· {c.feito.nome}</span>}
-            </div>
-            <p className="mt-1 text-black dark:text-zinc-50">{c.resultado}</p>
-            {c.nota && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{c.nota}</p>}
-          </div>
-        ))}
-      </div>
+      <div className="mt-3 flex flex-col gap-2">{timeline.map((item) => item.node)}</div>
     </div>
   )
 }

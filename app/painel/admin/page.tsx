@@ -23,15 +23,7 @@ import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
 import StatCard from '@/components/StatCard'
 import BarMeter from '@/components/BarMeter'
-import type {
-  Cliente,
-  ClienteSemTreino,
-  Estudio,
-  Lead,
-  LeadParada,
-  EstadoPagamento,
-  ReavaliacaoPendente,
-} from '@/lib/supabase/database.types'
+import type { Cliente, ClienteSemTreino, Estudio, Lead, LeadParada } from '@/lib/supabase/database.types'
 
 type ClienteResumo = Pick<Cliente, 'id' | 'nome' | 'estado' | 'inicio_contrato'>
 type LeadResumo = Pick<Lead, 'estado' | 'entrada' | 'fecho_em' | 'visita_data'>
@@ -205,8 +197,6 @@ async function PainelAdminEstudio({
 
   const [
     { data: leadsParadasData, error: erroLeadsParadas },
-    { data: reavaliacoesData, error: erroReavaliacoes },
-    { data: pagamentosAtrasadosData, error: erroPagamentos },
     { data: clientesData, error: erroClientes },
     { data: leadsData, error: erroLeadsTodas },
     { data: registosSemanaData, error: erroRegistosSemana },
@@ -218,18 +208,6 @@ async function PainelAdminEstudio({
       .select('*')
       .eq('estudio_id', estudio.id)
       .order('dias_sem_contacto', { ascending: false }),
-    supabase
-      .from('v_reavaliacoes_pendentes')
-      .select('*')
-      .eq('estudio_id', estudio.id)
-      .eq('precisa_atencao', true)
-      .order('dias_para_reavaliar', { ascending: true, nullsFirst: true }),
-    supabase
-      .from('v_estado_pagamento')
-      .select('*')
-      .eq('estudio_id', estudio.id)
-      .eq('em_dia', false)
-      .order('nome'),
     supabase.from('clientes').select('id, nome, estado, inicio_contrato').eq('estudio_id', estudio.id),
     supabase.from('leads').select('estado, entrada, fecho_em, visita_data').eq('estudio_id', estudio.id),
     supabase
@@ -253,8 +231,6 @@ async function PainelAdminEstudio({
 
   if (
     erroLeadsParadas ||
-    erroReavaliacoes ||
-    erroPagamentos ||
     erroClientes ||
     erroLeadsTodas ||
     erroRegistosSemana ||
@@ -263,8 +239,6 @@ async function PainelAdminEstudio({
   ) {
     throw new Error(
       (erroLeadsParadas ??
-        erroReavaliacoes ??
-        erroPagamentos ??
         erroClientes ??
         erroLeadsTodas ??
         erroRegistosSemana ??
@@ -276,8 +250,6 @@ async function PainelAdminEstudio({
   const sessoesDoDia = (sessoesDoDiaData ?? []) as LeadDoDia[]
 
   const leadsParadas = (leadsParadasData ?? []) as LeadParada[]
-  const reavaliacoes = (reavaliacoesData ?? []) as ReavaliacaoPendente[]
-  const pagamentosAtrasados = (pagamentosAtrasadosData ?? []) as EstadoPagamento[]
 
   // "Sem treino há mais de 7 dias" é calculado agora; "sem evento no
   // Google Calendar" vem da cache que o job diário (app/api/cron/retencao)
@@ -366,11 +338,7 @@ async function PainelAdminEstudio({
     .sort((a, b) => b.horas - a.horas)
 
   const totalPendencias =
-    leadsParadas.length +
-    reavaliacoes.length +
-    pagamentosAtrasados.length +
-    clientesSemAgendamento.length +
-    segurosARenovar.length
+    leadsParadas.length + clientesSemAgendamento.length + segurosARenovar.length
 
   return (
     <>
@@ -493,6 +461,9 @@ async function PainelAdminEstudio({
       </div>
 
       <TituloSeccao cor="ambar">Pendências ({totalPendencias})</TituloSeccao>
+      <p className="mt-2 text-xs text-muted">
+        Reavaliações e pagamentos em atraso ficam só em Coordenação, por pedido do dono.
+      </p>
       <div className="mt-2 flex flex-col gap-2">
         {leadsParadas.map((l) => (
           <Link
@@ -505,34 +476,6 @@ async function PainelAdminEstudio({
             </span>
             <span className="text-xs text-amber-700 dark:text-amber-300">
               {l.dias_sem_contacto} dias sem contacto
-            </span>
-          </Link>
-        ))}
-        {reavaliacoes.map((r) => (
-          <Link
-            key={`reav-${r.cliente_id}`}
-            href={`/painel/${slug}/avaliacoes/${r.cliente_id}`}
-            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
-          >
-            <span className="font-medium text-foreground">
-              {r.nome} <span className="text-xs text-muted">· reavaliação</span>
-            </span>
-            <span className="text-xs text-amber-700 dark:text-amber-300">
-              {r.ultima_avaliacao ? `última em ${fmt(r.ultima_avaliacao)}` : 'nunca avaliado'}
-            </span>
-          </Link>
-        ))}
-        {pagamentosAtrasados.map((p) => (
-          <Link
-            key={`pag-${p.cliente_id}`}
-            href={`/painel/${slug}/pagamentos/${p.cliente_id}`}
-            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
-          >
-            <span className="font-medium text-foreground">
-              {p.nome} <span className="text-xs text-muted">· pagamento</span>
-            </span>
-            <span className="text-xs text-amber-700 dark:text-amber-300">
-              {p.valido_ate ? `venceu em ${fmt(p.valido_ate)}` : 'sem pagamentos'}
             </span>
           </Link>
         ))}

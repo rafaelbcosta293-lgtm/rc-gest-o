@@ -174,6 +174,52 @@ export async function agendarExperimental(formData: FormData) {
   redirect(`/painel/${estudioSlug}/leads/${leadId}`)
 }
 
+const TEMPERATURAS_VALIDAS = new Set(['Fria', 'Morna', 'Quente'])
+
+export type LinhaImportacaoCsv = {
+  nome: string
+  telefone: string | null
+  email: string | null
+  origem: string | null
+  campanha: string | null
+  modalidade_interesse: string | null
+  objetivo: string | null
+  interesse: string | null
+  valor_potencial: number | null
+  temperatura: string | null
+}
+
+export async function importarLeadsCsv(input: {
+  estudioSlug: string
+  estudioId: number
+  leads: LinhaImportacaoCsv[]
+}): Promise<{ ok: true; count: number } | { error: string }> {
+  if (input.leads.length === 0) return { error: 'Não há leads para importar.' }
+
+  const supabase = await createClient()
+  const linhas = input.leads.map((l) => ({
+    estudio_id: input.estudioId,
+    nome: l.nome,
+    telefone: l.telefone,
+    email: l.email,
+    origem: l.origem,
+    campanha: l.campanha,
+    modalidade_interesse: l.modalidade_interesse,
+    objetivo: l.objetivo,
+    interesse: l.interesse,
+    valor_potencial: l.valor_potencial,
+    // Temperatura inválida/ausente fica de fora para a base usar o
+    // valor por omissão ("Morna"), em vez de falhar a linha toda.
+    temperatura: l.temperatura && TEMPERATURAS_VALIDAS.has(l.temperatura) ? l.temperatura : undefined,
+  }))
+
+  const { error, count } = await supabase.from('leads').insert(linhas, { count: 'exact' })
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/leads`)
+  return { ok: true, count: count ?? linhas.length }
+}
+
 export async function adicionarContacto(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const leadId = formData.get('lead_id') as string

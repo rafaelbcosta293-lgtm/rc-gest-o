@@ -83,12 +83,20 @@ export default async function LeadsPage({
             {estudio.nome} · {leads.length} {leads.length === 1 ? 'lead' : 'leads'}
           </p>
         </div>
-        <Link
-          href={`/painel/${slug}/leads/novo`}
-          className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
-        >
-          + Lead
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/painel/${slug}/leads/importar`}
+            className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+          >
+            Importar CSV
+          </Link>
+          <Link
+            href={`/painel/${slug}/leads/novo`}
+            className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+          >
+            + Lead
+          </Link>
+        </div>
       </div>
 
       {funil.total > 0 && (

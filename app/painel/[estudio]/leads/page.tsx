@@ -1,9 +1,17 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, TrendingUp, Clock3, UserCheck } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { somarDias } from '@/lib/data/horarios'
+import { ESTADOS_LEAD } from '@/lib/data/constantes'
+import { calcularMetricasFunil, type HistoricoEtapaLinha } from '@/lib/data/funil'
+import StatCard from '@/components/StatCard'
+import BarMeter from '@/components/BarMeter'
 import LeadsKanban, { type LeadResumo } from './LeadsKanban'
+
+const ORDEM_FUNIL = Object.keys(ESTADOS_LEAD) as (keyof typeof ESTADOS_LEAD)[]
+const JANELA_FUNIL_DIAS = 90
 
 export default async function LeadsPage({
   params,
@@ -36,6 +44,23 @@ export default async function LeadsPage({
   const leads = (data ?? []) as unknown as LeadResumo[]
   const hoje = new Date().toISOString().slice(0, 10)
 
+  const leadIds = leads.map((l) => l.id)
+  let historico: HistoricoEtapaLinha[] = []
+  if (leadIds.length > 0) {
+    const { data: historicoData, error: erroHistorico } = await supabase
+      .from('lead_stage_history')
+      .select('lead_id, estado_anterior, estado_novo, criado_em')
+      .in('lead_id', leadIds)
+    if (erroHistorico) {
+      throw new Error(erroHistorico.message)
+    }
+    historico = historicoData ?? []
+  }
+
+  const limiteFunil = somarDias(hoje, -JANELA_FUNIL_DIAS)
+  const leadsNoFunil = leads.filter((l) => l.entrada >= limiteFunil).map((l) => l.id)
+  const funil = calcularMetricasFunil(leadsNoFunil, historico, ORDEM_FUNIL)
+
   const emAberto = (l: LeadResumo) => l.estado !== 'Ganha' && l.estado !== 'Perdida'
   const visitasHoje = leads.filter((l) => emAberto(l) && l.visita_data === hoje)
   const contactosHoje = leads.filter(
@@ -65,6 +90,49 @@ export default async function LeadsPage({
           + Lead
         </Link>
       </div>
+
+      {funil.total > 0 && (
+        <div className="mt-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Funil · últimos {JANELA_FUNIL_DIAS} dias
+          </h2>
+          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <StatCard
+              icone={TrendingUp}
+              label="Taxa de conversão"
+              valor={Math.round(funil.taxaConversao * 100)}
+              sufixo="%"
+            />
+            <StatCard
+              icone={UserCheck}
+              label="Comparecimento à experimental"
+              valor={funil.taxaComparecimento != null ? Math.round(funil.taxaComparecimento * 100) : '—'}
+              sufixo={funil.taxaComparecimento != null ? '%' : undefined}
+            />
+            <StatCard
+              icone={Clock3}
+              label="Até ao 1º contacto"
+              valor={
+                funil.horasMediasPrimeiroContacto != null
+                  ? Math.round(funil.horasMediasPrimeiroContacto)
+                  : '—'
+              }
+              sufixo={funil.horasMediasPrimeiroContacto != null ? 'h' : undefined}
+            />
+          </div>
+          <div className="mt-3 flex flex-col gap-2.5 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+            {ORDEM_FUNIL.map((etapa) => (
+              <BarMeter
+                key={etapa}
+                label={etapa}
+                valor={funil.porEtapa[etapa] ?? 0}
+                total={funil.total}
+                cor={ESTADOS_LEAD[etapa].tx}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {(visitasHoje.length > 0 || contactosHoje.length > 0) && (
         <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">

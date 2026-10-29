@@ -2,26 +2,8 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { ESTADOS_LEAD } from '@/lib/data/constantes'
-import { fmt } from '@/lib/data/presencas'
-import { diasDesde } from '@/lib/data/leads'
-import type { Lead } from '@/lib/supabase/database.types'
-
-const ORDEM_FUNIL = Object.keys(ESTADOS_LEAD) as (keyof typeof ESTADOS_LEAD)[]
-
-type LeadResumo = Pick<
-  Lead,
-  | 'id'
-  | 'nome'
-  | 'telefone'
-  | 'estado'
-  | 'proximo_contacto'
-  | 'visita_data'
-  | 'visita_hora'
-  | 'valor_potencial'
-  | 'entrada'
-> & { responsavel: { nome: string } | null }
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import LeadsKanban, { type LeadResumo } from './LeadsKanban'
 
 export default async function LeadsPage({
   params,
@@ -36,13 +18,16 @@ export default async function LeadsPage({
     notFound()
   }
 
-  const { data, error } = await supabase
-    .from('leads')
-    .select(
-      'id, nome, telefone, estado, proximo_contacto, visita_data, visita_hora, valor_potencial, entrada, responsavel:perfis!responsavel_id(nome)'
-    )
-    .eq('estudio_id', estudio.id)
-    .order('proximo_contacto', { ascending: true, nullsFirst: false })
+  const [{ data, error }, pts] = await Promise.all([
+    supabase
+      .from('leads')
+      .select(
+        'id, nome, telefone, estado, origem, temperatura, responsavel_id, proximo_contacto, visita_data, visita_hora, valor_potencial, entrada, responsavel:perfis!responsavel_id(nome)'
+      )
+      .eq('estudio_id', estudio.id)
+      .order('proximo_contacto', { ascending: true, nullsFirst: false }),
+    getEquipaDoEstudio(supabase, estudio.id),
+  ])
 
   if (error) {
     throw new Error(error.message)
@@ -57,15 +42,8 @@ export default async function LeadsPage({
     (l) => emAberto(l) && l.proximo_contacto && l.proximo_contacto <= hoje && l.visita_data !== hoje
   )
 
-  const porEstado = new Map<string, typeof leads>()
-  for (const l of leads) {
-    const lista = porEstado.get(l.estado) ?? []
-    lista.push(l)
-    porEstado.set(l.estado, lista)
-  }
-
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
         className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
@@ -126,75 +104,12 @@ export default async function LeadsPage({
         </div>
       )}
 
-      <div className="mt-6 flex flex-col gap-6">
-        {ORDEM_FUNIL.map((estado) => {
-          const lista = porEstado.get(estado)
-          if (!lista || lista.length === 0) return null
-          const cor = ESTADOS_LEAD[estado]
-          return (
-            <div key={estado}>
-              <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                <span
-                  className="rounded-full px-2 py-0.5"
-                  style={{ background: cor.bg, color: cor.tx }}
-                >
-                  {estado}
-                </span>
-                <span>({lista.length})</span>
-              </h2>
-              <div className="mt-2 flex flex-col gap-2">
-                {lista.map((l) => {
-                  const atrasado = l.proximo_contacto ? l.proximo_contacto <= hoje : false
-                  return (
-                    <Link
-                      key={l.id}
-                      href={`/painel/${slug}/leads/${l.id}`}
-                      className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <strong className="text-sm text-black dark:text-zinc-50">
-                            {l.nome}
-                          </strong>
-                          {l.telefone && (
-                            <p className="mt-0.5 text-xs text-zinc-500">{l.telefone}</p>
-                          )}
-                        </div>
-                        {l.proximo_contacto && (
-                          <span
-                            className={`shrink-0 text-xs font-medium ${
-                              atrasado ? 'text-red-600' : 'text-zinc-500'
-                            }`}
-                          >
-                            {atrasado ? 'contactar: ' : 'contacto em '}
-                            {fmt(l.proximo_contacto)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
-                        <span>há {diasDesde(l.entrada)} dias</span>
-                        {l.responsavel && <span>· {l.responsavel.nome}</span>}
-                        {l.valor_potencial != null && <span>· €{l.valor_potencial}</span>}
-                        {l.visita_data && (
-                          <span className="rounded-full bg-[#E9E5F7] px-2 py-0.5 font-medium text-[#5B3FA0]">
-                            Visita {fmt(l.visita_data)}
-                            {l.visita_hora ? ` ${l.visita_hora.slice(0, 5)}` : ''}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {leads.length === 0 && (
+      {leads.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
           Ainda não há leads registados.
         </div>
+      ) : (
+        <LeadsKanban estudioSlug={slug} leads={leads} pts={pts} />
       )}
     </div>
   )

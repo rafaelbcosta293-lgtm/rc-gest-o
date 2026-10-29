@@ -91,6 +91,36 @@ export async function atualizarLead(formData: FormData) {
   redirect(`/painel/${estudioSlug}/leads/${id}`)
 }
 
+export type ResultadoAcaoRapida = { ok: true } | { error: string }
+
+// Usado pelo Kanban de arrastar-e-largar. Nunca aceita o estado "Ganha" —
+// essa etapa exige sempre criar o cliente (converterEmCliente), por isso
+// o quadro trata a coluna "Ganha" como só-leitura e esta ação rejeita-a
+// na mesma por segurança caso chegue aqui por outra via.
+export async function moverEstadoLeadRapido(input: {
+  estudioSlug: string
+  id: string
+  estado: string
+}): Promise<ResultadoAcaoRapida> {
+  if (input.estado === 'Ganha') return { error: 'Usa "Converter em cliente" para fechar esta etapa.' }
+
+  const hoje = new Date().toISOString().slice(0, 10)
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('leads')
+    .update({
+      estado: input.estado,
+      fecho_em: input.estado === 'Perdida' ? hoje : null,
+    })
+    .eq('id', input.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/leads`)
+  return { ok: true }
+}
+
 export async function adicionarContacto(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const leadId = formData.get('lead_id') as string

@@ -53,6 +53,13 @@ export default async function EquipaPage({
         de aprovado aqui.
       </p>
 
+      <Link
+        href={`/painel/${slug}/equipa/operacional`}
+        className="mt-3 inline-block rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+      >
+        Painel operacional
+      </Link>
+
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {error}

@@ -51,7 +51,7 @@ export default async function LeadsPage({
   const leads = (data ?? []) as unknown as LeadResumo[]
   const hoje = new Date().toISOString().slice(0, 10)
 
-  const emAberto = (l: LeadResumo) => l.estado !== 'Convertido' && l.estado !== 'Perdido'
+  const emAberto = (l: LeadResumo) => l.estado !== 'Ganha' && l.estado !== 'Perdida'
   const visitasHoje = leads.filter((l) => emAberto(l) && l.visita_data === hoje)
   const contactosHoje = leads.filter(
     (l) => emAberto(l) && l.proximo_contacto && l.proximo_contacto <= hoje && l.visita_data !== hoje

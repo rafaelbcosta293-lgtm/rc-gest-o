@@ -74,8 +74,8 @@ export async function atualizarLead(formData: FormData) {
       // A data em que a visita foi marcada só se define uma vez — se já
       // existia, mantém-se; só muda quando a visita é marcada agora.
       visita_marcada_em: visitaData ? (visitaMarcadaAtual ?? hoje) : null,
-      motivo_perda: estado === 'Perdido' ? campoOuNull(formData, 'motivo_perda') : null,
-      fecho_em: estado === 'Perdido' ? hoje : null,
+      motivo_perda: estado === 'Perdida' ? campoOuNull(formData, 'motivo_perda') : null,
+      fecho_em: estado === 'Perdida' ? hoje : null,
     })
     .eq('id', id)
 
@@ -136,7 +136,7 @@ export async function converterEmCliente(formData: FormData) {
 
   const { error: erroLead } = await supabase
     .from('leads')
-    .update({ estado: 'Convertido', cliente_id: cliente.id, fecho_em: hoje })
+    .update({ estado: 'Ganha', cliente_id: cliente.id, fecho_em: hoje })
     .eq('id', leadId)
 
   if (erroLead) {

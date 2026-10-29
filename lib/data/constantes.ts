@@ -74,13 +74,19 @@ export const ESTADOS_CLIENTE = {
   'Ex-cliente': { ...PALETA.neutro, label: 'Inativo' },
 } as const
 
+// Ordem = ordem do funil (ver docs/ESPECIFICACAO_CRM_ANALITICA.md §3) —
+// várias páginas usam Object.keys(ESTADOS_LEAD) para a ordem do Kanban
+// e dos filtros, por isso a ordem aqui importa tanto quanto a cor.
 export const ESTADOS_LEAD = {
-  Novo: PALETA.azul,
-  Contactado: PALETA.ambar,
-  'Visita marcada': PALETA.roxo,
-  'Visita feita': PALETA.teal,
-  Convertido: PALETA.verde,
-  Perdido: PALETA.vermelho,
+  Nova: PALETA.azul,
+  Contactada: PALETA.ambar,
+  Qualificada: PALETA.laranja,
+  'Experimental agendada': PALETA.roxo,
+  'Experimental realizada': PALETA.teal,
+  'Falhou a experimental': PALETA.vermelho,
+  'Proposta / Em decisão': PALETA.ambar,
+  Ganha: PALETA.verde,
+  Perdida: PALETA.neutro,
 } as const
 
 export const TIPOS_CONTACTO = ['Telefone', 'WhatsApp', 'Email', 'Presencial', 'Mensagem redes'] as const

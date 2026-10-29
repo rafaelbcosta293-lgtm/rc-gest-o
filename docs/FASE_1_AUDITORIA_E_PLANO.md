@@ -150,13 +150,13 @@ Também confirmei (via `mcp__Supabase__get_advisors`) que não há fugas de dado
 - PDF do resumo mensal.
 - Tabela de auditoria genérica (trigger a registar antes/depois em `pagamentos`, `planos`, `config`/`settings`).
 
-## 9. Perguntas antes de avançar para a Fase 2
+## 9. Decisões (o Rafael pediu para avançar sem gate manual por fase — fica registado o que decidi e porquê, em vez de bloquear à espera de clique)
 
-1. **Acesso por função vs. acesso por email fixo.** Proponho manter o acesso a Administração exatamente como está (só o teu email, já reforçado por RLS) e passar Coordenação/Comercial/Master Trainer/PT a decidir o que veem primeiro pelo `papel` de cada conta (cada pessoa já tem login próprio, exceto as contas partilhadas por estúdio). Concordas, ou preferes manter tudo por email fixo e só acrescentar o Comercial à lista?
-2. **Gráficos: Recharts ou continuar sem dependências?** Já tenho 4 componentes de gráfico SVG à mão, sem biblioteca, usados nos dashboards atuais. A especificação sugere Recharts "se for React". Recharts traz mais tipos de gráfico prontos (funil, heatmap, área com intervalo de cenários) mas é uma dependência com peso real. Prefiro continuar a construir à mão (consistente com o resto da app) e só trazer Recharts se algum gráfico específico (ex.: os 3 cenários de projeção) for claramente mais seguro feito numa biblioteca testada. Confirmas?
-3. **`settings`**: aproveito e alargo a tabela `config` que já existe (chave/valor), ou crias mesmo uma tabela `settings` nova e separada?
-4. **Agendar experimentais a partir da ficha da lead**: crio o evento na Agenda interna (já construída, mais rápida) ou tem mesmo de ir para o Google Calendar partilhado do estúdio, como os outros agendamentos?
-5. **Ambiente de demonstração**: confirmas que posso usar uma branch do Supabase (ambiente separado, não o projeto de produção) para os dados de demonstração de 12 meses, em vez de os colocar no projeto real?
-6. **Prioridade dentro da Fase 5**: painéis é a fase maior da especificação (6 subsecções). Depois dos alertas (Fase 4), há alguma das seis (Quadro do dia / Comercial / Clientes-retenção / Operacional / Financeiro / Timeline da empresa) que queiras ver primeiro, ou sigo pela ordem da especificação?
+1. **Acesso por função vs. email fixo.** Administração mantém-se exatamente como está (só o teu email, já reforçado por RLS — zero risco de tocar nisso). Introduzo o papel `comercial` e passo a decidir a página inicial e a navegação de Coordenação/Comercial/Master Trainer/PT pelo `papel` de cada conta, por cima do que já existe — aditivo, não troca nada que já funciona.
+2. **Gráficos.** Continuo sem biblioteca — os 4 componentes SVG à mão já existentes cobrem a maioria; só trago Recharts (ou equivalente) mais tarde se um gráfico específico (ex.: os 3 cenários de projeção, Fase 6) se mostrar impraticável à mão.
+3. **`settings`.** Alargo a tabela `config` (chave/valor) já existente em vez de criar uma tabela paralela — é exatamente para isto que ela já serve.
+4. **Agendar experimentais.** Criado na Agenda interna (já construída, sem depender de API externa) em vez do Google Calendar partilhado.
+5. **Ambiente de demonstração.** Uso uma branch do Supabase, nunca o projeto de produção.
+6. **Prioridade da Fase 5.** Sigo a ordem da própria especificação: Quadro do dia → Comercial → Clientes/retenção → Operacional → Financeiro → Timeline da empresa.
 
-À espera do teu OK (e das respostas acima que fizerem sentido) para arrancar na Fase 2.
+Decisões registadas aqui para rever/corrigir a qualquer momento — nenhuma é definitiva, só destravam o trabalho sem ficar à espera de aprovação a cada passo, como pedido.

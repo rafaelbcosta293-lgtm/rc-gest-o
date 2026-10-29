@@ -318,10 +318,10 @@ async function PainelAdminEstudio({
   const leads = (leadsData ?? []) as LeadResumo[]
   const leadsNovas = leads.filter((l) => l.entrada >= inicioMes && l.entrada < fimMesExclusivo).length
   const leadsConvertidas = leads.filter(
-    (l) => l.estado === 'Convertido' && l.fecho_em && l.fecho_em >= inicioMes && l.fecho_em < fimMesExclusivo
+    (l) => l.estado === 'Ganha' && l.fecho_em && l.fecho_em >= inicioMes && l.fecho_em < fimMesExclusivo
   ).length
   const sessoesAgendadas = leads.filter(
-    (l) => l.visita_data && l.visita_data >= hoje && l.estado !== 'Perdido' && l.estado !== 'Convertido'
+    (l) => l.visita_data && l.visita_data >= hoje && l.estado !== 'Perdida' && l.estado !== 'Ganha'
   ).length
 
   const idsClientes = clientes.map((c) => c.id)

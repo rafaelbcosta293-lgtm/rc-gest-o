@@ -1,6 +1,6 @@
 import type { BlocoTipo } from '@/lib/data/constantes'
 
-export type Papel = 'admin' | 'studio_manager' | 'master_trainer' | 'pt'
+export type Papel = 'admin' | 'studio_manager' | 'master_trainer' | 'pt' | 'comercial'
 
 export type Estudio = {
   id: number
@@ -127,13 +127,24 @@ export type ChecklistResposta = {
   ok: boolean
 }
 
+// Nomes alinhados com o funil de 8 etapas da especificação do CRM
+// (docs/ESPECIFICACAO_CRM_ANALITICA.md, secção 3) — os 6 estados
+// antigos foram renomeados (Novo→Nova, Contactado→Contactada, "Visita
+// marcada"→"Experimental agendada", "Visita feita"→"Experimental
+// realizada", Convertido→Ganha, Perdido→Perdida) e 3 entraram de novo
+// (Qualificada, "Falhou a experimental", "Proposta / Em decisão").
 export type EstadoLead =
-  | 'Novo'
-  | 'Contactado'
-  | 'Visita marcada'
-  | 'Visita feita'
-  | 'Convertido'
-  | 'Perdido'
+  | 'Nova'
+  | 'Contactada'
+  | 'Qualificada'
+  | 'Experimental agendada'
+  | 'Experimental realizada'
+  | 'Falhou a experimental'
+  | 'Proposta / Em decisão'
+  | 'Ganha'
+  | 'Perdida'
+
+export type TemperaturaLead = 'Fria' | 'Morna' | 'Quente'
 
 export type TipoContacto = 'Telefone' | 'WhatsApp' | 'Email' | 'Presencial' | 'Mensagem redes'
 
@@ -144,11 +155,14 @@ export type Lead = {
   telefone: string | null
   email: string | null
   origem: string | null
+  campanha: string | null
+  modalidade_interesse: string | null
   objetivo: string | null
   interesse: string | null
   disponibilidade: string | null
   walk_in: boolean
   estado: EstadoLead
+  temperatura: TemperaturaLead
   responsavel_id: string | null
   entrada: string
   proximo_contacto: string | null
@@ -160,6 +174,110 @@ export type Lead = {
   motivo_perda: string | null
   cliente_id: string | null
   nota: string | null
+  criado_em: string
+}
+
+export type LeadStageHistory = {
+  id: string
+  lead_id: string
+  estado_anterior: EstadoLead | null
+  estado_novo: EstadoLead
+  mudado_por: string | null
+  criado_em: string
+}
+
+export type TipoAtividade =
+  | 'Chamada'
+  | 'WhatsApp'
+  | 'SMS'
+  | 'Email'
+  | 'Nota'
+  | 'Experimental agendada'
+  | 'Experimental realizada'
+  | 'Experimental falhada'
+  | 'Venda'
+  | 'Pagamento'
+  | 'Treino realizado'
+  | 'Falta'
+  | 'Desmarcação'
+  | 'Avaliação'
+  | 'Alteração de plano'
+  | 'Suspensão'
+  | 'Cancelamento'
+  | 'Reativação'
+  | 'Aniversário enviado'
+
+export type Activity = {
+  id: string
+  estudio_id: number
+  lead_id: string | null
+  cliente_id: string | null
+  tipo: TipoAtividade
+  descricao: string | null
+  metadados: Record<string, unknown>
+  criado_por: string | null
+  criado_em: string
+}
+
+export type Goal = {
+  id: string
+  estudio_id: number
+  ano: number
+  mes: number
+  metrica: string
+  meta: number
+  criado_por: string | null
+  criado_em: string
+}
+
+export type MarketingCost = {
+  id: string
+  estudio_id: number
+  ano: number
+  mes: number
+  origem: string
+  campanha: string | null
+  custo: number
+  criado_em: string
+}
+
+export type SeveridadeAlerta = 'Info' | 'Atenção' | 'Crítico'
+export type EstadoAlerta = 'Novo' | 'Visto' | 'Resolvido' | 'Adiado'
+
+export type AlertRule = {
+  id: string
+  chave: string
+  nome: string
+  descricao: string | null
+  severidade_base: SeveridadeAlerta
+  ativo: boolean
+  limites: Record<string, unknown>
+  criado_em: string
+}
+
+export type AlertaRegistado = {
+  id: string
+  estudio_id: number
+  regra_chave: string | null
+  severidade: SeveridadeAlerta
+  titulo: string
+  descricao: string | null
+  lead_id: string | null
+  cliente_id: string | null
+  papel_destinatario: Papel | null
+  perfil_destinatario: string | null
+  estado: EstadoAlerta
+  adiado_ate: string | null
+  resolvido_em: string | null
+  criado_em: string
+  atualizado_em: string
+}
+
+export type KpiSnapshotDiario = {
+  id: string
+  estudio_id: number
+  data: string
+  metricas: Record<string, unknown>
   criado_em: string
 }
 

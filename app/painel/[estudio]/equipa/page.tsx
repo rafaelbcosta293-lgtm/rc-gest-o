@@ -7,7 +7,7 @@ import { alternarAcesso, mudarPapel } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import type { Papel } from '@/lib/supabase/database.types'
 
-const PAPEIS: Papel[] = ['admin', 'studio_manager', 'master_trainer', 'pt']
+const PAPEIS: Papel[] = ['admin', 'studio_manager', 'master_trainer', 'comercial', 'pt']
 
 export default async function EquipaPage({
   params,

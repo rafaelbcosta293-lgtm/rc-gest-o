@@ -6,7 +6,7 @@ const inputCls =
   'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
 const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
-const ESTADOS_EDITAVEIS = Object.keys(ESTADOS_LEAD).filter((k) => k !== 'Convertido')
+const ESTADOS_EDITAVEIS = Object.keys(ESTADOS_LEAD).filter((k) => k !== 'Ganha')
 
 export default function LeadForm({
   estudioSlug,
@@ -196,7 +196,7 @@ export default function LeadForm({
                     {k}
                   </option>
                 ))}
-                {lead.estado === 'Convertido' && <option value="Convertido">Convertido</option>}
+                {lead.estado === 'Ganha' && <option value="Ganha">Ganha</option>}
               </select>
             </div>
 

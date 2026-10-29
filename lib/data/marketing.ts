@@ -46,9 +46,9 @@ export function metricasNoIntervalo(
   const visitasNoIntervalo = leads.filter(
     (l) => l.visita_data && l.visita_data >= inicioISO && l.visita_data < fimExclusivoISO
   )
-  const fechoVisitas = visitasNoIntervalo.filter((l) => l.estado === 'Convertido').length
+  const fechoVisitas = visitasNoIntervalo.filter((l) => l.estado === 'Ganha').length
   const walkInsNoIntervalo = noIntervalo.filter((l) => l.walk_in)
-  const fechoWalkIns = walkInsNoIntervalo.filter((l) => l.estado === 'Convertido').length
+  const fechoWalkIns = walkInsNoIntervalo.filter((l) => l.estado === 'Ganha').length
 
   return {
     leads: noIntervalo.length,

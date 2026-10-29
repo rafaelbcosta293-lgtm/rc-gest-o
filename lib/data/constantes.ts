@@ -9,6 +9,7 @@ import {
   KeyRound,
   AlarmClock,
   BellRing,
+  Target,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -144,6 +145,7 @@ export const MODULOS: Modulo[] = [
   { id: 'horarios', nome: 'Horários', icone: AlarmClock, cor: 'vermelho', desc: 'Escala da semana e ausências da equipa', pronto: true },
   { id: 'agenda', nome: 'Agenda', icone: CalendarDays, cor: 'roxo', desc: 'Treinos, avaliações e reuniões — dia, semana e mês', pronto: true },
   { id: 'alertas', nome: 'Alertas', icone: BellRing, cor: 'vermelho', desc: 'Leads, clientes e pagamentos que precisam de atenção agora', pronto: true },
+  { id: 'objetivos', nome: 'Objetivos', icone: Target, cor: 'verde', desc: 'Metas do mês, progresso e a calculadora de funil inverso', pronto: true },
 ]
 
 // Coordenação e Administração deixaram de ser por estúdio — passaram a

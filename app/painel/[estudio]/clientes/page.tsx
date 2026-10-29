@@ -240,6 +240,12 @@ export default async function ClientesPage({
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href={`/painel/${slug}/clientes/retencao`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
+          >
+            Retenção
+          </Link>
+          <Link
             href={`/painel/${slug}/clientes/aniversarios`}
             className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
           >

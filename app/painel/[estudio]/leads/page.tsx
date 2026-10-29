@@ -95,6 +95,12 @@ export default async function LeadsPage({
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href={`/painel/${slug}/leads/comercial`}
+            className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+          >
+            Painel comercial
+          </Link>
+          <Link
             href={`/painel/${slug}/leads/importar`}
             className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
           >

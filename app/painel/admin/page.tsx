@@ -122,6 +122,14 @@ export default async function AdminPage({
         <span className="text-sm text-muted">→</span>
       </Link>
 
+      <Link
+        href="/painel/admin/simulador"
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-border-strong"
+      >
+        <span className="text-sm text-foreground">Simulador &quot;E se…&quot; (cenários hipotéticos)</span>
+        <span className="text-sm text-muted">→</span>
+      </Link>
+
       <TituloSeccao cor="roxo">Serviços / Produtos</TituloSeccao>
       <Link
         href="/painel/admin/servicos"

@@ -281,6 +281,15 @@ export type KpiSnapshotDiario = {
   criado_em: string
 }
 
+export type CenarioSimulador = {
+  id: string
+  nome: string
+  entradas: Record<string, unknown>
+  resultados: Record<string, unknown>
+  criado_por: string | null
+  criado_em: string
+}
+
 export type TipoMarcoEmpresa = 'Campanha' | 'Preço' | 'Equipa' | 'Meta' | 'Outro'
 
 export type MarcoEmpresa = {

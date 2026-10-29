@@ -269,6 +269,12 @@ export default async function LeadPage({
             ))}
           </select>
         </div>
+        <div className="flex flex-col justify-end gap-1.5 pb-2.5">
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input type="checkbox" name="sucesso" defaultChecked />
+            Conseguiu falar com a lead
+          </label>
+        </div>
         <div className="flex flex-1 flex-col gap-1.5">
           <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
             Resultado

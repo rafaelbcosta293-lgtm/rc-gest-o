@@ -1,14 +1,16 @@
 import Link from 'next/link'
-import { ArrowLeft, TrendingUp, Clock3, UserCheck } from 'lucide-react'
+import { ArrowLeft, TrendingUp, Clock3, UserCheck, Phone, Handshake } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { somarDias } from '@/lib/data/horarios'
-import { ESTADOS_LEAD } from '@/lib/data/constantes'
+import { ESTADOS_LEAD, PALETA } from '@/lib/data/constantes'
 import { calcularMetricasFunil, type HistoricoEtapaLinha } from '@/lib/data/funil'
 import StatCard from '@/components/StatCard'
 import BarMeter from '@/components/BarMeter'
 import LeadsKanban, { type LeadResumo } from './LeadsKanban'
+import type { QuadroDoDia } from '@/lib/supabase/database.types'
 
 const ORDEM_FUNIL = Object.keys(ESTADOS_LEAD) as (keyof typeof ESTADOS_LEAD)[]
 const JANELA_FUNIL_DIAS = 90
@@ -26,7 +28,9 @@ export default async function LeadsPage({
     notFound()
   }
 
-  const [{ data, error }, pts] = await Promise.all([
+  const hoje = new Date().toISOString().slice(0, 10)
+
+  const [{ data, error }, pts, sessao, { data: quadroData, error: erroQuadro }] = await Promise.all([
     supabase
       .from('leads')
       .select(
@@ -35,14 +39,20 @@ export default async function LeadsPage({
       .eq('estudio_id', estudio.id)
       .order('proximo_contacto', { ascending: true, nullsFirst: false }),
     getEquipaDoEstudio(supabase, estudio.id),
+    getSessaoAtual(),
+    supabase.rpc('quadro_do_dia', { p_estudio: estudio.id, p_dia: hoje }),
   ])
 
   if (error) {
     throw new Error(error.message)
   }
+  if (erroQuadro) {
+    throw new Error(erroQuadro.message)
+  }
 
+  const { ehAdmin } = papeisDaSessao(sessao)
+  const quadro = ((quadroData as QuadroDoDia[] | null) ?? [])[0] ?? null
   const leads = (data ?? []) as unknown as LeadResumo[]
-  const hoje = new Date().toISOString().slice(0, 10)
 
   const leadIds = leads.map((l) => l.id)
   let historico: HistoricoEtapaLinha[] = []
@@ -98,6 +108,26 @@ export default async function LeadsPage({
           </Link>
         </div>
       </div>
+
+      {quadro && (
+        <div className="mt-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Quadro do dia</h2>
+          <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <StatCard label="Leads novas" valor={quadro.leads_novas} aoVivo />
+            <StatCard icone={Phone} label="Contactos" valor={quadro.contactos} />
+            <StatCard icone={UserCheck} label="Com sucesso" valor={quadro.contactos_sucesso} />
+            <StatCard label="Experimentais agendadas" valor={quadro.sessoes_agendadas} />
+            <StatCard label="Experimentais hoje" valor={quadro.sessoes_para_hoje} />
+            <StatCard
+              icone={Handshake}
+              cor={PALETA.verde}
+              label="Vendas hoje"
+              valor={quadro.vendas}
+              sufixo={ehAdmin && quadro.vendas > 0 ? `· €${quadro.valor_vendas}` : undefined}
+            />
+          </div>
+        </div>
+      )}
 
       {funil.total > 0 && (
         <div className="mt-6">

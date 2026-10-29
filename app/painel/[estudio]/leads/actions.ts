@@ -231,6 +231,7 @@ export async function adicionarContacto(formData: FormData) {
     data: (formData.get('data') as string) || new Date().toISOString().slice(0, 10),
     tipo: formData.get('tipo') as string,
     resultado: formData.get('resultado') as string,
+    sucesso: formData.get('sucesso') === 'on',
     nota: campoOuNull(formData, 'nota'),
     feito_por: userData.user?.id ?? null,
   })

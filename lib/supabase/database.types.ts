@@ -287,9 +287,23 @@ export type LeadContacto = {
   data: string
   tipo: TipoContacto
   resultado: string
+  // Sinal estruturado de sucesso/insucesso, separado do "resultado" em
+  // texto livre — fica null nos contactos registados antes desta
+  // coluna existir (não há como saber ao certo).
+  sucesso: boolean | null
   nota: string | null
   feito_por: string | null
   criado_em: string
+}
+
+export type QuadroDoDia = {
+  leads_novas: number
+  contactos: number
+  contactos_sucesso: number
+  sessoes_agendadas: number
+  sessoes_para_hoje: number
+  vendas: number
+  valor_vendas: number
 }
 
 export type Escala = {

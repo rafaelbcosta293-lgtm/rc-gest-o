@@ -1,5 +1,5 @@
 import { ESTADOS_LEAD } from '@/lib/data/constantes'
-import type { Lead, Perfil } from '@/lib/supabase/database.types'
+import type { Lead, Perfil, TemperaturaLead } from '@/lib/supabase/database.types'
 import SubmitButton from '@/components/SubmitButton'
 
 const inputCls =
@@ -7,6 +7,7 @@ const inputCls =
 const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
 const ESTADOS_EDITAVEIS = Object.keys(ESTADOS_LEAD).filter((k) => k !== 'Ganha')
+const TEMPERATURAS: TemperaturaLead[] = ['Fria', 'Morna', 'Quente']
 
 export default function LeadForm({
   estudioSlug,
@@ -86,6 +87,56 @@ export default function LeadForm({
             placeholder="ex.: Instagram, indicação"
             className={inputCls}
           />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="campanha" className={labelCls}>
+            Campanha
+          </label>
+          <input
+            id="campanha"
+            name="campanha"
+            defaultValue={lead?.campanha ?? ''}
+            placeholder="ex.: Promo verão 2026"
+            className={inputCls}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="modalidade_interesse" className={labelCls}>
+            Modalidade de interesse
+          </label>
+          <select
+            id="modalidade_interesse"
+            name="modalidade_interesse"
+            defaultValue={lead?.modalidade_interesse ?? ''}
+            className={inputCls}
+          >
+            <option value="">—</option>
+            <option value="Treino Personalizado">Treino Personalizado</option>
+            <option value="Treino Acompanhado">Treino Acompanhado</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className={labelCls}>Temperatura</span>
+          <div className="flex gap-1.5">
+            {TEMPERATURAS.map((t) => (
+              <label
+                key={t}
+                className="flex-1 cursor-pointer rounded-md border border-black/10 px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-medium dark:border-white/10"
+              >
+                <input
+                  type="radio"
+                  name="temperatura"
+                  value={t}
+                  defaultChecked={(lead?.temperatura ?? 'Morna') === t}
+                  className="sr-only"
+                />
+                {t}
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col justify-end gap-1.5 pb-2.5">
@@ -234,7 +285,7 @@ export default function LeadForm({
                 id="motivo_perda"
                 name="motivo_perda"
                 defaultValue={lead.motivo_perda ?? ''}
-                placeholder="só é guardado se o estado for &quot;Perdido&quot;"
+                placeholder="só é guardado se o estado for &quot;Perdida&quot;"
                 className={inputCls}
               />
             </div>

@@ -82,7 +82,7 @@ export default async function LeadPage({
           href={`/painel/${slug}/treinos/${lead.cliente_id}`}
           className="mt-4 inline-block rounded-full bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
         >
-          ✓ Convertido — ver ficha de cliente
+          ✓ Ganha — ver ficha de cliente
         </Link>
       ) : (
         <details className="mt-4 rounded-xl border border-teal-300 bg-teal-50 p-4 dark:bg-teal-950">

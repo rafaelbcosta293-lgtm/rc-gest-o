@@ -281,6 +281,19 @@ export type KpiSnapshotDiario = {
   criado_em: string
 }
 
+export type AcaoAuditoria = 'INSERT' | 'UPDATE' | 'DELETE'
+
+export type RegistoAuditoria = {
+  id: string
+  tabela: string
+  registo_id: string
+  acao: AcaoAuditoria
+  dados_antigos: Record<string, unknown> | null
+  dados_novos: Record<string, unknown> | null
+  alterado_por: string | null
+  criado_em: string
+}
+
 export type CenarioSimulador = {
   id: string
   nome: string

@@ -131,6 +131,15 @@ export default async function AdminPage({
         <span className="text-sm text-muted">→</span>
       </Link>
 
+      <TituloSeccao cor="neutro">Auditoria</TituloSeccao>
+      <Link
+        href="/painel/admin/auditoria"
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-border-strong"
+      >
+        <span className="text-sm text-foreground">Quem alterou pagamentos, planos e preços</span>
+        <span className="text-sm text-muted">→</span>
+      </Link>
+
       <TituloSeccao cor="neutro">Contas</TituloSeccao>
       <Link
         href="/painel/admin/contas"

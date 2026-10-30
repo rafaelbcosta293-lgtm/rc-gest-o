@@ -91,7 +91,7 @@ export default async function LeadsPage({
   }))
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
+    <div className="mx-auto max-w-[1600px] px-4 py-10">
       <Link
         href={`/painel/${slug}`}
         className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"

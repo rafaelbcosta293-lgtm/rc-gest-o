@@ -106,7 +106,7 @@ export default async function OperacionalPage({
   const fecho = coberturaChecklist(checklistData ?? [], 'Fecho', diasDoMesAteHoje)
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-10">
       <Link
         href={`/painel/${slug}/equipa`}
         className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"

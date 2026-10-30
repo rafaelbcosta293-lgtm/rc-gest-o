@@ -193,7 +193,7 @@ export default async function AniversariosPage({
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10">
       <Link
         href={`/painel/${slug}/clientes`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"

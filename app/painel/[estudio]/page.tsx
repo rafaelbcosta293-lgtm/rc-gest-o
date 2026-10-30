@@ -73,7 +73,7 @@ export default async function EstudioPage({
   const pendenciasTotais = mensalidadesEmDivida + segurosEmDivida + leadsContactoAtrasado
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="px-4 py-4 sm:px-6">
       {ehGestao && (
         <div className="mb-4 flex items-center justify-end gap-2">
           <Link

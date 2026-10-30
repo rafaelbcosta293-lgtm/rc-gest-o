@@ -244,6 +244,21 @@ export async function adicionarContacto(formData: FormData) {
   redirect(`/painel/${estudioSlug}/leads/${leadId}`)
 }
 
+export async function apagarLead(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('leads').delete().eq('id', id)
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/leads/${id}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/leads`)
+  redirect(`/painel/${estudioSlug}/leads`)
+}
+
 export async function converterEmCliente(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))

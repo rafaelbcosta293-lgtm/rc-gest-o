@@ -50,7 +50,7 @@ export default async function AuditoriaPage({
   const registos = (data ?? []) as unknown as (RegistoAuditoria & { perfil: { nome: string } | null })[]
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10">
       <Link
         href="/painel/admin"
         className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"

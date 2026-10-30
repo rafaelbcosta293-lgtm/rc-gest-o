@@ -54,7 +54,7 @@ export default async function FichaClientePage({
   const a = ALERTAS[cliente.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/treinos`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"

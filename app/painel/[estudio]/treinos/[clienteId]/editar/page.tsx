@@ -31,7 +31,7 @@ export default async function EditarClientePage({
   const pts = await getEquipaDoEstudio(supabase, estudio.id)
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/${voltar}/${clienteId}`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"

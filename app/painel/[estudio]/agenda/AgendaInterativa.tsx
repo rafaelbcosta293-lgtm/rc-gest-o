@@ -334,14 +334,17 @@ function GrelhaInterativa({
   const colunas = `repeat(${dias.length}, 1fr)`
   const largura = dias.length > 1 ? 'min-w-[760px]' : 'min-w-[260px]'
   const alturaGrade = GRADE_HORA_FIM * 60 * pxPorMinuto
+  // Hora sob o rato, arredondada aos 10 minutos — só para orientação
+  // visual (uma régua), nunca usada para decidir onde um clique cai.
+  const [horaHover, setHoraHover] = useState<number | null>(null)
 
   return (
     <div className="mt-4 overflow-x-auto">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted">
-          Clica e arrasta num espaço vazio para criar com a duração exata (um clique simples usa
-          40 min), arrasta o meio de um evento para o mover, o topo ou o fundo para
-          encurtar/alongar.
+          Passa o rato para veres a hora exata (de 10 em 10 min); clica e arrasta num espaço vazio
+          para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento
+          para o mover, o topo ou o fundo para encurtar/alongar.
         </p>
         <div className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-pop">
           <button
@@ -378,7 +381,10 @@ function GrelhaInterativa({
             </div>
           ))}
         </div>
-        <div className="max-h-[75vh] overflow-y-auto rounded-b-xl border border-border-subtle">
+        <div
+          onMouseLeave={() => setHoraHover(null)}
+          className="h-[calc(100vh-280px)] min-h-[360px] overflow-y-auto rounded-b-xl border border-border-subtle"
+        >
           <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: alturaGrade }}>
             <div className="relative text-[10px] text-muted">
               {HORAS_GRADE.map((h) => (
@@ -390,6 +396,16 @@ function GrelhaInterativa({
                   {String(h).padStart(2, '0')}:00
                 </div>
               ))}
+              {horaHover !== null && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-20 flex -translate-y-1/2 justify-end"
+                  style={{ top: horaHover * pxPorMinuto }}
+                >
+                  <span className="rounded bg-accent px-1 py-0.5 text-[9px] font-bold whitespace-nowrap text-white">
+                    {minutosParaHora(horaHover)}
+                  </span>
+                </div>
+              )}
             </div>
             {dias.map((dia) => (
               <ColunaDia
@@ -403,6 +419,8 @@ function GrelhaInterativa({
                 onClickVazio={(horaInicio, duracaoMin) => onClickVazio(dia, horaInicio, duracaoMin)}
                 onAbrirEvento={onAbrirEvento}
                 pxPorMinuto={pxPorMinuto}
+                horaHover={horaHover}
+                onHoverMinuto={setHoraHover}
               />
             ))}
           </div>
@@ -431,6 +449,8 @@ function ColunaDia({
   onClickVazio,
   onAbrirEvento,
   pxPorMinuto,
+  horaHover,
+  onHoverMinuto,
 }: {
   eventos: EventoComNomes[]
   emDrag: boolean
@@ -441,6 +461,8 @@ function ColunaDia({
   onClickVazio: (horaInicio: string, duracaoMin: number) => void
   onAbrirEvento: (evento: EventoComNomes) => void
   pxPorMinuto: number
+  horaHover: number | null
+  onHoverMinuto: (minuto: number | null) => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const arrastoRef = useRef<ArrastoColuna | null>(null)
@@ -528,6 +550,12 @@ function ColunaDia({
     <div
       ref={ref}
       onMouseDown={iniciarCriacao}
+      onMouseMove={(e) => {
+        if (arrastoRef.current) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        const min = minutoNoClique(e.clientY, rect.top, pxPorMinuto)
+        onHoverMinuto(Math.round(min / 10) * 10)
+      }}
       onDragOver={(e) => {
         e.preventDefault()
         onDragOver()
@@ -550,6 +578,12 @@ function ColunaDia({
           style={{ top: h * 60 * pxPorMinuto }}
         />
       ))}
+      {horaHover !== null && !previa && (
+        <div
+          className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-accent"
+          style={{ top: horaHover * pxPorMinuto }}
+        />
+      )}
       {previa && (
         <div
           className="pointer-events-none absolute inset-x-1 rounded border-2 border-dashed border-brand bg-brand/20"

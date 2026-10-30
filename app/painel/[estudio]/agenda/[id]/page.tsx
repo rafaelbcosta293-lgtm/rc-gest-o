@@ -62,7 +62,7 @@ export default async function EventoAgendaPage({
   const cancelado = evento.estado === 'Cancelado'
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/agenda?vista=dia&data=${evento.data}`}
         className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"

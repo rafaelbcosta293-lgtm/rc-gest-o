@@ -61,7 +61,7 @@ export default async function HorariosCoordenacaoPage({
   const estudios = await getEstudios(supabase)
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-7xl px-4 py-10">
       <Link href="/painel/coordenacao" className="text-sm text-zinc-600 underline dark:text-zinc-400">
         ← Coordenação
       </Link>

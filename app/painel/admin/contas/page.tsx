@@ -49,7 +49,7 @@ export default async function ContasEstudiosPage({
   )
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href="/painel/admin"
         className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"

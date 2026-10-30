@@ -5,10 +5,11 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { ESTADOS_LEAD, TIPOS_CONTACTO } from '@/lib/data/constantes'
 import { fmt } from '@/lib/data/presencas'
-import { adicionarContacto, agendarExperimental, atualizarLead, converterEmCliente } from '../actions'
+import { adicionarContacto, agendarExperimental, apagarLead, atualizarLead, converterEmCliente } from '../actions'
 import LeadForm from '../LeadForm'
 import ContactoRapido from '../ContactoRapido'
 import SubmitButton from '@/components/SubmitButton'
+import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
 import type { Activity, LeadContacto } from '@/lib/supabase/database.types'
 
 export default async function LeadPage({
@@ -105,7 +106,7 @@ export default async function LeadPage({
   ].sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1))
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/leads`}
         className="text-sm text-zinc-600 underline dark:text-zinc-400"
@@ -303,6 +304,17 @@ export default async function LeadPage({
         </div>
       )}
       <div className="mt-3 flex flex-col gap-2">{timeline.map((item) => item.node)}</div>
+
+      <div className="mt-8 border-t border-black/10 pt-6 dark:border-white/10">
+        <ApagarComConfirmacao
+          action={apagarLead}
+          confirmacao={`Apagar o lead "${lead.nome}"? Apaga também os contactos e a linha do tempo registados. Não é possível desfazer.`}
+          campos={{ estudio_slug: slug, id: lead.id }}
+          className="rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+        >
+          Apagar lead
+        </ApagarComConfirmacao>
+      </div>
     </div>
   )
 }

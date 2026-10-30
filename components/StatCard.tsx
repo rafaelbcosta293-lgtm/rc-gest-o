@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import { Info } from 'lucide-react'
 import Sparkline from './Sparkline'
 
 type Tendencia = { valor: number; label?: string }
@@ -17,6 +18,7 @@ export default function StatCard({
   tendenciaInvertida = false,
   historico,
   aoVivo = false,
+  formula,
 }: {
   icone?: LucideIcon
   cor?: { bg: string; tx: string }
@@ -29,6 +31,10 @@ export default function StatCard({
   tendenciaInvertida?: boolean
   historico?: number[]
   aoVivo?: boolean
+  // Fórmula exata do KPI (secção 7), para toda a gente ler o número da
+  // mesma forma — title nativo, sem JS: funciona ao passar o rato e
+  // também com toque longo na maioria dos browsers de tablet/telemóvel.
+  formula?: string
 }) {
   const subiu = tendencia ? tendencia.valor > 0 : null
   const corTendencia =
@@ -53,6 +59,11 @@ export default function StatCard({
           <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
             {aoVivo && <span className="live-dot" aria-hidden />}
             {label}
+            {formula && (
+              <span title={formula} aria-label={`Fórmula: ${formula}`} tabIndex={0} className="cursor-help">
+                <Info className="h-3 w-3" strokeWidth={2} />
+              </span>
+            )}
           </span>
         </div>
         {historico && historico.length > 1 && <Sparkline valores={historico} />}

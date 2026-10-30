@@ -174,12 +174,14 @@ export default async function LeadsPage({
               label="Taxa de conversão"
               valor={Math.round(funil.taxaConversao * 100)}
               sufixo="%"
+              formula={`Leads que chegaram a "Ganha" ÷ total de leads no período.`}
             />
             <StatCard
               icone={UserCheck}
               label="Comparecimento à experimental"
               valor={funil.taxaComparecimento != null ? Math.round(funil.taxaComparecimento * 100) : '—'}
               sufixo={funil.taxaComparecimento != null ? '%' : undefined}
+              formula={`"Experimental realizada" ÷ (agendadas + falhadas + realizadas).`}
             />
             <StatCard
               icone={Clock3}
@@ -190,6 +192,7 @@ export default async function LeadsPage({
                   : '—'
               }
               sufixo={funil.horasMediasPrimeiroContacto != null ? 'h' : undefined}
+              formula={`Horas entre a criação da lead e a 1ª transição a partir de "Nova".`}
             />
           </div>
           <div className="mt-3 flex flex-col gap-2.5 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">

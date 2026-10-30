@@ -147,14 +147,20 @@ export default async function FinanceiroPage({
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="MRR" valor={`€${Math.round(mrr)}`} aoVivo />
-        <StatCard label="ARR" valor={`€${Math.round(arr)}`} />
-        <StatCard label="ARPU" valor={`€${arpuGlobal.toFixed(2)}`} />
+        <StatCard
+          label="MRR"
+          valor={`€${Math.round(mrr)}`}
+          aoVivo
+          formula="Soma do pagamento mais recente de cada cliente ativo ainda dentro da validade (em dia)."
+        />
+        <StatCard label="ARR" valor={`€${Math.round(arr)}`} formula="MRR × 12." />
+        <StatCard label="ARPU" valor={`€${arpuGlobal.toFixed(2)}`} formula="MRR ÷ clientes ativos." />
         <StatCard
           cor={taxaAteDia8 >= 0.8 ? PALETA.verde : PALETA.ambar}
           label="Pagamentos até ao dia 8"
           valor={Math.round(taxaAteDia8 * 100)}
           sufixo="%"
+          formula="Pagamentos deste mês feitos até ao dia 8 ÷ total de pagamentos deste mês."
         />
       </div>
 
@@ -197,12 +203,17 @@ export default async function FinanceiroPage({
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Margem por hora de PT</h2>
           <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
-            <StatCard label="Receita / hora" valor={`€${margem.receitaPorHora.toFixed(2)}`} />
+            <StatCard
+              label="Receita / hora"
+              valor={`€${margem.receitaPorHora.toFixed(2)}`}
+              formula="Receita cobrada este mês ÷ horas de PT realizadas este mês."
+            />
             <StatCard
               cor={margem.margemPorHora >= 0 ? PALETA.verde : PALETA.vermelho}
               label="Margem / hora"
               valor={`€${margem.margemPorHora.toFixed(2)}`}
               sufixo={`custo: €${margem.custoPorHora.toFixed(2)}`}
+              formula="Receita por hora menos o custo por hora de PT (config.custo_hora_pt)."
             />
           </div>
         </div>

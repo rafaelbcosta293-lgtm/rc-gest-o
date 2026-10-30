@@ -153,7 +153,12 @@ export default async function RetencaoPage({
         <StatCard cor={PALETA.vermelho} label="Cancelados" valor={resumoMes.cancelados} />
         <StatCard cor={PALETA.ambar} label="Suspensos" valor={resumoMes.suspensos} />
         <StatCard cor={PALETA.teal} label="Reativados" valor={resumoMes.reativados} />
-        <StatCard label="Vida média" valor={vidaMedia != null ? vidaMedia.toFixed(1) : '—'} sufixo="meses" />
+        <StatCard
+          label="Vida média"
+          valor={vidaMedia != null ? vidaMedia.toFixed(1) : '—'}
+          sufixo="meses"
+          formula="Média, em meses, de saiu_em − inicio_contrato, só de quem já saiu."
+        />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -162,11 +167,13 @@ export default async function RetencaoPage({
           label="Churn mensal (aproximado)"
           valor={Math.round(churn * 100)}
           sufixo="%"
+          formula="Cancelados este mês ÷ (ativos agora + cancelados este mês) — aproximação, sem snapshot do início do mês."
         />
         <StatCard
           label="Cancelamento no fim da experiência"
           valor={Math.round(fimExperiencia.taxa * 100)}
           sufixo={`% (${fimExperiencia.cancelados}/${fimExperiencia.total})`}
+          formula="Clientes cuja saída caiu a ±7 dias do fim da experiência ÷ clientes com experiência já terminada."
         />
       </div>
 

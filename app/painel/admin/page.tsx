@@ -14,21 +14,17 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { fmt, MESES } from '@/lib/data/presencas'
-import { inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from './actions'
-import { corEstudio, ESTADOS_LEAD, PALETA } from '@/lib/data/constantes'
+import { corEstudio, PALETA } from '@/lib/data/constantes'
 import { segurosPorPagar } from '@/lib/data/clientes'
 import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
 import StatCard from '@/components/StatCard'
-import BarMeter from '@/components/BarMeter'
-import type { Cliente, ClienteSemTreino, Estudio, Lead, LeadParada } from '@/lib/supabase/database.types'
+import type { Cliente, Estudio, Lead } from '@/lib/supabase/database.types'
 
 type ClienteResumo = Pick<Cliente, 'id' | 'nome' | 'estado' | 'inicio_contrato'>
 type LeadResumo = Pick<Lead, 'estado' | 'entrada' | 'fecho_em' | 'visita_data'>
-type LeadDoDia = Pick<Lead, 'id' | 'nome' | 'visita_hora' | 'estado'>
-type RegistoSemana = { horas: number; pt: { nome: string } | null }
 type SP = Record<string, string | undefined>
 
 // Cada estúdio navega o seu próprio mês/dia nesta página combinada, sem
@@ -195,7 +191,6 @@ async function PainelAdminEstudio({
   const mes = mesParam ? Number(mesParam.slice(5, 7)) : agora.getMonth() + 1
   const inicioMes = `${ano}-${String(mes).padStart(2, '0')}-01`
   const fimMesExclusivo = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, '0')}-01`
-  const mesAtualParam = `${ano}-${String(mes).padStart(2, '0')}`
   const mesAnteriorAno = mes === 1 ? ano - 1 : ano
   const mesAnteriorMes = mes === 1 ? 12 : mes - 1
   const mesSeguinteAno = mes === 12 ? ano + 1 : ano
@@ -203,88 +198,22 @@ async function PainelAdminEstudio({
   const mesAnteriorParam = `${mesAnteriorAno}-${String(mesAnteriorMes).padStart(2, '0')}`
   const mesSeguinteParam = `${mesSeguinteAno}-${String(mesSeguinteMes).padStart(2, '0')}`
 
+  // Preservado só para o paginador de "Este mês" manter o dia na URL
+  // ao trocar de mês — a secção que o usava (Sessões experimentais)
+  // passou para a Coordenação.
   const diaSessoes = diaParam || hoje
-  const diaSessoesEhHoje = diaSessoes === hoje
-  const diaSessoesAnterior = somarDias(diaSessoes, -1)
-  const diaSessoesSeguinte = somarDias(diaSessoes, 1)
-
-  const inicioSemana = inicioDaSemana(hoje)
-  const fimSemanaExclusivo = somarDias(inicioSemana, 7)
 
   const supabase = await createClient()
 
-  const [
-    { data: leadsParadasData, error: erroLeadsParadas },
-    { data: clientesData, error: erroClientes },
-    { data: leadsData, error: erroLeadsTodas },
-    { data: registosSemanaData, error: erroRegistosSemana },
-    { data: sessoesDoDiaData, error: erroSessoesDoDia },
-    { data: semTreinoData, error: erroSemTreino },
-  ] = await Promise.all([
-    supabase
-      .from('v_leads_paradas')
-      .select('*')
-      .eq('estudio_id', estudio.id)
-      .order('dias_sem_contacto', { ascending: false }),
-    supabase.from('clientes').select('id, nome, estado, inicio_contrato').eq('estudio_id', estudio.id),
-    supabase.from('leads').select('estado, entrada, fecho_em, visita_data').eq('estudio_id', estudio.id),
-    supabase
-      .from('registos_pt')
-      .select('horas, pt:perfis!pt_id(nome)')
-      .eq('estudio_id', estudio.id)
-      .gte('data', inicioSemana)
-      .lt('data', fimSemanaExclusivo),
-    supabase
-      .from('leads')
-      .select('id, nome, visita_hora, estado')
-      .eq('estudio_id', estudio.id)
-      .eq('visita_data', diaSessoes)
-      .order('visita_hora', { ascending: true, nullsFirst: false }),
-    supabase
-      .from('v_clientes_sem_treino_recente')
-      .select('*')
-      .eq('estudio_id', estudio.id)
-      .gt('dias_sem_treino', 7),
-  ])
+  const [{ data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeadsTodas }] =
+    await Promise.all([
+      supabase.from('clientes').select('id, nome, estado, inicio_contrato').eq('estudio_id', estudio.id),
+      supabase.from('leads').select('estado, entrada, fecho_em, visita_data').eq('estudio_id', estudio.id),
+    ])
 
-  if (
-    erroLeadsParadas ||
-    erroClientes ||
-    erroLeadsTodas ||
-    erroRegistosSemana ||
-    erroSessoesDoDia ||
-    erroSemTreino
-  ) {
-    throw new Error(
-      (erroLeadsParadas ??
-        erroClientes ??
-        erroLeadsTodas ??
-        erroRegistosSemana ??
-        erroSessoesDoDia ??
-        erroSemTreino)!.message
-    )
+  if (erroClientes || erroLeadsTodas) {
+    throw new Error((erroClientes ?? erroLeadsTodas)!.message)
   }
-
-  const sessoesDoDia = (sessoesDoDiaData ?? []) as LeadDoDia[]
-
-  const leadsParadas = (leadsParadasData ?? []) as LeadParada[]
-
-  // "Sem treino há mais de 7 dias" é calculado agora; "sem evento no
-  // Google Calendar" vem da cache que o job diário (app/api/cron/retencao)
-  // escreveu — por isso é uma segunda consulta, dependente da primeira.
-  const candidatosSemTreino = (semTreinoData ?? []) as ClienteSemTreino[]
-  const idsCandidatosSemTreino = candidatosSemTreino.map((c) => c.cliente_id)
-  const { data: semAgendamentoData, error: erroSemAgendamento } = idsCandidatosSemTreino.length
-    ? await supabase
-        .from('clientes_sem_agendamento')
-        .select('cliente_id')
-        .in('cliente_id', idsCandidatosSemTreino)
-    : { data: [], error: null }
-  if (erroSemAgendamento) {
-    throw new Error(erroSemAgendamento.message)
-  }
-  const idsSemAgendamento = new Set((semAgendamentoData ?? []).map((d) => d.cliente_id))
-  const clientesSemAgendamento = candidatosSemTreino.filter((c) => idsSemAgendamento.has(c.cliente_id))
 
   const clientes = (clientesData ?? []) as ClienteResumo[]
   const clientesAtivos = clientes.filter((c) => c.estado === 'Ativo').length
@@ -345,18 +274,7 @@ async function PainelAdminEstudio({
   }
   const receitaMes = (pagamentosMesData ?? []).reduce((soma, p) => soma + Number(p.valor), 0)
 
-  const registosSemana = (registosSemanaData ?? []) as unknown as RegistoSemana[]
-  const horasPorPt = new Map<string, number>()
-  for (const r of registosSemana) {
-    const nome = r.pt?.nome ?? '—'
-    horasPorPt.set(nome, (horasPorPt.get(nome) ?? 0) + r.horas)
-  }
-  const horasEquipa = [...horasPorPt.entries()]
-    .map(([nome, horas]) => ({ nome, horas }))
-    .sort((a, b) => b.horas - a.horas)
-
-  const totalPendencias =
-    leadsParadas.length + clientesSemAgendamento.length + segurosARenovar.length
+  const totalPendencias = segurosARenovar.length
 
   return (
     <>
@@ -408,109 +326,12 @@ async function PainelAdminEstudio({
         />
       </div>
 
-      <TituloSeccao cor="roxo">Sessões experimentais</TituloSeccao>
-      <div className="mt-2 flex items-center gap-3">
-        <Link
-          href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAtualParam, [pk('dia')]: diaSessoesAnterior })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
-        >
-          ←
-        </Link>
-        <span className="text-sm font-medium">{diaSessoesEhHoje ? 'Hoje' : fmt(diaSessoes)}</span>
-        <Link
-          href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAtualParam, [pk('dia')]: diaSessoesSeguinte })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
-        >
-          →
-        </Link>
-        {!diaSessoesEhHoje && (
-          <Link
-            href={`/painel/admin${comQuery(sp, { [pk('mes')]: mesAtualParam, [pk('dia')]: undefined })}`}
-            className="text-xs text-muted underline"
-          >
-            voltar a hoje
-          </Link>
-        )}
-      </div>
-      <div className="mt-2 flex flex-col gap-2">
-        {sessoesDoDia.map((l) => {
-          const cor = ESTADOS_LEAD[l.estado as keyof typeof ESTADOS_LEAD]
-          return (
-            <Link
-              key={l.id}
-              href={`/painel/${slug}/leads/${l.id}`}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm transition-colors hover:border-border-strong"
-            >
-              <span className="flex items-center gap-2">
-                {l.visita_hora && (
-                  <span className="text-xs text-muted">{l.visita_hora.slice(0, 5)}</span>
-                )}
-                <span className="font-medium text-foreground">{l.nome}</span>
-              </span>
-              <span
-                className="rounded-full px-2 py-0.5 text-xs font-medium"
-                style={{ background: cor.bg, color: cor.tx }}
-              >
-                {l.estado}
-              </span>
-            </Link>
-          )
-        })}
-        {sessoesDoDia.length === 0 && (
-          <p className="text-sm text-muted">Nenhuma sessão experimental agendada para este dia.</p>
-        )}
-      </div>
-
-      <TituloSeccao cor="verde">Horas da equipa esta semana</TituloSeccao>
-      <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
-        {horasEquipa.map((h) => (
-          <BarMeter
-            key={h.nome}
-            label={h.nome}
-            valor={h.horas}
-            total={horasEquipa[0].horas}
-            mostrarPct={false}
-            cor={PALETA.verde.tx}
-          />
-        ))}
-        {horasEquipa.length === 0 && (
-          <p className="text-sm text-muted">Sem registos de horas esta semana.</p>
-        )}
-      </div>
-
       <TituloSeccao cor="ambar">Pendências ({totalPendencias})</TituloSeccao>
       <p className="mt-2 text-xs text-muted">
-        Reavaliações e pagamentos em atraso ficam só em Coordenação, por pedido do dono.
+        Leads paradas, clientes sem agendamento, reavaliações e pagamentos em atraso ficam só em
+        Coordenação, por pedido do dono.
       </p>
       <div className="mt-2 flex flex-col gap-2">
-        {leadsParadas.map((l) => (
-          <Link
-            key={`lead-${l.id}`}
-            href={`/painel/${slug}/leads/${l.id}`}
-            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
-          >
-            <span className="font-medium text-foreground">
-              {l.nome} <span className="text-xs text-muted">· lead parada</span>
-            </span>
-            <span className="text-xs text-amber-700 dark:text-amber-300">
-              {l.dias_sem_contacto} dias sem contacto
-            </span>
-          </Link>
-        ))}
-        {clientesSemAgendamento.map((c) => (
-          <Link
-            key={`inativo-${c.cliente_id}`}
-            href={`/painel/${slug}/clientes/${c.cliente_id}`}
-            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
-          >
-            <span className="font-medium text-foreground">
-              {c.nome} <span className="text-xs text-muted">· Cliente Inativo / Sem Agendamento</span>
-            </span>
-            <span className="text-xs text-amber-700 dark:text-amber-300">
-              {c.dias_sem_treino} dias sem treinar
-            </span>
-          </Link>
-        ))}
         {segurosARenovar.map((c) => (
           <Link
             key={`seguro-${c.id}`}

@@ -4,9 +4,9 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
-import { somarDias } from '@/lib/data/horarios'
+import { somarDias, inicioDaSemana } from '@/lib/data/horarios'
 import { desbloquearCoordenacao } from './actions'
-import { corEstudio } from '@/lib/data/constantes'
+import { corEstudio, ESTADOS_LEAD } from '@/lib/data/constantes'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { metricasNoIntervalo, METRICAS_MARKETING, type LeadMarketing } from '@/lib/data/marketing'
 import { segurosPorPagar } from '@/lib/data/clientes'
@@ -20,19 +20,40 @@ import type {
   ClienteSemTreino,
   EstadoPagamento,
   Estudio,
+  Lead,
   LeadParada,
   ReavaliacaoPendente,
 } from '@/lib/supabase/database.types'
 
 type ChecklistHoje = { tipo: string; concluidos: number; total: number }
 type ClienteSeguro = Pick<Cliente, 'id' | 'nome' | 'inicio_contrato'>
+type LeadDoDia = Pick<Lead, 'id' | 'nome' | 'visita_hora' | 'estado'>
+type RegistoSemana = { horas: number; pt: { nome: string } | null }
+type SP = Record<string, string | undefined>
+
+// Cada estúdio navega o seu próprio dia nesta página combinada, sem
+// pisar o do outro — a chave de cada parâmetro leva o slug à frente
+// ("fatima_dia", "leiria_dia", …) e comQuery preserva tudo o resto.
+function comQuery(sp: SP, overrides: Record<string, string | undefined>) {
+  const params = new URLSearchParams()
+  for (const [k, v] of Object.entries(sp)) {
+    if (v !== undefined) params.set(k, v)
+  }
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === undefined) params.delete(k)
+    else params.set(k, v)
+  }
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
 
 export default async function CoordenacaoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; erroSenha?: string }>
+  searchParams: Promise<SP & { error?: string; erroSenha?: string }>
 }) {
-  const { error, erroSenha } = await searchParams
+  const sp = await searchParams
+  const { error, erroSenha } = sp
 
   const supabase = await createClient()
 
@@ -91,7 +112,7 @@ export default async function CoordenacaoPage({
               <h2 className="text-lg font-semibold text-foreground">{estudio.nome}</h2>
             </div>
             <Suspense fallback={<EsqueletoEstudio />}>
-              <PainelCoordenacaoEstudio estudio={estudio} />
+              <PainelCoordenacaoEstudio estudio={estudio} sp={sp} />
             </Suspense>
           </section>
         ))}
@@ -118,11 +139,22 @@ function EsqueletoEstudio() {
 
 async function PainelCoordenacaoEstudio({
   estudio,
+  sp,
 }: {
   estudio: Pick<Estudio, 'id' | 'slug' | 'nome'>
+  sp: SP
 }) {
   const slug = estudio.slug
+  const pk = (nome: string) => `${slug}_${nome}`
   const hoje = new Date().toISOString().slice(0, 10)
+
+  const diaSessoes = sp[pk('dia')] || hoje
+  const diaSessoesEhHoje = diaSessoes === hoje
+  const diaSessoesAnterior = somarDias(diaSessoes, -1)
+  const diaSessoesSeguinte = somarDias(diaSessoes, 1)
+
+  const inicioSemana = inicioDaSemana(hoje)
+  const fimSemanaExclusivo = somarDias(inicioSemana, 7)
 
   const supabase = await createClient()
 
@@ -134,6 +166,8 @@ async function PainelCoordenacaoEstudio({
     { data: leadsMarketingData, error: erroLeadsMarketing },
     { data: semTreinoData },
     { data: clientesAtivosData },
+    { data: sessoesDoDiaData },
+    { data: registosSemanaData },
   ] = await Promise.all([
     supabase
       .from('checklist_registos')
@@ -165,6 +199,18 @@ async function PainelCoordenacaoEstudio({
       .select('id, nome, inicio_contrato')
       .eq('estudio_id', estudio.id)
       .eq('estado', 'Ativo'),
+    supabase
+      .from('leads')
+      .select('id, nome, visita_hora, estado')
+      .eq('estudio_id', estudio.id)
+      .eq('visita_data', diaSessoes)
+      .order('visita_hora', { ascending: true, nullsFirst: false }),
+    supabase
+      .from('registos_pt')
+      .select('horas, pt:perfis!pt_id(nome)')
+      .eq('estudio_id', estudio.id)
+      .gte('data', inicioSemana)
+      .lt('data', fimSemanaExclusivo),
   ])
 
   if (erroLeadsMarketing) {
@@ -213,6 +259,18 @@ async function PainelCoordenacaoEstudio({
     throw new Error(erroReativacoesSeguro.message)
   }
   const segurosARenovar = segurosPorPagar(clientesAtivos, agora, segurosPagosData ?? [], reativacoesData ?? [])
+
+  const sessoesDoDia = (sessoesDoDiaData ?? []) as LeadDoDia[]
+
+  const registosSemana = (registosSemanaData ?? []) as unknown as RegistoSemana[]
+  const horasPorPt = new Map<string, number>()
+  for (const r of registosSemana) {
+    const nome = r.pt?.nome ?? '—'
+    horasPorPt.set(nome, (horasPorPt.get(nome) ?? 0) + r.horas)
+  }
+  const horasEquipa = [...horasPorPt.entries()]
+    .map(([nome, horas]) => ({ nome, horas }))
+    .sort((a, b) => b.horas - a.horas)
 
   return (
     <>
@@ -277,6 +335,76 @@ async function PainelCoordenacaoEstudio({
       >
         ver timeline da empresa e marcos
       </Link>
+
+      <TituloSeccao cor="roxo">Sessões experimentais</TituloSeccao>
+      <div className="mt-2 flex items-center gap-3">
+        <Link
+          href={`/painel/coordenacao${comQuery(sp, { [pk('dia')]: diaSessoesAnterior })}`}
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+        >
+          ←
+        </Link>
+        <span className="text-sm font-medium">{diaSessoesEhHoje ? 'Hoje' : fmt(diaSessoes)}</span>
+        <Link
+          href={`/painel/coordenacao${comQuery(sp, { [pk('dia')]: diaSessoesSeguinte })}`}
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+        >
+          →
+        </Link>
+        {!diaSessoesEhHoje && (
+          <Link
+            href={`/painel/coordenacao${comQuery(sp, { [pk('dia')]: undefined })}`}
+            className="text-xs text-muted underline"
+          >
+            voltar a hoje
+          </Link>
+        )}
+      </div>
+      <div className="mt-2 flex flex-col gap-2">
+        {sessoesDoDia.map((l) => {
+          const cor = ESTADOS_LEAD[l.estado as keyof typeof ESTADOS_LEAD]
+          return (
+            <Link
+              key={l.id}
+              href={`/painel/${slug}/leads/${l.id}`}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm transition-colors hover:border-border-strong"
+            >
+              <span className="flex items-center gap-2">
+                {l.visita_hora && (
+                  <span className="text-xs text-muted">{l.visita_hora.slice(0, 5)}</span>
+                )}
+                <span className="font-medium text-foreground">{l.nome}</span>
+              </span>
+              <span
+                className="rounded-full px-2 py-0.5 text-xs font-medium"
+                style={{ background: cor.bg, color: cor.tx }}
+              >
+                {l.estado}
+              </span>
+            </Link>
+          )
+        })}
+        {sessoesDoDia.length === 0 && (
+          <p className="text-sm text-muted">Nenhuma sessão experimental agendada para este dia.</p>
+        )}
+      </div>
+
+      <TituloSeccao cor="verde">Horas da equipa esta semana</TituloSeccao>
+      <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+        {horasEquipa.map((h) => (
+          <BarMeter
+            key={h.nome}
+            label={h.nome}
+            valor={h.horas}
+            total={horasEquipa[0].horas}
+            mostrarPct={false}
+            cor={PALETA.verde.tx}
+          />
+        ))}
+        {horasEquipa.length === 0 && (
+          <p className="text-sm text-muted">Sem registos de horas esta semana.</p>
+        )}
+      </div>
 
       <TituloSeccao cor="ambar">Pendências</TituloSeccao>
       <div className="mt-2 flex flex-col gap-2">

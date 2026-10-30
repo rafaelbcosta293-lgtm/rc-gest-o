@@ -32,7 +32,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
           estúdio — os módulos ficam na barra de separadores do fundo,
           sempre ao alcance do polegar, ao estilo iOS. */}
-      <div className="sticky top-0 z-10 flex items-center justify-end gap-1 border-b border-border-subtle bg-background/80 px-4 py-2 backdrop-blur-xl md:hidden">
+      <div className="shadow-deep sticky top-0 z-10 flex items-center justify-end gap-1 border-b border-border-subtle bg-background/90 px-4 py-2 backdrop-blur-xl md:hidden">
         <Link
           href={`/painel/${slug}/pesquisa`}
           title="Pesquisar"
@@ -54,7 +54,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       {/* Computador/tablet (≥768px): barra superior fixa, com o
           logótipo, os módulos (pílulas, numa linha com scroll
           horizontal se não couberem) e as ações à direita. */}
-      <header className="sticky top-0 z-10 hidden items-center gap-3 border-b border-border-subtle bg-surface/70 px-4 py-2.5 backdrop-blur-xl md:flex">
+      <header className="shadow-deep sticky top-0 z-10 hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl md:flex">
         <Link href="/painel" className="flex shrink-0 items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="RC Private Fitness Studio" className="h-8 w-auto" />
@@ -98,7 +98,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
 
       {/* Telemóvel: barra de separadores fixa no fundo, ao estilo iOS. */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around overflow-x-auto border-t border-border-subtle bg-background/80 px-1 py-1 shadow-[0_-8px_24px_rgba(24,24,27,0.06)] backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around overflow-x-auto border-t border-border-subtle bg-background/90 px-1 py-1 shadow-[0_-2px_2px_rgba(24,24,27,0.05),0_-16px_32px_-8px_rgba(24,24,27,0.16)] backdrop-blur-xl md:hidden">
         {MODULOS.map((m) =>
           podeAceder(m) ? (
             <NavLinkPhone key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} />

@@ -25,7 +25,7 @@ export function NavLinkTopBar({ href, id, nome }: { href: string; id: string; no
   return (
     <Link
       href={href}
-      className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition-colors"
+      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition-all ${ativo ? 'shadow-pop' : ''}`}
       style={{
         background: ativo ? PALETA[cor].bg : undefined,
         color: ativo ? PALETA[cor].tx : 'var(--muted)',

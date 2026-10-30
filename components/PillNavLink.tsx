@@ -28,9 +28,9 @@ export default function PillNavLink({
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
+      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition-all ${
         ativo
-          ? 'bg-brand/15 text-foreground'
+          ? 'shadow-pop bg-brand/15 text-foreground'
           : 'text-foreground/70 hover:bg-brand/[.07] hover:text-foreground'
       }`}
     >

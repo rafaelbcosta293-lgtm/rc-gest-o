@@ -6,8 +6,6 @@
   --background: #f7f5f2;
   --foreground: #18181b;
   --surface: #ffffff;
-  --border-subtle: rgba(24, 24, 27, 0.08);
-  --border-strong: rgba(24, 24, 27, 0.16);
   --muted: #6b7280;
 
   /* Dourado do logótipo RC Private Fitness Studio — igual em claro/escuro,
@@ -25,13 +23,43 @@
   --accent-soft: #ecfeff;
   --accent-ring: rgba(34, 211, 238, 0.4);
 
-  /* Sombras suaves e difusas (duas camadas, como a Apple usa). Em modo
-     escuro ficam mais discretas — a profundidade aí vem do contraste
-     entre o cartão e o fundo, não da sombra. */
-  --shadow-card-value: 0 1px 2px rgba(24, 24, 27, 0.04), 0 10px 28px -8px rgba(24, 24, 27, 0.1);
-  --shadow-card-hover-value: 0 2px 6px rgba(24, 24, 27, 0.06), 0 20px 44px -10px rgba(24, 24, 27, 0.16);
-  --shadow-pop-value: 0 1px 2px rgba(24, 24, 27, 0.05), 0 4px 14px -4px rgba(24, 24, 27, 0.12);
-  --shadow-glow-value: 0 0 0 1px rgba(34, 211, 238, 0.14), 0 8px 24px -6px rgba(34, 211, 238, 0.4);
+  /* Sombras em várias camadas (contacto + médio + ambiente), com um
+     reflexo subtil no topo do cartão — dá um relevo "físico", de
+     elementos realmente empilhados uns sobre os outros, em vez de uma
+     sombra só, difusa e plana. */
+  --shadow-card-value:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 1px 1px rgba(24, 24, 27, 0.05),
+    0 8px 16px -6px rgba(24, 24, 27, 0.12),
+    0 28px 56px -18px rgba(24, 24, 27, 0.22);
+  --shadow-card-hover-value:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 2px 2px rgba(24, 24, 27, 0.07),
+    0 14px 24px -8px rgba(24, 24, 27, 0.16),
+    0 36px 72px -16px rgba(24, 24, 27, 0.28);
+  --shadow-pop-value:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 1px 1px rgba(24, 24, 27, 0.06),
+    0 8px 18px -6px rgba(24, 24, 27, 0.18);
+  --shadow-glow-value:
+    0 0 0 1px rgba(34, 211, 238, 0.16),
+    0 2px 8px -2px rgba(34, 211, 238, 0.3),
+    0 12px 32px -8px rgba(34, 211, 238, 0.45);
+  /* Para elementos que "flutuam" por cima de conteúdo (barras de menu
+     fixas) — menos espalhada que shadow-card, mais definida mesmo
+     colada ao que está por baixo. */
+  --shadow-deep-value:
+    0 1px 0 rgba(255, 255, 255, 0.4) inset,
+    0 1px 3px rgba(24, 24, 27, 0.08),
+    0 10px 24px -8px rgba(24, 24, 27, 0.18);
+
+  --border-subtle: rgba(24, 24, 27, 0.1);
+  --border-strong: rgba(24, 24, 27, 0.18);
+
+  /* Brilho muito subtil no topo do fundo — a página deixa de ser uma cor
+     plana e passa a ter uma origem de luz, ainda que quase impercetível,
+     o que ajuda tudo o resto a parecer "em cima" dela. */
+  --bg-glow: radial-gradient(ellipse 1200px 520px at 50% -12%, rgba(217, 185, 106, 0.08), transparent 60%);
 }
 
 @theme inline {
@@ -61,6 +89,7 @@
   --shadow-card-hover: var(--shadow-card-hover-value);
   --shadow-pop: var(--shadow-pop-value);
   --shadow-glow: var(--shadow-glow-value);
+  --shadow-deep: var(--shadow-deep-value);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -70,18 +99,40 @@
     --background: #0b0a09;
     --foreground: #f4f4f5;
     --surface: #18181b;
-    --border-subtle: rgba(255, 255, 255, 0.08);
-    --border-strong: rgba(255, 255, 255, 0.16);
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.2);
     --muted: #9ca3af;
     /* Em modo escuro o acento passa a ser o próprio ciano vivo (não a
        variante escurecida para texto em fundo claro) — é aí que o "tech
        glow" realmente aparece. */
     --accent: #22d3ee;
     --accent-soft: rgba(34, 211, 238, 0.1);
-    --shadow-card-value: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -8px rgba(0, 0, 0, 0.45);
-    --shadow-card-hover-value: 0 2px 6px rgba(0, 0, 0, 0.35), 0 20px 44px -10px rgba(0, 0, 0, 0.55);
-    --shadow-pop-value: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px -4px rgba(0, 0, 0, 0.5);
-    --shadow-glow-value: 0 0 0 1px rgba(34, 211, 238, 0.22), 0 8px 28px -4px rgba(34, 211, 238, 0.5);
+    /* O reflexo de topo passa a ser uma linha clara muito ténue (não
+       branco sólido) — simula a mesma aresta iluminada que no claro,
+       mas a profundidade real aqui vem do preto a ganhar camadas. */
+    --shadow-card-value:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 1px 2px rgba(0, 0, 0, 0.4),
+      0 10px 24px -8px rgba(0, 0, 0, 0.5),
+      0 32px 64px -16px rgba(0, 0, 0, 0.65);
+    --shadow-card-hover-value:
+      0 1px 0 rgba(255, 255, 255, 0.09) inset,
+      0 2px 4px rgba(0, 0, 0, 0.45),
+      0 18px 32px -8px rgba(0, 0, 0, 0.6),
+      0 44px 88px -18px rgba(0, 0, 0, 0.75);
+    --shadow-pop-value:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 1px 2px rgba(0, 0, 0, 0.4),
+      0 8px 20px -6px rgba(0, 0, 0, 0.55);
+    --shadow-glow-value:
+      0 0 0 1px rgba(34, 211, 238, 0.24),
+      0 2px 8px -2px rgba(34, 211, 238, 0.35),
+      0 14px 36px -6px rgba(34, 211, 238, 0.55);
+    --shadow-deep-value:
+      0 1px 0 rgba(255, 255, 255, 0.05) inset,
+      0 1px 3px rgba(0, 0, 0, 0.45),
+      0 12px 28px -8px rgba(0, 0, 0, 0.55);
+    --bg-glow: radial-gradient(ellipse 1200px 520px at 50% -12%, rgba(34, 211, 238, 0.06), transparent 60%);
   }
 }
 
@@ -90,7 +141,8 @@
 }
 
 body {
-  background: var(--background);
+  background: var(--bg-glow), var(--background);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   text-rendering: optimizeLegibility;

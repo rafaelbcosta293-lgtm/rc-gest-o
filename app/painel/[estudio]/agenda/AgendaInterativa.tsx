@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { X, Trash2, Ban, RotateCcw } from 'lucide-react'
+import { X, Trash2, Ban, RotateCcw, Minus, Plus } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import { corTipoEvento, TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
@@ -11,6 +11,7 @@ import {
   criarEventoRapido,
   atualizarEventoRapido,
   moverEventoRapido,
+  redimensionarEventoRapido,
   desmarcarEventoRapido,
   reativarEventoRapido,
   apagarEventoRapido,
@@ -50,8 +51,14 @@ function horaFim(horaInicio: string, duracaoMin: number) {
 
 type EstadoModal =
   | { aberto: false }
-  | { aberto: true; modo: 'criar'; data: string; horaInicio: string }
+  | { aberto: true; modo: 'criar'; data: string; horaInicio: string; duracaoMin: number }
   | { aberto: true; modo: 'editar'; evento: EventoComNomes }
+
+// Níveis de zoom (pixels por minuto) — o valor por omissão mostra o dia
+// inteiro (00h–24h) sem precisar de scroll na maioria dos ecrãs; os
+// níveis seguintes aproximam para marcar/ver detalhe ao minuto.
+const NIVEIS_ZOOM = [0.3, 0.45, 0.65, 0.9, 1.3, 1.8, 2.4]
+const ZOOM_OMISSAO = 1
 
 export default function AgendaInterativa({
   slug,
@@ -71,8 +78,10 @@ export default function AgendaInterativa({
   const router = useRouter()
   const [modal, setModal] = useState<EstadoModal>({ aberto: false })
   const [dragOverDia, setDragOverDia] = useState<string | null>(null)
+  const [zoomIndice, setZoomIndice] = useState(ZOOM_OMISSAO)
   const [aPendente, iniciarTransicao] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
+  const pxPorMinuto = NIVEIS_ZOOM[zoomIndice]
 
   function fechar() {
     setModal({ aberto: false })
@@ -92,6 +101,14 @@ export default function AgendaInterativa({
         data: novaData,
         horaInicio: novaHoraInicio,
       })
+      if ('error' in resultado) setErro(resultado.error)
+      else router.refresh()
+    })
+  }
+
+  function redimensionar(id: string, horaInicio: string, duracaoMin: number) {
+    iniciarTransicao(async () => {
+      const resultado = await redimensionarEventoRapido({ estudioSlug: slug, id, horaInicio, duracaoMin })
       if ('error' in resultado) setErro(resultado.error)
       else router.refresh()
     })
@@ -169,8 +186,14 @@ export default function AgendaInterativa({
           setDragOverDia(null)
           mover(id, dia, horaInicio)
         }}
-        onClickVazio={(dia, horaInicio) => setModal({ aberto: true, modo: 'criar', data: dia, horaInicio })}
+        onRedimensionar={redimensionar}
+        onClickVazio={(dia, horaInicio, duracaoMin) =>
+          setModal({ aberto: true, modo: 'criar', data: dia, horaInicio, duracaoMin })
+        }
         onAbrirEvento={(e) => setModal({ aberto: true, modo: 'editar', evento: e })}
+        pxPorMinuto={pxPorMinuto}
+        zoomIndice={zoomIndice}
+        onZoomIndiceChange={setZoomIndice}
       />
 
       {modal.aberto && (
@@ -192,18 +215,16 @@ export default function AgendaInterativa({
   )
 }
 
-// A grelha mostra das 7h às 21h, em contínuo — cada evento fica
-// posicionado exatamente à sua hora e minuto (não há mais blocos fixos
-// de 30 em 30 min a condicionar onde um evento pode ficar).
-const GRADE_HORA_INICIO = 7
-const GRADE_HORA_FIM = 21
-const PX_POR_MINUTO = 1.3
-const GRADE_MIN_INICIO = GRADE_HORA_INICIO * 60
-const GRADE_ALTURA = (GRADE_HORA_FIM - GRADE_HORA_INICIO) * 60 * PX_POR_MINUTO
+// A grelha mostra o dia inteiro, das 00h00 às 24h00 — cada evento fica
+// posicionado exatamente à sua hora e minuto (não há blocos fixos de
+// meia hora a condicionar onde um evento pode ficar).
+const GRADE_HORA_INICIO = 0
+const GRADE_HORA_FIM = 24
 const HORAS_GRADE = Array.from(
   { length: GRADE_HORA_FIM - GRADE_HORA_INICIO + 1 },
   (_, i) => GRADE_HORA_INICIO + i
 )
+const DURACAO_MIN_MINIMA = 5
 
 type EventoPosicionado = { evento: EventoComNomes; coluna: number; colunas: number }
 
@@ -234,9 +255,9 @@ function disporEventosDoDia(eventosDia: EventoComNomes[]): EventoPosicionado[] {
   })
 }
 
-function minutoNoClique(clienteY: number, rectTop: number) {
-  const minutos = GRADE_MIN_INICIO + Math.round((clienteY - rectTop) / PX_POR_MINUTO)
-  return Math.max(GRADE_MIN_INICIO, Math.min(GRADE_HORA_FIM * 60 - 1, minutos))
+function minutoNoClique(clienteY: number, rectTop: number, pxPorMinuto: number) {
+  const minutos = Math.round((clienteY - rectTop) / pxPorMinuto)
+  return Math.max(0, Math.min(GRADE_HORA_FIM * 60 - 1, minutos))
 }
 
 function GrelhaInterativa({
@@ -245,28 +266,63 @@ function GrelhaInterativa({
   dragOverDia,
   onDragOverDia,
   onDrop,
+  onRedimensionar,
   onClickVazio,
   onAbrirEvento,
+  pxPorMinuto,
+  zoomIndice,
+  onZoomIndiceChange,
 }: {
   dias: string[]
   porDia: Record<string, EventoComNomes[]>
   dragOverDia: string | null
   onDragOverDia: (dia: string | null) => void
   onDrop: (id: string, dia: string, horaInicio: string) => void
-  onClickVazio: (dia: string, horaInicio: string) => void
+  onRedimensionar: (id: string, horaInicio: string, duracaoMin: number) => void
+  onClickVazio: (dia: string, horaInicio: string, duracaoMin: number) => void
   onAbrirEvento: (evento: EventoComNomes) => void
+  pxPorMinuto: number
+  zoomIndice: number
+  onZoomIndiceChange: (indice: number) => void
 }) {
   // Um só dia (vista Dia) ocupa a largura toda; a semana continua a
   // precisar de largura mínima para as 7 colunas não ficarem espremidas.
   const colunas = `repeat(${dias.length}, 1fr)`
   const largura = dias.length > 1 ? 'min-w-[760px]' : 'min-w-[260px]'
+  const alturaGrade = GRADE_HORA_FIM * 60 * pxPorMinuto
 
   return (
     <div className="mt-4 overflow-x-auto">
-      <p className="mb-2 text-xs text-muted">
-        Clica num espaço vazio para criar à hora exata, clica num evento para editar, arrasta um
-        evento para o mover — tudo minuto a minuto, sem ficar preso a blocos de meia hora.
-      </p>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted">
+          Clica e arrasta num espaço vazio para criar com a duração exata (um clique simples usa
+          40 min), arrasta o meio de um evento para o mover, o topo ou o fundo para
+          encurtar/alongar.
+        </p>
+        <div className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-pop">
+          <button
+            type="button"
+            onClick={() => onZoomIndiceChange(Math.max(0, zoomIndice - 1))}
+            disabled={zoomIndice === 0}
+            title="Diminuir zoom"
+            className="flex h-6 w-6 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <span className="w-9 text-center text-[11px] font-semibold text-muted">
+            {Math.round((pxPorMinuto / NIVEIS_ZOOM[ZOOM_OMISSAO]) * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={() => onZoomIndiceChange(Math.min(NIVEIS_ZOOM.length - 1, zoomIndice + 1))}
+            disabled={zoomIndice === NIVEIS_ZOOM.length - 1}
+            title="Aumentar zoom"
+            className="flex h-6 w-6 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
       <div className={largura}>
         <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}` }}>
           <div />
@@ -278,14 +334,14 @@ function GrelhaInterativa({
             </div>
           ))}
         </div>
-        <div className="max-h-[65vh] overflow-y-auto rounded-b-xl border border-border-subtle">
-          <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: GRADE_ALTURA }}>
+        <div className="max-h-[75vh] overflow-y-auto rounded-b-xl border border-border-subtle">
+          <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: alturaGrade }}>
             <div className="relative text-[10px] text-muted">
               {HORAS_GRADE.map((h) => (
                 <div
                   key={h}
                   className="absolute right-1 -translate-y-1/2"
-                  style={{ top: (h * 60 - GRADE_MIN_INICIO) * PX_POR_MINUTO }}
+                  style={{ top: h * 60 * pxPorMinuto }}
                 >
                   {String(h).padStart(2, '0')}:00
                 </div>
@@ -299,8 +355,10 @@ function GrelhaInterativa({
                 onDragOver={() => onDragOverDia(dia)}
                 onDragLeave={() => onDragOverDia(null)}
                 onDrop={(id, horaInicio) => onDrop(id, dia, horaInicio)}
-                onClickVazio={(horaInicio) => onClickVazio(dia, horaInicio)}
+                onRedimensionar={onRedimensionar}
+                onClickVazio={(horaInicio, duracaoMin) => onClickVazio(dia, horaInicio, duracaoMin)}
                 onAbrirEvento={onAbrirEvento}
+                pxPorMinuto={pxPorMinuto}
               />
             ))}
           </div>
@@ -310,25 +368,122 @@ function GrelhaInterativa({
   )
 }
 
+// Um só arrasto por coluna de cada vez — ou a criar um evento novo
+// (a partir de um espaço vazio) ou a redimensionar um existente (a
+// partir de uma das pegas). Guardado em ref (não state) para o
+// mousemove/mouseup no window ler sempre o valor mais recente, sem
+// obrigar a re-subscrever os listeners a cada pixel arrastado.
+type ArrastoColuna =
+  | { tipo: 'criar'; inicioMin: number }
+  | { tipo: 'redimensionar'; evento: EventoComNomes; pega: 'topo' | 'fundo' }
+
 function ColunaDia({
   eventos,
   emDrag,
   onDragOver,
   onDragLeave,
   onDrop,
+  onRedimensionar,
   onClickVazio,
   onAbrirEvento,
+  pxPorMinuto,
 }: {
   eventos: EventoComNomes[]
   emDrag: boolean
   onDragOver: () => void
   onDragLeave: () => void
   onDrop: (id: string, horaInicio: string) => void
-  onClickVazio: (horaInicio: string) => void
+  onRedimensionar: (id: string, horaInicio: string, duracaoMin: number) => void
+  onClickVazio: (horaInicio: string, duracaoMin: number) => void
   onAbrirEvento: (evento: EventoComNomes) => void
+  pxPorMinuto: number
 }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const arrastoRef = useRef<ArrastoColuna | null>(null)
+  const [previa, setPrevia] = useState<{ inicioMin: number; fimMin: number } | null>(null)
+
+  useEffect(() => {
+    function minutoDoEvento(e: MouseEvent) {
+      const rect = ref.current?.getBoundingClientRect()
+      if (!rect) return null
+      return minutoNoClique(e.clientY, rect.top, pxPorMinuto)
+    }
+
+    function mover(e: MouseEvent) {
+      const arrasto = arrastoRef.current
+      if (!arrasto) return
+      const min = minutoDoEvento(e)
+      if (min === null) return
+
+      if (arrasto.tipo === 'criar') {
+        setPrevia({ inicioMin: Math.min(arrasto.inicioMin, min), fimMin: Math.max(arrasto.inicioMin, min) })
+        return
+      }
+
+      const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
+      const fimOriginal = inicioOriginal + arrasto.evento.duracao_min
+      if (arrasto.pega === 'topo') {
+        const novoInicio = Math.min(min, fimOriginal - DURACAO_MIN_MINIMA)
+        setPrevia({ inicioMin: novoInicio, fimMin: fimOriginal })
+      } else {
+        const novoFim = Math.max(min, inicioOriginal + DURACAO_MIN_MINIMA)
+        setPrevia({ inicioMin: inicioOriginal, fimMin: novoFim })
+      }
+    }
+
+    function soltar(e: MouseEvent) {
+      const arrasto = arrastoRef.current
+      if (!arrasto) return
+      arrastoRef.current = null
+      setPrevia(null)
+      const min = minutoDoEvento(e)
+      if (min === null) return
+
+      if (arrasto.tipo === 'criar') {
+        const inicio = Math.min(arrasto.inicioMin, min)
+        const fim = Math.max(arrasto.inicioMin, min)
+        const duracaoArrastada = fim - inicio
+        onClickVazio(minutosParaHora(inicio), duracaoArrastada >= 15 ? duracaoArrastada : 40)
+        return
+      }
+
+      const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
+      const fimOriginal = inicioOriginal + arrasto.evento.duracao_min
+      const novoInicio = arrasto.pega === 'topo' ? Math.min(min, fimOriginal - DURACAO_MIN_MINIMA) : inicioOriginal
+      const novoFim = arrasto.pega === 'fundo' ? Math.max(min, inicioOriginal + DURACAO_MIN_MINIMA) : fimOriginal
+      if (novoInicio === inicioOriginal && novoFim === fimOriginal) return
+      onRedimensionar(arrasto.evento.id, minutosParaHora(novoInicio), novoFim - novoInicio)
+    }
+
+    window.addEventListener('mousemove', mover)
+    window.addEventListener('mouseup', soltar)
+    return () => {
+      window.removeEventListener('mousemove', mover)
+      window.removeEventListener('mouseup', soltar)
+    }
+  }, [pxPorMinuto, onClickVazio, onRedimensionar])
+
+  function iniciarCriacao(e: React.MouseEvent) {
+    if (e.button !== 0) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const min = minutoNoClique(e.clientY, rect.top, pxPorMinuto)
+    arrastoRef.current = { tipo: 'criar', inicioMin: min }
+    setPrevia({ inicioMin: min, fimMin: min })
+  }
+
+  function iniciarRedimensionamento(evento: EventoComNomes, pega: 'topo' | 'fundo') {
+    return (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      arrastoRef.current = { tipo: 'redimensionar', evento, pega }
+      setPrevia({ inicioMin: minutosDoDia(evento.hora_inicio), fimMin: minutosDoDia(evento.hora_inicio) + evento.duracao_min })
+    }
+  }
+
   return (
     <div
+      ref={ref}
+      onMouseDown={iniciarCriacao}
       onDragOver={(e) => {
         e.preventDefault()
         onDragOver()
@@ -338,13 +493,9 @@ function ColunaDia({
         e.preventDefault()
         const id = e.dataTransfer.getData('text/plain')
         const rect = e.currentTarget.getBoundingClientRect()
-        if (id) onDrop(id, minutosParaHora(minutoNoClique(e.clientY, rect.top)))
+        if (id) onDrop(id, minutosParaHora(minutoNoClique(e.clientY, rect.top, pxPorMinuto)))
       }}
-      onClick={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect()
-        onClickVazio(minutosParaHora(minutoNoClique(e.clientY, rect.top)))
-      }}
-      className={`relative cursor-pointer border-l border-border-subtle bg-surface transition-colors ${
+      className={`relative cursor-pointer border-l border-border-subtle bg-surface transition-colors select-none ${
         emDrag ? 'bg-brand/[.1]' : ''
       }`}
     >
@@ -352,9 +503,18 @@ function ColunaDia({
         <div
           key={h}
           className="absolute inset-x-0 border-t border-border-subtle/60"
-          style={{ top: (h * 60 - GRADE_MIN_INICIO) * PX_POR_MINUTO }}
+          style={{ top: h * 60 * pxPorMinuto }}
         />
       ))}
+      {previa && (
+        <div
+          className="pointer-events-none absolute inset-x-1 rounded border-2 border-dashed border-brand bg-brand/20"
+          style={{
+            top: previa.inicioMin * pxPorMinuto,
+            height: Math.max((previa.fimMin - previa.inicioMin) * pxPorMinuto, 4),
+          }}
+        />
+      )}
       {disporEventosDoDia(eventos).map(({ evento, coluna, colunas }) => {
         const cor = corTipoEvento(evento.tipo)
         const inicioMin = minutosDoDia(evento.hora_inicio)
@@ -363,6 +523,7 @@ function ColunaDia({
             key={evento.id}
             type="button"
             draggable
+            onMouseDown={(e) => e.stopPropagation()}
             onDragStart={(ev) => {
               ev.dataTransfer.setData('text/plain', evento.id)
               ev.dataTransfer.effectAllowed = 'move'
@@ -371,12 +532,12 @@ function ColunaDia({
               ev.stopPropagation()
               onAbrirEvento(evento)
             }}
-            className={`absolute overflow-hidden rounded border px-1 py-0.5 text-left leading-tight ${
+            className={`group absolute overflow-hidden rounded border px-1 py-0.5 text-left leading-tight ${
               evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''
             }`}
             style={{
-              top: (inicioMin - GRADE_MIN_INICIO) * PX_POR_MINUTO,
-              height: Math.max(evento.duracao_min * PX_POR_MINUTO, 18),
+              top: inicioMin * pxPorMinuto,
+              height: Math.max(evento.duracao_min * pxPorMinuto, 18),
               left: `${(coluna * 100) / colunas}%`,
               width: `${100 / colunas}%`,
               background: cor.bg,
@@ -388,6 +549,17 @@ function ColunaDia({
               {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
             </span>
             <span className="block truncate text-[10px] font-medium">{rotuloEvento(evento)}</span>
+            {/* Pegas de redimensionar, ao estilo Google Calendar — só o
+                cursor muda de resto; ficam discretas até se precisar
+                delas. */}
+            <span
+              onMouseDown={iniciarRedimensionamento(evento, 'topo')}
+              className="absolute inset-x-0 top-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
+            />
+            <span
+              onMouseDown={iniciarRedimensionamento(evento, 'fundo')}
+              className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
+            />
           </button>
         )
       })}
@@ -424,6 +596,7 @@ function EventoModalOverlay({
   const evento = modal.modo === 'editar' ? modal.evento : null
   const dataDefault = modal.modo === 'editar' ? modal.evento.data : modal.data
   const horaDefault = modal.modo === 'editar' ? modal.evento.hora_inicio.slice(0, 5) : modal.horaInicio
+  const duracaoDefault = modal.modo === 'editar' ? modal.evento.duracao_min : modal.duracaoMin
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onFechar}>
@@ -503,10 +676,10 @@ function EventoModalOverlay({
               type="number"
               name="duracao_min"
               min={5}
-              max={240}
+              max={1440}
               step={1}
               list="duracoes-comuns-modal"
-              defaultValue={evento?.duracao_min ?? 40}
+              defaultValue={duracaoDefault}
               required
               className={inputCls}
               title="Duração em minutos — qualquer valor, não só os sugeridos"

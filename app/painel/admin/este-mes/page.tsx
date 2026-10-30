@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, Megaphone, TrendingUp, UserPlus, Euro } from 'lucide-react'
+import { ArrowLeft, Megaphone, TrendingUp, UserPlus, Euro, Dumbbell } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
@@ -66,7 +66,7 @@ export default async function AdminEsteMesPage({
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Este mês</h1>
       <p className="mt-1 text-sm text-muted">
-        {estudios.map((e) => e.nome).join(' e ')} · leads, conversões e receita do mês.
+        {estudios.map((e) => e.nome).join(' e ')} · leads, conversões, receita e treinos do mês.
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2">
@@ -131,18 +131,29 @@ async function EsteMesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
   ).length
 
   const idsClientes = clientes.map((c) => c.id)
-  const { data: pagamentosMesData, error: erroPagamentosMes } = idsClientes.length
-    ? await supabase
-        .from('pagamentos')
-        .select('valor')
-        .in('cliente_id', idsClientes)
-        .gte('data_pagamento', inicioMes)
-        .lt('data_pagamento', fimMesExclusivo)
-    : { data: [], error: null }
-  if (erroPagamentosMes) {
-    throw new Error(erroPagamentosMes.message)
+  const [{ data: pagamentosMesData, error: erroPagamentosMes }, { data: presencasMesData, error: erroPresencasMes }] =
+    await Promise.all([
+      idsClientes.length
+        ? supabase
+            .from('pagamentos')
+            .select('valor')
+            .in('cliente_id', idsClientes)
+            .gte('data_pagamento', inicioMes)
+            .lt('data_pagamento', fimMesExclusivo)
+        : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from('presencas')
+        .select('cliente_id, clientes!inner(estudio_id)')
+        .eq('clientes.estudio_id', estudio.id)
+        .eq('estado', 'Presente')
+        .gte('data', inicioMes)
+        .lt('data', fimMesExclusivo),
+    ])
+  if (erroPagamentosMes || erroPresencasMes) {
+    throw new Error((erroPagamentosMes ?? erroPresencasMes)!.message)
   }
   const receitaMes = (pagamentosMesData ?? []).reduce((soma, p) => soma + Number(p.valor), 0)
+  const treinosRealizados = (presencasMesData ?? []).length
 
   return (
     <>
@@ -163,11 +174,18 @@ async function EsteMesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
           →
         </Link>
       </div>
-      <div className="bg-tech-grid mt-3 grid grid-cols-2 gap-3 rounded-2xl p-1">
+      <div className="bg-tech-grid mt-3 grid grid-cols-2 gap-3 rounded-2xl p-1 sm:grid-cols-3">
         <StatCard icone={Megaphone} cor={PALETA.laranja} label="Leads novas" valor={leadsNovas} />
         <StatCard icone={TrendingUp} cor={PALETA.teal} label="Convertidas" valor={leadsConvertidas} />
         <StatCard icone={UserPlus} cor={PALETA.azul} label="Novos clientes" valor={novosClientes} />
         <StatCard icone={Euro} cor={PALETA.ambar} label="Receita" valor={`€${receitaMes.toFixed(0)}`} />
+        <StatCard
+          icone={Dumbbell}
+          cor={PALETA.roxo}
+          label="Treinos realizados"
+          valor={treinosRealizados}
+          formula="Presenças com estado 'Presente' no mês, neste estúdio."
+        />
       </div>
     </>
   )

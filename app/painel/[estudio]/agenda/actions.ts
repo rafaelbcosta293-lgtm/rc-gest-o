@@ -248,6 +248,24 @@ export async function moverEventoRapido(input: {
   return { ok: true }
 }
 
+export async function redimensionarEventoRapido(input: {
+  estudioSlug: string
+  id: string
+  horaInicio: string
+  duracaoMin: number
+}): Promise<ResultadoAcaoRapida> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('agenda_eventos')
+    .update({ hora_inicio: input.horaInicio, duracao_min: input.duracaoMin })
+    .eq('id', input.id)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}
+
 export async function desmarcarEventoRapido(input: {
   estudioSlug: string
   id: string

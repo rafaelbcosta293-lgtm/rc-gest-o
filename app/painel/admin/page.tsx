@@ -105,6 +105,15 @@ export default async function AdminPage({
         ))}
       </div>
 
+      <TituloSeccao cor="azul">Relatórios</TituloSeccao>
+      <Link
+        href="/painel/admin/relatorio"
+        className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-border-strong"
+      >
+        <span className="text-sm text-foreground">Relatório mensal consolidado (para imprimir/PDF)</span>
+        <span className="text-sm text-muted">→</span>
+      </Link>
+
       <TituloSeccao cor="verde">Financeiro</TituloSeccao>
       <Link
         href="/painel/admin/financeiro"

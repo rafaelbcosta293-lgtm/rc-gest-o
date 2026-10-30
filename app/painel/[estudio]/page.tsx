@@ -96,6 +96,14 @@ export default async function EstudioPage({
         <div className="flex items-center gap-2">
           {ehGestao && (
             <Link
+              href={`/painel/${slug}/relatorio`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground/80 shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
+            >
+              Relatório mensal
+            </Link>
+          )}
+          {ehGestao && (
+            <Link
               href={`/painel/${slug}/equipa`}
               className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground/80 shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
             >

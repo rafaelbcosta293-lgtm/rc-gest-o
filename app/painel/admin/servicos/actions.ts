@@ -51,12 +51,22 @@ export async function guardarSenha(formData: FormData) {
 export async function criarPlano(formData: FormData) {
   const supabase = await createClient()
 
+  // Entra sempre no fim da lista — a ordem de leitura (maior "ordem")
+  // decide o fim, não a data de criação nem o preço.
+  const { data: ultimo } = await supabase
+    .from('planos')
+    .select('ordem')
+    .order('ordem', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   const { error } = await supabase.from('planos').insert({
     nome: formData.get('nome') as string,
     valor: Number(formData.get('valor')),
     sessoes_por_semana: formData.get('sessoes_por_semana')
       ? Number(formData.get('sessoes_por_semana'))
       : null,
+    ordem: (ultimo?.ordem ?? 0) + 1,
   })
 
   if (error) {
@@ -89,6 +99,21 @@ export async function atualizarPlano(formData: FormData) {
 
   revalidatePath('/painel/admin/servicos')
   redirect('/painel/admin/servicos')
+}
+
+// Chamada diretamente (sem <form>/redirect) ao soltar um serviço
+// arrastado — grava a ordem nova da lista toda de uma vez.
+export async function reordenarPlanos(ids: string[]): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+
+  const resultados = await Promise.all(
+    ids.map((id, i) => supabase.from('planos').update({ ordem: i + 1 }).eq('id', id))
+  )
+  const comErro = resultados.find((r) => r.error)
+  if (comErro?.error) return { error: comErro.error.message }
+
+  revalidatePath('/painel/admin/servicos')
+  return { ok: true }
 }
 
 export async function apagarPlano(formData: FormData) {

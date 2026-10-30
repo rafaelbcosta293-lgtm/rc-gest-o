@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { areaTemPassword, areaDesbloqueada, chaveConfigSenha } from '@/lib/data/gate'
-import { criarPlano, atualizarPlano, apagarPlano, guardarConfig, guardarSenha } from './actions'
+import { criarPlano, guardarConfig, guardarSenha } from './actions'
 import { desbloquearAdmin } from '../actions'
 import PortaSenha from '@/components/PortaSenha'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
+import ListaPlanos from './ListaPlanos'
 import type { ConfigLinha, Plano } from '@/lib/supabase/database.types'
 
 const inputCls =
@@ -21,6 +22,71 @@ const CHAVES_ESCONDIDAS = [
   chaveConfigSenha('admin'),
   chaveConfigSenha('coordenacao'),
 ]
+
+// A chave em si (ex.: "desmarcacoes_acumuladas_limite") não é um nome
+// pensado para se ler — aqui ganha um rótulo em português e um grupo,
+// para a lista deixar de ser uma pilha única e passar a secções com
+// sentido, fáceis de encontrar.
+const CONFIG_META: Record<string, { label: string; grupo: string; tipo?: 'textarea' | 'time' }> = {
+  horario_estudio_inicio: { label: 'Hora de abertura', grupo: 'Horário do estúdio', tipo: 'time' },
+  horario_estudio_fim: { label: 'Hora de fecho', grupo: 'Horário do estúdio', tipo: 'time' },
+
+  contrato_minimo_meses: { label: 'Contrato mínimo (meses)', grupo: 'Contratos e pagamentos' },
+  dia_limite_mensalidade: { label: 'Dia limite do mês para pagar a mensalidade', grupo: 'Contratos e pagamentos' },
+  taxa_inscricao: { label: 'Taxa de inscrição (€)', grupo: 'Contratos e pagamentos' },
+  taxa_reativacao: { label: 'Taxa de reativação (€)', grupo: 'Contratos e pagamentos' },
+  seguro_anual: { label: 'Seguro anual (€)', grupo: 'Contratos e pagamentos' },
+  validade_sessoes_dias: { label: 'Validade das sessões (dias)', grupo: 'Contratos e pagamentos' },
+
+  horas_desmarcacao: { label: 'Antecedência mínima para desmarcar (horas)', grupo: 'Desmarcações' },
+  desmarcacoes_seguidas_limite: { label: 'Limite de desmarcações seguidas', grupo: 'Desmarcações' },
+  desmarcacoes_acumuladas_limite: { label: 'Limite de desmarcações acumuladas', grupo: 'Desmarcações' },
+
+  preco_tp_1x_40min: { label: '1×/semana · 40 min (€)', grupo: 'Preços — Treino Personalizado' },
+  preco_tp_1x_50min: { label: '1×/semana · 50 min (€)', grupo: 'Preços — Treino Personalizado' },
+  preco_tp_2x_40min: { label: '2×/semana · 40 min (€)', grupo: 'Preços — Treino Personalizado' },
+  preco_tp_2x_50min: { label: '2×/semana · 50 min (€)', grupo: 'Preços — Treino Personalizado' },
+
+  preco_ta_1x: { label: '1×/semana (€)', grupo: 'Preços — Treino Acompanhado' },
+  preco_ta_2x: { label: '2×/semana (€)', grupo: 'Preços — Treino Acompanhado' },
+  preco_ta_3x: { label: '3×/semana (€)', grupo: 'Preços — Treino Acompanhado' },
+
+  custo_hora_pt: { label: 'Custo por hora de PT (€)', grupo: 'Outros' },
+  max_clientes_bloco_exclusivo: { label: 'Máx. clientes por bloco exclusivo', grupo: 'Outros' },
+  reavaliacao_antecipada_treino_acompanhado: {
+    label: 'Reavaliação antecipada — Treino Acompanhado (€)',
+    grupo: 'Outros',
+  },
+
+  regulamento: { label: 'Regulamento do estúdio', grupo: 'Documentos', tipo: 'textarea' },
+
+  qr_token_fatima: { label: 'Código QR — Fátima', grupo: 'Códigos QR dos estúdios' },
+  qr_token_leiria: { label: 'Código QR — Leiria', grupo: 'Códigos QR dos estúdios' },
+}
+
+const GRUPOS_ORDEM = [
+  'Horário do estúdio',
+  'Contratos e pagamentos',
+  'Desmarcações',
+  'Preços — Treino Personalizado',
+  'Preços — Treino Acompanhado',
+  'Outros',
+  'Documentos',
+  'Códigos QR dos estúdios',
+  'Outras definições',
+] as const
+
+const CORES_GRUPO: Record<string, 'teal' | 'roxo' | 'azul' | 'ambar' | 'verde' | 'vermelho' | 'neutro' | 'laranja'> = {
+  'Horário do estúdio': 'azul',
+  'Contratos e pagamentos': 'verde',
+  Desmarcações: 'laranja',
+  'Preços — Treino Personalizado': 'roxo',
+  'Preços — Treino Acompanhado': 'teal',
+  Outros: 'ambar',
+  Documentos: 'neutro',
+  'Códigos QR dos estúdios': 'neutro',
+  'Outras definições': 'neutro',
+}
 
 export default async function ServicosPage({
   searchParams,
@@ -46,7 +112,7 @@ export default async function ServicosPage({
 
   const [{ data: planosData, error: erroPlanos }, { data: configData, error: erroConfig }] =
     await Promise.all([
-      supabase.from('planos').select('*').order('valor'),
+      supabase.from('planos').select('*').order('ordem'),
       supabase.from('config').select('*').order('chave'),
     ])
 
@@ -78,61 +144,8 @@ export default async function ServicosPage({
         </p>
       )}
 
-      <div className="mt-6 flex flex-col gap-2">
-        {planos.map((p) => (
-          <div
-            key={p.id}
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
-          >
-            <form action={atualizarPlano} className="flex flex-1 flex-wrap items-center gap-2">
-              <input type="hidden" name="id" value={p.id} />
-              <input
-                name="nome"
-                defaultValue={p.nome}
-                className={`${inputCls} flex-1 basis-40`}
-              />
-              <input
-                name="valor"
-                type="number"
-                step="0.01"
-                defaultValue={p.valor}
-                className={`${inputCls} w-24`}
-              />
-              <input
-                name="sessoes_por_semana"
-                type="number"
-                placeholder="sessões/sem"
-                defaultValue={p.sessoes_por_semana ?? ''}
-                className={`${inputCls} w-28`}
-              />
-              <label className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-                <input type="checkbox" name="ativo" defaultChecked={p.ativo} /> ativo
-              </label>
-              <SubmitButton
-                pendingText="…"
-                className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
-              >
-                Guardar
-              </SubmitButton>
-            </form>
-            <form action={apagarPlano}>
-              <input type="hidden" name="id" value={p.id} />
-              <SubmitButton
-                pendingText="…"
-                aria-label="Eliminar serviço"
-                className="shrink-0 text-lg text-zinc-400 hover:text-red-600"
-              >
-                ×
-              </SubmitButton>
-            </form>
-          </div>
-        ))}
-        {planos.length === 0 && (
-          <div className="rounded-xl border border-dashed border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10">
-            Ainda não há serviços registados.
-          </div>
-        )}
-      </div>
+      <p className="mt-6 text-xs text-zinc-500">Arrasta pela pega à esquerda para mudar a ordem.</p>
+      <ListaPlanos planos={planos} />
 
       <form
         action={criarPlano}
@@ -205,35 +218,65 @@ export default async function ServicosPage({
         </form>
       </div>
 
-      <TituloSeccao cor="neutro">Definições do negócio</TituloSeccao>
-      <div className="mt-2 flex flex-col gap-2">
-        {config.map((c) => (
-          <form
-            key={c.chave}
-            action={guardarConfig}
-            className="flex flex-col gap-1.5 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
-          >
-            <input type="hidden" name="chave" value={c.chave} />
-            <label className="text-xs font-medium text-zinc-500">{c.chave}</label>
-            <div className="flex items-end gap-2">
-              {c.chave.includes('msg') ? (
-                <textarea name="valor" defaultValue={c.valor ?? ''} rows={2} className={`${inputCls} flex-1`} />
-              ) : (
-                <input name="valor" defaultValue={c.valor ?? ''} className={`${inputCls} flex-1`} />
-              )}
-              <SubmitButton
-                pendingText="…"
-                className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
-              >
-                Guardar
-              </SubmitButton>
+      {(() => {
+        const porGrupo = new Map<string, ConfigLinha[]>()
+        for (const c of config) {
+          const grupo = CONFIG_META[c.chave]?.grupo ?? 'Outras definições'
+          const lista = porGrupo.get(grupo) ?? []
+          lista.push(c)
+          porGrupo.set(grupo, lista)
+        }
+        const gruposComDados = GRUPOS_ORDEM.filter((g) => porGrupo.has(g))
+
+        return gruposComDados.map((grupo) => (
+          <div key={grupo}>
+            <TituloSeccao cor={CORES_GRUPO[grupo] ?? 'neutro'}>{grupo}</TituloSeccao>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {porGrupo.get(grupo)!.map((c) => {
+                const meta = CONFIG_META[c.chave]
+                return (
+                  <form
+                    key={c.chave}
+                    action={guardarConfig}
+                    className={`flex flex-col gap-1.5 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950 ${
+                      meta?.tipo === 'textarea' ? 'sm:col-span-2' : ''
+                    }`}
+                  >
+                    <input type="hidden" name="chave" value={c.chave} />
+                    <label className="text-xs font-medium text-zinc-500">{meta?.label ?? c.chave}</label>
+                    <div className="flex items-end gap-2">
+                      {meta?.tipo === 'textarea' ? (
+                        <textarea
+                          name="valor"
+                          defaultValue={c.valor ?? ''}
+                          rows={6}
+                          className={`${inputCls} flex-1`}
+                        />
+                      ) : (
+                        <input
+                          type={meta?.tipo === 'time' ? 'time' : 'text'}
+                          name="valor"
+                          defaultValue={c.valor ?? ''}
+                          className={`${inputCls} flex-1`}
+                        />
+                      )}
+                      <SubmitButton
+                        pendingText="…"
+                        className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
+                      >
+                        Guardar
+                      </SubmitButton>
+                    </div>
+                  </form>
+                )
+              })}
             </div>
-          </form>
-        ))}
-        {config.length === 0 && (
-          <p className="text-sm text-zinc-500">Sem definições configuradas.</p>
-        )}
-      </div>
+          </div>
+        ))
+      })()}
+      {config.length === 0 && (
+        <p className="mt-8 text-sm text-zinc-500">Sem definições configuradas.</p>
+      )}
     </div>
   )
 }

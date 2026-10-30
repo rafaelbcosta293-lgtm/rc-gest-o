@@ -368,6 +368,7 @@ export type Plano = {
   valor: number
   sessoes_por_semana: number | null
   ativo: boolean
+  ordem: number
 }
 
 export type Pagamento = {

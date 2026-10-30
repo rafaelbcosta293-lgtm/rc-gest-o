@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ArrowLeftRight } from 'lucide-react'
+import { ArrowLeftRight, Search } from 'lucide-react'
 import { MODULOS } from '@/lib/data/constantes'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
@@ -32,7 +32,15 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
           estúdio — os módulos ficam na barra de separadores do fundo,
           sempre ao alcance do polegar, ao estilo iOS. */}
-      <div className="sticky top-0 z-10 flex items-center justify-end border-b border-border-subtle bg-background/80 px-4 py-2 backdrop-blur-xl md:hidden">
+      <div className="sticky top-0 z-10 flex items-center justify-end gap-1 border-b border-border-subtle bg-background/80 px-4 py-2 backdrop-blur-xl md:hidden">
+        <Link
+          href={`/painel/${slug}/pesquisa`}
+          title="Pesquisar"
+          aria-label="Pesquisar"
+          className="flex items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+        >
+          <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+        </Link>
         <Link
           href="/painel"
           title="Mudar estúdio"
@@ -50,6 +58,14 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
         <Link href="/painel" className="mb-3 flex items-center justify-center p-1.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="RC Private Fitness Studio" className="h-7 w-auto" />
+        </Link>
+        <Link
+          href={`/painel/${slug}/pesquisa`}
+          title="Pesquisar"
+          aria-label="Pesquisar"
+          className="mb-1 flex items-center justify-center rounded-xl p-3 text-muted hover:bg-brand/[.07] hover:text-foreground"
+        >
+          <Search className="h-5 w-5" strokeWidth={2.25} />
         </Link>
         {MODULOS.map((m) =>
           podeAceder(m) ? (
@@ -74,6 +90,15 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           <img src="/logo.png" alt="RC Private Fitness Studio" className="h-10 w-auto" />
         </Link>
         <nav className="flex flex-col gap-1 px-4">
+          <Link
+            href={`/painel/${slug}/pesquisa`}
+            className="mb-2 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted hover:bg-brand/[.07] hover:text-foreground"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-border-subtle">
+              <Search className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </span>
+            Pesquisar
+          </Link>
           {MODULOS.map((m) =>
             podeAceder(m) ? (
               <NavLinkDesktop key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />

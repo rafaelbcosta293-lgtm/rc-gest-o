@@ -1,41 +1,99 @@
 @import "tailwindcss";
 
-/* Tema escuro/"tech" passa a ser a identidade fixa da app — não depende
-   do tema do sistema do telemóvel/computador de quem usa (deixou de
-   haver tema claro). Por isso o variante "dark:" do Tailwind passa a
-   seguir esta classe, sempre presente em <html> (ver app/layout.tsx),
-   em vez de "prefers-color-scheme" — e todas as variantes "dark:" já
-   escritas em cada página (há dezenas) passam a aplicar-se sempre. */
+/* Dois temas prontos, trocáveis só com a classe "dark" em <html> (ver
+   app/layout.tsx) — não dependem do tema do sistema de quem usa. O
+   variante "dark:" do Tailwind segue esta mesma classe, por isso todas
+   as variantes "dark:" já escritas em cada página (há dezenas) também
+   trocam sozinhas, sem tocar em cada página uma a uma. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Preto ligeiramente mais quente que #000, para não ficar duro ao lado
-     do dourado — um "centro de comando", não um ecrã apagado. */
-  --background: #0b0a09;
-  --foreground: #f4f4f5;
-  --surface: #18181b;
-  --muted: #9ca3af;
+  /* "Vidro" — fundo claro e quente, cartões em vidro esmerilado
+     (translúcidos, para usar com backdrop-blur), sombras suaves e
+     difusas — mais "produto premium" do que "painel técnico". */
+  --background: #f5f3ef;
+  --foreground: #18181b;
+  --surface: rgba(255, 255, 255, 0.68);
+  --muted: #6b7280;
 
   /* Dourado do logótipo RC Private Fitness Studio — a cor de ação
      principal (botões, foco), constante seja qual for o resto do tema. */
   --brand: #d9b96a;
   --brand-strong: #bfa35d;
-  --brand-ring: rgba(217, 185, 106, 0.5);
+  --brand-ring: rgba(217, 185, 106, 0.45);
 
-  /* Acento "tech" — ciano elétrico, para a camada analítica (gráficos,
+  /* Acento "tech" — ciano, para a camada analítica (gráficos,
      indicadores ao vivo, tendências) e para o brilho das pílulas/barras
      ativas — nunca compete com o dourado como cor de ação, só acompanha
-     dados, performance e navegação. */
+     dados, performance e navegação. Mais escuro que o "glow" para ter
+     contraste em fundo claro. */
+  --accent: #0e7490;
+  --accent-glow: #22d3ee;
+  --accent-soft: rgba(34, 211, 238, 0.12);
+  --accent-ring: rgba(34, 211, 238, 0.4);
+
+  /* Sombras em várias camadas (contacto + médio + ambiente), suaves e
+     difusas — o relevo aqui vem do desfoque/vidro dos cartões, não de
+     sombras marcadas como no tema escuro. */
+  --shadow-card-value:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 1px 1px rgba(24, 24, 27, 0.04),
+    0 10px 20px -8px rgba(24, 24, 27, 0.1),
+    0 32px 64px -20px rgba(24, 24, 27, 0.16);
+  --shadow-card-hover-value:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 2px 2px rgba(24, 24, 27, 0.05),
+    0 16px 28px -10px rgba(24, 24, 27, 0.14),
+    0 40px 80px -20px rgba(24, 24, 27, 0.22);
+  --shadow-pop-value:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 1px 1px rgba(24, 24, 27, 0.05),
+    0 8px 16px -6px rgba(24, 24, 27, 0.12);
+  --shadow-glow-value:
+    0 0 0 1px rgba(34, 211, 238, 0.14),
+    0 2px 8px -2px rgba(34, 211, 238, 0.22),
+    0 14px 32px -8px rgba(34, 211, 238, 0.3);
+  /* A mesma pílula "pop", mas com um brilho dourado por cima — para os
+     estados ativos da navegação principal (Admin/Coordenação), que usam
+     a cor da marca em vez do acento ciano dos dados. */
+  --shadow-glow-brand-value:
+    var(--shadow-pop-value),
+    0 0 0 1px rgba(217, 185, 106, 0.3),
+    0 6px 18px -4px rgba(217, 185, 106, 0.4);
+  /* Para elementos que "flutuam" por cima de conteúdo (barras de menu
+     fixas) — menos espalhada que shadow-card, mais definida mesmo
+     colada ao que está por baixo. */
+  --shadow-deep-value:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 1px 3px rgba(24, 24, 27, 0.06),
+    0 10px 22px -8px rgba(24, 24, 27, 0.14);
+
+  --border-subtle: rgba(24, 24, 27, 0.1);
+  --border-strong: rgba(24, 24, 27, 0.18);
+
+  /* Dois brilhos ambiente pastel (dourado + ciano) em cantos opostos,
+     por detrás do vidro dos cartões — em vez de um fundo plano. */
+  --bg-glow:
+    radial-gradient(ellipse 1000px 480px at 12% -8%, rgba(217, 185, 106, 0.14), transparent 60%),
+    radial-gradient(ellipse 1200px 560px at 88% 4%, rgba(34, 211, 238, 0.1), transparent 60%);
+}
+
+/* "Tech" — fundo escuro fixo tipo "centro de comando", vidro esmerilado
+   por cima (nas barras fixas, que já usam fundo translúcido + desfoque),
+   brilhos ciano/dourado mais intensos, sombras marcadas em várias
+   camadas. Fica disponível para trocar de volta (basta a classe "dark"
+   em <html>, ver app/layout.tsx), sem duplicar nenhuma página. */
+:root.dark {
+  --background: #0b0a09;
+  --foreground: #f4f4f5;
+  --surface: #18181b;
+  --muted: #9ca3af;
+
   --accent: #22d3ee;
   --accent-glow: #67e8f9;
   --accent-soft: rgba(34, 211, 238, 0.12);
   --accent-ring: rgba(34, 211, 238, 0.45);
 
-  /* Sombras em várias camadas (contacto + médio + ambiente), com um
-     reflexo subtil no topo do cartão — dá um relevo "físico", de
-     elementos realmente empilhados uns sobre os outros, em vez de uma
-     sombra só, difusa e plana. O preto a ganhar camadas é que dá a
-     profundidade real aqui, não um reflexo branco sólido. */
   --shadow-card-value:
     0 1px 0 rgba(255, 255, 255, 0.06) inset,
     0 1px 2px rgba(0, 0, 0, 0.4),
@@ -54,16 +112,10 @@
     0 0 0 1px rgba(34, 211, 238, 0.26),
     0 2px 10px -2px rgba(34, 211, 238, 0.4),
     0 16px 40px -6px rgba(34, 211, 238, 0.6);
-  /* A mesma pílula "pop", mas com um brilho dourado por cima — para os
-     estados ativos da navegação principal (Admin/Coordenação), que usam
-     a cor da marca em vez do acento ciano dos dados. */
   --shadow-glow-brand-value:
     var(--shadow-pop-value),
     0 0 0 1px rgba(217, 185, 106, 0.35),
     0 6px 20px -4px rgba(217, 185, 106, 0.6);
-  /* Para elementos que "flutuam" por cima de conteúdo (barras de menu
-     fixas) — menos espalhada que shadow-card, mais definida mesmo
-     colada ao que está por baixo. */
   --shadow-deep-value:
     0 1px 0 rgba(255, 255, 255, 0.05) inset,
     0 1px 3px rgba(0, 0, 0, 0.45),
@@ -72,9 +124,6 @@
   --border-subtle: rgba(255, 255, 255, 0.1);
   --border-strong: rgba(255, 255, 255, 0.22);
 
-  /* Dois brilhos ambiente (dourado + ciano) em cantos opostos, em vez de
-     um só e centrado — dá ao fundo uma origem de luz mais cinematográfica,
-     de "painel de comando", em vez de uma cor plana por baixo dos cartões. */
   --bg-glow:
     radial-gradient(ellipse 1000px 480px at 12% -8%, rgba(217, 185, 106, 0.12), transparent 60%),
     radial-gradient(ellipse 1200px 560px at 88% 4%, rgba(34, 211, 238, 0.09), transparent 60%);

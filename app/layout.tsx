@@ -22,17 +22,17 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0a09",
+  themeColor: "#f5f3ef",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt"
-      // Tema escuro/"tech" é a identidade fixa da app (ver app/globals.css)
-      // — a classe "dark" fica sempre presente, nunca depende do tema do
-      // sistema de quem está a usar.
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      // Dois temas prontos em app/globals.css (claro/"vidro" e
+      // escuro/"tech") — trocar é só pôr ou tirar "dark" aqui, sem tocar
+      // em nenhuma página.
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

@@ -50,19 +50,30 @@ pareceria "seguro" mas é só a view a falhar silenciosamente. Ver
 ## Validação dos KPIs com dados de demonstração
 
 A especificação pede uma tabela "valor esperado vs calculado" sobre
-dados de demonstração. **Isto continua bloqueado**: criar uma branch
-de desenvolvimento paga no Supabase para gerar esses dados precisa de
-confirmação de custo fora desta sessão (duas tentativas anteriores
-expiraram sem resposta — ver `docs/FASE_2_PROGRESSO.md`). Sem dados
-de demonstração, a validação real feita até agora foi:
+dados de demonstração, usando uma branch de desenvolvimento do
+Supabase para não misturar dados falsos com os dados reais do
+negócio. **Decisão do dono (2026-10-30): não avançar com isto.**
+
+A causa raiz só ficou clara ao tentar criar a branch a sério: não é
+uma questão de aprovar um custo (branching do Supabase cobra por
+hora de computação) — o plano atual do projeto Supabase nem sequer
+suporta branches (`PaymentRequiredException: Branching is supported
+only on the Pro plan or above`). Faria falta um upgrade do projeto
+para o plano Pro, com custo mensal fixo, só para este teste. O dono
+optou por não o fazer e deixar este ponto documentado como bloqueado,
+em vez de gerar os dados de demonstração diretamente na produção
+(opção que também foi oferecida e recusada, por misturar dados falsos
+com os dados reais do negócio, mesmo que temporariamente).
+
+Sem dados de demonstração, a validação real feita até agora foi:
 - os 145 testes unitários (acima), que cobrem a lógica de cada
   fórmula isoladamente, com números inventados mas conhecidos;
 - verificação manual dos ecrãs com os dados reais da app em produção
   (poucos registos, por ser um negócio real, não uma demonstração).
 
-Para fechar este ponto como a especificação pede, falta: criar a
-branch de demonstração (precisa da aprovação de custo do dono) e
-gerar 12 meses de dados variados nos dois estúdios.
+Se um dia o projeto Supabase passar a Pro por outro motivo, este
+ponto pode ser retomado: criar a branch, gerar 12 meses de dados
+variados nos dois estúdios, e construir a tabela de verificação.
 
 ## Build e lint
 

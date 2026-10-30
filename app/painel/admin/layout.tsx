@@ -15,11 +15,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="shadow-deep sticky top-0 z-10 flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl">
+    // "dark" fica só aqui — a Administração é a única zona da app com o
+    // tema escuro/"tech"; o resto continua no modelo claro/vidro.
+    <div className="dark tema-proprio flex min-h-full flex-col">
+      <header className="shadow-deep sticky top-0 z-10 flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-3 backdrop-blur-xl">
         <Link href="/painel" className="flex shrink-0 items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-8 w-auto" />
+          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-9 w-auto" />
         </Link>
         <AdminNav />
       </header>

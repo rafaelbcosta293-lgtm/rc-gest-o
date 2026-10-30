@@ -81,9 +81,10 @@
 /* "Tech" — fundo escuro fixo tipo "centro de comando", vidro esmerilado
    por cima (nas barras fixas, que já usam fundo translúcido + desfoque),
    brilhos ciano/dourado mais intensos, sombras marcadas em várias
-   camadas. Fica disponível para trocar de volta (basta a classe "dark"
-   em <html>, ver app/layout.tsx), sem duplicar nenhuma página. */
-:root.dark {
+   camadas. A classe "dark" pode ir em <html> (app toda) ou só num
+   contentor específico (ex: app/painel/admin/layout.tsx) — as variáveis
+   herdam para dentro desse contentor sem afetar o resto da app. */
+.dark {
   --background: #0b0a09;
   --foreground: #f4f4f5;
   --surface: #18181b;
@@ -170,6 +171,32 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   text-rendering: optimizeLegibility;
+}
+
+/* Mesmo fundo/cor do body, mas para um contentor que tem o seu próprio
+   tema à parte (ex: a Administração, só essa a preto, com o resto da
+   app em "vidro") — evita repetir o mesmo background inline em cada
+   sítio que precise disto. */
+.tema-proprio {
+  background: var(--bg-glow), var(--background);
+  background-attachment: fixed;
+  color: var(--foreground);
+}
+
+/* Qualquer coisa em que se possa clicar passa a mostrar a "mão" — por
+   omissão alguns browsers só mudam o cursor em "a" e não em "button",
+   o que faz parecer que não se pode clicar numa ação real. */
+a,
+button:not(:disabled),
+summary,
+label[for],
+select,
+[role="button"] {
+  cursor: pointer;
+}
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
 /* Transição suave em qualquer elemento interativo — sem ter de repetir

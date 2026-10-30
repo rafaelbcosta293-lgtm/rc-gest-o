@@ -18,23 +18,34 @@ export default function PillNavLink({
   label,
   icone: Icone,
   exato = false,
+  // Pílulas maiores, com contorno sempre visível e letras mais fortes —
+  // só a Administração pede este destaque; a Coordenação mantém o
+  // visual mais discreto de sempre (prop por omissão a false).
+  destaque = false,
 }: {
   href: string
   label: string
   icone: LucideIcon
   exato?: boolean
+  destaque?: boolean
 }) {
   const ativo = estaAtivoPill(usePathname(), href, exato)
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition-all ${
+      className={`flex shrink-0 items-center whitespace-nowrap rounded-full font-semibold transition-all ${
+        destaque ? 'gap-2 border px-4 py-2 text-[13px] tracking-wide' : 'gap-1.5 px-3 py-1.5 text-sm'
+      } ${
         ativo
-          ? 'shadow-glow-brand bg-brand/15 text-foreground'
-          : 'text-foreground/70 hover:bg-brand/[.07] hover:text-foreground'
+          ? destaque
+            ? 'shadow-glow-brand border-brand/50 bg-brand/20 text-foreground'
+            : 'shadow-glow-brand bg-brand/15 text-foreground'
+          : destaque
+            ? 'border-border-subtle text-foreground/80 hover:border-brand/40 hover:bg-brand/[.1] hover:text-foreground'
+            : 'text-foreground/70 hover:bg-brand/[.07] hover:text-foreground'
       }`}
     >
-      <Icone className="h-4 w-4" strokeWidth={2.5} />
+      <Icone className={destaque ? 'h-[18px] w-[18px]' : 'h-4 w-4'} strokeWidth={2.5} />
       {label}
     </Link>
   )

@@ -17,49 +17,6 @@ function moduloPorId(id: string) {
   return MODULOS.find((m) => m.id === id)!
 }
 
-// Computador (≥1024px): barra lateral completa, ícone + nome.
-export function NavLinkDesktop({ href, id, nome }: { href: string; id: string; nome: string }) {
-  const { icone: Icone, cor } = moduloPorId(id)
-  const ativo = estaAtivo(usePathname(), href)
-  return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold tracking-tight transition-colors ${
-        ativo ? 'bg-brand/15 text-foreground' : 'text-foreground/70 hover:bg-brand/[.07] hover:text-foreground'
-      }`}
-    >
-      <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-        style={{ background: PALETA[cor].bg, color: PALETA[cor].tx }}
-      >
-        <Icone className="h-4 w-4" strokeWidth={2.5} />
-      </span>
-      {nome}
-    </Link>
-  )
-}
-
-// Tablet (768–1023px): barra lateral estreita, só com ícone — cabe mais
-// ecrã de conteúdo sem perder a navegação sempre visível.
-export function NavLinkTablet({ href, id, nome }: { href: string; id: string; nome: string }) {
-  const { icone: Icone, cor } = moduloPorId(id)
-  const ativo = estaAtivo(usePathname(), href)
-  return (
-    <Link
-      href={href}
-      title={nome}
-      aria-label={nome}
-      className="flex items-center justify-center rounded-xl p-3 transition-colors"
-      style={{
-        background: ativo ? PALETA[cor].bg : undefined,
-        color: ativo ? PALETA[cor].tx : 'var(--muted)',
-      }}
-    >
-      <Icone className="h-5 w-5" strokeWidth={2.5} />
-    </Link>
-  )
-}
-
 // Computador/tablet (≥768px): barra superior horizontal, ícone + nome,
 // numa pílula — substitui as duas barras laterais antigas.
 export function NavLinkTopBar({ href, id, nome }: { href: string; id: string; nome: string }) {

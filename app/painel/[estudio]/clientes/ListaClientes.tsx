@@ -72,7 +72,7 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
               <span className="flex min-w-[160px] flex-1 items-center gap-2">
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: l.alertaDot }} />
                 <span
-                  className="truncate font-semibold text-foreground"
+                  className="cursor-context-menu truncate rounded-md border border-border-subtle px-2 py-0.5 font-semibold text-foreground transition-colors hover:border-brand/50 hover:bg-brand/[.12]"
                   title="Botão direito para editar"
                   onContextMenu={(e) => {
                     e.preventDefault()

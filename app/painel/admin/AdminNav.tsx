@@ -103,7 +103,7 @@ export default function AdminNav() {
                   onClick={() => setAberto(null)}
                   className="whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium text-foreground/80 transition-colors hover:bg-brand/[.08] hover:text-foreground"
                 >
-                  Só {e.nome}
+                  {e.nome}
                 </Link>
               ))}
             </div>

@@ -513,7 +513,12 @@ function GrelhaInterativa({
   }
 
   return (
-    <div className="mt-4 overflow-x-auto">
+    <div
+      className="mt-4 overflow-x-auto"
+      onMouseLeave={() => {
+        if (!arrastoRef.current) setCursor(null)
+      }}
+    >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted">
           A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para
@@ -557,9 +562,6 @@ function GrelhaInterativa({
         </div>
         <div
           onMouseMove={aoMoverRatoEmRepouso}
-          onMouseLeave={() => {
-            if (!arrastoRef.current) setCursor(null)
-          }}
           className="h-[calc(100vh-280px)] min-h-[360px] overflow-y-auto rounded-b-xl border border-border-subtle"
         >
           <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: alturaGrade }}>

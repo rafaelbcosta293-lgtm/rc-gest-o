@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { X, Trash2, Ban, RotateCcw, Minus, Plus } from 'lucide-react'
@@ -84,7 +84,6 @@ export default function AgendaInterativa({
 }) {
   const router = useRouter()
   const [modal, setModal] = useState<EstadoModal>({ aberto: false })
-  const [dragOverDia, setDragOverDia] = useState<string | null>(null)
   const [zoomIndice, setZoomIndice] = useState(ZOOM_OMISSAO)
   const [aPendente, iniciarTransicao] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
@@ -204,12 +203,7 @@ export default function AgendaInterativa({
       <GrelhaInterativa
         dias={dias}
         porDia={porDia}
-        dragOverDia={dragOverDia}
-        onDragOverDia={setDragOverDia}
-        onDrop={(id, dia, horaInicio) => {
-          setDragOverDia(null)
-          mover(id, dia, horaInicio)
-        }}
+        onMover={mover}
         onRedimensionar={redimensionar}
         onClickVazio={(dia, horaInicio, duracaoMin) =>
           setModal({ aberto: true, modo: 'criar', data: dia, horaInicio, duracaoMin })
@@ -304,12 +298,21 @@ function minutoNoClique(clienteY: number, rectTop: number, pxPorMinuto: number) 
   return Math.max(0, Math.min(GRADE_HORA_FIM * 60 - 1, minutos))
 }
 
+// Um só arrasto de cada vez — a criar um evento novo (a partir de um
+// espaço vazio), a redimensionar um existente (a partir de uma pega) ou
+// a mover um existente (a partir do meio) — pode atravessar colunas
+// (dias) diferentes, por isso vive aqui, não em cada coluna. Em ref
+// (não state): o mousemove no window tem de ler sempre o valor mais
+// recente sem obrigar a re-subscrever os listeners a cada pixel.
+type Arrasto =
+  | { tipo: 'criar'; dia: string; inicioMin: number }
+  | { tipo: 'redimensionar'; evento: EventoComNomes; pega: 'topo' | 'fundo' }
+  | { tipo: 'mover'; evento: EventoComNomes }
+
 function GrelhaInterativa({
   dias,
   porDia,
-  dragOverDia,
-  onDragOverDia,
-  onDrop,
+  onMover,
   onRedimensionar,
   onClickVazio,
   onAbrirEvento,
@@ -319,9 +322,7 @@ function GrelhaInterativa({
 }: {
   dias: string[]
   porDia: Record<string, EventoComNomes[]>
-  dragOverDia: string | null
-  onDragOverDia: (dia: string | null) => void
-  onDrop: (id: string, dia: string, horaInicio: string) => void
+  onMover: (id: string, dia: string, horaInicio: string) => void
   onRedimensionar: (id: string, horaInicio: string, duracaoMin: number) => void
   onClickVazio: (dia: string, horaInicio: string, duracaoMin: number) => void
   onAbrirEvento: (evento: EventoComNomes) => void
@@ -334,17 +335,185 @@ function GrelhaInterativa({
   const colunas = `repeat(${dias.length}, 1fr)`
   const largura = dias.length > 1 ? 'min-w-[760px]' : 'min-w-[260px]'
   const alturaGrade = GRADE_HORA_FIM * 60 * pxPorMinuto
-  // Hora sob o rato, arredondada aos 10 minutos — só para orientação
-  // visual (uma régua), nunca usada para decidir onde um clique cai.
-  const [horaHover, setHoraHover] = useState<number | null>(null)
+
+  const colRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const arrastoRef = useRef<Arrasto | null>(null)
+  // Fica true assim que um arrasto de "mover" se desloca de verdade —
+  // o clique que abre a ficha do evento olha para isto a seguir ao
+  // mouseup, para não abrir o modal logo depois de reagendar.
+  const ignorarProximoClickRef = useRef(false)
+
+  const [previa, setPrevia] = useState<{ dia: string; inicioMin: number; fimMin: number } | null>(null)
+  const [arrastandoId, setArrastandoId] = useState<string | null>(null)
+  // Hora sob o rato — acompanha sempre o cursor (ao contrário da régua
+  // antiga, fixa na coluna da esquerda), tanto em repouso como durante
+  // qualquer arrasto, arredondada aos 10 minutos.
+  const [cursor, setCursor] = useState<{ x: number; y: number; minuto: number } | null>(null)
+
+  function registarRef(dia: string) {
+    return (el: HTMLDivElement | null) => {
+      colRefs.current[dia] = el
+    }
+  }
+
+  const localizar = useCallback(
+    (clientX: number, clientY: number): { dia: string; minuto: number } | null => {
+      for (const dia of dias) {
+        const el = colRefs.current[dia]
+        if (!el) continue
+        const rect = el.getBoundingClientRect()
+        if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+          return { dia, minuto: minutoNoClique(clientY, rect.top, pxPorMinuto) }
+        }
+      }
+      return null
+    },
+    [dias, pxPorMinuto]
+  )
+
+  useEffect(() => {
+    function mover(e: MouseEvent) {
+      const loc = localizar(e.clientX, e.clientY)
+      if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: Math.round(loc.minuto / 10) * 10 })
+
+      const arrasto = arrastoRef.current
+      if (!arrasto || !loc) return
+
+      if (arrasto.tipo === 'criar') {
+        setPrevia({
+          dia: arrasto.dia,
+          inicioMin: Math.min(arrasto.inicioMin, loc.minuto),
+          fimMin: Math.max(arrasto.inicioMin, loc.minuto),
+        })
+      } else if (arrasto.tipo === 'redimensionar') {
+        const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
+        const fimOriginal = inicioOriginal + arrasto.evento.duracao_min
+        if (arrasto.pega === 'topo') {
+          setPrevia({
+            dia: arrasto.evento.data,
+            inicioMin: Math.min(loc.minuto, fimOriginal - DURACAO_MIN_MINIMA),
+            fimMin: fimOriginal,
+          })
+        } else {
+          setPrevia({
+            dia: arrasto.evento.data,
+            inicioMin: inicioOriginal,
+            fimMin: Math.max(loc.minuto, inicioOriginal + DURACAO_MIN_MINIMA),
+          })
+        }
+      } else {
+        const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
+        if (loc.dia !== arrasto.evento.data || loc.minuto !== inicioOriginal) {
+          ignorarProximoClickRef.current = true
+        }
+        setPrevia({ dia: loc.dia, inicioMin: loc.minuto, fimMin: loc.minuto + arrasto.evento.duracao_min })
+      }
+    }
+
+    function soltar(e: MouseEvent) {
+      const arrasto = arrastoRef.current
+      if (!arrasto) return
+      arrastoRef.current = null
+      setPrevia(null)
+      setArrastandoId(null)
+      const loc = localizar(e.clientX, e.clientY)
+      if (!loc) return
+
+      if (arrasto.tipo === 'criar') {
+        const inicio = Math.min(arrasto.inicioMin, loc.minuto)
+        const fim = Math.max(arrasto.inicioMin, loc.minuto)
+        const duracaoArrastada = fim - inicio
+        onClickVazio(arrasto.dia, minutosParaHora(inicio), duracaoArrastada >= 15 ? duracaoArrastada : 40)
+        return
+      }
+
+      if (arrasto.tipo === 'redimensionar') {
+        const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
+        const fimOriginal = inicioOriginal + arrasto.evento.duracao_min
+        const novoInicio = arrasto.pega === 'topo' ? Math.min(loc.minuto, fimOriginal - DURACAO_MIN_MINIMA) : inicioOriginal
+        const novoFim = arrasto.pega === 'fundo' ? Math.max(loc.minuto, inicioOriginal + DURACAO_MIN_MINIMA) : fimOriginal
+        if (novoInicio !== inicioOriginal || novoFim !== fimOriginal) {
+          onRedimensionar(arrasto.evento.id, minutosParaHora(novoInicio), novoFim - novoInicio)
+        }
+        return
+      }
+
+      const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
+      if (loc.dia !== arrasto.evento.data || loc.minuto !== inicioOriginal) {
+        onMover(arrasto.evento.id, loc.dia, minutosParaHora(loc.minuto))
+      }
+    }
+
+    window.addEventListener('mousemove', mover)
+    window.addEventListener('mouseup', soltar)
+    return () => {
+      window.removeEventListener('mousemove', mover)
+      window.removeEventListener('mouseup', soltar)
+    }
+  }, [localizar, onClickVazio, onRedimensionar, onMover])
+
+  function aoMoverRatoEmRepouso(e: React.MouseEvent) {
+    if (arrastoRef.current) return
+    const loc = localizar(e.clientX, e.clientY)
+    if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: Math.round(loc.minuto / 10) * 10 })
+  }
+
+  function iniciarCriacao(dia: string) {
+    return (e: React.MouseEvent) => {
+      if (e.button !== 0) return
+      const loc = localizar(e.clientX, e.clientY)
+      const inicioMin = loc?.minuto ?? 0
+      arrastoRef.current = { tipo: 'criar', dia, inicioMin }
+      setPrevia({ dia, inicioMin, fimMin: inicioMin })
+    }
+  }
+
+  function iniciarRedimensionamento(evento: EventoComNomes, pega: 'topo' | 'fundo') {
+    return (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      arrastoRef.current = { tipo: 'redimensionar', evento, pega }
+      setPrevia({
+        dia: evento.data,
+        inicioMin: minutosDoDia(evento.hora_inicio),
+        fimMin: minutosDoDia(evento.hora_inicio) + evento.duracao_min,
+      })
+    }
+  }
+
+  function iniciarMovimento(evento: EventoComNomes) {
+    return (e: React.MouseEvent) => {
+      if (e.button !== 0) return
+      e.stopPropagation()
+      ignorarProximoClickRef.current = false
+      arrastoRef.current = { tipo: 'mover', evento }
+      setArrastandoId(evento.id)
+      setPrevia({
+        dia: evento.data,
+        inicioMin: minutosDoDia(evento.hora_inicio),
+        fimMin: minutosDoDia(evento.hora_inicio) + evento.duracao_min,
+      })
+    }
+  }
+
+  function aoClicarEvento(evento: EventoComNomes) {
+    return (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (ignorarProximoClickRef.current) {
+        ignorarProximoClickRef.current = false
+        return
+      }
+      onAbrirEvento(evento)
+    }
+  }
 
   return (
     <div className="mt-4 overflow-x-auto">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted">
-          Passa o rato para veres a hora exata (de 10 em 10 min); clica e arrasta num espaço vazio
-          para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento
-          para o mover, o topo ou o fundo para encurtar/alongar.
+          A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para
+          criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o
+          mover, o topo ou o fundo para encurtar/alongar.
         </p>
         <div className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-pop">
           <button
@@ -382,7 +551,10 @@ function GrelhaInterativa({
           ))}
         </div>
         <div
-          onMouseLeave={() => setHoraHover(null)}
+          onMouseMove={aoMoverRatoEmRepouso}
+          onMouseLeave={() => {
+            if (!arrastoRef.current) setCursor(null)
+          }}
           className="h-[calc(100vh-280px)] min-h-[360px] overflow-y-auto rounded-b-xl border border-border-subtle"
         >
           <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: alturaGrade }}>
@@ -396,180 +568,65 @@ function GrelhaInterativa({
                   {String(h).padStart(2, '0')}:00
                 </div>
               ))}
-              {horaHover !== null && (
-                <div
-                  className="pointer-events-none absolute inset-x-0 z-20 flex -translate-y-1/2 justify-end"
-                  style={{ top: horaHover * pxPorMinuto }}
-                >
-                  <span className="rounded bg-accent px-1 py-0.5 text-[9px] font-bold whitespace-nowrap text-white">
-                    {minutosParaHora(horaHover)}
-                  </span>
-                </div>
-              )}
             </div>
             {dias.map((dia) => (
               <ColunaDia
                 key={dia}
                 eventos={porDia[dia] ?? []}
-                emDrag={dragOverDia === dia}
-                onDragOver={() => onDragOverDia(dia)}
-                onDragLeave={() => onDragOverDia(null)}
-                onDrop={(id, horaInicio) => onDrop(id, dia, horaInicio)}
-                onRedimensionar={onRedimensionar}
-                onClickVazio={(horaInicio, duracaoMin) => onClickVazio(dia, horaInicio, duracaoMin)}
-                onAbrirEvento={onAbrirEvento}
+                registarRef={registarRef(dia)}
+                onIniciarCriacao={iniciarCriacao(dia)}
+                onIniciarRedimensionamento={iniciarRedimensionamento}
+                onIniciarMovimento={iniciarMovimento}
+                onClicarEvento={aoClicarEvento}
+                arrastandoId={arrastandoId}
+                previa={previa?.dia === dia ? previa : null}
                 pxPorMinuto={pxPorMinuto}
-                horaHover={horaHover}
-                onHoverMinuto={setHoraHover}
               />
             ))}
           </div>
         </div>
       </div>
+
+      {/* A hora segue o cursor em qualquer sítio da grelha — posição
+          fixa ao ecrã, por isso não é afetada pelo scroll interno. */}
+      {cursor && (
+        <div
+          className="pointer-events-none fixed z-30 rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-white shadow-pop"
+          style={{ left: cursor.x + 14, top: cursor.y - 10 }}
+        >
+          {minutosParaHora(cursor.minuto)}
+        </div>
+      )}
     </div>
   )
 }
 
-// Um só arrasto por coluna de cada vez — ou a criar um evento novo
-// (a partir de um espaço vazio) ou a redimensionar um existente (a
-// partir de uma das pegas). Guardado em ref (não state) para o
-// mousemove/mouseup no window ler sempre o valor mais recente, sem
-// obrigar a re-subscrever os listeners a cada pixel arrastado.
-type ArrastoColuna =
-  | { tipo: 'criar'; inicioMin: number }
-  | { tipo: 'redimensionar'; evento: EventoComNomes; pega: 'topo' | 'fundo' }
-
 function ColunaDia({
   eventos,
-  emDrag,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  onRedimensionar,
-  onClickVazio,
-  onAbrirEvento,
+  registarRef,
+  onIniciarCriacao,
+  onIniciarRedimensionamento,
+  onIniciarMovimento,
+  onClicarEvento,
+  arrastandoId,
+  previa,
   pxPorMinuto,
-  horaHover,
-  onHoverMinuto,
 }: {
   eventos: EventoComNomes[]
-  emDrag: boolean
-  onDragOver: () => void
-  onDragLeave: () => void
-  onDrop: (id: string, horaInicio: string) => void
-  onRedimensionar: (id: string, horaInicio: string, duracaoMin: number) => void
-  onClickVazio: (horaInicio: string, duracaoMin: number) => void
-  onAbrirEvento: (evento: EventoComNomes) => void
+  registarRef: (el: HTMLDivElement | null) => void
+  onIniciarCriacao: (e: React.MouseEvent) => void
+  onIniciarRedimensionamento: (evento: EventoComNomes, pega: 'topo' | 'fundo') => (e: React.MouseEvent) => void
+  onIniciarMovimento: (evento: EventoComNomes) => (e: React.MouseEvent) => void
+  onClicarEvento: (evento: EventoComNomes) => (e: React.MouseEvent) => void
+  arrastandoId: string | null
+  previa: { inicioMin: number; fimMin: number } | null
   pxPorMinuto: number
-  horaHover: number | null
-  onHoverMinuto: (minuto: number | null) => void
 }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const arrastoRef = useRef<ArrastoColuna | null>(null)
-  const [previa, setPrevia] = useState<{ inicioMin: number; fimMin: number } | null>(null)
-
-  useEffect(() => {
-    function minutoDoEvento(e: MouseEvent) {
-      const rect = ref.current?.getBoundingClientRect()
-      if (!rect) return null
-      return minutoNoClique(e.clientY, rect.top, pxPorMinuto)
-    }
-
-    function mover(e: MouseEvent) {
-      const arrasto = arrastoRef.current
-      if (!arrasto) return
-      const min = minutoDoEvento(e)
-      if (min === null) return
-
-      if (arrasto.tipo === 'criar') {
-        setPrevia({ inicioMin: Math.min(arrasto.inicioMin, min), fimMin: Math.max(arrasto.inicioMin, min) })
-        return
-      }
-
-      const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
-      const fimOriginal = inicioOriginal + arrasto.evento.duracao_min
-      if (arrasto.pega === 'topo') {
-        const novoInicio = Math.min(min, fimOriginal - DURACAO_MIN_MINIMA)
-        setPrevia({ inicioMin: novoInicio, fimMin: fimOriginal })
-      } else {
-        const novoFim = Math.max(min, inicioOriginal + DURACAO_MIN_MINIMA)
-        setPrevia({ inicioMin: inicioOriginal, fimMin: novoFim })
-      }
-    }
-
-    function soltar(e: MouseEvent) {
-      const arrasto = arrastoRef.current
-      if (!arrasto) return
-      arrastoRef.current = null
-      setPrevia(null)
-      const min = minutoDoEvento(e)
-      if (min === null) return
-
-      if (arrasto.tipo === 'criar') {
-        const inicio = Math.min(arrasto.inicioMin, min)
-        const fim = Math.max(arrasto.inicioMin, min)
-        const duracaoArrastada = fim - inicio
-        onClickVazio(minutosParaHora(inicio), duracaoArrastada >= 15 ? duracaoArrastada : 40)
-        return
-      }
-
-      const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
-      const fimOriginal = inicioOriginal + arrasto.evento.duracao_min
-      const novoInicio = arrasto.pega === 'topo' ? Math.min(min, fimOriginal - DURACAO_MIN_MINIMA) : inicioOriginal
-      const novoFim = arrasto.pega === 'fundo' ? Math.max(min, inicioOriginal + DURACAO_MIN_MINIMA) : fimOriginal
-      if (novoInicio === inicioOriginal && novoFim === fimOriginal) return
-      onRedimensionar(arrasto.evento.id, minutosParaHora(novoInicio), novoFim - novoInicio)
-    }
-
-    window.addEventListener('mousemove', mover)
-    window.addEventListener('mouseup', soltar)
-    return () => {
-      window.removeEventListener('mousemove', mover)
-      window.removeEventListener('mouseup', soltar)
-    }
-  }, [pxPorMinuto, onClickVazio, onRedimensionar])
-
-  function iniciarCriacao(e: React.MouseEvent) {
-    if (e.button !== 0) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const min = minutoNoClique(e.clientY, rect.top, pxPorMinuto)
-    arrastoRef.current = { tipo: 'criar', inicioMin: min }
-    setPrevia({ inicioMin: min, fimMin: min })
-  }
-
-  function iniciarRedimensionamento(evento: EventoComNomes, pega: 'topo' | 'fundo') {
-    return (e: React.MouseEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      arrastoRef.current = { tipo: 'redimensionar', evento, pega }
-      setPrevia({ inicioMin: minutosDoDia(evento.hora_inicio), fimMin: minutosDoDia(evento.hora_inicio) + evento.duracao_min })
-    }
-  }
-
   return (
     <div
-      ref={ref}
-      onMouseDown={iniciarCriacao}
-      onMouseMove={(e) => {
-        if (arrastoRef.current) return
-        const rect = e.currentTarget.getBoundingClientRect()
-        const min = minutoNoClique(e.clientY, rect.top, pxPorMinuto)
-        onHoverMinuto(Math.round(min / 10) * 10)
-      }}
-      onDragOver={(e) => {
-        e.preventDefault()
-        onDragOver()
-      }}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => {
-        e.preventDefault()
-        const id = e.dataTransfer.getData('text/plain')
-        const rect = e.currentTarget.getBoundingClientRect()
-        if (id) onDrop(id, minutosParaHora(minutoNoClique(e.clientY, rect.top, pxPorMinuto)))
-      }}
-      className={`relative cursor-pointer border-l border-border-subtle bg-surface transition-colors select-none ${
-        emDrag ? 'bg-brand/[.1]' : ''
-      }`}
+      ref={registarRef}
+      onMouseDown={onIniciarCriacao}
+      className="relative cursor-pointer border-l border-border-subtle bg-surface transition-colors select-none"
     >
       {HORAS_GRADE.map((h) => (
         <div
@@ -578,12 +635,6 @@ function ColunaDia({
           style={{ top: h * 60 * pxPorMinuto }}
         />
       ))}
-      {horaHover !== null && !previa && (
-        <div
-          className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-accent"
-          style={{ top: horaHover * pxPorMinuto }}
-        />
-      )}
       {previa && (
         <div
           className="pointer-events-none absolute inset-x-1 rounded border-2 border-dashed border-brand bg-brand/20"
@@ -596,23 +647,16 @@ function ColunaDia({
       {disporEventosDoDia(eventos).map(({ evento, grupo, coluna, colunas }) => {
         const cor = corTipoEvento(evento.tipo)
         const inicioMin = minutosDoDia(evento.hora_inicio)
+        const emArrasto = arrastandoId === evento.id
         return (
           <button
             key={evento.id}
             type="button"
-            draggable
-            onMouseDown={(e) => e.stopPropagation()}
-            onDragStart={(ev) => {
-              ev.dataTransfer.setData('text/plain', evento.id)
-              ev.dataTransfer.effectAllowed = 'move'
-            }}
-            onClick={(ev) => {
-              ev.stopPropagation()
-              onAbrirEvento(evento)
-            }}
-            className={`group absolute overflow-hidden rounded border px-1 py-0.5 text-left leading-tight ${
+            onMouseDown={onIniciarMovimento(evento)}
+            onClick={onClicarEvento(evento)}
+            className={`group absolute overflow-hidden rounded border px-1 py-0.5 text-left leading-tight transition-opacity ${
               evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''
-            }`}
+            } ${emArrasto ? 'opacity-30' : ''}`}
             style={{
               top: inicioMin * pxPorMinuto,
               height: Math.max(evento.duracao_min * pxPorMinuto, 18),
@@ -631,11 +675,11 @@ function ColunaDia({
                 cursor muda de resto; ficam discretas até se precisar
                 delas. */}
             <span
-              onMouseDown={iniciarRedimensionamento(evento, 'topo')}
+              onMouseDown={onIniciarRedimensionamento(evento, 'topo')}
               className="absolute inset-x-0 top-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
             />
             <span
-              onMouseDown={iniciarRedimensionamento(evento, 'fundo')}
+              onMouseDown={onIniciarRedimensionamento(evento, 'fundo')}
               className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
             />
           </button>

@@ -13,11 +13,10 @@ import {
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
-import { fmt, MESES } from '@/lib/data/presencas'
+import { MESES } from '@/lib/data/presencas'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from './actions'
 import { corEstudio, PALETA } from '@/lib/data/constantes'
-import { segurosPorPagar } from '@/lib/data/clientes'
 import PortaSenha from '@/components/PortaSenha'
 import TituloSeccao from '@/components/TituloSeccao'
 import StatCard from '@/components/StatCard'
@@ -222,35 +221,6 @@ async function PainelAdminEstudio({
   const novosClientes = clientes.filter(
     (c) => c.inicio_contrato && c.inicio_contrato >= inicioMes && c.inicio_contrato < fimMesExclusivo
   ).length
-  const clientesAtivosComContrato = clientes.filter((c) => c.estado === 'Ativo')
-  const idsClientesAtivos = clientesAtivosComContrato.map((c) => c.id)
-  const { data: segurosPagosData, error: erroSegurosPagos } = idsClientesAtivos.length
-    ? await supabase
-        .from('pagamentos')
-        .select('cliente_id, data_pagamento')
-        .in('cliente_id', idsClientesAtivos)
-        .eq('inclui_seguro', true)
-    : { data: [], error: null }
-  if (erroSegurosPagos) {
-    throw new Error(erroSegurosPagos.message)
-  }
-  const { data: reativacoesData, error: erroReativacoesSeguro } = idsClientesAtivos.length
-    ? await supabase
-        .from('pagamentos')
-        .select('cliente_id, data_pagamento')
-        .in('cliente_id', idsClientesAtivos)
-        .eq('inclui_reativacao', true)
-    : { data: [], error: null }
-  if (erroReativacoesSeguro) {
-    throw new Error(erroReativacoesSeguro.message)
-  }
-  const segurosARenovar = segurosPorPagar(
-    clientesAtivosComContrato,
-    agora,
-    segurosPagosData ?? [],
-    reativacoesData ?? []
-  )
-
   const leads = (leadsData ?? []) as LeadResumo[]
   const leadsNovas = leads.filter((l) => l.entrada >= inicioMes && l.entrada < fimMesExclusivo).length
   const leadsConvertidas = leads.filter(
@@ -273,8 +243,6 @@ async function PainelAdminEstudio({
     throw new Error(erroPagamentosMes.message)
   }
   const receitaMes = (pagamentosMesData ?? []).reduce((soma, p) => soma + Number(p.valor), 0)
-
-  const totalPendencias = segurosARenovar.length
 
   return (
     <>
@@ -324,29 +292,6 @@ async function PainelAdminEstudio({
           label="Sessões agendadas"
           valor={sessoesAgendadas}
         />
-      </div>
-
-      <TituloSeccao cor="ambar">Pendências ({totalPendencias})</TituloSeccao>
-      <p className="mt-2 text-xs text-muted">
-        Leads paradas, clientes sem agendamento, reavaliações e pagamentos em atraso ficam só em
-        Coordenação, por pedido do dono.
-      </p>
-      <div className="mt-2 flex flex-col gap-2">
-        {segurosARenovar.map((c) => (
-          <Link
-            key={`seguro-${c.id}`}
-            href={`/painel/${slug}/pagamentos/${c.id}`}
-            className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
-          >
-            <span className="font-medium text-foreground">
-              {c.nome} <span className="text-xs text-muted">· renovação de seguro</span>
-            </span>
-            <span className="text-xs text-amber-700 dark:text-amber-300">
-              em dívida desde {fmt(c.dataRenovacao)}
-            </span>
-          </Link>
-        ))}
-        {totalPendencias === 0 && <p className="text-sm text-muted">Nada pendente — tudo em dia.</p>}
       </div>
     </>
   )

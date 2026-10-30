@@ -4,12 +4,18 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
+import EditarClienteModal, { type ClienteEdicao } from './EditarClienteModal'
+import type { EstadoCliente } from '@/lib/supabase/database.types'
 
 export type LinhaCliente = {
   id: string
   numeroSocio: string | null
   nome: string
   telefone: string | null
+  email: string | null
+  nascimento: string | null
+  frequenciaSemanal: number | null
+  estado: EstadoCliente
   estadoLabel: string
   estadoBg: string
   estadoTx: string
@@ -23,6 +29,7 @@ export type LinhaCliente = {
 
 export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]; slug: string }) {
   const [filtro, setFiltro] = useState('')
+  const [editando, setEditando] = useState<ClienteEdicao | null>(null)
 
   const linhasFiltradas = useMemo(() => {
     if (!filtro) return linhas
@@ -64,7 +71,26 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
               </span>
               <span className="flex min-w-[160px] flex-1 items-center gap-2">
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: l.alertaDot }} />
-                <span className="truncate font-semibold text-foreground">{l.nome}</span>
+                <span
+                  className="truncate font-semibold text-foreground"
+                  title="Botão direito para editar"
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setEditando({
+                      id: l.id,
+                      nome: l.nome,
+                      numeroSocio: l.numeroSocio,
+                      telefone: l.telefone,
+                      email: l.email,
+                      nascimento: l.nascimento,
+                      frequenciaSemanal: l.frequenciaSemanal,
+                      estado: l.estado,
+                    })
+                  }}
+                >
+                  {l.nome}
+                </span>
               </span>
               <span
                 className="w-24 shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-medium"
@@ -98,6 +124,10 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
         <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
           {filtro ? 'Nenhum cliente com esse nome.' : 'Ainda não há clientes com este filtro.'}
         </div>
+      )}
+
+      {editando && (
+        <EditarClienteModal slug={slug} cliente={editando} onFechar={() => setEditando(null)} />
       )}
     </>
   )

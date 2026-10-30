@@ -60,6 +60,26 @@ export function NavLinkTablet({ href, id, nome }: { href: string; id: string; no
   )
 }
 
+// Computador/tablet (≥768px): barra superior horizontal, ícone + nome,
+// numa pílula — substitui as duas barras laterais antigas.
+export function NavLinkTopBar({ href, id, nome }: { href: string; id: string; nome: string }) {
+  const { icone: Icone, cor } = moduloPorId(id)
+  const ativo = estaAtivo(usePathname(), href)
+  return (
+    <Link
+      href={href}
+      className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition-colors"
+      style={{
+        background: ativo ? PALETA[cor].bg : undefined,
+        color: ativo ? PALETA[cor].tx : 'var(--muted)',
+      }}
+    >
+      <Icone className="h-4 w-4" strokeWidth={2.5} />
+      {nome}
+    </Link>
+  )
+}
+
 // Telemóvel (<768px): barra fixa no fundo, ao estilo iOS — ícone +
 // legenda pequena, sempre ao alcance do polegar.
 export function NavLinkPhone({ href, id }: { href: string; id: string }) {

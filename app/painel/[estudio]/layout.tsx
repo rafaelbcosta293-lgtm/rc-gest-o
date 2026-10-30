@@ -4,7 +4,7 @@ import { ArrowLeftRight, Search } from 'lucide-react'
 import { MODULOS } from '@/lib/data/constantes'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
-import { NavLinkDesktop, NavLinkTablet, NavLinkPhone } from './NavLink'
+import { NavLinkTopBar, NavLinkPhone } from './NavLink'
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
@@ -28,7 +28,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       : `${m.nome} — só para ${m.restrito === 'admin' ? 'administradores' : 'gestão'}`
 
   return (
-    <div className="flex min-h-full flex-col lg:flex-row">
+    <div className="flex min-h-full flex-col">
       {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
           estúdio — os módulos ficam na barra de separadores do fundo,
           sempre ao alcance do polegar, ao estilo iOS. */}
@@ -51,72 +51,47 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
         </Link>
       </div>
 
-      {/* Tablet (768–1023px): barra lateral estreita, só com ícones —
-          mantém a navegação sempre visível sem ocupar tanto ecrã como a
-          versão completa. */}
-      <aside className="hidden border-border-subtle bg-surface/70 backdrop-blur-xl md:sticky md:top-0 md:flex md:h-screen md:w-20 md:flex-col md:items-center md:gap-1 md:border-r md:py-5 lg:hidden">
-        <Link href="/painel" className="mb-3 flex items-center justify-center p-1.5">
+      {/* Computador/tablet (≥768px): barra superior fixa, com o
+          logótipo, os módulos (pílulas, numa linha com scroll
+          horizontal se não couberem) e as ações à direita. */}
+      <header className="sticky top-0 z-10 hidden items-center gap-3 border-b border-border-subtle bg-surface/70 px-4 py-2.5 backdrop-blur-xl md:flex">
+        <Link href="/painel" className="flex shrink-0 items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-7 w-auto" />
+          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-8 w-auto" />
         </Link>
-        <Link
-          href={`/painel/${slug}/pesquisa`}
-          title="Pesquisar"
-          aria-label="Pesquisar"
-          className="mb-1 flex items-center justify-center rounded-xl p-3 text-muted hover:bg-brand/[.07] hover:text-foreground"
-        >
-          <Search className="h-5 w-5" strokeWidth={2.25} />
-        </Link>
-        {MODULOS.map((m) =>
-          podeAceder(m) ? (
-            <NavLinkTablet key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
-          ) : (
-            <span
-              key={m.id}
-              title={tituloBloqueado(m)}
-              className="flex cursor-not-allowed items-center justify-center rounded-xl p-3 text-muted opacity-40"
-            >
-              <m.icone className="h-5 w-5" strokeWidth={2.25} />
-            </span>
-          )
-        )}
-      </aside>
-
-      {/* Computador (≥1024px): barra lateral completa, com nomes por
-          extenso. */}
-      <aside className="hidden shrink-0 border-border-subtle bg-surface/70 backdrop-blur-xl lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col lg:border-r">
-        <Link href="/painel" className="flex items-center px-6 py-7">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-10 w-auto" />
-        </Link>
-        <nav className="flex flex-col gap-1 px-4">
-          <Link
-            href={`/painel/${slug}/pesquisa`}
-            className="mb-2 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted hover:bg-brand/[.07] hover:text-foreground"
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-border-subtle">
-              <Search className="h-3.5 w-3.5" strokeWidth={2.25} />
-            </span>
-            Pesquisar
-          </Link>
+        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {MODULOS.map((m) =>
             podeAceder(m) ? (
-              <NavLinkDesktop key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
+              <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
             ) : (
               <span
                 key={m.id}
                 title={tituloBloqueado(m)}
-                className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted opacity-50"
+                className="flex shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-muted opacity-40"
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-border-subtle">
-                  <m.icone className="h-3.5 w-3.5" strokeWidth={2.25} />
-                </span>
+                <m.icone className="h-4 w-4" strokeWidth={2.5} />
                 {m.nome}
               </span>
             )
           )}
         </nav>
-      </aside>
+        <Link
+          href={`/painel/${slug}/pesquisa`}
+          title="Pesquisar"
+          aria-label="Pesquisar"
+          className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+        >
+          <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+        </Link>
+        <Link
+          href="/painel"
+          title="Mudar estúdio"
+          aria-label="Mudar estúdio"
+          className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+        >
+          <ArrowLeftRight className="h-[18px] w-[18px]" strokeWidth={2.25} />
+        </Link>
+      </header>
 
       {/* O conteúdo ganha espaço extra no fundo, no telemóvel, para a
           barra de separadores fixa não tapar o fim da página. */}

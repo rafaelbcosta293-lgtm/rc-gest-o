@@ -1,0 +1,225 @@
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+import { Suspense } from 'react'
+import { createClient } from '@/lib/supabase/server'
+import { getEstudios } from '@/lib/data/estudios'
+import { fmt } from '@/lib/data/presencas'
+import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { desbloquearCoordenacao } from '../actions'
+import { corEstudio } from '@/lib/data/constantes'
+import { segurosPorPagar } from '@/lib/data/clientes'
+import PortaSenha from '@/components/PortaSenha'
+import type {
+  Cliente,
+  ClienteSemTreino,
+  EstadoPagamento,
+  Estudio,
+  LeadParada,
+  ReavaliacaoPendente,
+} from '@/lib/supabase/database.types'
+
+type ClienteSeguro = Pick<Cliente, 'id' | 'nome' | 'inicio_contrato'>
+
+export default async function CoordenacaoPendenciasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ erroSenha?: string }>
+}) {
+  const sp = await searchParams
+
+  const supabase = await createClient()
+
+  const protegida = await areaTemPassword(supabase, 'coordenacao')
+  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
+  if (protegida && !desbloqueada) {
+    return (
+      <PortaSenha
+        titulo="Coordenação — Pendências"
+        destino="/painel/coordenacao/pendencias"
+        action={desbloquearCoordenacao}
+        erro={sp.erroSenha}
+      />
+    )
+  }
+
+  const estudios = await getEstudios(supabase)
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-10">
+      <Link
+        href="/painel/coordenacao"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Resumo
+      </Link>
+
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Pendências</h1>
+      <p className="mt-1 text-sm text-muted">Leads paradas, reavaliações, pagamentos e seguros a renovar.</p>
+
+      <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">
+        {estudios.map((estudio) => (
+          <section key={estudio.id}>
+            <div className="flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: corEstudio(estudio.slug).cor }}
+              />
+              <h2 className="text-lg font-semibold text-foreground">{estudio.nome}</h2>
+            </div>
+            <Suspense fallback={<EsqueletoEstudio />}>
+              <PendenciasEstudio estudio={estudio} />
+            </Suspense>
+          </section>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function EsqueletoEstudio() {
+  return <div className="mt-2 h-24 animate-pulse rounded-2xl border border-border-subtle bg-border-subtle" />
+}
+
+async function PendenciasEstudio({ estudio }: { estudio: Pick<Estudio, 'id' | 'slug'> }) {
+  const slug = estudio.slug
+  const supabase = await createClient()
+
+  const [
+    { data: leadsParadasData },
+    { data: reavaliacoesData },
+    { data: pagamentosData },
+    { data: semTreinoData },
+    { data: clientesAtivosData },
+  ] = await Promise.all([
+    supabase
+      .from('v_leads_paradas')
+      .select('*')
+      .eq('estudio_id', estudio.id)
+      .order('dias_sem_contacto', { ascending: false }),
+    supabase
+      .from('v_reavaliacoes_pendentes')
+      .select('*')
+      .eq('estudio_id', estudio.id)
+      .eq('precisa_atencao', true),
+    supabase.from('v_estado_pagamento').select('*').eq('estudio_id', estudio.id).eq('em_dia', false),
+    supabase
+      .from('v_clientes_sem_treino_recente')
+      .select('*')
+      .eq('estudio_id', estudio.id)
+      .gt('dias_sem_treino', 7),
+    supabase
+      .from('clientes')
+      .select('id, nome, inicio_contrato')
+      .eq('estudio_id', estudio.id)
+      .eq('estado', 'Ativo'),
+  ])
+
+  const leadsParadas = (leadsParadasData ?? []) as LeadParada[]
+  const reavaliacoes = (reavaliacoesData ?? []) as ReavaliacaoPendente[]
+  const pagamentosAtrasados = (pagamentosData ?? []) as EstadoPagamento[]
+
+  // "Sem treino há mais de 7 dias" é calculado agora; "sem evento no
+  // Google Calendar" vem da cache que o job diário (app/api/cron/retencao)
+  // escreveu — por isso é uma segunda consulta, dependente da primeira.
+  const candidatosInativos = (semTreinoData ?? []) as ClienteSemTreino[]
+  const idsCandidatos = candidatosInativos.map((c) => c.cliente_id)
+  const { data: semAgendamentoData } = idsCandidatos.length
+    ? await supabase.from('clientes_sem_agendamento').select('cliente_id').in('cliente_id', idsCandidatos)
+    : { data: [] }
+  const idsSemAgendamento = new Set((semAgendamentoData ?? []).map((d) => d.cliente_id))
+  const clientesInativos = candidatosInativos.filter((c) => idsSemAgendamento.has(c.cliente_id))
+
+  const agora = new Date()
+  const clientesAtivos = (clientesAtivosData ?? []) as ClienteSeguro[]
+  const idsClientesAtivos = clientesAtivos.map((c) => c.id)
+  const { data: segurosPagosData, error: erroSegurosPagos } = idsClientesAtivos.length
+    ? await supabase
+        .from('pagamentos')
+        .select('cliente_id, data_pagamento')
+        .in('cliente_id', idsClientesAtivos)
+        .eq('inclui_seguro', true)
+    : { data: [], error: null }
+  if (erroSegurosPagos) {
+    throw new Error(erroSegurosPagos.message)
+  }
+  const { data: reativacoesData, error: erroReativacoesSeguro } = idsClientesAtivos.length
+    ? await supabase
+        .from('pagamentos')
+        .select('cliente_id, data_pagamento')
+        .in('cliente_id', idsClientesAtivos)
+        .eq('inclui_reativacao', true)
+    : { data: [], error: null }
+  if (erroReativacoesSeguro) {
+    throw new Error(erroReativacoesSeguro.message)
+  }
+  const segurosARenovar = segurosPorPagar(clientesAtivos, agora, segurosPagosData ?? [], reativacoesData ?? [])
+
+  return (
+    <div className="mt-2 flex flex-col gap-2">
+      {leadsParadas.map((l) => (
+        <Link
+          key={`lead-${l.id}`}
+          href={`/painel/${slug}/leads/${l.id}`}
+          className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+        >
+          <span className="text-foreground">{l.nome} · lead parada</span>
+          <span className="text-xs text-amber-700 dark:text-amber-300">
+            {l.dias_sem_contacto} dias sem contacto
+          </span>
+        </Link>
+      ))}
+      {reavaliacoes.map((r) => (
+        <Link
+          key={`reav-${r.cliente_id}`}
+          href={`/painel/${slug}/avaliacoes/${r.cliente_id}`}
+          className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+        >
+          <span className="text-foreground">{r.nome} · reavaliação</span>
+          <span className="text-xs text-amber-700 dark:text-amber-300">
+            {r.ultima_avaliacao ? `última em ${fmt(r.ultima_avaliacao)}` : 'nunca avaliado'}
+          </span>
+        </Link>
+      ))}
+      {pagamentosAtrasados.map((p) => (
+        <Link
+          key={`pag-${p.cliente_id}`}
+          href={`/painel/${slug}/pagamentos/${p.cliente_id}`}
+          className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+        >
+          <span className="text-foreground">{p.nome} · pagamento</span>
+          <span className="text-xs text-amber-700 dark:text-amber-300">
+            {p.valido_ate ? `venceu em ${fmt(p.valido_ate)}` : 'sem pagamentos'}
+          </span>
+        </Link>
+      ))}
+      {clientesInativos.map((c) => (
+        <Link
+          key={`inativo-${c.cliente_id}`}
+          href={`/painel/${slug}/clientes/${c.cliente_id}`}
+          className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+        >
+          <span className="text-foreground">{c.nome} · Cliente Inativo / Sem Agendamento</span>
+          <span className="text-xs text-amber-700 dark:text-amber-300">{c.dias_sem_treino} dias sem treinar</span>
+        </Link>
+      ))}
+      {segurosARenovar.map((c) => (
+        <Link
+          key={`seguro-${c.id}`}
+          href={`/painel/${slug}/pagamentos/${c.id}`}
+          className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+        >
+          <span className="text-foreground">{c.nome} · renovação de seguro</span>
+          <span className="text-xs text-amber-700 dark:text-amber-300">
+            em dívida desde {fmt(c.dataRenovacao)}
+          </span>
+        </Link>
+      ))}
+      {leadsParadas.length +
+        reavaliacoes.length +
+        pagamentosAtrasados.length +
+        clientesInativos.length +
+        segurosARenovar.length ===
+        0 && <p className="text-sm text-muted">Nada pendente — tudo em dia.</p>}
+    </div>
+  )
+}

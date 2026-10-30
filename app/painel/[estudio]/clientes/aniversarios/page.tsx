@@ -58,16 +58,16 @@ function Calendario({
       <div className="flex items-center justify-between gap-3">
         <Link
           href={`/painel/${slug}/clientes/aniversarios?mes=${anoAnterior}-${String(mesAnteriorNum).padStart(2, '0')}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           ← {MESES[mesAnteriorNum - 1].slice(0, 3)}
         </Link>
-        <strong className="text-sm text-black dark:text-zinc-50">
+        <strong className="text-sm text-foreground">
           {MESES[mes - 1]} {ano}
         </strong>
         <Link
           href={`/painel/${slug}/clientes/aniversarios?mes=${anoSeguinte}-${String(mesSeguinteNum).padStart(2, '0')}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           {MESES[mesSeguinteNum - 1].slice(0, 3)} →
         </Link>
@@ -87,7 +87,7 @@ function Calendario({
                 ? 'border-transparent'
                 : ehHoje(dia)
                   ? 'border-teal-400 bg-teal-50 dark:bg-teal-950'
-                  : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-950'
+                  : 'border-border-subtle bg-surface'
             }`}
           >
             {dia !== null && (
@@ -196,15 +196,15 @@ export default async function AniversariosPage({
     <div className="mx-auto max-w-5xl px-4 py-10">
       <Link
         href={`/painel/${slug}/clientes`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline"
       >
         ← Clientes
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">
         Aniversários
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         {estudio.nome} · a mensagem já vem pronta a copiar — envia por onde costumas falar com
         cada pessoa e marca como enviado.
       </p>
@@ -215,7 +215,7 @@ export default async function AniversariosPage({
           className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
             vistaCalendario
               ? 'border-brand bg-brand text-black'
-              : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+              : 'border-border-subtle text-muted'
           }`}
         >
           Calendário
@@ -225,7 +225,7 @@ export default async function AniversariosPage({
           className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
             !vistaCalendario
               ? 'border-brand bg-brand text-black'
-              : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+              : 'border-border-subtle text-muted'
           }`}
         >
           Lista
@@ -248,11 +248,11 @@ export default async function AniversariosPage({
         {lista.map(({ cliente, dataProximo, dias, idade, mensagem, envio }) => (
           <div
             key={cliente.id}
-            className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950"
+            className="rounded-xl border border-border-subtle bg-surface p-4"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <strong className="text-sm text-black dark:text-zinc-50">
+                <strong className="text-sm text-foreground">
                   {cliente.nome}
                 </strong>
                 <span className="ml-2 text-xs text-zinc-500">
@@ -266,7 +266,7 @@ export default async function AniversariosPage({
                     ? 'bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300'
                     : dias <= 7
                       ? 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                      : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400'
+                      : 'bg-zinc-100 text-muted dark:bg-zinc-900'
                 }`}
               >
                 {dias === 0 ? 'É hoje!' : dias === 1 ? 'Amanhã' : `em ${dias} dias`}
@@ -283,7 +283,7 @@ export default async function AniversariosPage({
               {mensagem && (
                 <CopiarTexto
                   texto={mensagem}
-                  className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+                  className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
                 />
               )}
 
@@ -311,7 +311,7 @@ export default async function AniversariosPage({
                   <input type="hidden" name="ano" value={anoAtual} />
                   <SubmitButton
                     pendingText="…"
-                    className="rounded-full bg-brand px-3 py-1.5 text-xs font-medium text-black"
+                    className="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-black hover:bg-brand-strong"
                   >
                     Marcar como enviado
                   </SubmitButton>
@@ -323,7 +323,7 @@ export default async function AniversariosPage({
       </div>
 
       {lista.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-zinc-500">
           Nenhum cliente com data de nascimento registada.
         </div>
       )}
@@ -331,12 +331,12 @@ export default async function AniversariosPage({
       )}
 
       {ehGestao && (
-        <details className="mt-10 rounded-xl border border-black/10 dark:border-white/10">
+        <details className="mt-10 rounded-xl border border-border-subtle">
           <summary className="flex cursor-pointer items-center gap-1.5 p-4 text-xs font-semibold uppercase tracking-wider text-[#5B3FA0]">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#5B3FA0]" />
             Editar mensagens
           </summary>
-          <div className="flex flex-col gap-4 border-t border-black/10 p-4 dark:border-white/10">
+          <div className="flex flex-col gap-4 border-t border-border-subtle p-4">
             <p className="text-xs text-zinc-500">
               Usa <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{'{nome}'}</code> onde
               quiseres que apareça o nome da pessoa.
@@ -351,11 +351,11 @@ export default async function AniversariosPage({
                 name="valor"
                 defaultValue={msgAtiva}
                 rows={3}
-                className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+                className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
               />
               <SubmitButton
                 pendingText="…"
-                className="self-start rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
+                className="self-start rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
               >
                 Guardar
               </SubmitButton>
@@ -370,11 +370,11 @@ export default async function AniversariosPage({
                 name="valor"
                 defaultValue={msgExCliente}
                 rows={3}
-                className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+                className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
               />
               <SubmitButton
                 pendingText="…"
-                className="self-start rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
+                className="self-start rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
               >
                 Guardar
               </SubmitButton>

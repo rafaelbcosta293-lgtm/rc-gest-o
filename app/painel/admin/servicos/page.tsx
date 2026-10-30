@@ -10,7 +10,7 @@ import ListaPlanos from './ListaPlanos'
 import type { ConfigLinha, Plano } from '@/lib/supabase/database.types'
 
 const inputCls =
-  'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
 
 // Estas chaves de "config" têm forms dedicados (write-only, nunca
 // mostram o valor atual) — não devem aparecer na lista genérica de
@@ -127,14 +127,14 @@ export default async function ServicosPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <Link href="/painel/admin" className="text-sm text-zinc-600 underline dark:text-zinc-400">
+      <Link href="/painel/admin" className="text-sm text-muted underline">
         ← Administração
       </Link>
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Serviços / Produtos
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         Valores dos planos (partilhados por todos os estúdios), definições do negócio e acessos.
       </p>
 
@@ -149,7 +149,7 @@ export default async function ServicosPage({
 
       <form
         action={criarPlano}
-        className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-black/20 p-3 dark:border-white/20"
+        className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border-strong p-3"
       >
         <input name="nome" required placeholder="Nome do serviço" className={`${inputCls} flex-1 basis-40`} />
         <input
@@ -168,7 +168,7 @@ export default async function ServicosPage({
         />
         <SubmitButton
           pendingText="A criar…"
-          className="rounded-full bg-brand px-4 py-1.5 text-xs font-medium text-black"
+          className="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-black hover:bg-brand-strong"
         >
           + Serviço
         </SubmitButton>
@@ -186,7 +186,7 @@ export default async function ServicosPage({
       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <form
           action={guardarSenha}
-          className="flex flex-col gap-1.5 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
+          className="flex flex-col gap-1.5 rounded-lg border border-border-subtle bg-surface p-3"
         >
           <input type="hidden" name="chave" value={chaveConfigSenha('admin')} />
           <label className="text-xs font-medium text-zinc-500">Password de Administração</label>
@@ -194,7 +194,7 @@ export default async function ServicosPage({
             <input type="password" name="senha" placeholder="Nova password" className={`${inputCls} flex-1`} />
             <SubmitButton
               pendingText="…"
-              className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
             >
               Guardar
             </SubmitButton>
@@ -202,7 +202,7 @@ export default async function ServicosPage({
         </form>
         <form
           action={guardarSenha}
-          className="flex flex-col gap-1.5 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
+          className="flex flex-col gap-1.5 rounded-lg border border-border-subtle bg-surface p-3"
         >
           <input type="hidden" name="chave" value={chaveConfigSenha('coordenacao')} />
           <label className="text-xs font-medium text-zinc-500">Password de Coordenação</label>
@@ -210,7 +210,7 @@ export default async function ServicosPage({
             <input type="password" name="senha" placeholder="Nova password" className={`${inputCls} flex-1`} />
             <SubmitButton
               pendingText="…"
-              className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
             >
               Guardar
             </SubmitButton>
@@ -238,7 +238,7 @@ export default async function ServicosPage({
                   <form
                     key={c.chave}
                     action={guardarConfig}
-                    className={`flex flex-col gap-1.5 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950 ${
+                    className={`flex flex-col gap-1.5 rounded-lg border border-border-subtle bg-surface p-3 ${
                       meta?.tipo === 'textarea' ? 'sm:col-span-2' : ''
                     }`}
                   >
@@ -262,7 +262,7 @@ export default async function ServicosPage({
                       )}
                       <SubmitButton
                         pendingText="…"
-                        className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
+                        className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
                       >
                         Guardar
                       </SubmitButton>

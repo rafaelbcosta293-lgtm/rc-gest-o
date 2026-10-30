@@ -190,8 +190,8 @@ export default async function ObjetivosPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Objetivos</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">Objetivos</h1>
+      <p className="mt-1 text-sm text-muted">
         {estudio.nome} · {mes}/{ano} · dia {diaDoMes} de {diasDoMes}
       </p>
 
@@ -267,7 +267,7 @@ export default async function ObjetivosPage({
         <input type="hidden" name="mes" value={mes} />
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Métrica</label>
-          <select name="metrica" className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900">
+          <select name="metrica" className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900">
             {METRICAS.filter((m) => !m.soAdmin || ehAdmin).map((m) => (
               <option key={m.chave} value={m.chave}>
                 {m.label}
@@ -282,12 +282,12 @@ export default async function ObjetivosPage({
             name="meta"
             step="any"
             required
-            className="w-32 rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+            className="w-32 rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
           />
         </div>
         <SubmitButton
           pendingText="A guardar…"
-          className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
         >
           Guardar
         </SubmitButton>

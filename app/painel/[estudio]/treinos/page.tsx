@@ -76,16 +76,16 @@ export default async function TreinosPage({
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
+          <h1 className="text-2xl font-semibold text-foreground">
             Treinos
           </h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-muted">
             {estudio.nome} · {clientes.length} clientes ativos
           </p>
         </div>
         <Link
           href={`/painel/${slug}/treinos/novo`}
-          className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
         >
           + Cliente
         </Link>

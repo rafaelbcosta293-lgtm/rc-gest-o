@@ -884,7 +884,7 @@ function EventoModalOverlay({
             <button
               type="submit"
               disabled={aPendente}
-              className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong disabled:opacity-60"
+              className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong disabled:opacity-60"
             >
               {aPendente ? 'A guardar…' : 'Guardar'}
             </button>

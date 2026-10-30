@@ -44,10 +44,10 @@ export default async function EquipaPage({
       >
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">
         Equipa — {estudio.nome}
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         Só quem tem acesso a este estúdio consegue ver e trabalhar com os clientes dele. Quem
         cria conta em <span className="font-medium">/registo</span> só aparece com acesso depois
         de aprovado aqui.
@@ -55,7 +55,7 @@ export default async function EquipaPage({
 
       <Link
         href={`/painel/${slug}/equipa/operacional`}
-        className="mt-3 inline-block rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+        className="mt-3 inline-block rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
       >
         Painel operacional
       </Link>
@@ -73,10 +73,10 @@ export default async function EquipaPage({
           return (
             <div
               key={p.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3"
             >
               <div>
-                <p className="flex items-center gap-2 text-sm font-medium text-black dark:text-zinc-50">
+                <p className="flex items-center gap-2 text-sm font-medium text-foreground">
                   {p.nome}
                   {porAprovar && (
                     <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
@@ -93,7 +93,7 @@ export default async function EquipaPage({
                   <select
                     name="papel"
                     defaultValue={p.papel}
-                    className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+                    className="rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
                   >
                     {PAPEIS.map((papel) => (
                       <option key={papel} value={papel}>
@@ -103,7 +103,7 @@ export default async function EquipaPage({
                   </select>
                   <SubmitButton
                     pendingText="…"
-                    className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10"
+                    className="rounded-md border border-border-subtle px-2 py-1.5 text-xs"
                   >
                     Guardar
                   </SubmitButton>
@@ -117,7 +117,7 @@ export default async function EquipaPage({
                     pendingText="A atualizar…"
                     className={`rounded-full px-4 py-1.5 text-xs font-medium ${
                       temAcesso
-                        ? 'border border-black/10 text-zinc-700 hover:bg-black/[.04] dark:border-white/10 dark:text-zinc-300'
+                        ? 'border border-border-subtle text-zinc-700 hover:bg-black/[.04] dark:text-zinc-300'
                         : 'bg-brand text-black'
                     }`}
                   >
@@ -131,7 +131,7 @@ export default async function EquipaPage({
       </div>
 
       {(perfis ?? []).length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
           Ainda não há ninguém registado.
         </div>
       )}

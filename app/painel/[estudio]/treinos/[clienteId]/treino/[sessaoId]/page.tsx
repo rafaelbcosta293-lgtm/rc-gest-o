@@ -109,14 +109,14 @@ export default async function EditarTreinoPage({
     <div className="mx-auto max-w-5xl px-4 py-10">
       <Link
         href={`/painel/${slug}/treinos/${clienteId}`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline"
       >
         ← {cliente.nome}
       </Link>
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">
         Editar treino
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{cliente.nome}</p>
+      <p className="mt-1 text-sm text-muted">{cliente.nome}</p>
 
       <TreinoForm
         estudioSlug={slug}

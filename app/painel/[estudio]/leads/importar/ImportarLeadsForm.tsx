@@ -59,7 +59,7 @@ export default function ImportarLeadsForm({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+          className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
         >
           Escolher ficheiro .csv
         </button>
@@ -85,9 +85,9 @@ export default function ImportarLeadsForm({
 
       {leads.length > 0 && (
         <>
-          <div className="overflow-x-auto rounded-xl border border-black/10 dark:border-white/10">
+          <div className="overflow-x-auto rounded-xl border border-border-subtle">
             <table className="w-full text-left text-sm">
-              <thead className="bg-black/[0.03] text-xs uppercase tracking-wider text-zinc-500 dark:bg-white/[0.03]">
+              <thead className="bg-foreground/[0.03] text-xs uppercase tracking-wider text-muted">
                 <tr>
                   <th className="px-3 py-2">Nome</th>
                   <th className="px-3 py-2">Telefone</th>
@@ -98,10 +98,10 @@ export default function ImportarLeadsForm({
               <tbody>
                 {leads.slice(0, 20).map((l, i) => (
                   <tr key={i} className="border-t border-black/5 dark:border-white/5">
-                    <td className="px-3 py-2 text-black dark:text-zinc-50">{l.nome}</td>
-                    <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{l.telefone ?? '—'}</td>
-                    <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{l.origem ?? '—'}</td>
-                    <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{l.temperatura ?? '—'}</td>
+                    <td className="px-3 py-2 text-foreground">{l.nome}</td>
+                    <td className="px-3 py-2 text-muted">{l.telefone ?? '—'}</td>
+                    <td className="px-3 py-2 text-muted">{l.origem ?? '—'}</td>
+                    <td className="px-3 py-2 text-muted">{l.temperatura ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -117,7 +117,7 @@ export default function ImportarLeadsForm({
             type="button"
             onClick={confirmar}
             disabled={aEnviar}
-            className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+            className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
           >
             {aEnviar ? 'A importar…' : `Importar ${leads.length} ${leads.length === 1 ? 'lead' : 'leads'}`}
           </button>

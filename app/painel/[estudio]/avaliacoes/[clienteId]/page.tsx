@@ -52,18 +52,18 @@ export default async function AvaliacoesClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/avaliacoes`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline"
       >
         ← Avaliações
       </Link>
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
+        <h1 className="text-2xl font-semibold text-foreground">
           {cliente.nome}
         </h1>
         <Link
           href={`/painel/${slug}/avaliacoes/${clienteId}/nova`}
-          className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
         >
           + Avaliação
         </Link>
@@ -78,10 +78,10 @@ export default async function AvaliacoesClientePage({
       {atual && (
         <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-black dark:text-zinc-50">
+            <strong className="block text-lg text-foreground">
               {atual.peso_kg ?? '—'}
             </strong>
-            <span className="text-xs text-zinc-600 dark:text-zinc-400">
+            <span className="text-xs text-muted">
               peso (kg){' '}
               {anterior && diferenca(atual.peso_kg, anterior.peso_kg) !== null && (
                 <>· {diferenca(atual.peso_kg, anterior.peso_kg)! > 0 ? '+' : ''}
@@ -90,10 +90,10 @@ export default async function AvaliacoesClientePage({
             </span>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-black dark:text-zinc-50">
+            <strong className="block text-lg text-foreground">
               {atual.massa_gorda_pct ?? '—'}
             </strong>
-            <span className="text-xs text-zinc-600 dark:text-zinc-400">
+            <span className="text-xs text-muted">
               massa gorda (%){' '}
               {anterior &&
                 diferenca(atual.massa_gorda_pct, anterior.massa_gorda_pct) !== null && (
@@ -103,34 +103,34 @@ export default async function AvaliacoesClientePage({
             </span>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-black dark:text-zinc-50">
+            <strong className="block text-lg text-foreground">
               {atual.massa_muscular_kg ?? '—'}
             </strong>
-            <span className="text-xs text-zinc-600 dark:text-zinc-400">massa muscular (kg)</span>
+            <span className="text-xs text-muted">massa muscular (kg)</span>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-black dark:text-zinc-50">
+            <strong className="block text-lg text-foreground">
               {atual.massa_gorda_kg ?? '—'}
             </strong>
-            <span className="text-xs text-zinc-600 dark:text-zinc-400">massa gorda (kg)</span>
+            <span className="text-xs text-muted">massa gorda (kg)</span>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-black dark:text-zinc-50">
+            <strong className="block text-lg text-foreground">
               {atual.imc ?? '—'}
             </strong>
-            <span className="text-xs text-zinc-600 dark:text-zinc-400">IMC</span>
+            <span className="text-xs text-muted">IMC</span>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-black dark:text-zinc-50">
+            <strong className="block text-lg text-foreground">
               {atual.idade_metabolica ?? '—'}
             </strong>
-            <span className="text-xs text-zinc-600 dark:text-zinc-400">idade metabólica</span>
+            <span className="text-xs text-muted">idade metabólica</span>
           </div>
           <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-black dark:text-zinc-50">
+            <strong className="block text-lg text-foreground">
               {atual.densidade_ossea ?? '—'}
             </strong>
-            <span className="text-xs text-zinc-600 dark:text-zinc-400">densidade óssea (kg)</span>
+            <span className="text-xs text-muted">densidade óssea (kg)</span>
           </div>
         </div>
       )}
@@ -151,7 +151,7 @@ export default async function AvaliacoesClientePage({
       </h2>
 
       {lista.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
           Ainda não há avaliações registadas para {cliente.nome}.
         </div>
       )}
@@ -160,17 +160,17 @@ export default async function AvaliacoesClientePage({
         {lista.map((a) => (
           <div
             key={a.id}
-            className="flex items-center gap-3 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
+            className="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface p-3"
           >
             <span className="w-20 text-xs text-zinc-500">{fmt(a.data)}</span>
-            <span className="flex-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <span className="flex-1 text-xs text-muted">
               {a.peso_kg ? `${a.peso_kg} kg` : '—'}
               {a.massa_gorda_pct ? ` · ${a.massa_gorda_pct}% gordura` : ''}
               {a.pt ? ` · ${a.pt.nome}` : ''}
             </span>
             <Link
               href={`/painel/${slug}/avaliacoes/${clienteId}/${a.id}/editar`}
-              className="text-xs font-medium text-zinc-600 underline dark:text-zinc-400"
+              className="text-xs font-medium text-muted underline"
             >
               Editar
             </Link>

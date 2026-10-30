@@ -24,7 +24,7 @@ function ehMetrica(v: string | undefined): v is keyof MetricasMarketing {
 
 function TituloEstudio({ estudio }: { estudio: Pick<Estudio, 'slug' | 'nome'> }) {
   return (
-    <h3 className="mt-4 flex items-center gap-2 text-sm font-semibold text-black dark:text-zinc-50">
+    <h3 className="mt-4 flex items-center gap-2 text-sm font-semibold text-foreground">
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: corEstudio(estudio.slug).cor }} />
       {estudio.nome}
     </h3>
@@ -38,7 +38,7 @@ function TabelaMetricas({ metricas }: { metricas: MetricasMarketing }) {
         <div key={m.chave}>
           <strong
             className={`block text-sm ${
-              m.chave === 'totalFechos' ? 'text-teal-700 dark:text-teal-400' : 'text-black dark:text-zinc-50'
+              m.chave === 'totalFechos' ? 'text-teal-700 dark:text-teal-400' : 'text-foreground'
             }`}
           >
             {metricas[m.chave]}
@@ -69,7 +69,7 @@ function CalendarioDia({
   const maxValor = Math.max(1, ...dias.map((d) => metricasPorDia.get(d)![metricaAtual]))
 
   return (
-    <div className="mt-2 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+    <div className="mt-2 rounded-xl border border-border-subtle bg-surface p-4">
       <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-zinc-400">
         {DIAS_SEMANA.map((d) => (
           <span key={d}>{d}</span>
@@ -95,7 +95,7 @@ function CalendarioDia({
               style={{ background: `rgba(14, 149, 148, ${intensidade})` }}
             >
               <span className="text-[10px] text-zinc-500">{numero}</span>
-              <strong className="text-sm text-black dark:text-zinc-50">{valor}</strong>
+              <strong className="text-sm text-foreground">{valor}</strong>
             </div>
           )
         })}
@@ -120,7 +120,7 @@ function ListaSemanas({ leads, anoMes, mesMes }: { leads: LeadMarketing[]; anoMe
         return (
           <div
             key={inicioSemana}
-            className="rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
+            className="rounded-lg border border-border-subtle bg-surface p-3"
           >
             <p className="text-xs font-medium text-zinc-500">
               {fmt(inicioSemana)} – {fmt(fimSemana)}
@@ -144,7 +144,7 @@ function ListaMeses({ leads, anoSelecionado }: { leads: LeadMarketing[]; anoSele
         return (
           <div
             key={m}
-            className="rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
+            className="rounded-lg border border-border-subtle bg-surface p-3"
           >
             <p className="text-xs font-medium text-zinc-500">{MESES[m - 1]}</p>
             <TabelaMetricas metricas={metricas} />
@@ -164,13 +164,13 @@ function ResumoAno({ leads, anoSelecionado }: { leads: LeadMarketing[]; anoSelec
       {METRICAS_MARKETING.map((m) => (
         <div
           key={m.chave}
-          className={`rounded-xl border border-black/10 p-4 dark:border-white/10 ${
-            m.chave === 'totalFechos' ? 'bg-teal-50 dark:bg-teal-950' : 'bg-white dark:bg-zinc-950'
+          className={`rounded-xl border border-border-subtle p-4 ${
+            m.chave === 'totalFechos' ? 'bg-teal-50 dark:bg-teal-950' : 'bg-surface'
           }`}
         >
           <strong
             className={`block text-2xl ${
-              m.chave === 'totalFechos' ? 'text-teal-800 dark:text-teal-200' : 'text-black dark:text-zinc-50'
+              m.chave === 'totalFechos' ? 'text-teal-800 dark:text-teal-200' : 'text-foreground'
             }`}
           >
             {metricas[m.chave]}
@@ -248,7 +248,7 @@ export default async function MarketingPage({
           className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
             vista === v
               ? 'border-brand bg-brand text-black'
-              : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+              : 'border-border-subtle text-muted'
           }`}
         >
           {LABEL_VISTA[v]}
@@ -259,12 +259,12 @@ export default async function MarketingPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
-      <Link href="/painel/coordenacao" className="text-sm text-zinc-600 underline dark:text-zinc-400">
+      <Link href="/painel/coordenacao" className="text-sm text-muted underline">
         ← Coordenação
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Marketing</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">Marketing</h1>
+      <p className="mt-1 text-sm text-muted">
         {estudios.map((e) => e.nome).join(' e ')} · funil de leads ao longo do tempo, lado a lado.
       </p>
 
@@ -275,16 +275,16 @@ export default async function MarketingPage({
           <div className="mt-4 flex items-center justify-center gap-3">
             <Link
               href={`/painel/coordenacao/marketing?vista=dia&mes=${mesAnteriorParam}&metrica=${metricaAtual}`}
-              className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
             >
               ←
             </Link>
-            <span className="text-sm font-medium text-black dark:text-zinc-50">
+            <span className="text-sm font-medium text-foreground">
               {MESES[mesMes - 1]} {anoMes}
             </span>
             <Link
               href={`/painel/coordenacao/marketing?vista=dia&mes=${mesSeguinteParam}&metrica=${metricaAtual}`}
-              className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
             >
               →
             </Link>
@@ -299,7 +299,7 @@ export default async function MarketingPage({
                 className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                   metricaAtual === m.chave
                     ? 'border-teal-600 bg-teal-600 text-white'
-                    : 'border-black/10 text-zinc-600 dark:border-white/10 dark:text-zinc-400'
+                    : 'border-border-subtle text-muted'
                 }`}
               >
                 {m.label}
@@ -323,16 +323,16 @@ export default async function MarketingPage({
           <div className="mt-4 flex items-center justify-center gap-3">
             <Link
               href={`/painel/coordenacao/marketing?vista=semana&mes=${mesAnteriorParam}`}
-              className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
             >
               ←
             </Link>
-            <span className="text-sm font-medium text-black dark:text-zinc-50">
+            <span className="text-sm font-medium text-foreground">
               {MESES[mesMes - 1]} {anoMes}
             </span>
             <Link
               href={`/painel/coordenacao/marketing?vista=semana&mes=${mesSeguinteParam}`}
-              className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
             >
               →
             </Link>
@@ -354,14 +354,14 @@ export default async function MarketingPage({
           <div className="mt-4 flex items-center justify-center gap-3">
             <Link
               href={`/painel/coordenacao/marketing?vista=mes&ano=${anoSelecionado - 1}`}
-              className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
             >
               ←
             </Link>
-            <span className="text-sm font-medium text-black dark:text-zinc-50">{anoSelecionado}</span>
+            <span className="text-sm font-medium text-foreground">{anoSelecionado}</span>
             <Link
               href={`/painel/coordenacao/marketing?vista=mes&ano=${anoSelecionado + 1}`}
-              className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
             >
               →
             </Link>
@@ -383,14 +383,14 @@ export default async function MarketingPage({
           <div className="mt-4 flex items-center justify-center gap-3">
             <Link
               href={`/painel/coordenacao/marketing?vista=ano&ano=${anoSelecionado - 1}`}
-              className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
             >
               ←
             </Link>
-            <span className="text-sm font-medium text-black dark:text-zinc-50">{anoSelecionado}</span>
+            <span className="text-sm font-medium text-foreground">{anoSelecionado}</span>
             <Link
               href={`/painel/coordenacao/marketing?vista=ano&ano=${anoSelecionado + 1}`}
-              className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
             >
               →
             </Link>

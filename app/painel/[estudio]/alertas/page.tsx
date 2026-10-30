@@ -76,8 +76,8 @@ export default async function AlertasPage({
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Centro de alertas</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold text-foreground">Centro de alertas</h1>
+          <p className="mt-1 text-sm text-muted">
             {estudio.nome} · {alertas.length} {alertas.length === 1 ? 'alerta aberto' : 'alertas abertos'}
           </p>
         </div>
@@ -90,7 +90,7 @@ export default async function AlertasPage({
       )}
 
       {alertas.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-zinc-500">
           Sem alertas em aberto.
         </div>
       )}
@@ -114,19 +114,19 @@ export default async function AlertasPage({
                   return (
                     <div
                       key={a.id}
-                      className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950"
+                      className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface p-4"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
                           {href ? (
                             <Link
                               href={href}
-                              className="text-sm font-medium text-black underline dark:text-zinc-50"
+                              className="text-sm font-medium text-foreground underline"
                             >
                               {a.titulo}
                             </Link>
                           ) : (
-                            <p className="text-sm font-medium text-black dark:text-zinc-50">{a.titulo}</p>
+                            <p className="text-sm font-medium text-foreground">{a.titulo}</p>
                           )}
                           {a.estado === 'Adiado' && a.adiado_ate && (
                             <p className="mt-0.5 text-xs text-zinc-500">adiado até {a.adiado_ate}</p>
@@ -141,7 +141,7 @@ export default async function AlertasPage({
                             <input type="hidden" name="id" value={a.id} />
                             <SubmitButton
                               pendingText="…"
-                              className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+                              className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
                             >
                               Marcar visto
                             </SubmitButton>
@@ -152,13 +152,13 @@ export default async function AlertasPage({
                           <input type="hidden" name="id" value={a.id} />
                           <SubmitButton
                             pendingText="…"
-                            className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+                            className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
                           >
                             Resolver
                           </SubmitButton>
                         </form>
                         <details className="group">
-                          <summary className="cursor-pointer list-none rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]">
+                          <summary className="cursor-pointer list-none rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]">
                             Adiar…
                           </summary>
                           <form
@@ -172,11 +172,11 @@ export default async function AlertasPage({
                               name="adiado_ate"
                               required
                               min={new Date().toISOString().slice(0, 10)}
-                              className="rounded-md border border-black/10 px-2 py-1 text-xs dark:border-white/10 dark:bg-zinc-900"
+                              className="rounded-md border border-border-subtle px-2 py-1 text-xs dark:bg-zinc-900"
                             />
                             <SubmitButton
                               pendingText="…"
-                              className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+                              className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
                             >
                               Confirmar
                             </SubmitButton>

@@ -3,7 +3,7 @@ import type { Lead, Perfil, TemperaturaLead } from '@/lib/supabase/database.type
 import SubmitButton from '@/components/SubmitButton'
 
 const inputCls =
-  'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
 const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
 const ESTADOS_EDITAVEIS = Object.keys(ESTADOS_LEAD).filter((k) => k !== 'Ganha')
@@ -124,7 +124,7 @@ export default function LeadForm({
             {TEMPERATURAS.map((t) => (
               <label
                 key={t}
-                className="flex-1 cursor-pointer rounded-md border border-black/10 px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-medium dark:border-white/10"
+                className="flex-1 cursor-pointer rounded-md border border-border-subtle px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-medium"
               >
                 <input
                   type="radio"
@@ -308,7 +308,7 @@ export default function LeadForm({
 
       <SubmitButton
         pendingText="A guardar…"
-        className="mt-2 self-start rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+        className="mt-2 self-start rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
       >
         {lead ? 'Guardar alterações' : 'Criar lead'}
       </SubmitButton>

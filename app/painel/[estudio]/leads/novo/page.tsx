@@ -26,12 +26,12 @@ export default async function NovoLeadPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/leads`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline"
       >
         ← Leads
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Novo lead</h1>
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">Novo lead</h1>
 
       <LeadForm
         estudioSlug={slug}

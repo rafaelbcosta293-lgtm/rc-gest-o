@@ -57,18 +57,18 @@ export default async function FichaClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/treinos`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline"
       >
         ← Treinos
       </Link>
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
+          <h1 className="text-2xl font-semibold text-foreground">
             {cliente.nome}
           </h1>
           {cliente.objetivo && (
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-muted">
               {cliente.objetivo}
             </p>
           )}
@@ -76,7 +76,7 @@ export default async function FichaClientePage({
         <div className="flex gap-2">
           <Link
             href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=treinos`}
-            className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
           >
             Editar ficha
           </Link>
@@ -87,7 +87,7 @@ export default async function FichaClientePage({
             <input type="hidden" name="pt_id" value={cliente.pt_principal_id ?? ''} />
             <SubmitButton
               pendingText="A iniciar…"
-              className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+              className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
             >
               Planear treino
             </SubmitButton>
@@ -95,7 +95,7 @@ export default async function FichaClientePage({
         </div>
       </div>
 
-      <section className="mt-6 overflow-hidden rounded-xl border-2 border-black/10 dark:border-white/10">
+      <section className="mt-6 overflow-hidden rounded-xl border-2 border-border-subtle">
         <div
           className="px-4 py-2.5 text-sm"
           style={{ background: a.bg, color: a.tx }}
@@ -109,13 +109,13 @@ export default async function FichaClientePage({
             {cliente.evento_data && <> — {fmt(cliente.evento_data)}</>}
           </div>
         )}
-        <div className="bg-white p-4 dark:bg-zinc-950">
+        <div className="bg-surface p-4">
           {ultima?.nota_proxima ? (
             <>
               <div className="text-[11px] uppercase tracking-wide text-zinc-500">
                 Nota do último treino · {fmt(ultima.data)} · {ultima.pt?.nome ?? '—'}
               </div>
-              <p className="mt-2 text-base font-medium text-black dark:text-zinc-50">
+              <p className="mt-2 text-base font-medium text-foreground">
                 {ultima.nota_proxima}
               </p>
             </>
@@ -132,7 +132,7 @@ export default async function FichaClientePage({
       </h2>
 
       {lista.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
           Ainda não há treinos registados para {cliente.nome}.
         </div>
       )}
@@ -147,14 +147,14 @@ export default async function FichaClientePage({
             <Link
               key={s.id}
               href={`/painel/${slug}/treinos/${clienteId}/treino/${s.id}`}
-              className="flex gap-4 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+              className="flex gap-4 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-black/30"
             >
               <div className="min-w-[70px] pt-0.5 text-xs text-zinc-500">
                 {fmt(s.data)}
               </div>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-sm text-black dark:text-zinc-50">
+                  <strong className="text-sm text-foreground">
                     {s.foco || 'Treino'}
                   </strong>
                   {s.correu && (

@@ -101,8 +101,8 @@ export default async function LeadsPage({
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Leads</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold text-foreground">Leads</h1>
+          <p className="mt-1 text-sm text-muted">
             {estudio.nome} · {leads.length} {leads.length === 1 ? 'lead' : 'leads'}
           </p>
         </div>
@@ -124,19 +124,19 @@ export default async function LeadsPage({
           />
           <Link
             href={`/painel/${slug}/leads/comercial`}
-            className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
           >
             Painel comercial
           </Link>
           <Link
             href={`/painel/${slug}/leads/importar`}
-            className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
           >
             Importar CSV
           </Link>
           <Link
             href={`/painel/${slug}/leads/novo`}
-            className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+            className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
           >
             + Lead
           </Link>
@@ -220,9 +220,9 @@ export default async function LeadsPage({
               <Link
                 key={`visita-${l.id}`}
                 href={`/painel/${slug}/leads/${l.id}`}
-                className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm transition-colors hover:bg-white/70 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+                className="flex items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm hover:bg-brand/[.06]"
               >
-                <span className="text-black dark:text-zinc-50">{l.nome}</span>
+                <span className="text-foreground">{l.nome}</span>
                 <span className="text-xs font-medium text-[#5B3FA0]">
                   Visita{l.visita_hora ? ` às ${l.visita_hora.slice(0, 5)}` : ''}
                 </span>
@@ -234,9 +234,9 @@ export default async function LeadsPage({
                 <Link
                   key={`contacto-${l.id}`}
                   href={`/painel/${slug}/leads/${l.id}`}
-                  className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm transition-colors hover:bg-white/70 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+                  className="flex items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm hover:bg-brand/[.06]"
                 >
-                  <span className="text-black dark:text-zinc-50">{l.nome}</span>
+                  <span className="text-foreground">{l.nome}</span>
                   <span className={`text-xs font-medium ${atrasado ? 'text-red-600' : 'text-amber-700 dark:text-amber-400'}`}>
                     Contactar {atrasado ? '(em atraso)' : 'hoje'}
                   </span>
@@ -248,7 +248,7 @@ export default async function LeadsPage({
       )}
 
       {leads.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
           Ainda não há leads registados.
         </div>
       ) : (

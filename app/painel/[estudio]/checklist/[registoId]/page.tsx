@@ -65,15 +65,15 @@ export default async function ChecklistRegistoPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/checklist`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline"
       >
         ← Abertura / Fecho
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">
         {registo.tipo}
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         {fmt(registo.data)} · {registo.hora.slice(0, 5)} · {registo.concluidos} de {registo.total}{' '}
         feitos
       </p>
@@ -102,7 +102,7 @@ export default async function ChecklistRegistoPage({
                     className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left text-sm transition-colors ${
                       r.ok
                         ? 'border-teal-200 bg-teal-50 text-teal-900 dark:border-teal-900 dark:bg-teal-950 dark:text-teal-100'
-                        : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-950'
+                        : 'border-border-subtle bg-surface'
                     }`}
                   >
                     <span className="text-base leading-none">{r.ok ? '☑' : '☐'}</span>
@@ -116,7 +116,7 @@ export default async function ChecklistRegistoPage({
       </div>
 
       {respostas.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
           Esta checklist não tem itens.
         </div>
       )}
@@ -132,11 +132,11 @@ export default async function ChecklistRegistoPage({
           rows={3}
           defaultValue={registo.ocorrencia ?? ''}
           placeholder="ex.: torneira da casa de banho a pingar, avisar manutenção"
-          className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
+          className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30"
         />
         <SubmitButton
           pendingText="A guardar…"
-          className="self-start rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+          className="self-start rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
         >
           Guardar ocorrência
         </SubmitButton>

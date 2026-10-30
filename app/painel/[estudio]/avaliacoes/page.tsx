@@ -71,10 +71,10 @@ export default async function AvaliacoesPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">
         Avaliações
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         {estudio.nome} · avaliações físicas, reavaliações e evolução.
       </p>
 

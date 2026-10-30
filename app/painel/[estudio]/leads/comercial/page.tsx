@@ -117,8 +117,8 @@ export default async function PainelComercialPage({
         <ArrowLeft className="h-4 w-4" /> Leads
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Painel comercial</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{estudio.nome}</p>
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">Painel comercial</h1>
+      <p className="mt-1 text-sm text-muted">{estudio.nome}</p>
 
       <div className="mt-8">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">

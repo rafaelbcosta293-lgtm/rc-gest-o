@@ -61,12 +61,12 @@ export default async function PagamentosClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/pagamentos`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline"
       >
         ← Pagamentos
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">
         {cliente.nome}
       </h1>
       <p
@@ -111,7 +111,7 @@ export default async function PagamentosClientePage({
             type="number"
             step="0.01"
             required
-            className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
+            className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -122,12 +122,12 @@ export default async function PagamentosClientePage({
             name="data_pagamento"
             type="date"
             defaultValue={hoje}
-            className="rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30"
+            className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30"
           />
         </div>
         <SubmitButton
           pendingText="A guardar…"
-          className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+          className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
         >
           Registar seguro
         </SubmitButton>
@@ -137,7 +137,7 @@ export default async function PagamentosClientePage({
         Histórico ({pagamentos.length})
       </h2>
       {pagamentos.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
           Ainda não há pagamentos registados.
         </div>
       )}
@@ -145,9 +145,9 @@ export default async function PagamentosClientePage({
         {pagamentos.map((p) => (
           <div
             key={p.id}
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-black/10 bg-white p-3 text-sm dark:border-white/10 dark:bg-zinc-950"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface p-3 text-sm"
           >
-            <span className="font-medium text-black dark:text-zinc-50">{p.valor}€</span>
+            <span className="font-medium text-foreground">{p.valor}€</span>
             <span className="text-xs text-zinc-500">{p.plano?.nome ?? 'sem plano'}</span>
             <span className="text-xs text-zinc-500">{p.metodo}</span>
             <span className="text-xs text-zinc-500">
@@ -168,7 +168,7 @@ export default async function PagamentosClientePage({
               <span className="text-xs text-zinc-400">· {p.registado.nome}</span>
             )}
             {p.nota && (
-              <span className="w-full text-xs text-zinc-600 dark:text-zinc-400">{p.nota}</span>
+              <span className="w-full text-xs text-muted">{p.nota}</span>
             )}
             <form action={apagarPagamento} className="ml-auto">
               <input type="hidden" name="estudio_slug" value={slug} />

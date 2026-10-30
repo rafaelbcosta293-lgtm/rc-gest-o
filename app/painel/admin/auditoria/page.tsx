@@ -59,7 +59,7 @@ export default async function AuditoriaPage({
       </Link>
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Registo de auditoria</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         Quem alterou pagamentos, planos e preços, e quando — últimos 100 registos.
       </p>
 

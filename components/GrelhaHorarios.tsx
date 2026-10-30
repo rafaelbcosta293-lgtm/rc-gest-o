@@ -61,7 +61,7 @@ function Cabecalho({ dias }: { dias: string[] }) {
       {dias.map((d, i) => (
         <div
           key={d}
-          className="bg-zinc-50 p-0.5 text-center text-[10px] font-medium text-black dark:bg-zinc-900 dark:text-zinc-50"
+          className="bg-zinc-50 p-0.5 text-center text-[10px] font-medium text-foreground dark:bg-zinc-900"
         >
           {DIAS_SEMANA[i].slice(0, 3)}
           <br />
@@ -76,13 +76,13 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
   return (
     <div className="overflow-x-auto">
       <div
-        className="grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-[10px] dark:border-white/10 dark:bg-white/10"
+        className="grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-border-subtle bg-black/10 text-[10px] dark:bg-white/10"
         style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}
       >
         <Cabecalho dias={dias} />
         {BLOCOS_HORARIO.map((bloco) => (
           <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-            <div className="flex items-center bg-white px-1 py-0.5 text-[9px] text-zinc-500 dark:bg-zinc-950">
+            <div className="flex items-center bg-surface px-1 py-0.5 text-[9px] text-zinc-500">
               {bloco.label}
             </div>
             {dias.map((dia) => {
@@ -90,7 +90,7 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
               return (
                 <div
                   key={dia}
-                  className="flex min-h-[1.25rem] flex-col justify-center gap-px bg-white p-0.5 text-[9px] leading-tight dark:bg-zinc-950"
+                  className="flex min-h-[1.25rem] flex-col justify-center gap-px bg-surface p-0.5 text-[9px] leading-tight"
                 >
                   {atual.length === 0 ? (
                     <span className="text-center text-zinc-300 dark:text-zinc-700">—</span>
@@ -170,13 +170,13 @@ function GrelhaEditavel({
     <div>
       <div className="overflow-x-auto">
         <div
-          className="grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-black/10 bg-black/10 text-[10px] dark:border-white/10 dark:bg-white/10"
+          className="grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-border-subtle bg-black/10 text-[10px] dark:bg-white/10"
           style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}
         >
           <Cabecalho dias={dias} />
           {BLOCOS_HORARIO.map((bloco) => (
             <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-              <div className="flex items-center bg-white px-1 py-0.5 text-[9px] text-zinc-500 dark:bg-zinc-950">
+              <div className="flex items-center bg-surface px-1 py-0.5 text-[9px] text-zinc-500">
                 {bloco.label}
               </div>
               {dias.map((dia) => {
@@ -216,7 +216,7 @@ function GrelhaEditavel({
                     key={dia}
                     type="button"
                     onClick={() => setAbertaChave(chave)}
-                    className="flex min-h-[1.25rem] flex-col justify-center gap-px bg-white p-0.5 text-[9px] leading-tight hover:bg-black/[.03] dark:bg-zinc-950 dark:hover:bg-white/[.06]"
+                    className="flex min-h-[1.25rem] flex-col justify-center gap-px bg-surface p-0.5 text-[9px] leading-tight hover:bg-foreground/[.05]"
                   >
                     {ptIdsAtuais.length === 0 ? (
                       <span className="text-center text-zinc-300 dark:text-zinc-700">+</span>
@@ -238,7 +238,7 @@ function GrelhaEditavel({
           type="button"
           onClick={guardarAlteracoes}
           disabled={aGuardar}
-          className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
         >
           {aGuardar ? 'A guardar…' : 'Guardar alterações'}
         </button>

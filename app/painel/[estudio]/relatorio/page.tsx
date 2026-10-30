@@ -107,8 +107,8 @@ export default async function RelatorioMensalPage({
         <ImprimirButton />
       </div>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Relatório mensal</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">Relatório mensal</h1>
+      <p className="mt-1 text-sm text-muted">
         {estudio.nome} · {MESES[mes - 1]} {ano} · gerado em {fmt(hoje)}
       </p>
 
@@ -147,9 +147,9 @@ export default async function RelatorioMensalPage({
             return (
               <div
                 key={g.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm dark:border-white/10 dark:bg-zinc-950"
+                className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm"
               >
-                <span className="text-black dark:text-zinc-50">{g.metrica}</span>
+                <span className="text-foreground">{g.metrica}</span>
                 <span className="flex items-center gap-2">
                   <span className="font-mono text-xs text-muted">
                     {Math.round(realizado * 10) / 10} / {g.meta}

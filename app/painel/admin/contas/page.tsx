@@ -60,7 +60,7 @@ export default async function ContasEstudiosPage({
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Contas de login dos estúdios
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         Cada estúdio tem uma conta de email própria, partilhada pela equipa — separada das fichas
         dos instrutores. Aqui vês a que estúdio cada conta está ligada, e podes corrigir ou definir
         uma nova palavra-passe.
@@ -92,9 +92,9 @@ export default async function ContasEstudiosPage({
           return (
             <div
               key={estudio.id}
-              className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950"
+              className="rounded-xl border border-border-subtle bg-surface p-4"
             >
-              <h2 className="font-semibold text-black dark:text-zinc-50">{estudio.nome}</h2>
+              <h2 className="font-semibold text-foreground">{estudio.nome}</h2>
               <p className="mt-0.5 font-mono text-xs text-zinc-500">{email}</p>
 
               <div className="mt-2">
@@ -145,7 +145,7 @@ export default async function ContasEstudiosPage({
                 />
                 <SubmitButton
                   pendingText="A guardar…"
-                  className="self-start rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+                  className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
                 >
                   Guardar palavra-passe
                 </SubmitButton>

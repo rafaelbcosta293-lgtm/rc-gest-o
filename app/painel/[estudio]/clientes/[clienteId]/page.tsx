@@ -94,7 +94,7 @@ export default async function FichaCompletaClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/clientes`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline"
       >
         ← Clientes
       </Link>
@@ -102,7 +102,7 @@ export default async function FichaCompletaClientePage({
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">{c.nome}</h1>
+            <h1 className="text-2xl font-semibold text-foreground">{c.nome}</h1>
             <span
               className="rounded-full px-2.5 py-0.5 text-xs font-medium"
               style={{ background: est.bg, color: est.tx }}
@@ -114,12 +114,12 @@ export default async function FichaCompletaClientePage({
             )}
           </div>
           {c.objetivo && (
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{c.objetivo}</p>
+            <p className="mt-1 text-sm text-muted">{c.objetivo}</p>
           )}
         </div>
         <Link
           href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=clientes`}
-          className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"
+          className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
         >
           Editar ficha
         </Link>
@@ -138,48 +138,48 @@ export default async function FichaCompletaClientePage({
       {/* Dados gerais */}
       <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-          <strong className="block text-lg text-black dark:text-zinc-50">
+          <strong className="block text-lg text-foreground">
             {meses !== null ? meses : '—'}
           </strong>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">meses ativo</span>
+          <span className="text-xs text-muted">meses ativo</span>
         </div>
         <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-          <strong className="block text-lg text-black dark:text-zinc-50">
+          <strong className="block text-lg text-foreground">
             {c.frequencia_semanal ?? '—'}
           </strong>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">treinos / semana</span>
+          <span className="text-xs text-muted">treinos / semana</span>
         </div>
         <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-          <strong className="block text-lg text-black dark:text-zinc-50">
+          <strong className="block text-lg text-foreground">
             {c.nascimento ? fmtDiaMes(new Date(`${c.nascimento}T00:00:00`)) : '—'}
           </strong>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">
+          <span className="text-xs text-muted">
             {idade !== null ? `aniversário · faz ${idade} anos` : 'aniversário'}
           </span>
         </div>
         <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-          <strong className="block text-lg text-black dark:text-zinc-50">
+          <strong className="block text-lg text-foreground">
             {c.pt_principal?.nome ?? '—'}
           </strong>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">PT principal</span>
+          <span className="text-xs text-muted">PT principal</span>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-col gap-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <div className="mt-3 flex flex-col gap-1 text-sm text-muted">
         {c.telefone && <p>📞 {c.telefone}</p>}
         {c.email && <p>✉️ {c.email}</p>}
         {c.notas && <p className="mt-1 italic">“{c.notas}”</p>}
       </div>
 
       {/* Avaliações */}
-      <section className="mt-8 rounded-xl border border-black/10 p-4 dark:border-white/10">
+      <section className="mt-8 rounded-xl border border-border-subtle p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Avaliações
           </h2>
           <Link
             href={`/painel/${slug}/avaliacoes/${clienteId}`}
-            className="text-xs font-medium text-zinc-600 underline dark:text-zinc-400"
+            className="text-xs font-medium text-muted underline"
           >
             Ver histórico ({totalAvaliacoes ?? 0})
           </Link>
@@ -202,14 +202,14 @@ export default async function FichaCompletaClientePage({
       </section>
 
       {/* Planos de treino */}
-      <section className="mt-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
+      <section className="mt-4 rounded-xl border border-border-subtle p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Planos de treino
           </h2>
           <Link
             href={`/painel/${slug}/treinos/${clienteId}`}
-            className="text-xs font-medium text-zinc-600 underline dark:text-zinc-400"
+            className="text-xs font-medium text-muted underline"
           >
             Ver histórico ({totalSessoes ?? 0})
           </Link>
@@ -227,14 +227,14 @@ export default async function FichaCompletaClientePage({
       </section>
 
       {/* Presenças */}
-      <section className="mt-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
+      <section className="mt-4 rounded-xl border border-border-subtle p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Presenças · {MESES[mes - 1]}
           </h2>
           <Link
             href={`/painel/${slug}/presencas/${clienteId}`}
-            className="text-xs font-medium text-zinc-600 underline dark:text-zinc-400"
+            className="text-xs font-medium text-muted underline"
           >
             Ver detalhe
           </Link>
@@ -246,14 +246,14 @@ export default async function FichaCompletaClientePage({
       </section>
 
       {/* Pagamentos */}
-      <section className="mt-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
+      <section className="mt-4 rounded-xl border border-border-subtle p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Pagamento
           </h2>
           <Link
             href={`/painel/${slug}/pagamentos/${clienteId}`}
-            className="text-xs font-medium text-zinc-600 underline dark:text-zinc-400"
+            className="text-xs font-medium text-muted underline"
           >
             Ver detalhe
           </Link>

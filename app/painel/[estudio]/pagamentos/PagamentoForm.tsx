@@ -5,7 +5,7 @@ import SubmitButton from '@/components/SubmitButton'
 import type { Plano } from '@/lib/supabase/database.types'
 
 const inputCls =
-  'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
 const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
 const METODOS = ['Numerário', 'Multibanco', 'MB Way', 'Transferência', 'Cartão']
@@ -137,7 +137,7 @@ export default function PagamentoForm({
 
       <SubmitButton
         pendingText="A guardar…"
-        className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+        className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
       >
         Registar pagamento
       </SubmitButton>

@@ -79,7 +79,7 @@ function CampoLinha({
       <input
         value={value}
         onChange={onChange}
-        className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-900"
+        className="rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
       />
     </div>
   )
@@ -230,7 +230,7 @@ export default function TreinoForm({
   }
 
   const inputCls =
-    'rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
+    'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
 
   return (
     <div className="mt-6 flex flex-col gap-6">
@@ -251,14 +251,14 @@ export default function TreinoForm({
             return (
               <div
                 key={linha.key}
-                className="rounded-lg border border-black/10 p-3 dark:border-white/10"
+                className="rounded-lg border border-border-subtle p-3"
               >
                 <div className="flex items-center gap-2">
                   <select
                     value={linha.bloco}
                     onChange={(e) => aoMudarBloco(linha, indice, e.target.value as BlocoTipo)}
                     style={{ color: BLOCO_COR[linha.bloco] }}
-                    className="w-[110px] shrink-0 rounded-md border border-black/10 px-2 py-1.5 text-xs font-semibold dark:border-white/10 dark:bg-zinc-900"
+                    className="w-[110px] shrink-0 rounded-md border border-border-subtle px-2 py-1.5 text-xs font-semibold dark:bg-zinc-900"
                   >
                     {BLOCOS.map((b) => (
                       <option key={b} value={b}>
@@ -271,8 +271,8 @@ export default function TreinoForm({
                     onClick={() => setSeletorPara(linha.key)}
                     className={`flex-1 rounded-md border px-3 py-1.5 text-left text-sm ${
                       linha.exercicio_nome
-                        ? 'border-black/10 dark:border-white/10'
-                        : 'border-dashed border-black/20 text-zinc-500 dark:border-white/20'
+                        ? 'border-border-subtle'
+                        : 'border-dashed border-border-strong text-zinc-500'
                     }`}
                   >
                     {linha.exercicio_nome || 'Escolher exercício…'}
@@ -338,7 +338,7 @@ export default function TreinoForm({
               type="button"
               onClick={() => adicionarLinha(b)}
               style={{ color: BLOCO_COR[b] }}
-              className="rounded-md border border-dashed border-black/20 px-3 py-1.5 text-xs font-semibold dark:border-white/20"
+              className="rounded-md border border-dashed border-border-strong px-3 py-1.5 text-xs font-semibold"
             >
               + {b}
             </button>
@@ -467,7 +467,7 @@ export default function TreinoForm({
         <div className="flex justify-end gap-3">
           <SubmitButton
             pendingText="A guardar…"
-            className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+            className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
           >
             Guardar treino
           </SubmitButton>

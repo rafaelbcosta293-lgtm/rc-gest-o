@@ -11,13 +11,13 @@ export default async function AtualizarPasswordPage({
 
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
-      <div className="w-full max-w-sm rounded-lg border border-black/10 bg-white p-8 dark:border-white/10 dark:bg-zinc-950">
+      <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-8">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="RC Private Fitness Studio" className="mx-auto h-9 w-auto" />
-        <h1 className="mt-6 text-2xl font-semibold text-black dark:text-zinc-50">
+        <h1 className="mt-6 text-2xl font-semibold text-foreground">
           Nova palavra-passe
         </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-1 text-sm text-muted">
           Escolhe uma nova palavra-passe para a tua conta.
         </p>
 
@@ -46,7 +46,7 @@ export default async function AtualizarPasswordPage({
 
           <SubmitButton
             pendingText="A guardar…"
-            className="mt-2 rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+            className="mt-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
           >
             Guardar palavra-passe
           </SubmitButton>

@@ -272,7 +272,7 @@ export default async function ClientesPage({
           </Link>
           <Link
             href={`/painel/${slug}/treinos/novo`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
           >
             <Plus className="h-4 w-4" /> Cliente
           </Link>

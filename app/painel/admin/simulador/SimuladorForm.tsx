@@ -155,12 +155,12 @@ export default function SimuladorForm({
             value={nomeCenario}
             onChange={(e) => setNomeCenario(e.target.value)}
             placeholder="ex.: Expansão 2027"
-            className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+            className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
           />
         </div>
         <SubmitButton
           pendingText="A guardar…"
-          className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
         >
           Guardar cenário
         </SubmitButton>

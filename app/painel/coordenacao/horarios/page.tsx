@@ -14,7 +14,7 @@ import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHora
 import type { Estudio, Perfil } from '@/lib/supabase/database.types'
 
 const inputCls =
-  'rounded-md border border-black/10 px-2 py-1.5 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-md border border-border-subtle px-2 py-1.5 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
 
 type TurnoSemana = { data: string; hora: number; minuto: number; pt: { id: string; nome: string } | null }
 type SP = Record<string, string | undefined>
@@ -62,14 +62,14 @@ export default async function HorariosCoordenacaoPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
-      <Link href="/painel/coordenacao" className="text-sm text-zinc-600 underline dark:text-zinc-400">
+      <Link href="/painel/coordenacao" className="text-sm text-muted underline">
         ← Coordenação
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">
         Planeamento da semana
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         {estudios.map((e) => e.nome).join(' e ')} · escala e instrutores.
       </p>
 
@@ -90,7 +90,7 @@ export default async function HorariosCoordenacaoPage({
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: corEstudio(estudio.slug).cor }}
               />
-              <h2 className="text-lg font-semibold text-black dark:text-zinc-50">{estudio.nome}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{estudio.nome}</h2>
             </div>
             <PainelHorariosEstudio estudio={estudio} sp={sp} />
           </section>
@@ -177,7 +177,7 @@ async function PainelHorariosEstudio({
       <div className="mt-2 flex items-center gap-3">
         <Link
           href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaAnterior })}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           ←
         </Link>
@@ -186,7 +186,7 @@ async function PainelHorariosEstudio({
         </span>
         <Link
           href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaSeguinte })}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           →
         </Link>
@@ -217,7 +217,7 @@ async function PainelHorariosEstudio({
         {resumoEscalaSemana.map((r) => (
           <div
             key={r.id}
-            className="flex items-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-950"
+            className="flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs"
           >
             <span
               className="rounded px-1.5 py-0.5 font-medium"
@@ -233,19 +233,19 @@ async function PainelHorariosEstudio({
         )}
       </div>
 
-      <details className="mt-6 rounded-xl border border-black/10 dark:border-white/10">
+      <details className="mt-6 rounded-xl border border-border-subtle">
         <summary className="flex cursor-pointer items-center gap-1.5 p-4 text-xs font-semibold uppercase tracking-wider text-[#5B3FA0]">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#5B3FA0]" />
           Instrutores
         </summary>
-        <div className="border-t border-black/10 p-4 dark:border-white/10">
+        <div className="border-t border-border-subtle p-4">
           <p className="text-xs text-zinc-500">
             Só quem tem acesso aqui aparece para escolher no planeamento da semana.
           </p>
 
           <form
             action={criarInstrutor}
-            className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-black/20 p-3 dark:border-white/20"
+            className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-border-strong p-3"
           >
             <input type="hidden" name="estudio_id" value={estudio.id} />
             <div className="flex flex-col gap-1">
@@ -262,7 +262,7 @@ async function PainelHorariosEstudio({
             </div>
             <SubmitButton
               pendingText="A criar…"
-              className="rounded-full bg-brand px-4 py-1.5 text-xs font-medium text-black"
+              className="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-black hover:bg-brand-strong"
             >
               Criar instrutor
             </SubmitButton>
@@ -279,11 +279,11 @@ async function PainelHorariosEstudio({
               return (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm dark:border-white/10 dark:bg-zinc-950"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm"
                 >
                   <div className="flex items-center gap-2">
                     {cor && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cor.tx }} />}
-                    <span className="font-medium text-black dark:text-zinc-50">{p.nome}</span>
+                    <span className="font-medium text-foreground">{p.nome}</span>
                     <span className="text-xs text-zinc-500">
                       {p.papel}
                       {!p.ativo && ' · inativo'}
@@ -299,7 +299,7 @@ async function PainelHorariosEstudio({
                       pendingText="…"
                       className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                         temAcesso
-                          ? 'border border-black/10 text-zinc-700 hover:bg-black/[.04] dark:border-white/10 dark:text-zinc-300'
+                          ? 'border border-border-subtle text-zinc-700 hover:bg-black/[.04] dark:text-zinc-300'
                           : 'bg-brand text-black'
                       }`}
                     >

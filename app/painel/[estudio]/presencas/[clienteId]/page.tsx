@@ -79,15 +79,15 @@ export default async function PresencasClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/presencas?ano=${ano}&mes=${mes}`}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-muted underline"
       >
         ← Presenças
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">
         {cliente.nome}
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         {cliente.frequencia_semanal
           ? `${cliente.frequencia_semanal} treinos por semana`
           : 'frequência não definida'}{' '}
@@ -99,27 +99,27 @@ export default async function PresencasClientePage({
           <strong className="block text-lg text-green-700 dark:text-green-300">
             {feitos}
           </strong>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">treinos feitos</span>
+          <span className="text-xs text-muted">treinos feitos</span>
         </div>
         <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-          <strong className="block text-lg text-black dark:text-zinc-50">
+          <strong className="block text-lg text-foreground">
             {prev?.arredondado ?? '—'}
           </strong>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">previstos</span>
+          <span className="text-xs text-muted">previstos</span>
         </div>
         <div className="rounded-lg bg-red-50 p-3 dark:bg-red-950">
           <strong className="block text-lg text-red-700 dark:text-red-300">{faltas}</strong>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">faltas</span>
+          <span className="text-xs text-muted">faltas</span>
         </div>
         <div className="rounded-lg bg-amber-50 p-3 dark:bg-amber-950">
           <strong className="block text-lg text-amber-700 dark:text-amber-300">
             {avisadas}
           </strong>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">avisadas</span>
+          <span className="text-xs text-muted">avisadas</span>
         </div>
       </div>
 
-      <div className="mt-6 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+      <div className="mt-6 rounded-xl border border-border-subtle bg-surface p-4">
         <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-zinc-400">
           {DIAS_SEMANA.map((d) => (
             <span key={d}>{d}</span>
@@ -177,7 +177,7 @@ export default async function PresencasClientePage({
             type="date"
             name="data"
             defaultValue={hoje}
-            className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+            className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -185,7 +185,7 @@ export default async function PresencasClientePage({
           <select
             name="estado"
             defaultValue="Presente"
-            className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+            className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
           >
             {Object.keys(PRESENCAS).map((k) => (
               <option key={k} value={k}>
@@ -201,12 +201,12 @@ export default async function PresencasClientePage({
           <input
             name="nota"
             placeholder="ex.: avisou de manhã"
-            className="w-full rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900"
+            className="w-full rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
           />
         </div>
         <SubmitButton
           pendingText="A registar…"
-          className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-brand-strong"
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
         >
           Registar
         </SubmitButton>
@@ -219,7 +219,7 @@ export default async function PresencasClientePage({
         Registos de {MESES[mes - 1]} ({lista.length})
       </h2>
       {lista.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
           Sem registos neste mês.
         </div>
       )}
@@ -232,7 +232,7 @@ export default async function PresencasClientePage({
           return (
             <div
               key={p.id}
-              className="flex items-center gap-3 rounded-lg border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950"
+              className="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface p-3"
             >
               <span className="w-16 text-xs text-zinc-500">{fmt(p.data)}</span>
               <span
@@ -245,7 +245,7 @@ export default async function PresencasClientePage({
                 {p.origem === 'calendario' ? 'Google Calendar' : (p.pt?.nome ?? '—')}
               </span>
               {p.nota && (
-                <span className="flex-1 truncate text-xs text-zinc-600 dark:text-zinc-400">
+                <span className="flex-1 truncate text-xs text-muted">
                   {p.nota}
                 </span>
               )}

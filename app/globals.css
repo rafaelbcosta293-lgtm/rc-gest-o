@@ -13,7 +13,11 @@
      difusas — mais "produto premium" do que "painel técnico". */
   --background: #f5f3ef;
   --foreground: #18181b;
-  --surface: rgba(255, 255, 255, 0.68);
+  /* Opaco — a translucidez do "vidro" fica só nas barras fixas, que a
+     aplicam no próprio uso (bg-surface/80 + backdrop-blur-xl), não aqui;
+     um cartão/lista/modal normal precisa de contraste sólido para texto
+     denso ser legível. */
+  --surface: #ffffff;
   --muted: #6b7280;
 
   /* Dourado do logótipo RC Private Fitness Studio — a cor de ação

@@ -144,8 +144,8 @@ export default async function RetencaoPage({
         <ArrowLeft className="h-4 w-4" /> Clientes
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Clientes e retenção</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{estudio.nome}</p>
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">Clientes e retenção</h1>
+      <p className="mt-1 text-sm text-muted">{estudio.nome}</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Ativos" valor={resumoMes.ativos} aoVivo />
@@ -196,7 +196,7 @@ export default async function RetencaoPage({
             <Link
               key={r.id}
               href={`/painel/${slug}/clientes/${r.id}`}
-              className="flex items-center justify-between gap-3 rounded-xl p-3 text-sm transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
+              className="flex items-center justify-between gap-3 rounded-xl p-3 text-sm hover:bg-brand/[.06]"
             >
               <span className="flex items-center gap-2 font-medium text-foreground">
                 <AlertTriangle className="h-4 w-4 text-red-500" />

@@ -114,8 +114,8 @@ export default async function OperacionalPage({
         <ArrowLeft className="h-4 w-4" /> Equipa
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Painel operacional</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{estudio.nome} · este mês</p>
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">Painel operacional</h1>
+      <p className="mt-1 text-sm text-muted">{estudio.nome} · este mês</p>
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Avaliações feitas" valor={reavaliacoes.feitas} />

@@ -69,7 +69,7 @@ export default function ExercicioPicker({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <strong className="text-black dark:text-zinc-50">Escolher exercício</strong>
+          <strong className="text-foreground">Escolher exercício</strong>
           <button
             type="button"
             onClick={fechar}
@@ -85,7 +85,7 @@ export default function ExercicioPicker({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Pesquisar em todos os exercícios…"
-          className="mt-4 w-full rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-800"
+          className="mt-4 w-full rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-800"
         />
 
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-dashed border-teal-400 bg-teal-50 p-2.5 dark:bg-teal-950">
@@ -96,7 +96,7 @@ export default function ExercicioPicker({
               setErroNovo(null)
             }}
             placeholder="Não está na lista? Escreve o nome do exercício novo…"
-            className="min-w-[180px] flex-1 rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-sm dark:border-white/10 dark:bg-zinc-900"
+            className="min-w-[180px] flex-1 rounded-md border border-border-subtle bg-white px-2.5 py-1.5 text-sm dark:bg-zinc-900"
           />
           <button
             type="button"
@@ -151,7 +151,7 @@ export default function ExercicioPicker({
                     className={`rounded-md border px-3 py-1.5 text-xs ${
                       catId === c.id
                         ? 'border-brand bg-brand text-black'
-                        : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-800'
+                        : 'border-border-subtle bg-white dark:bg-zinc-800'
                     }`}
                   >
                     {c.nome}
@@ -172,7 +172,7 @@ export default function ExercicioPicker({
                     className={`rounded-md border px-3 py-1.5 text-xs ${
                       catId === c.id
                         ? 'border-brand bg-brand text-black'
-                        : 'border-black/10 bg-white dark:border-white/10 dark:bg-zinc-800'
+                        : 'border-border-subtle bg-white dark:bg-zinc-800'
                     }`}
                   >
                     {c.nome}
@@ -198,7 +198,7 @@ export default function ExercicioPicker({
                 escolher(e)
                 fechar()
               }}
-              className="rounded-md border border-black/10 bg-white px-3 py-2.5 text-left text-sm hover:border-teal-500 hover:bg-teal-50 dark:border-white/10 dark:bg-zinc-800 dark:hover:bg-teal-950"
+              className="rounded-md border border-border-subtle bg-white px-3 py-2.5 text-left text-sm hover:border-teal-500 hover:bg-teal-50 dark:bg-zinc-800 dark:hover:bg-teal-950"
             >
               {e.nome}
             </button>

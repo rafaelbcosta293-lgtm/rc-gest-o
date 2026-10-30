@@ -20,27 +20,34 @@ export type LinhaSeguro = {
   emDividaDesdeLabel: string
 }
 
-function CartaoPagamento({ slug, linha }: { slug: string; linha: LinhaPagamentoAtraso }) {
-  const cores =
-    linha.variante === 'atrasado'
-      ? 'border-red-200 bg-red-50 hover:border-red-300 dark:border-red-900 dark:bg-red-950'
-      : 'border-black/10 bg-white hover:border-black/30 dark:border-white/10 dark:bg-zinc-950'
+function LinhaPagamento({
+  slug,
+  linha,
+  primeira,
+}: {
+  slug: string
+  linha: LinhaPagamentoAtraso
+  primeira: boolean
+}) {
+  const atrasado = linha.variante === 'atrasado'
   return (
     <Link
       href={`/painel/${slug}/pagamentos/${linha.clienteId}`}
-      className={`flex flex-col gap-1.5 rounded-xl border p-4 transition-colors ${cores}`}
+      className={`flex flex-col gap-1.5 px-4 py-3.5 text-sm ${
+        atrasado ? 'bg-red-50 hover:bg-red-100/70 dark:bg-red-950/40 dark:hover:bg-red-950/70' : 'bg-surface hover:bg-brand/[.06]'
+      } ${primeira ? '' : atrasado ? 'border-t border-red-200 dark:border-red-900' : 'border-t border-border-subtle'}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="font-medium text-black dark:text-zinc-50">{linha.nome}</span>
+        <span className="font-medium text-foreground">{linha.nome}</span>
         <span
-          className={`text-xs font-medium ${
-            linha.variante === 'atrasado' ? 'text-red-700 dark:text-red-300' : 'text-teal-700 dark:text-teal-400'
+          className={`text-xs font-semibold ${
+            atrasado ? 'text-red-700 dark:text-red-300' : 'text-teal-700 dark:text-teal-400'
           }`}
         >
           {linha.situacaoLabel}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
         <span>{linha.tipoMensalidade ?? 'sem plano associado'}</span>
         {linha.adquiridos != null && (
           <span>
@@ -87,7 +94,7 @@ export default function ListaPagamentos({
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
         placeholder="Procurar por nome…"
-        className="mt-6 w-full rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+        className="mt-6 w-full rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
       />
 
       {atrasadosFiltrados.length > 0 && (
@@ -95,9 +102,9 @@ export default function ListaPagamentos({
           <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-red-600">
             Por regularizar ({atrasadosFiltrados.length})
           </h2>
-          <div className="mt-2 flex flex-col gap-2">
-            {atrasadosFiltrados.map((l) => (
-              <CartaoPagamento key={l.clienteId} slug={slug} linha={l} />
+          <div className="mt-2 flex flex-col overflow-hidden rounded-2xl border border-red-200 shadow-card dark:border-red-900">
+            {atrasadosFiltrados.map((l, i) => (
+              <LinhaPagamento key={l.clienteId} slug={slug} linha={l} primeira={i === 0} />
             ))}
           </div>
         </>
@@ -108,15 +115,17 @@ export default function ListaPagamentos({
           <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-amber-600">
             Seguro a renovar ({segurosFiltrados.length})
           </h2>
-          <div className="mt-2 flex flex-col gap-2">
-            {segurosFiltrados.map((l) => (
+          <div className="mt-2 flex flex-col overflow-hidden rounded-2xl border border-amber-200 shadow-card dark:border-amber-900">
+            {segurosFiltrados.map((l, i) => (
               <Link
                 key={`seguro-${l.clienteId}`}
                 href={`/painel/${slug}/pagamentos/${l.clienteId}`}
-                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm transition-colors hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950"
+                className={`flex items-center justify-between gap-3 bg-amber-50 px-4 py-3.5 text-sm hover:bg-amber-100/70 dark:bg-amber-950/40 dark:hover:bg-amber-950/70 ${
+                  i === 0 ? '' : 'border-t border-amber-200 dark:border-amber-900'
+                }`}
               >
-                <span className="font-medium text-black dark:text-zinc-50">{l.nome}</span>
-                <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                <span className="font-medium text-foreground">{l.nome}</span>
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
                   {l.emDividaDesdeLabel}
                 </span>
               </Link>
@@ -127,19 +136,19 @@ export default function ListaPagamentos({
 
       {emDiaFiltrados.length > 0 && (
         <>
-          <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted">
             Em dia ({emDiaFiltrados.length})
           </h2>
-          <div className="mt-2 flex flex-col gap-2">
-            {emDiaFiltrados.map((l) => (
-              <CartaoPagamento key={l.clienteId} slug={slug} linha={l} />
+          <div className="mt-2 flex flex-col overflow-hidden rounded-2xl border border-border-subtle shadow-card">
+            {emDiaFiltrados.map((l, i) => (
+              <LinhaPagamento key={l.clienteId} slug={slug} linha={l} primeira={i === 0} />
             ))}
           </div>
         </>
       )}
 
       {semResultados && (
-        <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
           {filtro
             ? 'Nenhum cliente com esse nome.'
             : 'Ainda não há clientes ativos neste estúdio.'}

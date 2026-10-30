@@ -88,17 +88,17 @@ export default async function PresencasPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">
+      <h1 className="mt-3 text-2xl font-semibold text-foreground">
         Presenças
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted">
         {estudio.nome} · quem treinou e quem faltou este mês.
       </p>
 
       <div className="mt-6 flex items-center gap-3">
         <Link
           href={`/painel/${slug}/presencas?ano=${mesAnterior.ano}&mes=${mesAnterior.mes}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           ←
         </Link>
@@ -107,7 +107,7 @@ export default async function PresencasPage({
         </span>
         <Link
           href={`/painel/${slug}/presencas?ano=${mesSeguinte.ano}&mes=${mesSeguinte.mes}`}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           →
         </Link>

@@ -36,7 +36,7 @@ export default function ListaAvaliacoes({
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
         placeholder="Procurar por nome…"
-        className="mt-4 w-full rounded-md border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-900"
+        className="mt-4 w-full rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
       />
 
       <div className="mt-4 flex flex-col gap-2">
@@ -44,10 +44,10 @@ export default function ListaAvaliacoes({
           <Link
             key={l.id}
             href={`/painel/${slug}/avaliacoes/${l.id}`}
-            className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white p-4 transition-colors hover:border-black/30 dark:border-white/10 dark:bg-zinc-950"
+            className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-black/30"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium text-black dark:text-zinc-50">{l.nome}</span>
+              <span className="font-medium text-foreground">{l.nome}</span>
               <div className="flex items-center gap-2">
                 {l.reavaliacaoAtrasada && (
                   <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
@@ -71,7 +71,7 @@ export default function ListaAvaliacoes({
       </div>
 
       {linhasFiltradas.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-zinc-500">
           {filtro ? 'Nenhum cliente ativo com esse nome.' : 'Ainda não há clientes ativos neste estúdio.'}
         </div>
       )}

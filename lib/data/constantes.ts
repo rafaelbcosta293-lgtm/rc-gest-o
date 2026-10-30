@@ -42,6 +42,16 @@ export function corEstudio(slug: string) {
   return CORES_ESTUDIO[slug] ?? COR_ESTUDIO_OMISSAO
 }
 
+// Telemóvel físico de cada estúdio — uma página web não consegue fazer
+// esse telemóvel tocar sozinho a partir de outro aparelho (isso só com
+// um serviço de chamadas pago, tipo Twilio, a fazer de ponte); por
+// pedido do dono, mostra-se só o número certo para ligar à mão a
+// partir desse telemóvel.
+export const TELEFONE_ESTUDIO: Record<string, string> = {
+  fatima: '+351 913 188 090',
+  leiria: '+351 913 188 080',
+}
+
 export const ALERTAS = {
   Nenhum: { ...PALETA.verde, dot: '#1E9A52', label: 'Sem alertas' },
   Lesão: { ...PALETA.vermelho, dot: PALETA.vermelho.tx, label: 'Lesão' },

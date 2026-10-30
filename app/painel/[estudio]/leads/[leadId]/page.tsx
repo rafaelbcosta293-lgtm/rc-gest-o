@@ -129,7 +129,7 @@ export default async function LeadPage({
         {lead.email && ` · ${lead.email}`}
       </p>
 
-      <ContactoRapido nome={lead.nome} telefone={lead.telefone} />
+      <ContactoRapido nome={lead.nome} telefone={lead.telefone} estudioSlug={slug} />
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

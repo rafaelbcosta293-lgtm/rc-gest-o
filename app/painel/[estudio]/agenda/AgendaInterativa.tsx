@@ -293,9 +293,14 @@ function disporEventosDoDia(eventosDia: EventoComNomes[]): EventoPosicionado[] {
   })
 }
 
+// Arredondado aos 10 minutos aqui, na origem — para a caixa que
+// acompanha o rato, a pré-visualização e a hora final gravada serem
+// sempre exatamente o mesmo valor (nunca a pré-visualização encostar a
+// uma hora redonda e a marcação ficar gravada uns minutos ao lado).
 function minutoNoClique(clienteY: number, rectTop: number, pxPorMinuto: number) {
-  const minutos = Math.round((clienteY - rectTop) / pxPorMinuto)
-  return Math.max(0, Math.min(GRADE_HORA_FIM * 60 - 1, minutos))
+  const minutosExatos = (clienteY - rectTop) / pxPorMinuto
+  const minutos = Math.round(minutosExatos / 10) * 10
+  return Math.max(0, Math.min(GRADE_HORA_FIM * 60 - 10, minutos))
 }
 
 // Um só arrasto de cada vez — a criar um evento novo (a partir de um
@@ -374,7 +379,7 @@ function GrelhaInterativa({
   useEffect(() => {
     function mover(e: MouseEvent) {
       const loc = localizar(e.clientX, e.clientY)
-      if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: Math.round(loc.minuto / 10) * 10 })
+      if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto })
 
       const arrasto = arrastoRef.current
       if (!arrasto || !loc) return
@@ -455,7 +460,7 @@ function GrelhaInterativa({
   function aoMoverRatoEmRepouso(e: React.MouseEvent) {
     if (arrastoRef.current) return
     const loc = localizar(e.clientX, e.clientY)
-    if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: Math.round(loc.minuto / 10) * 10 })
+    if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto })
   }
 
   function iniciarCriacao(dia: string) {

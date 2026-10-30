@@ -13,11 +13,21 @@ export default function ClienteCombobox({
   nome = 'cliente_id',
   defaultValue = null,
   placeholder = 'Escreve para pesquisar…',
+  onSelecionar,
+  excluirIds,
 }: {
   clientes: ClienteOpcao[]
   nome?: string
   defaultValue?: ClienteOpcao | null
   placeholder?: string
+  // Quando definido, o campo passa a "adicionar pessoa" (treinos em
+  // simultâneo): em vez de guardar a escolha num input escondido, avisa
+  // quem usa o componente e limpa-se logo a seguir, para se poder
+  // escrever o próximo nome sem fechar nada.
+  onSelecionar?: (cliente: ClienteOpcao) => void
+  // Nomes já escolhidos noutro sítio (ex.: outras pessoas já
+  // adicionadas ao mesmo treino) — não voltam a aparecer na lista.
+  excluirIds?: string[]
 }) {
   const [texto, setTexto] = useState(defaultValue?.nome ?? '')
   const [selecionado, setSelecionado] = useState<ClienteOpcao | null>(defaultValue ?? null)
@@ -34,21 +44,22 @@ export default function ClienteCombobox({
     return () => document.removeEventListener('mousedown', aoClicarFora)
   }, [])
 
+  const disponiveis = excluirIds ? clientes.filter((c) => !excluirIds.includes(c.id)) : clientes
   const termo = texto.trim().toLowerCase()
   const filtrados = termo
-    ? clientes.filter((c) => c.nome.toLowerCase().startsWith(termo)).slice(0, 8)
-    : clientes.slice(0, 8)
+    ? disponiveis.filter((c) => c.nome.toLowerCase().startsWith(termo)).slice(0, 8)
+    : disponiveis.slice(0, 8)
 
   return (
     <div ref={containerRef} className="relative">
-      <input type="hidden" name={nome} value={selecionado?.id ?? ''} />
+      {!onSelecionar && <input type="hidden" name={nome} value={selecionado?.id ?? ''} />}
       <input
         type="text"
         value={texto}
         onFocus={() => setAberto(true)}
         onChange={(e) => {
           setTexto(e.target.value)
-          setSelecionado(null)
+          if (!onSelecionar) setSelecionado(null)
           setAberto(true)
         }}
         placeholder={placeholder}
@@ -62,8 +73,13 @@ export default function ClienteCombobox({
               key={c.id}
               type="button"
               onClick={() => {
-                setSelecionado(c)
-                setTexto(c.nome)
+                if (onSelecionar) {
+                  onSelecionar(c)
+                  setTexto('')
+                } else {
+                  setSelecionado(c)
+                  setTexto(c.nome)
+                }
                 setAberto(false)
               }}
               className="block w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-brand/[.06]"

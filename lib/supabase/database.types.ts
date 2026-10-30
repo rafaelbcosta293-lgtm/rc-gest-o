@@ -458,6 +458,7 @@ export type EventoAgenda = {
   duracao_min: number
   estado: EstadoEventoAgenda
   serie_id: string | null
+  grupo_id: string | null
   nota: string | null
   motivo_cancelamento: string | null
   criado_por: string | null

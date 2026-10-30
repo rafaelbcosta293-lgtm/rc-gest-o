@@ -30,8 +30,13 @@ const inputCls =
 
 const DURACOES_COMUNS = [30, 40, 45, 60, 90, 120]
 
-function rotuloEvento(e: EventoComNomes) {
-  return e.cliente?.nome ?? e.titulo ?? e.tipo
+// Treinos em simultâneo guardam uma linha por pessoa (grupo_id
+// partilhado) — o rótulo junta os nomes para se ver logo quem treina
+// junto, sem abrir o evento.
+function rotuloEvento(grupo: EventoComNomes[]) {
+  const nomes = grupo.map((e) => e.cliente?.nome).filter((n): n is string => !!n)
+  if (nomes.length > 0) return nomes.join(' + ')
+  return grupo[0].titulo ?? grupo[0].tipo
 }
 
 function minutosParaHora(minutos: number) {
@@ -52,7 +57,9 @@ function horaFim(horaInicio: string, duracaoMin: number) {
 type EstadoModal =
   | { aberto: false }
   | { aberto: true; modo: 'criar'; data: string; horaInicio: string; duracaoMin: number }
-  | { aberto: true; modo: 'editar'; evento: EventoComNomes }
+  // grupo inclui sempre o próprio evento — tem 1 elemento quando é só
+  // uma pessoa, vários quando é um treino em simultâneo.
+  | { aberto: true; modo: 'editar'; evento: EventoComNomes; grupo: EventoComNomes[] }
 
 // Níveis de zoom (pixels por minuto) — o valor por omissão mostra o dia
 // inteiro (00h–24h) sem precisar de scroll na maioria dos ecrãs; os
@@ -94,10 +101,12 @@ export default function AgendaInterativa({
   }
 
   function mover(id: string, novaData: string, novaHoraInicio: string) {
+    const grupoId = eventos.find((e) => e.id === id)?.grupo_id ?? null
     iniciarTransicao(async () => {
       const resultado = await moverEventoRapido({
         estudioSlug: slug,
         id,
+        grupoId,
         data: novaData,
         horaInicio: novaHoraInicio,
       })
@@ -107,18 +116,19 @@ export default function AgendaInterativa({
   }
 
   function redimensionar(id: string, horaInicio: string, duracaoMin: number) {
+    const grupoId = eventos.find((e) => e.id === id)?.grupo_id ?? null
     iniciarTransicao(async () => {
-      const resultado = await redimensionarEventoRapido({ estudioSlug: slug, id, horaInicio, duracaoMin })
+      const resultado = await redimensionarEventoRapido({ estudioSlug: slug, id, grupoId, horaInicio, duracaoMin })
       if ('error' in resultado) setErro(resultado.error)
       else router.refresh()
     })
   }
 
-  function aoSubmeter(formData: FormData) {
+  function aoSubmeter(formData: FormData, clienteIds: string[]) {
     const campos = {
       estudioSlug: slug,
       tipo: formData.get('tipo') as TipoEvento,
-      clienteId: (formData.get('cliente_id') as string) || null,
+      clienteIds,
       ptId: (formData.get('pt_id') as string) || null,
       titulo: (formData.get('titulo') as string)?.trim() || null,
       data: formData.get('data') as string,
@@ -130,7 +140,12 @@ export default function AgendaInterativa({
     iniciarTransicao(async () => {
       const resultado =
         modal.aberto && modal.modo === 'editar'
-          ? await atualizarEventoRapido({ ...campos, id: modal.evento.id })
+          ? await atualizarEventoRapido({
+              ...campos,
+              id: modal.evento.id,
+              grupoId: modal.evento.grupo_id,
+              estudioId,
+            })
           : await criarEventoRapido({ ...campos, estudioId })
       if ('error' in resultado) setErro(resultado.error)
       else aposSucesso()
@@ -139,9 +154,9 @@ export default function AgendaInterativa({
 
   function desmarcar() {
     if (!(modal.aberto && modal.modo === 'editar')) return
-    const id = modal.evento.id
+    const { id, grupo_id } = modal.evento
     iniciarTransicao(async () => {
-      const resultado = await desmarcarEventoRapido({ estudioSlug: slug, id, motivo: null })
+      const resultado = await desmarcarEventoRapido({ estudioSlug: slug, id, grupoId: grupo_id, motivo: null })
       if ('error' in resultado) setErro(resultado.error)
       else aposSucesso()
     })
@@ -149,9 +164,9 @@ export default function AgendaInterativa({
 
   function reativar() {
     if (!(modal.aberto && modal.modo === 'editar')) return
-    const id = modal.evento.id
+    const { id, grupo_id } = modal.evento
     iniciarTransicao(async () => {
-      const resultado = await reativarEventoRapido({ estudioSlug: slug, id })
+      const resultado = await reativarEventoRapido({ estudioSlug: slug, id, grupoId: grupo_id })
       if ('error' in resultado) setErro(resultado.error)
       else aposSucesso()
     })
@@ -159,10 +174,14 @@ export default function AgendaInterativa({
 
   function apagar() {
     if (!(modal.aberto && modal.modo === 'editar')) return
-    if (!window.confirm('Apagar este evento? Não é possível desfazer.')) return
-    const id = modal.evento.id
+    const aviso =
+      modal.grupo.length > 1
+        ? 'Apagar este treino em simultâneo? Remove todas as pessoas. Não é possível desfazer.'
+        : 'Apagar este evento? Não é possível desfazer.'
+    if (!window.confirm(aviso)) return
+    const { id, grupo_id } = modal.evento
     iniciarTransicao(async () => {
-      const resultado = await apagarEventoRapido({ estudioSlug: slug, id })
+      const resultado = await apagarEventoRapido({ estudioSlug: slug, id, grupoId: grupo_id })
       if ('error' in resultado) setErro(resultado.error)
       else aposSucesso()
     })
@@ -173,6 +192,11 @@ export default function AgendaInterativa({
     const lista = porDia[e.data] ?? []
     lista.push(e)
     porDia[e.data] = lista
+  }
+
+  function abrirParaEditar(evento: EventoComNomes) {
+    const grupo = evento.grupo_id ? eventos.filter((e) => e.grupo_id === evento.grupo_id) : [evento]
+    setModal({ aberto: true, modo: 'editar', evento, grupo })
   }
 
   return (
@@ -190,7 +214,7 @@ export default function AgendaInterativa({
         onClickVazio={(dia, horaInicio, duracaoMin) =>
           setModal({ aberto: true, modo: 'criar', data: dia, horaInicio, duracaoMin })
         }
-        onAbrirEvento={(e) => setModal({ aberto: true, modo: 'editar', evento: e })}
+        onAbrirEvento={abrirParaEditar}
         pxPorMinuto={pxPorMinuto}
         zoomIndice={zoomIndice}
         onZoomIndiceChange={setZoomIndice}
@@ -226,19 +250,39 @@ const HORAS_GRADE = Array.from(
 )
 const DURACAO_MIN_MINIMA = 5
 
-type EventoPosicionado = { evento: EventoComNomes; coluna: number; colunas: number }
+type EventoPosicionado = { evento: EventoComNomes; grupo: EventoComNomes[]; coluna: number; colunas: number }
+
+// Um treino em simultâneo tem uma linha por pessoa — todas com o mesmo
+// grupo_id — mas só deve ocupar UM bloco na grelha (com todos os nomes),
+// em vez de aparecerem lado a lado como se fossem eventos diferentes.
+function representantesDoDia(eventosDia: EventoComNomes[]): { evento: EventoComNomes; grupo: EventoComNomes[] }[] {
+  const vistos = new Set<string>()
+  const resultado: { evento: EventoComNomes; grupo: EventoComNomes[] }[] = []
+  for (const e of eventosDia) {
+    if (vistos.has(e.id)) continue
+    if (e.grupo_id) {
+      const grupo = eventosDia.filter((x) => x.grupo_id === e.grupo_id)
+      grupo.forEach((x) => vistos.add(x.id))
+      resultado.push({ evento: e, grupo })
+    } else {
+      vistos.add(e.id)
+      resultado.push({ evento: e, grupo: [e] })
+    }
+  }
+  return resultado
+}
 
 // Dispõe os eventos do dia numa grelha contínua: eventos que se
 // sobrepõem no tempo ficam lado a lado (como no Google Calendar), em
 // vez de empilhados uns sobre os outros.
 function disporEventosDoDia(eventosDia: EventoComNomes[]): EventoPosicionado[] {
-  const ordenados = [...eventosDia].sort(
-    (a, b) => minutosDoDia(a.hora_inicio) - minutosDoDia(b.hora_inicio)
+  const ordenados = [...representantesDoDia(eventosDia)].sort(
+    (a, b) => minutosDoDia(a.evento.hora_inicio) - minutosDoDia(b.evento.hora_inicio)
   )
   const fimPorColuna: number[] = []
-  const base = ordenados.map((evento) => {
-    const inicio = minutosDoDia(evento.hora_inicio)
-    const fim = inicio + evento.duracao_min
+  const base = ordenados.map((r) => {
+    const inicio = minutosDoDia(r.evento.hora_inicio)
+    const fim = inicio + r.evento.duracao_min
     let coluna = fimPorColuna.findIndex((f) => f <= inicio)
     if (coluna === -1) {
       coluna = fimPorColuna.length
@@ -246,12 +290,12 @@ function disporEventosDoDia(eventosDia: EventoComNomes[]): EventoPosicionado[] {
     } else {
       fimPorColuna[coluna] = fim
     }
-    return { evento, coluna, inicio, fim }
+    return { ...r, coluna, inicio, fim }
   })
   return base.map((p) => {
     const simultaneos = base.filter((q) => q.inicio < p.fim && q.fim > p.inicio)
     const colunas = Math.max(...simultaneos.map((q) => q.coluna + 1))
-    return { evento: p.evento, coluna: p.coluna, colunas }
+    return { evento: p.evento, grupo: p.grupo, coluna: p.coluna, colunas }
   })
 }
 
@@ -515,7 +559,7 @@ function ColunaDia({
           }}
         />
       )}
-      {disporEventosDoDia(eventos).map(({ evento, coluna, colunas }) => {
+      {disporEventosDoDia(eventos).map(({ evento, grupo, coluna, colunas }) => {
         const cor = corTipoEvento(evento.tipo)
         const inicioMin = minutosDoDia(evento.hora_inicio)
         return (
@@ -548,7 +592,7 @@ function ColunaDia({
             <span className="block truncate text-[9px] font-semibold">
               {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
             </span>
-            <span className="block truncate text-[10px] font-medium">{rotuloEvento(evento)}</span>
+            <span className="block truncate text-[10px] font-medium">{rotuloEvento(grupo)}</span>
             {/* Pegas de redimensionar, ao estilo Google Calendar — só o
                 cursor muda de resto; ficam discretas até se precisar
                 delas. */}
@@ -587,7 +631,7 @@ function EventoModalOverlay({
   aPendente: boolean
   slug: string
   onFechar: () => void
-  onSubmeter: (formData: FormData) => void
+  onSubmeter: (formData: FormData, clienteIds: string[]) => void
   onDesmarcar: () => void
   onReativar: () => void
   onApagar: () => void
@@ -597,6 +641,17 @@ function EventoModalOverlay({
   const dataDefault = modal.modo === 'editar' ? modal.evento.data : modal.data
   const horaDefault = modal.modo === 'editar' ? modal.evento.hora_inicio.slice(0, 5) : modal.horaInicio
   const duracaoDefault = modal.modo === 'editar' ? modal.evento.duracao_min : modal.duracaoMin
+
+  // Quem já está neste treino — para um treino em simultâneo, o grupo
+  // tem mais do que uma pessoa; pode-se adicionar ou remover enquanto
+  // se edita, e guardar aplica a todas.
+  const [participantes, setParticipantes] = useState<ClienteOpcao[]>(() =>
+    modal.modo === 'editar'
+      ? modal.grupo
+          .map((e) => e.cliente)
+          .filter((c): c is ClienteOpcao => c !== null)
+      : []
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onFechar}>
@@ -621,6 +676,13 @@ function EventoModalOverlay({
           </p>
         )}
 
+        {participantes.length > 1 && (
+          <p className="mt-2 rounded-lg bg-brand/[.06] px-3 py-2 text-xs text-muted">
+            Treino em simultâneo — guardar, mover, desmarcar ou apagar aplica-se a todas as
+            pessoas.
+          </p>
+        )}
+
         {erro && (
           <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
             {erro}
@@ -630,7 +692,10 @@ function EventoModalOverlay({
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            onSubmeter(new FormData(e.currentTarget))
+            onSubmeter(
+              new FormData(e.currentTarget),
+              participantes.map((c) => c.id)
+            )
           }}
           className="mt-3 flex flex-col gap-3"
         >
@@ -651,7 +716,38 @@ function EventoModalOverlay({
             ))}
           </div>
 
-          <ClienteCombobox clientes={clientes} defaultValue={evento?.cliente ?? null} />
+          <div className="flex flex-col gap-1.5">
+            {participantes.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {participantes.map((c) => (
+                  <span
+                    key={c.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-brand/[.12] px-2.5 py-1 text-xs font-medium text-foreground"
+                  >
+                    {c.nome}
+                    <button
+                      type="button"
+                      onClick={() => setParticipantes((lista) => lista.filter((x) => x.id !== c.id))}
+                      className="text-muted hover:text-foreground"
+                      title={`Remover ${c.nome} deste treino`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <ClienteCombobox
+              clientes={clientes}
+              excluirIds={participantes.map((c) => c.id)}
+              onSelecionar={(c) => setParticipantes((lista) => [...lista, c])}
+              placeholder={
+                participantes.length === 0
+                  ? '— Reunião / outro (sem cliente) — ou escreve para adicionar'
+                  : 'Adicionar mais alguém ao mesmo treino…'
+              }
+            />
+          </div>
 
           <select name="pt_id" defaultValue={evento?.pt_id ?? ''} className={inputCls}>
             <option value="">— Sem instrutor —</option>

@@ -172,7 +172,11 @@ export type ResultadoAcaoRapida = { ok: true } | { error: string }
 type CamposEvento = {
   estudioSlug: string
   tipo: TipoEventoAgenda
-  clienteId: string | null
+  // Um treino com várias pessoas em simultâneo guarda uma linha por
+  // pessoa, todas com o mesmo grupo_id — vazio/[null] é "sem cliente"
+  // (reunião/outro), uma entrada é o caso normal, várias é o treino
+  // conjunto.
+  clienteIds: string[]
   ptId: string | null
   titulo: string | null
   data: string
@@ -187,18 +191,24 @@ export async function criarEventoRapido(
   const sessao = await getSessaoAtual()
   const supabase = await createClient()
 
-  const { error } = await supabase.from('agenda_eventos').insert({
+  const idsClientes: (string | null)[] = input.clienteIds.length > 0 ? input.clienteIds : [null]
+  const grupoId = idsClientes.length > 1 ? randomUUID() : null
+
+  const linhas = idsClientes.map((clienteId) => ({
     estudio_id: input.estudioId,
-    cliente_id: input.clienteId,
+    cliente_id: clienteId,
     pt_id: input.ptId,
     tipo: input.tipo,
     titulo: input.titulo,
     data: input.data,
     hora_inicio: input.horaInicio,
     duracao_min: input.duracaoMin,
+    grupo_id: grupoId,
     nota: input.nota,
     criado_por: sessao.userId,
-  })
+  }))
+
+  const { error } = await supabase.from('agenda_eventos').insert(linhas)
   if (error) return { error: error.message }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
@@ -206,25 +216,65 @@ export async function criarEventoRapido(
 }
 
 export async function atualizarEventoRapido(
-  input: CamposEvento & { id: string }
+  input: CamposEvento & { id: string; grupoId: string | null; estudioId: number }
 ): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  // Tal como atualizarEvento: só esta linha, nunca a série toda.
-  const { error } = await supabase
-    .from('agenda_eventos')
-    .update({
-      tipo: input.tipo,
-      cliente_id: input.clienteId,
-      pt_id: input.ptId,
-      titulo: input.titulo,
-      data: input.data,
-      hora_inicio: input.horaInicio,
-      duracao_min: input.duracaoMin,
-      nota: input.nota,
-    })
-    .eq('id', input.id)
-  if (error) return { error: error.message }
+  // Linhas que hoje compõem este treino (só esta, ou todo o grupo
+  // partilhado) — comparadas com a lista de pessoas pedida agora, para
+  // saber quem sai (apagar), quem fica (atualizar) e quem entra (criar).
+  const { data: atuaisData, error: erroAtuais } = input.grupoId
+    ? await supabase.from('agenda_eventos').select('id, cliente_id').eq('grupo_id', input.grupoId)
+    : await supabase.from('agenda_eventos').select('id, cliente_id').eq('id', input.id)
+  if (erroAtuais) return { error: erroAtuais.message }
+  const atuais = atuaisData ?? []
+
+  const idsDesejados: (string | null)[] = input.clienteIds.length > 0 ? input.clienteIds : [null]
+  const paraApagar = atuais.filter((a) => !idsDesejados.includes(a.cliente_id))
+  const paraManter = atuais.filter((a) => idsDesejados.includes(a.cliente_id))
+  const paraCriar = idsDesejados.filter((id) => !atuais.some((a) => a.cliente_id === id))
+
+  const totalFinal = paraManter.length + paraCriar.length
+  const novoGrupoId = totalFinal > 1 ? (input.grupoId ?? randomUUID()) : null
+
+  const camposPartilhados = {
+    tipo: input.tipo,
+    pt_id: input.ptId,
+    titulo: input.titulo,
+    data: input.data,
+    hora_inicio: input.horaInicio,
+    duracao_min: input.duracaoMin,
+    grupo_id: novoGrupoId,
+    nota: input.nota,
+  }
+
+  if (paraApagar.length > 0) {
+    const { error } = await supabase
+      .from('agenda_eventos')
+      .delete()
+      .in('id', paraApagar.map((a) => a.id))
+    if (error) return { error: error.message }
+  }
+
+  if (paraManter.length > 0) {
+    const { error } = await supabase
+      .from('agenda_eventos')
+      .update(camposPartilhados)
+      .in('id', paraManter.map((a) => a.id))
+    if (error) return { error: error.message }
+  }
+
+  if (paraCriar.length > 0) {
+    const sessao = await getSessaoAtual()
+    const linhas = paraCriar.map((clienteId) => ({
+      estudio_id: input.estudioId,
+      cliente_id: clienteId,
+      criado_por: sessao.userId,
+      ...camposPartilhados,
+    }))
+    const { error } = await supabase.from('agenda_eventos').insert(linhas)
+    if (error) return { error: error.message }
+  }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   return { ok: true }
@@ -233,15 +283,14 @@ export async function atualizarEventoRapido(
 export async function moverEventoRapido(input: {
   estudioSlug: string
   id: string
+  grupoId: string | null
   data: string
   horaInicio: string
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('agenda_eventos')
-    .update({ data: input.data, hora_inicio: input.horaInicio })
-    .eq('id', input.id)
+  const query = supabase.from('agenda_eventos').update({ data: input.data, hora_inicio: input.horaInicio })
+  const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
@@ -251,15 +300,16 @@ export async function moverEventoRapido(input: {
 export async function redimensionarEventoRapido(input: {
   estudioSlug: string
   id: string
+  grupoId: string | null
   horaInicio: string
   duracaoMin: number
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const query = supabase
     .from('agenda_eventos')
     .update({ hora_inicio: input.horaInicio, duracao_min: input.duracaoMin })
-    .eq('id', input.id)
+  const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
@@ -269,14 +319,15 @@ export async function redimensionarEventoRapido(input: {
 export async function desmarcarEventoRapido(input: {
   estudioSlug: string
   id: string
+  grupoId: string | null
   motivo: string | null
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const query = supabase
     .from('agenda_eventos')
     .update({ estado: 'Cancelado', motivo_cancelamento: input.motivo })
-    .eq('id', input.id)
+  const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
@@ -286,13 +337,12 @@ export async function desmarcarEventoRapido(input: {
 export async function reativarEventoRapido(input: {
   estudioSlug: string
   id: string
+  grupoId: string | null
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('agenda_eventos')
-    .update({ estado: 'Agendado', motivo_cancelamento: null })
-    .eq('id', input.id)
+  const query = supabase.from('agenda_eventos').update({ estado: 'Agendado', motivo_cancelamento: null })
+  const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
@@ -302,10 +352,12 @@ export async function reativarEventoRapido(input: {
 export async function apagarEventoRapido(input: {
   estudioSlug: string
   id: string
+  grupoId: string | null
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  const { error } = await supabase.from('agenda_eventos').delete().eq('id', input.id)
+  const query = supabase.from('agenda_eventos').delete()
+  const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCsv, leadsDeCsv } from './csv'
+import { parseCsv, leadsDeCsv, gerarCsv } from './csv'
 
 describe('parseCsv', () => {
   it('separa linhas e campos simples por vírgula', () => {
@@ -70,5 +70,38 @@ describe('leadsDeCsv', () => {
 
   it('ficheiro vazio devolve listas vazias', () => {
     expect(leadsDeCsv('')).toEqual({ leads: [], erros: [] })
+  })
+})
+
+describe('gerarCsv', () => {
+  const colunas = [
+    { chave: 'nome', label: 'Nome' },
+    { chave: 'nota', label: 'Nota' },
+  ]
+
+  it('gera o cabeçalho a partir dos labels, e uma linha por registo', () => {
+    const csv = gerarCsv(colunas, [{ nome: 'Ana', nota: 'ok' }])
+    expect(csv).toBe('Nome,Nota\r\nAna,ok')
+  })
+
+  it('escapa campos com vírgula, aspas ou quebra de linha', () => {
+    const csv = gerarCsv(colunas, [{ nome: 'Silva, João', nota: 'disse "sim"' }])
+    expect(csv).toBe('Nome,Nota\r\n"Silva, João","disse ""sim"""')
+  })
+
+  it('trata null/undefined como campo vazio', () => {
+    const csv = gerarCsv(colunas, [{ nome: 'Ana', nota: null }])
+    expect(csv).toBe('Nome,Nota\r\nAna,')
+  })
+
+  it('o resultado é lido de volta pelo parseCsv tal como foi gerado', () => {
+    const linhas = [{ nome: 'Silva, João', nota: 'disse "sim"' }, { nome: 'Bruno', nota: null }]
+    const csv = gerarCsv(colunas, linhas)
+    const lido = parseCsv(csv)
+    expect(lido).toEqual([
+      ['Nome', 'Nota'],
+      ['Silva, João', 'disse "sim"'],
+      ['Bruno', ''],
+    ])
   })
 })

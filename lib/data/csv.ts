@@ -1,3 +1,19 @@
+// Gera CSV a partir de linhas já tabulares (secção 7: "exportação de
+// qualquer tabela") — escapa com aspas duplas só quando o campo tem
+// vírgula, aspas ou quebra de linha, como o parseCsv abaixo já espera.
+function campoCsv(valor: unknown): string {
+  if (valor === null || valor === undefined) return ''
+  const texto = String(valor)
+  if (/[",\n]/.test(texto)) return `"${texto.replace(/"/g, '""')}"`
+  return texto
+}
+
+export function gerarCsv(colunas: { chave: string; label: string }[], linhas: Record<string, unknown>[]): string {
+  const cabecalho = colunas.map((c) => campoCsv(c.label)).join(',')
+  const corpo = linhas.map((linha) => colunas.map((c) => campoCsv(linha[c.chave])).join(','))
+  return [cabecalho, ...corpo].join('\r\n')
+}
+
 // Parser de CSV simples (vírgulas, aspas duplas para escapar vírgulas e
 // quebras de linha) — suficiente para a importação de leads, sem
 // precisar de uma dependência externa para um ficheiro tipicamente

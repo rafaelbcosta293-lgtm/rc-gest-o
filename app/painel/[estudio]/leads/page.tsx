@@ -10,6 +10,7 @@ import { calcularMetricasFunil, type HistoricoEtapaLinha } from '@/lib/data/funi
 import StatCard from '@/components/StatCard'
 import BarMeter from '@/components/BarMeter'
 import LeadsKanban, { type LeadResumo } from './LeadsKanban'
+import ExportarCsvButton from '@/components/ExportarCsvButton'
 import type { QuadroDoDia } from '@/lib/supabase/database.types'
 
 const ORDEM_FUNIL = Object.keys(ESTADOS_LEAD) as (keyof typeof ESTADOS_LEAD)[]
@@ -77,6 +78,18 @@ export default async function LeadsPage({
     (l) => emAberto(l) && l.proximo_contacto && l.proximo_contacto <= hoje && l.visita_data !== hoje
   )
 
+  const leadsParaCsv = leads.map((l) => ({
+    nome: l.nome,
+    telefone: l.telefone,
+    estado: l.estado,
+    origem: l.origem,
+    temperatura: l.temperatura,
+    responsavel: l.responsavel?.nome ?? '',
+    proximo_contacto: l.proximo_contacto,
+    valor_potencial: l.valor_potencial,
+    entrada: l.entrada,
+  }))
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <Link
@@ -94,6 +107,21 @@ export default async function LeadsPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <ExportarCsvButton
+            colunas={[
+              { chave: 'nome', label: 'Nome' },
+              { chave: 'telefone', label: 'Telefone' },
+              { chave: 'estado', label: 'Estado' },
+              { chave: 'origem', label: 'Origem' },
+              { chave: 'temperatura', label: 'Temperatura' },
+              { chave: 'responsavel', label: 'Responsável' },
+              { chave: 'proximo_contacto', label: 'Próximo contacto' },
+              { chave: 'valor_potencial', label: 'Valor potencial' },
+              { chave: 'entrada', label: 'Entrada' },
+            ]}
+            linhas={leadsParaCsv}
+            nomeFicheiro={`leads-${slug}`}
+          />
           <Link
             href={`/painel/${slug}/leads/comercial`}
             className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/10 dark:hover:bg-white/[.08]"

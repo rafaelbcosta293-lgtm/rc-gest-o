@@ -20,6 +20,7 @@ import PortaSenha from '@/components/PortaSenha'
 import StatCard from '@/components/StatCard'
 import LineChart from '@/components/LineChart'
 import BarMeter from '@/components/BarMeter'
+import ExportarCsvButton from '@/components/ExportarCsvButton'
 
 const MESES_HISTORICO = 6
 
@@ -208,7 +209,19 @@ export default async function FinanceiroPage({
       </div>
 
       <div className="mt-8">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Antiguidade da dívida</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Antiguidade da dívida</h2>
+          <ExportarCsvButton
+            colunas={[
+              { chave: 'faixa', label: 'Faixa' },
+              { chave: 'clientes', label: 'Clientes' },
+              { chave: 'valorAproximado', label: 'Valor aproximado (€)' },
+            ]}
+            linhas={aging}
+            nomeFicheiro="antiguidade-divida"
+            className="text-xs text-muted underline hover:text-foreground"
+          />
+        </div>
         <div className="mt-2 flex flex-col gap-2.5 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
           {aging.map((f) => (
             <BarMeter

@@ -8,6 +8,7 @@ import { mesesAtivo } from '@/lib/data/clientes'
 import { proximoAniversario } from '@/lib/data/aniversarios'
 import { treinosPrevistos, intervaloMes, fmt } from '@/lib/data/presencas'
 import ListaClientes, { type LinhaCliente } from './ListaClientes'
+import ExportarCsvButton from '@/components/ExportarCsvButton'
 import type { EstadoCliente } from '@/lib/supabase/database.types'
 
 type ClienteLista = {
@@ -239,6 +240,19 @@ export default async function ClientesPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <ExportarCsvButton
+            colunas={[
+              { chave: 'numeroSocio', label: 'Nº de cliente' },
+              { chave: 'nome', label: 'Nome' },
+              { chave: 'telefone', label: 'Telefone' },
+              { chave: 'estadoLabel', label: 'Estado' },
+              { chave: 'inscricaoLabel', label: 'Inscrição' },
+              { chave: 'pagamentoLabel', label: 'Pagamento' },
+              { chave: 'treinosLabel', label: 'Treinos' },
+            ]}
+            linhas={linhas}
+            nomeFicheiro={`clientes-${slug}`}
+          />
           <Link
             href={`/painel/${slug}/clientes/retencao`}
             className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"

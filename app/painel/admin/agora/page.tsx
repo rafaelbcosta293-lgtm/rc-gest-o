@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, UserCheck, PauseCircle, UserMinus, CalendarCheck2 } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudios } from '@/lib/data/estudios'
+import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import { corEstudio, PALETA } from '@/lib/data/constantes'
@@ -16,7 +16,7 @@ type LeadResumo = Pick<Lead, 'estado' | 'visita_data'>
 export default async function AdminAgoraPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erroSenha?: string }>
+  searchParams: Promise<{ erroSenha?: string; estudio?: string }>
 }) {
   const sp = await searchParams
 
@@ -35,7 +35,7 @@ export default async function AdminAgoraPage({
     )
   }
 
-  const estudios = await getEstudios(supabase)
+  const estudios = filtrarPorEstudio(await getEstudios(supabase), sp.estudio)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">

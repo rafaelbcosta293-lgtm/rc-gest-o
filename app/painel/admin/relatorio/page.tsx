@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudios } from '@/lib/data/estudios'
+import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import { MESES, intervaloMes, fmt } from '@/lib/data/presencas'
@@ -16,7 +16,7 @@ import PortaSenha from '@/components/PortaSenha'
 export default async function RelatorioConsolidadoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ano?: string; mes?: string; erroSenha?: string }>
+  searchParams: Promise<{ ano?: string; mes?: string; erroSenha?: string; estudio?: string }>
 }) {
   const sp = await searchParams
 
@@ -35,7 +35,8 @@ export default async function RelatorioConsolidadoPage({
     )
   }
 
-  const estudios = await getEstudios(supabase)
+  const estudios = filtrarPorEstudio(await getEstudios(supabase), sp.estudio)
+  const idsEstudios = new Set(estudios.map((e) => e.id))
   const hoje = new Date().toISOString().slice(0, 10)
   const ano = Number(sp.ano) || Number(hoje.slice(0, 4))
   const mes = Number(sp.mes) || Number(hoje.slice(5, 7))
@@ -51,7 +52,7 @@ export default async function RelatorioConsolidadoPage({
     supabase.from('leads').select('estudio_id, estado, entrada, fecho_em'),
     supabase.from('clientes').select('id, estudio_id, estado'),
     supabase.from('activities').select('tipo, criado_em').in('tipo', ['Cancelamento', 'Suspensão', 'Reativação']),
-    supabase.from('alerts').select('severidade').neq('estado', 'Resolvido'),
+    supabase.from('alerts').select('estudio_id, severidade').neq('estado', 'Resolvido'),
     supabase.from('pagamentos').select('cliente_id, valor, data_pagamento, valido_ate').gte('data_pagamento', inicio),
   ])
 
@@ -59,18 +60,23 @@ export default async function RelatorioConsolidadoPage({
     if (erro) throw new Error(erro.message)
   }
 
-  const clientes = clientesData ?? []
-  const leads = leadsData ?? []
+  // Filtradas para o(s) estúdio(s) escolhidos no submenu do menu
+  // superior (ou todos, sem filtro) — os totais no topo refletem sempre
+  // o mesmo âmbito das linhas "Por estúdio" aqui em baixo.
+  const clientes = (clientesData ?? []).filter((c) => idsEstudios.has(c.estudio_id))
+  const leads = (leadsData ?? []).filter((l) => idsEstudios.has(l.estudio_id))
+  const idsClientesFiltrados = new Set(clientes.map((c) => c.id))
+  const pagamentosFiltrados = (pagamentosData ?? []).filter((p) => idsClientesFiltrados.has(p.cliente_id))
   const maisRecentePorCliente = new Map<string, { valor: number; valido_ate: string }>()
-  for (const p of pagamentosData ?? []) {
+  for (const p of pagamentosFiltrados) {
     if (!maisRecentePorCliente.has(p.cliente_id)) {
       maisRecentePorCliente.set(p.cliente_id, { valor: p.valor, valido_ate: p.valido_ate })
     }
   }
   const mrr = mrrAtual(Array.from(maisRecentePorCliente.values()), hoje)
-  const receitaDoMes = receitaPorMes(pagamentosData ?? [], [`${ano}-${String(mes).padStart(2, '0')}`])[0] ?? 0
+  const receitaDoMes = receitaPorMes(pagamentosFiltrados, [`${ano}-${String(mes).padStart(2, '0')}`])[0] ?? 0
 
-  const alertasAbertos = alertasData ?? []
+  const alertasAbertos = (alertasData ?? []).filter((a) => idsEstudios.has(a.estudio_id))
   const criticos = alertasAbertos.filter((a) => a.severidade === 'Crítico').length
 
   const linhasPorEstudio = estudios.map((e) => {
@@ -118,7 +124,7 @@ export default async function RelatorioConsolidadoPage({
         Relatório mensal consolidado
       </h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        Fátima + Leiria · {MESES[mes - 1]} {ano} · gerado em {fmt(hoje)}
+        {estudios.map((e) => e.nome).join(' + ')} · {MESES[mes - 1]} {ano} · gerado em {fmt(hoje)}
       </p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

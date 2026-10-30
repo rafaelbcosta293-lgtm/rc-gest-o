@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudios } from '@/lib/data/estudios'
+import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { intervaloMes } from '@/lib/data/presencas'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
@@ -27,9 +27,9 @@ const MESES_HISTORICO = 6
 export default async function FinanceiroPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; erroSenha?: string }>
+  searchParams: Promise<{ error?: string; erroSenha?: string; estudio?: string }>
 }) {
-  const { erroSenha } = await searchParams
+  const { erroSenha, estudio: estudioParam } = await searchParams
 
   const supabase = await createClient()
 
@@ -46,7 +46,8 @@ export default async function FinanceiroPage({
     )
   }
 
-  const estudios = await getEstudios(supabase)
+  const estudios = filtrarPorEstudio(await getEstudios(supabase), estudioParam)
+  const idsEstudios = new Set(estudios.map((e) => e.id))
   const hoje = new Date().toISOString().slice(0, 10)
   const ano = Number(hoje.slice(0, 4))
   const mes = Number(hoje.slice(5, 7))
@@ -66,7 +67,7 @@ export default async function FinanceiroPage({
       .select('cliente_id, valor, data_pagamento, valido_ate, inclui_inscricao, inclui_seguro, inclui_reativacao')
       .gte('data_pagamento', inicioHistorico)
       .order('data_pagamento', { ascending: false }),
-    supabase.from('registos_pt').select('horas').gte('data', inicio).lt('data', fimExclusivo),
+    supabase.from('registos_pt').select('estudio_id, horas').gte('data', inicio).lt('data', fimExclusivo),
     supabase.from('config').select('valor').eq('chave', 'custo_hora_pt').maybeSingle(),
   ])
 
@@ -74,8 +75,12 @@ export default async function FinanceiroPage({
     if (erro) throw new Error(erro.message)
   }
 
-  const clientes = clientesData ?? []
-  const pagamentos = pagamentosData ?? []
+  // Filtrados para o(s) estúdio(s) escolhidos no submenu do menu
+  // superior (ou todos, sem filtro).
+  const clientes = (clientesData ?? []).filter((c) => idsEstudios.has(c.estudio_id))
+  const idsClientesFiltrados = new Set(clientes.map((c) => c.id))
+  const pagamentos = (pagamentosData ?? []).filter((p) => idsClientesFiltrados.has(p.cliente_id))
+  const registos = (registosData ?? []).filter((r) => idsEstudios.has(r.estudio_id))
   const estudioPorCliente = new Map(clientes.map((c) => [c.id, c.estudio_id]))
   const ativosPorEstudio = new Map<number, number>()
   for (const c of clientes) {
@@ -122,7 +127,7 @@ export default async function FinanceiroPage({
   const valorTotalEmAtraso = clientesEmAtraso.reduce((soma, c) => soma + c.ultimoValor, 0)
 
   const custoHoraPt = parseValorConfig(configData?.valor) ?? 0
-  const horasTotais = (registosData ?? []).reduce((soma, r) => soma + r.horas, 0)
+  const horasTotais = registos.reduce((soma, r) => soma + r.horas, 0)
   const receitaDoMes = pagamentosDoMes.reduce((soma, p) => soma + p.valor, 0)
   const margem = margemPorHora(receitaDoMes, horasTotais, custoHoraPt)
 
@@ -143,7 +148,7 @@ export default async function FinanceiroPage({
 
       <h1 className="mt-3 text-2xl font-semibold text-black dark:text-zinc-50">Financeiro</h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        Fátima + Leiria · {totalAtivos} clientes ativos
+        {estudios.map((e) => e.nome).join(' + ')} · {totalAtivos} clientes ativos
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

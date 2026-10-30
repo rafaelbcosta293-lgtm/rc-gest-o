@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, Megaphone, TrendingUp, UserPlus, Euro, Dumbbell } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudios } from '@/lib/data/estudios'
+import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { MESES } from '@/lib/data/presencas'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
@@ -53,7 +53,7 @@ export default async function AdminEsteMesPage({
     )
   }
 
-  const estudios = await getEstudios(supabase)
+  const estudios = filtrarPorEstudio(await getEstudios(supabase), sp.estudio)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">

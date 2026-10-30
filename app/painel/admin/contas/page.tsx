@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudios } from '@/lib/data/estudios'
+import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { EMAIL_POR_ESTUDIO } from '@/lib/data/acessos'
 import { resolverIdPorEmail } from './dados'
 import { definirPasswordEstudio, corrigirAcessoEstudio } from './actions'
@@ -33,11 +33,11 @@ async function acessoAtual(supabase: SupabaseClient, email: string) {
 export default async function ContasEstudiosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; sucesso?: string; sucessoAcesso?: string }>
+  searchParams: Promise<{ error?: string; sucesso?: string; sucessoAcesso?: string; estudio?: string }>
 }) {
-  const { error, sucesso, sucessoAcesso } = await searchParams
+  const { error, sucesso, sucessoAcesso, estudio: estudioParam } = await searchParams
   const supabase = await createClient()
-  const estudios = await getEstudios(supabase)
+  const estudios = filtrarPorEstudio(await getEstudios(supabase), estudioParam)
 
   const comAcesso = await Promise.all(
     estudios.map(async (estudio) => {

@@ -10,6 +10,15 @@ export async function getEstudios(supabase: SupabaseClient): Promise<Estudio[]> 
   return (data as Estudio[] | null) ?? []
 }
 
+// Usado pelas pastas "filtráveis" da Administração (submenu "só
+// Fátima/só Leiria" no menu superior) — sem slug, ou com um slug que
+// não bate certo com nenhum estúdio, mostra-os a todos como sempre.
+export function filtrarPorEstudio<T extends { slug: string }>(estudios: T[], slug: string | undefined): T[] {
+  if (!slug) return estudios
+  const filtrado = estudios.filter((e) => e.slug === slug)
+  return filtrado.length > 0 ? filtrado : estudios
+}
+
 export async function getEstudioPorSlug(
   supabase: SupabaseClient,
   slug: string

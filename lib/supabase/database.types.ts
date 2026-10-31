@@ -463,8 +463,18 @@ export type EventoAgenda = {
   grupo_id: string | null
   nota: string | null
   motivo_cancelamento: string | null
+  lembrete_enviado: boolean
+  lembrete_enviado_em: string | null
   criado_por: string | null
   criado_em: string
+}
+
+export type EstadoSmsGateway = {
+  id: number
+  tentativas_falhadas: number
+  ultima_falha_em: string | null
+  alerta_enviado_em: string | null
+  atualizado_em: string
 }
 
 export type Avaliacao = {

@@ -13,6 +13,7 @@ import {
   Package,
   History,
   KeyRound,
+  MessageSquare,
 } from 'lucide-react'
 import PillNavLink from '@/components/PillNavLink'
 
@@ -32,6 +33,7 @@ const PASTAS = [
   { href: '/painel/admin/financeiro', label: 'Financeiro', icone: Wallet, filtravel: true },
   { href: '/painel/admin/simulador', label: 'Simulador', icone: Calculator, filtravel: false },
   { href: '/painel/admin/servicos', label: 'Serviços', icone: Package, filtravel: false },
+  { href: '/painel/admin/lembretes-sms', label: 'Lembretes SMS', icone: MessageSquare, filtravel: false },
   { href: '/painel/admin/auditoria', label: 'Auditoria', icone: History, filtravel: false },
   { href: '/painel/admin/contas', label: 'Contas', icone: KeyRound, filtravel: true },
 ]

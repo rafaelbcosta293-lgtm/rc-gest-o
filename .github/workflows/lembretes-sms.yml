@@ -1,0 +1,41 @@
+name: Lembretes de treino por SMS
+
+# Todos os dias às 10:00 em Lisboa. O cron do GitHub Actions só entende
+# UTC, e Lisboa muda de fuso (DST) — por isso há duas entradas, uma
+# para cada estação. A rota é idempotente (só processa quem ainda não
+# tem o lembrete marcado como enviado), por isso disparar duas vezes
+# por engano nunca duplica SMS.
+#
+# Se o telemóvel do SMS Gate estiver offline, a rota devolve
+# "gatewayOffline":true — este workflow tenta de novo, até 3 vezes,
+# com 1 minuto de intervalo, exatamente como pedido. Ao 3º falhanço
+# consecutivo é a própria rota (lib/data/lembretesSms.ts) que dispara o
+# email de alerta, não este workflow.
+on:
+  schedule:
+    - cron: '0 10 * * *' # hora de inverno (UTC+0)
+    - cron: '0 9 * * *' # hora de verão (UTC+1)
+  workflow_dispatch: {}
+
+jobs:
+  enviar-lembretes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar lembretes (com retries se o telemóvel estiver offline)
+        run: |
+          for tentativa in 1 2 3; do
+            resposta=$(curl -sS -L -X GET \
+              "${{ secrets.APP_URL }}/api/cron/lembretes-sms" \
+              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+            echo "Tentativa $tentativa: $resposta"
+
+            offline=$(echo "$resposta" | jq -r '.gatewayOffline // false')
+            if [ "$offline" != "true" ]; then
+              exit 0
+            fi
+
+            if [ "$tentativa" -lt 3 ]; then
+              echo "Telemóvel offline — a esperar 1 minuto antes da próxima tentativa…"
+              sleep 60
+            fi
+          done

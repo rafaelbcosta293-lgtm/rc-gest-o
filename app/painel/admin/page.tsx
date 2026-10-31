@@ -31,9 +31,6 @@ export default async function AdminPage({
   const ano = new Date().getFullYear()
   const evolucao = await getEvolucaoMensal(supabase, estudios, ano)
 
-  const formatoNumero = (v: number) => `${Math.round(v)}`
-  const formatoEuro = (v: number) => `€${Math.round(v).toLocaleString('pt-PT')}`
-
   function series(serieEstudio: typeof evolucao.novosSocios) {
     return serieEstudio.map((s) => ({
       nome: s.nome,
@@ -83,7 +80,7 @@ export default async function AdminPage({
             </span>
           </div>
           <div className="mt-3">
-            <GraficoEvolucao meses={evolucao.meses} series={series(evolucao.novosSocios)} formatar={formatoNumero} />
+            <GraficoEvolucao meses={evolucao.meses} series={series(evolucao.novosSocios)} unidade="numero" />
           </div>
         </div>
 
@@ -93,7 +90,7 @@ export default async function AdminPage({
             Faturação
           </div>
           <div className="mt-3">
-            <GraficoEvolucao meses={evolucao.meses} series={series(evolucao.faturacao)} formatar={formatoEuro} />
+            <GraficoEvolucao meses={evolucao.meses} series={series(evolucao.faturacao)} unidade="euro" />
           </div>
         </div>
 
@@ -106,7 +103,7 @@ export default async function AdminPage({
             <GraficoEvolucao
               meses={evolucao.meses}
               series={series(evolucao.treinosRealizados)}
-              formatar={formatoNumero}
+              unidade="numero"
             />
           </div>
         </div>

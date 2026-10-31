@@ -5,6 +5,17 @@ import { MESES } from '@/lib/data/presencas'
 
 type Serie = { nome: string; cor: string; pontos: number[] }
 
+// "formatar" não pode ser uma função recebida como prop — um Componente
+// de Servidor não pode passar uma função a um Componente Cliente (só
+// dados simples atravessam essa fronteira; foi exatamente este tipo de
+// erro, com um ícone em vez de um formatador, que já tinha causado uma
+// quebra em produção nesta sessão). Por isso recebe só "unidade" (um
+// valor simples) e resolve o formatador aqui dentro.
+const FORMATADORES = {
+  numero: (v: number) => `${Math.round(v)}`,
+  euro: (v: number) => `€${Math.round(v).toLocaleString('pt-PT')}`,
+} as const
+
 // Gráfico de evolução mensal — uma linha por estúdio, com legenda (que
 // mostra a média pedida pelo dono), rótulo no fim de cada linha e um
 // "crosshair" com tooltip ao passar o rato. Construído em SVG puro,
@@ -15,12 +26,13 @@ type Serie = { nome: string; cor: string; pontos: number[] }
 export default function GraficoEvolucao({
   meses,
   series,
-  formatar,
+  unidade,
 }: {
   meses: number[]
   series: Serie[]
-  formatar: (valor: number) => string
+  unidade: keyof typeof FORMATADORES
 }) {
+  const formatar = FORMATADORES[unidade]
   const [hoverIndice, setHoverIndice] = useState<number | null>(null)
 
   const largura = 640

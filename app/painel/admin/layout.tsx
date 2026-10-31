@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { podeAcederAdmin } from '@/lib/data/acessos'
@@ -20,8 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="dark tema-proprio flex min-h-full flex-col">
       <header className="shadow-deep sticky top-0 z-10 flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-3 backdrop-blur-xl">
         <Link href="/painel" className="flex shrink-0 items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-9 w-auto" />
+          <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-9 w-auto" priority />
         </Link>
         <AdminNav />
       </header>

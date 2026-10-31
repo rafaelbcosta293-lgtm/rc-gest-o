@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signup } from './actions'
@@ -21,8 +22,7 @@ export default async function RegistoPage({
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
       <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-8">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="RC Private Fitness Studio" className="mx-auto h-9 w-auto" />
+        <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="mx-auto h-9 w-auto" />
         <h1 className="mt-6 text-2xl font-semibold text-foreground">
           Criar conta
         </h1>

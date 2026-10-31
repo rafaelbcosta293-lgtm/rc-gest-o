@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { login } from './actions'
@@ -21,8 +22,7 @@ export default async function LoginPage({
   return (
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-3xl border border-border-subtle bg-surface p-8 shadow-card-hover">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="RC Private Fitness Studio" className="mx-auto h-9 w-auto" />
+        <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="mx-auto h-9 w-auto" />
         <h1 className="mt-6 text-3xl font-bold tracking-tight text-foreground">
           Iniciar sessão
         </h1>

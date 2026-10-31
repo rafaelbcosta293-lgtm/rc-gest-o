@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { podeAcederCoordenacao } from '@/lib/data/acessos'
@@ -18,8 +19,7 @@ export default async function CoordenacaoLayout({ children }: { children: React.
     <div className="flex min-h-full flex-col">
       <header className="shadow-deep sticky top-0 z-10 flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl">
         <Link href="/painel" className="flex shrink-0 items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-8 w-auto" />
+          <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
         </Link>
         <CoordenacaoNav />
       </header>

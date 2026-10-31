@@ -1,34 +1,29 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import Image from 'next/image'
 import { logout } from './login/actions'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { podeAcederAdmin } from '@/lib/data/acessos'
 import SubmitButton from '@/components/SubmitButton'
 
 export default async function Home() {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
-  const user = data.user
+  // getSessaoAtual() já faz o próprio supabase.auth.getUser() lá dentro
+  // (e fica em cache() por pedido) — chamar getUser() aqui outra vez só
+  // duplicava essa ida à Supabase Auth sem necessidade.
+  const sessao = await getSessaoAtual()
+  const emLogado = sessao.userId !== null
 
   // Quem tem acesso à Administração salta a grelha de módulos e vai
   // direto para lá, já combinada para todos os estúdios.
-  let destino = '/painel'
-  if (user) {
-    const sessao = await getSessaoAtual()
-    if (podeAcederAdmin(sessao.email)) {
-      destino = '/painel/admin'
-    }
-  }
+  const destino = emLogado && podeAcederAdmin(sessao.email) ? '/painel/admin' : '/painel'
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 px-4 text-center dark:bg-black">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.png" alt="RC Private Fitness Studio" className="h-14 w-auto" />
+      <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-14 w-auto" />
 
-      {user ? (
+      {emLogado ? (
         <div className="flex flex-col items-center gap-3">
           <p className="text-muted">
-            Sessão iniciada como <strong>{user.email}</strong>
+            Sessão iniciada como <strong>{sessao.email}</strong>
           </p>
           <div className="flex items-center gap-3">
             <Link

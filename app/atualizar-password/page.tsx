@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { updatePassword } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import PasswordInput from '@/components/PasswordInput'
@@ -12,8 +13,7 @@ export default async function AtualizarPasswordPage({
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
       <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-8">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="RC Private Fitness Studio" className="mx-auto h-9 w-auto" />
+        <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="mx-auto h-9 w-auto" />
         <h1 className="mt-6 text-2xl font-semibold text-foreground">
           Nova palavra-passe
         </h1>

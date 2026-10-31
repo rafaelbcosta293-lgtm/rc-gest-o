@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { ArrowLeftRight, Search } from 'lucide-react'
 import { MODULOS } from '@/lib/data/constantes'
@@ -56,8 +57,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           horizontal se não couberem) e as ações à direita. */}
       <header className="shadow-deep sticky top-0 z-10 hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl md:flex">
         <Link href="/painel" className="flex shrink-0 items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="RC Private Fitness Studio" className="h-8 w-auto" />
+          <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
         </Link>
         <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
           {MODULOS.map((m) =>

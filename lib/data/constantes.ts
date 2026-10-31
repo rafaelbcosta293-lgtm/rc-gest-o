@@ -42,6 +42,21 @@ export function corEstudio(slug: string) {
   return CORES_ESTUDIO[slug] ?? COR_ESTUDIO_OMISSAO
 }
 
+// Cor de cada estúdio só para traços de gráfico — mais viva que a cor
+// de texto das pastilhas (CORES_ESTUDIO), que em cima do fundo escuro da
+// Administração lia quase cinzenta. Validada com o validador de paletas
+// (checks de luminância, croma, distinção CVD e contraste) para o fundo
+// escuro e o claro, em vez de escolhida a olho.
+export const CORES_GRAFICO_ESTUDIO: Record<string, string> = {
+  fatima: '#13A89A',
+  leiria: '#D5680A',
+}
+const COR_GRAFICO_OMISSAO = '#8B5CF6'
+
+export function corGraficoEstudio(slug: string) {
+  return CORES_GRAFICO_ESTUDIO[slug] ?? COR_GRAFICO_OMISSAO
+}
+
 // Telemóvel físico de cada estúdio — uma página web não consegue fazer
 // esse telemóvel tocar sozinho a partir de outro aparelho (isso só com
 // um serviço de chamadas pago, tipo Twilio, a fazer de ponte); por

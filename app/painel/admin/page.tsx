@@ -1,13 +1,13 @@
 import Link from 'next/link'
-import { ArrowLeft, UserCheck, Megaphone, Euro } from 'lucide-react'
+import { ArrowLeft, UserPlus, Euro, Dumbbell, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
-import { intervaloMes } from '@/lib/data/presencas'
+import { getEvolucaoMensal } from '@/lib/data/evolucaoMensal'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from './actions'
-import { PALETA } from '@/lib/data/constantes'
+import { corGraficoEstudio } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
-import StatCard from '@/components/StatCard'
+import GraficoEvolucao from '@/components/GraficoEvolucao'
 
 export default async function AdminPage({
   searchParams,
@@ -28,27 +28,19 @@ export default async function AdminPage({
   }
 
   const estudios = await getEstudios(supabase)
-  const idsEstudios = estudios.map((e) => e.id)
+  const ano = new Date().getFullYear()
+  const evolucao = await getEvolucaoMensal(supabase, estudios, ano)
 
-  const agora = new Date()
-  const { inicio, fimExclusivo } = intervaloMes(agora.getFullYear(), agora.getMonth() + 1)
+  const formatoNumero = (v: number) => `${Math.round(v)}`
+  const formatoEuro = (v: number) => `€${Math.round(v).toLocaleString('pt-PT')}`
 
-  const [
-    { data: clientesData, error: erroClientes },
-    { data: leadsData, error: erroLeads },
-    { data: pagamentosData, error: erroPagamentos },
-  ] = await Promise.all([
-    supabase.from('clientes').select('estado').in('estudio_id', idsEstudios),
-    supabase.from('leads').select('entrada').in('estudio_id', idsEstudios).gte('entrada', inicio).lt('entrada', fimExclusivo),
-    supabase.from('pagamentos').select('valor').gte('data_pagamento', inicio).lt('data_pagamento', fimExclusivo),
-  ])
-  for (const erro of [erroClientes, erroLeads, erroPagamentos]) {
-    if (erro) throw new Error(erro.message)
+  function series(serieEstudio: typeof evolucao.novosSocios) {
+    return serieEstudio.map((s) => ({
+      nome: s.nome,
+      cor: corGraficoEstudio(s.slug),
+      pontos: s.pontos.map((p) => p.valor),
+    }))
   }
-
-  const clientesAtivos = (clientesData ?? []).filter((c) => c.estado === 'Ativo').length
-  const leadsNovas = (leadsData ?? []).length
-  const receitaMes = (pagamentosData ?? []).reduce((soma, p) => soma + Number(p.valor), 0)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -62,7 +54,7 @@ export default async function AdminPage({
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Administração</h1>
       <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
         <span className="live-dot" aria-hidden />
-        {estudios.map((e) => e.nome).join(' e ')} · resumo rápido, ao vivo.
+        {estudios.map((e) => e.nome).join(' e ')} · {ano}, mês a mês.
       </p>
 
       {error && (
@@ -71,10 +63,53 @@ export default async function AdminPage({
         </p>
       )}
 
-      <div className="bg-tech-grid mt-6 grid grid-cols-1 gap-3 rounded-2xl p-1 sm:grid-cols-3">
-        <StatCard icone={UserCheck} cor={PALETA.teal} label="Clientes ativos" valor={clientesAtivos} aoVivo />
-        <StatCard icone={Megaphone} cor={PALETA.laranja} label="Leads novas este mês" valor={leadsNovas} />
-        <StatCard icone={Euro} cor={PALETA.ambar} label="Receita este mês" valor={`€${receitaMes.toFixed(0)}`} />
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+              <UserPlus className="h-3.5 w-3.5" strokeWidth={2.25} />
+              Novos sócios
+              <span
+                title="O total de sócios ativos ao longo do ano não dá para mostrar com rigor: isso precisava de saber quando cada ex-cliente saiu, e essa data nunca foi registada. Em vez disso: novos sócios por mês (100% fiável) e o total ativo agora, ao lado."
+                aria-label="Porquê 'novos sócios' e não 'ativos'"
+                tabIndex={0}
+                className="cursor-help text-muted/70"
+              >
+                <Info className="h-3 w-3" strokeWidth={2} />
+              </span>
+            </div>
+            <span className="font-mono text-xs font-semibold tabular-nums text-muted">
+              {evolucao.ativosAgora.reduce((soma, e) => soma + e.total, 0)} ativos agora
+            </span>
+          </div>
+          <div className="mt-3">
+            <GraficoEvolucao meses={evolucao.meses} series={series(evolucao.novosSocios)} formatar={formatoNumero} />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+            <Euro className="h-3.5 w-3.5" strokeWidth={2.25} />
+            Faturação
+          </div>
+          <div className="mt-3">
+            <GraficoEvolucao meses={evolucao.meses} series={series(evolucao.faturacao)} formatar={formatoEuro} />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+            <Dumbbell className="h-3.5 w-3.5" strokeWidth={2.25} />
+            Treinos realizados
+          </div>
+          <div className="mt-3">
+            <GraficoEvolucao
+              meses={evolucao.meses}
+              series={series(evolucao.treinosRealizados)}
+              formatar={formatoNumero}
+            />
+          </div>
+        </div>
       </div>
 
       <p className="mt-6 text-sm text-muted">

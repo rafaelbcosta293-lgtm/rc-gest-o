@@ -25,6 +25,21 @@ export async function atualizarClienteRapido(input: {
   }
 
   const supabase = await createClient()
+
+  const { data: atual, error: erroAtual } = await supabase
+    .from('clientes')
+    .select('estado')
+    .eq('id', input.id)
+    .single()
+  if (erroAtual) {
+    return { error: 'Não foi possível guardar as alterações.' }
+  }
+
+  // O estado só fica marcado como "alterado à mão" (fora da transição
+  // automática por falta de pagamento) quando realmente muda aqui —
+  // voltar a gravar o mesmo valor, ao editar outro campo, não conta.
+  const mudouEstado = atual.estado !== input.estado
+
   const { error } = await supabase
     .from('clientes')
     .update({
@@ -35,6 +50,7 @@ export async function atualizarClienteRapido(input: {
       nascimento: input.nascimento,
       frequencia_semanal: input.frequenciaSemanal,
       estado: input.estado,
+      ...(mudouEstado ? { estado_automatico: false } : {}),
     })
     .eq('id', input.id)
 

@@ -38,6 +38,7 @@ export type Cliente = {
   frequencia_semanal: number | null
   pt_principal_id: string | null
   estado: EstadoCliente
+  estado_automatico: boolean
   alerta: string
   alerta_detalhe: string | null
   evento: string | null

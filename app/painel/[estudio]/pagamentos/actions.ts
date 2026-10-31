@@ -36,8 +36,15 @@ export async function criarPagamento(formData: FormData) {
     )
   }
 
+  // Uma mensalidade paga é o sinal mais forte de que o cliente está
+  // ativo: reativa sempre, mesmo que o estado tivesse sido alterado à
+  // mão antes (essa exceção manual só vale até ao pagamento seguinte).
+  await supabase.from('clientes').update({ estado: 'Ativo', estado_automatico: true }).eq('id', clienteId)
+
   revalidatePath(`/painel/${estudioSlug}/pagamentos`)
   revalidatePath(`/painel/${estudioSlug}/pagamentos/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/clientes`)
+  revalidatePath(`/painel/${estudioSlug}/clientes/${clienteId}`)
   redirect(`/painel/${estudioSlug}/pagamentos/${clienteId}`)
 }
 

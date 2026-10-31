@@ -15,6 +15,7 @@ const PUBLIC_API_PATHS = [
   '/api/cron/presencas-agenda',
   '/api/cron/alertas',
   '/api/cron/kpi-snapshot',
+  '/api/cron/estado-clientes',
   '/api/leads/google-forms',
 ]
 

@@ -58,12 +58,29 @@ export async function atualizarCliente(formData: FormData) {
   const voltarParam = formData.get('voltar') as string
   const voltar = MODULOS_ORIGEM.includes(voltarParam) ? voltarParam : 'treinos'
   const supabase = await createClient()
+  const novoEstado = (formData.get('estado') as string) || 'Ativo'
+
+  const { data: atual, error: erroAtual } = await supabase
+    .from('clientes')
+    .select('estado')
+    .eq('id', id)
+    .single()
+  if (erroAtual) {
+    redirect(
+      `/painel/${estudioSlug}/treinos/${id}/editar?voltar=${voltar}&error=${encodeURIComponent('Não foi possível guardar as alterações.')}`
+    )
+  }
+
+  // Idem: só conta como alteração manual do estado (que o tira da
+  // transição automática por falta de pagamento) quando o valor muda.
+  const mudouEstado = atual?.estado !== novoEstado
 
   const { error } = await supabase
     .from('clientes')
     .update({
       ...camposComuns(formData),
-      estado: (formData.get('estado') as string) || 'Ativo',
+      estado: novoEstado,
+      ...(mudouEstado ? { estado_automatico: false } : {}),
     })
     .eq('id', id)
 

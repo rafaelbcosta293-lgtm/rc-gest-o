@@ -1,0 +1,19 @@
+name: Transição automática de estado dos clientes
+
+# Uma vez por dia: suspende quem está há 1 mês sem mensalidade ativa e
+# passa a Ex-cliente quem está há 2 meses ou mais. Nunca mexe em quem
+# teve o estado alterado à mão.
+on:
+  schedule:
+    - cron: '20 6 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Avaliar e atualizar estados
+        run: |
+          curl --fail-with-body -sS -L -X GET \
+            "${{ secrets.APP_URL }}/api/cron/estado-clientes" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

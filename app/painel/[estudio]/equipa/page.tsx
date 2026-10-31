@@ -55,7 +55,7 @@ export default async function EquipaPage({
 
       <Link
         href={`/painel/${slug}/equipa/operacional`}
-        className="mt-3 inline-block rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+        className="mt-3 inline-block rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
       >
         Painel operacional
       </Link>

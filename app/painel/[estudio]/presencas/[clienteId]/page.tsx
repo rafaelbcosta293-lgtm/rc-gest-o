@@ -206,7 +206,7 @@ export default async function PresencasClientePage({
         </div>
         <SubmitButton
           pendingText="A registar…"
-          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
         >
           Registar
         </SubmitButton>

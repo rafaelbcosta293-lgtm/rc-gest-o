@@ -113,7 +113,7 @@ export default async function ChecklistPage({
                   </div>
                   <Link
                     href={`/painel/${slug}/checklist/${registo.id}`}
-                    className="mt-3 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+                    className="mt-3 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
                   >
                     {registo.concluidos >= registo.total ? 'Ver checklist' : 'Continuar'}
                   </Link>
@@ -125,7 +125,7 @@ export default async function ChecklistPage({
                   <input type="hidden" name="tipo" value={tipo} />
                   <SubmitButton
                     pendingText="A iniciar…"
-                    className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+                    className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
                   >
                     Iniciar {tipo.toLowerCase()}
                   </SubmitButton>
@@ -236,7 +236,7 @@ export default async function ChecklistPage({
                     />
                     <SubmitButton
                       pendingText="…"
-                      className="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-black hover:bg-brand-strong"
+                      className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-black hover:bg-brand-strong"
                     >
                       + Item
                     </SubmitButton>

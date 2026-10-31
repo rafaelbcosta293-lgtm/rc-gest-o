@@ -76,7 +76,7 @@ export default async function FichaClientePage({
         <div className="flex gap-2">
           <Link
             href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=treinos`}
-            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
           >
             Editar ficha
           </Link>
@@ -87,7 +87,7 @@ export default async function FichaClientePage({
             <input type="hidden" name="pt_id" value={cliente.pt_principal_id ?? ''} />
             <SubmitButton
               pendingText="A iniciar…"
-              className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+              className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
             >
               Planear treino
             </SubmitButton>

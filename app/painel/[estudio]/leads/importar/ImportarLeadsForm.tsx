@@ -59,7 +59,7 @@ export default function ImportarLeadsForm({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+          className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
         >
           Escolher ficheiro .csv
         </button>
@@ -117,7 +117,7 @@ export default function ImportarLeadsForm({
             type="button"
             onClick={confirmar}
             disabled={aEnviar}
-            className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+            className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {aEnviar ? 'A importar…' : `Importar ${leads.length} ${leads.length === 1 ? 'lead' : 'leads'}`}
           </button>

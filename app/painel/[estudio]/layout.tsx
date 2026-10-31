@@ -59,7 +59,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="RC Private Fitness Studio" className="h-8 w-auto" />
         </Link>
-        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
           {MODULOS.map((m) =>
             podeAceder(m) ? (
               <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
@@ -67,7 +67,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
               <span
                 key={m.id}
                 title={tituloBloqueado(m)}
-                className="flex shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-muted opacity-40"
+                className="flex shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-border-subtle px-3.5 py-2 text-sm font-bold tracking-wide text-muted opacity-40"
               >
                 <m.icone className="h-4 w-4" strokeWidth={2.5} />
                 {m.nome}

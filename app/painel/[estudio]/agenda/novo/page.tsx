@@ -170,7 +170,7 @@ export default async function NovoEventoPage({
 
         <SubmitButton
           pendingText="A criar…"
-          className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+          className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
         >
           Criar evento
         </SubmitButton>

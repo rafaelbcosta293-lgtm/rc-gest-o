@@ -95,7 +95,7 @@ export default async function RegistoPage({
 
           <SubmitButton
             pendingText="A criar conta…"
-            className="mt-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+            className="mt-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
           >
             Criar conta
           </SubmitButton>

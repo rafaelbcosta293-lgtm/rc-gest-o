@@ -145,7 +145,7 @@ export default async function ContasEstudiosPage({
                 />
                 <SubmitButton
                   pendingText="A guardar…"
-                  className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+                  className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
                 >
                   Guardar palavra-passe
                 </SubmitButton>

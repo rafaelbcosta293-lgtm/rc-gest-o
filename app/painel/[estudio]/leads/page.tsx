@@ -124,19 +124,19 @@ export default async function LeadsPage({
           />
           <Link
             href={`/painel/${slug}/leads/comercial`}
-            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
           >
             Painel comercial
           </Link>
           <Link
             href={`/painel/${slug}/leads/importar`}
-            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
           >
             Importar CSV
           </Link>
           <Link
             href={`/painel/${slug}/leads/novo`}
-            className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+            className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
           >
             + Lead
           </Link>

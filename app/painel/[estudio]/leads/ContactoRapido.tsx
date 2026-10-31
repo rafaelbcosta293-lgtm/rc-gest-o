@@ -33,7 +33,7 @@ export default function ContactoRapido({
       <div className="flex flex-wrap items-center gap-2">
         <a
           href={`tel:${telefone.replace(/\s/g, '')}`}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
         >
           <Phone className="h-4 w-4" /> Ligar
         </a>

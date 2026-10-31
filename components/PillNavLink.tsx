@@ -33,15 +33,15 @@ export default function PillNavLink({
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center whitespace-nowrap rounded-full font-semibold transition-all ${
-        destaque ? 'gap-2 border px-4 py-2 text-[13px] tracking-wide' : 'gap-1.5 px-3 py-1.5 text-sm'
+      className={`flex shrink-0 items-center whitespace-nowrap rounded-full transition-all ${
+        destaque ? 'gap-2 border-2 px-4 py-2 text-[13px] font-bold tracking-wide' : 'gap-1.5 px-3 py-1.5 text-sm font-semibold'
       } ${
         ativo
           ? destaque
-            ? 'shadow-glow-brand border-brand/50 bg-brand/20 text-foreground'
+            ? 'shadow-glow-brand border-brand bg-brand/20 text-foreground'
             : 'shadow-glow-brand bg-brand/15 text-foreground'
           : destaque
-            ? 'border-border-subtle text-foreground/80 hover:border-brand/40 hover:bg-brand/[.1] hover:text-foreground'
+            ? 'border-border-strong text-foreground/85 hover:border-brand/60 hover:bg-brand/[.1] hover:text-foreground'
             : 'text-foreground/70 hover:bg-brand/[.07] hover:text-foreground'
       }`}
     >

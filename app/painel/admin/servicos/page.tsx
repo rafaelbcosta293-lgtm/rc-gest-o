@@ -168,7 +168,7 @@ export default async function ServicosPage({
         />
         <SubmitButton
           pendingText="A criar…"
-          className="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-black hover:bg-brand-strong"
+          className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-black hover:bg-brand-strong"
         >
           + Serviço
         </SubmitButton>

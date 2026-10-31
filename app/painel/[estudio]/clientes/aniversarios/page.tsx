@@ -283,7 +283,7 @@ export default async function AniversariosPage({
               {mensagem && (
                 <CopiarTexto
                   texto={mensagem}
-                  className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
+                  className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]"
                 />
               )}
 
@@ -311,7 +311,7 @@ export default async function AniversariosPage({
                   <input type="hidden" name="ano" value={anoAtual} />
                   <SubmitButton
                     pendingText="…"
-                    className="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-black hover:bg-brand-strong"
+                    className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-black hover:bg-brand-strong"
                   >
                     Marcar como enviado
                   </SubmitButton>

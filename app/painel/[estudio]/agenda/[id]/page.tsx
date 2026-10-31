@@ -202,7 +202,7 @@ export default async function EventoAgendaPage({
 
         <SubmitButton
           pendingText="A guardar…"
-          className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+          className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
         >
           Guardar alterações
         </SubmitButton>
@@ -230,7 +230,7 @@ export default async function EventoAgendaPage({
             <input type="hidden" name="id" value={evento.id} />
             <SubmitButton
               pendingText="…"
-              className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-brand/[.06]"
+              className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-brand/[.08]"
             >
               Reativar
             </SubmitButton>
@@ -243,7 +243,7 @@ export default async function EventoAgendaPage({
           <input type="hidden" name="data" value={evento.data} />
           <SubmitButton
             pendingText="…"
-            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold text-muted hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
+            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold text-muted hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
           >
             Apagar
           </SubmitButton>

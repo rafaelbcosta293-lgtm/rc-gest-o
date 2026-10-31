@@ -46,7 +46,7 @@ export default async function AtualizarPasswordPage({
 
           <SubmitButton
             pendingText="A guardar…"
-            className="mt-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+            className="mt-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
           >
             Guardar palavra-passe
           </SubmitButton>

@@ -119,7 +119,7 @@ export default async function FichaCompletaClientePage({
         </div>
         <Link
           href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=clientes`}
-          className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+          className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
         >
           Editar ficha
         </Link>

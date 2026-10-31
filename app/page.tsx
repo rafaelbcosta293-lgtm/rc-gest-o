@@ -33,14 +33,14 @@ export default async function Home() {
           <div className="flex items-center gap-3">
             <Link
               href={destino}
-              className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+              className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
             >
               Ir para o painel
             </Link>
             <form action={logout}>
               <SubmitButton
                 pendingText="A terminar sessão…"
-                className="rounded-full border border-border-subtle px-5 py-2.5 text-sm font-semibold hover:bg-foreground/[.06]"
+                className="rounded-full border border-border-strong px-5 py-2.5 text-sm font-bold hover:bg-foreground/[.08]"
               >
                 Terminar sessão
               </SubmitButton>
@@ -51,13 +51,13 @@ export default async function Home() {
         <div className="flex flex-col items-center gap-3 sm:flex-row">
           <Link
             href="/login"
-            className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+            className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
           >
             Iniciar sessão
           </Link>
           <Link
             href="/registo"
-            className="rounded-full border border-border-subtle px-5 py-2.5 text-sm font-semibold hover:bg-foreground/[.06]"
+            className="rounded-full border border-border-strong px-5 py-2.5 text-sm font-bold hover:bg-foreground/[.08]"
           >
             Criar conta
           </Link>

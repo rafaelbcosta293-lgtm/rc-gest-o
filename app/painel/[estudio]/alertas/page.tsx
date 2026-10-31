@@ -141,7 +141,7 @@ export default async function AlertasPage({
                             <input type="hidden" name="id" value={a.id} />
                             <SubmitButton
                               pendingText="…"
-                              className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
+                              className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]"
                             >
                               Marcar visto
                             </SubmitButton>
@@ -152,13 +152,13 @@ export default async function AlertasPage({
                           <input type="hidden" name="id" value={a.id} />
                           <SubmitButton
                             pendingText="…"
-                            className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
+                            className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]"
                           >
                             Resolver
                           </SubmitButton>
                         </form>
                         <details className="group">
-                          <summary className="cursor-pointer list-none rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]">
+                          <summary className="cursor-pointer list-none rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]">
                             Adiar…
                           </summary>
                           <form
@@ -176,7 +176,7 @@ export default async function AlertasPage({
                             />
                             <SubmitButton
                               pendingText="…"
-                              className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
+                              className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]"
                             >
                               Confirmar
                             </SubmitButton>

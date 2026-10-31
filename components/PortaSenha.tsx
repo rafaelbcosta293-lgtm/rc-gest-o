@@ -34,7 +34,7 @@ export default function PortaSenha({
         {erro && <p className="text-xs text-red-600">Password incorreta.</p>}
         <SubmitButton
           pendingText="A verificar…"
-          className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
         >
           Entrar
         </SubmitButton>

@@ -221,7 +221,7 @@ export default async function AgendaConteudo({
         </div>
         <Link
           href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
-          className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-black shadow-pop hover:bg-brand-strong"
+          className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
         >
           <Plus className="h-4 w-4" /> Evento
         </Link>

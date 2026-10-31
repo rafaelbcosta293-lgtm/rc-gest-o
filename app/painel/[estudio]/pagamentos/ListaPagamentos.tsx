@@ -136,10 +136,10 @@ export default function ListaPagamentos({
 
       {emDiaFiltrados.length > 0 && (
         <>
-          <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted">
+          <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400">
             Em dia ({emDiaFiltrados.length})
           </h2>
-          <div className="mt-2 flex flex-col overflow-hidden rounded-2xl border border-border-subtle shadow-card">
+          <div className="mt-2 flex flex-col overflow-hidden rounded-2xl border border-teal-200 shadow-card dark:border-teal-900">
             {emDiaFiltrados.map((l, i) => (
               <LinhaPagamento key={l.clienteId} slug={slug} linha={l} primeira={i === 0} />
             ))}

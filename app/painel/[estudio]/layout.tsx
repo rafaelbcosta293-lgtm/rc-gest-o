@@ -3,14 +3,18 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { ArrowLeftRight, Search } from 'lucide-react'
 import { MODULOS } from '@/lib/data/constantes'
+import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
+import { obterEstadoBanner } from '@/lib/data/lembretesSms'
+import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import { NavLinkTopBar, NavLinkPhone } from './NavLink'
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
 
-  const sessao = await getSessaoAtual()
+  const supabase = await createClient()
+  const [sessao, estadoBanner] = await Promise.all([getSessaoAtual(), obterEstadoBanner(supabase)])
 
   // O acesso a cada estúdio é por email, não por "papel" — só quem está
   // na lista de lib/data/acessos.ts entra aqui, independentemente do que
@@ -30,68 +34,76 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
-          estúdio — os módulos ficam na barra de separadores do fundo,
-          sempre ao alcance do polegar, ao estilo iOS. */}
-      <div className="shadow-deep sticky top-0 z-10 flex items-center justify-end gap-1 border-b border-border-subtle bg-background/90 px-4 py-2 backdrop-blur-xl md:hidden">
-        <Link
-          href={`/painel/${slug}/pesquisa`}
-          title="Pesquisar"
-          aria-label="Pesquisar"
-          className="flex items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
-        >
-          <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </Link>
-        <Link
-          href="/painel"
-          title="Mudar estúdio"
-          aria-label="Mudar estúdio"
-          className="flex items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
-        >
-          <ArrowLeftRight className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </Link>
-      </div>
+      {/* A faixa e as barras de topo partilham um único wrapper
+          "sticky" — cada uma sticky à parte faria a barra tapar a
+          faixa ao fazer scroll (duas sticky top-0 ocupam o mesmo
+          lugar; só uma, com ambas dentro, as mantém empilhadas). */}
+      <div className="sticky top-0 z-10 flex flex-col">
+        <BarraSmsGatewayOffline offlineInicial={estadoBanner.offline} desdeInicial={estadoBanner.desde} />
 
-      {/* Computador/tablet (≥768px): barra superior fixa, com o
-          logótipo, os módulos (pílulas, numa linha com scroll
-          horizontal se não couberem) e as ações à direita. */}
-      <header className="shadow-deep sticky top-0 z-10 hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl md:flex">
-        <Link href="/painel" className="flex shrink-0 items-center">
-          <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
-        </Link>
-        <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
-          {MODULOS.map((m) =>
-            podeAceder(m) ? (
-              <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
-            ) : (
-              <span
-                key={m.id}
-                title={tituloBloqueado(m)}
-                className="flex shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-border-subtle px-3.5 py-2 text-sm font-bold tracking-wide text-muted opacity-40"
-              >
-                <m.icone className="h-4 w-4" strokeWidth={2.5} />
-                {m.nome}
-              </span>
-            )
-          )}
-        </nav>
-        <Link
-          href={`/painel/${slug}/pesquisa`}
-          title="Pesquisar"
-          aria-label="Pesquisar"
-          className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
-        >
-          <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </Link>
-        <Link
-          href="/painel"
-          title="Mudar estúdio"
-          aria-label="Mudar estúdio"
-          className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
-        >
-          <ArrowLeftRight className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </Link>
-      </header>
+        {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
+            estúdio — os módulos ficam na barra de separadores do fundo,
+            sempre ao alcance do polegar, ao estilo iOS. */}
+        <div className="shadow-deep flex items-center justify-end gap-1 border-b border-border-subtle bg-background/90 px-4 py-2 backdrop-blur-xl md:hidden">
+          <Link
+            href={`/painel/${slug}/pesquisa`}
+            title="Pesquisar"
+            aria-label="Pesquisar"
+            className="flex items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+          >
+            <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </Link>
+          <Link
+            href="/painel"
+            title="Mudar estúdio"
+            aria-label="Mudar estúdio"
+            className="flex items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+          >
+            <ArrowLeftRight className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </Link>
+        </div>
+
+        {/* Computador/tablet (≥768px): barra superior fixa, com o
+            logótipo, os módulos (pílulas, numa linha com scroll
+            horizontal se não couberem) e as ações à direita. */}
+        <header className="shadow-deep hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl md:flex">
+          <Link href="/painel" className="flex shrink-0 items-center">
+            <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
+          </Link>
+          <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+            {MODULOS.map((m) =>
+              podeAceder(m) ? (
+                <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
+              ) : (
+                <span
+                  key={m.id}
+                  title={tituloBloqueado(m)}
+                  className="flex shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-border-subtle px-3.5 py-2 text-sm font-bold tracking-wide text-muted opacity-40"
+                >
+                  <m.icone className="h-4 w-4" strokeWidth={2.5} />
+                  {m.nome}
+                </span>
+              )
+            )}
+          </nav>
+          <Link
+            href={`/painel/${slug}/pesquisa`}
+            title="Pesquisar"
+            aria-label="Pesquisar"
+            className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+          >
+            <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </Link>
+          <Link
+            href="/painel"
+            title="Mudar estúdio"
+            aria-label="Mudar estúdio"
+            className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+          >
+            <ArrowLeftRight className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </Link>
+        </header>
+      </div>
 
       {/* O conteúdo ganha espaço extra no fundo, no telemóvel, para a
           barra de separadores fixa não tapar o fim da página. */}

@@ -1,8 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { somarDias } from './horarios'
+import { getEstudios } from './estudios'
 import { enviarSms } from '@/lib/sms/gateway'
-import { enviarEmailAlerta } from '@/lib/email/resend'
 import type { EstadoSmsGateway } from '@/lib/supabase/database.types'
+
+// A partir de quantas falhas consecutivas se considera "offline" a
+// sério (não só um soluço passageiro de rede) — é o mesmo limiar que
+// decide quando a faixa vermelha e o alerta em Administração aparecem.
+const LIMIAR_CRISE = 3
+const REGRA_GATEWAY_OFFLINE = 'sms_gateway_offline'
 
 export const TEMPLATE_LEMBRETE_OMISSAO =
   'Olá {nome}! Lembramos que o teu treino é {dia_semana}, dia {dia_mes}, às {hora}. Contamos contigo! Com os melhores cumprimentos, Equipa RC Private Fitness Studio'
@@ -65,6 +71,58 @@ export type ResultadoProcessamentoLembretes = {
   gatewayOffline: boolean
 }
 
+// Estado que a faixa vermelha (visível em toda a app) e o botão de
+// reenvio no painel precisam de saber — "offline" só fica verdadeiro a
+// partir do limiar de crise, não ao primeiro soluço.
+export type EstadoBannerGateway = { offline: boolean; desde: string | null }
+
+export function estadoParaBanner(estado: Pick<EstadoSmsGateway, 'tentativas_falhadas' | 'offline_desde'>): EstadoBannerGateway {
+  const emCrise = estado.tentativas_falhadas >= LIMIAR_CRISE && estado.offline_desde !== null
+  return { offline: emCrise, desde: emCrise ? estado.offline_desde : null }
+}
+
+export async function obterEstadoBanner(supabase: SupabaseClient): Promise<EstadoBannerGateway> {
+  const { data, error } = await supabase
+    .from('estado_sms_gateway')
+    .select('tentativas_falhadas, offline_desde')
+    .eq('id', 1)
+    .single()
+  if (error || !data) return { offline: false, desde: null }
+  return estadoParaBanner(data)
+}
+
+// Cria um alerta "Crítico" (visível em Centro de alertas, só para
+// gestão) por cada estúdio — o telemóvel é partilhado pelos dois, por
+// isso ambos precisam de saber. Idempotente: só é chamada uma vez por
+// "crise" (ver alerta_registado_em em processarLembretesSms).
+async function registarAlertaGatewayOffline(admin: SupabaseClient): Promise<void> {
+  const estudios = await getEstudios(admin)
+  if (estudios.length === 0) return
+
+  await admin.from('alerts').insert(
+    estudios.map((e) => ({
+      estudio_id: e.id,
+      regra_chave: REGRA_GATEWAY_OFFLINE,
+      severidade: 'Crítico' as const,
+      titulo: 'SMS Gateway offline — os lembretes de treino não estão a ser enviados',
+      descricao:
+        'O telemóvel que envia os lembretes de treino por SMS está inacessível há 3 tentativas consecutivas. ' +
+        'Verifica se está ligado, com bateria e com rede, e depois usa "Tentar Reenvio de Lembretes Pendentes" ' +
+        'em Administração → Lembretes SMS.',
+    }))
+  )
+}
+
+// Resolve qualquer alerta de gateway offline ainda aberto, nos dois
+// estúdios — espelha a faixa a desaparecer sozinha quando recupera.
+async function resolverAlertaGatewayOffline(admin: SupabaseClient): Promise<void> {
+  await admin
+    .from('alerts')
+    .update({ estado: 'Resolvido', resolvido_em: new Date().toISOString(), atualizado_em: new Date().toISOString() })
+    .eq('regra_chave', REGRA_GATEWAY_OFFLINE)
+    .neq('estado', 'Resolvido')
+}
+
 // Partilhada pelo cron diário e pelo botão "Tentar Reenvio de
 // Lembretes Pendentes" — o telemóvel estar offline pára o processamento
 // (não vale a pena insistir cliente a cliente contra um gateway em
@@ -123,12 +181,16 @@ export async function processarLembretesSms(
       enviados++
 
       if (estado.tentativas_falhadas > 0) {
+        if (estado.alerta_registado_em) {
+          await resolverAlertaGatewayOffline(admin)
+        }
         const { data: atualizado } = await admin
           .from('estado_sms_gateway')
           .update({
             tentativas_falhadas: 0,
             ultima_falha_em: null,
-            alerta_enviado_em: null,
+            offline_desde: null,
+            alerta_registado_em: null,
             atualizado_em: new Date().toISOString(),
           })
           .eq('id', 1)
@@ -146,25 +208,22 @@ export async function processarLembretesSms(
 
       const { data: atualizado } = await admin
         .from('estado_sms_gateway')
-        .update({ tentativas_falhadas: novasTentativas, ultima_falha_em: agoraISO, atualizado_em: agoraISO })
+        .update({
+          tentativas_falhadas: novasTentativas,
+          ultima_falha_em: agoraISO,
+          offline_desde: estado.offline_desde ?? agoraISO,
+          atualizado_em: agoraISO,
+        })
         .eq('id', 1)
         .select()
         .single()
       if (atualizado) estado = atualizado as EstadoSmsGateway
 
-      if (novasTentativas >= 3 && !estado.alerta_enviado_em) {
-        const restantes = pendentes.length - enviados
-        await enviarEmailAlerta(
-          '[ALERTA] Telemóvel do SMS Gateway Desligado / Offline',
-          `O envio de lembretes de treino por SMS falhou ${novasTentativas} vezes consecutivas.\n\n` +
-            `Hora da última falha: ${new Date(agoraISO).toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}\n` +
-            `Lembretes pendentes por enviar: ${restantes}\n\n` +
-            'Verifica se o telemóvel com o SMS Gate está ligado, com bateria e com rede, e depois usa o botão ' +
-            '"Tentar Reenvio de Lembretes Pendentes" no painel de Administração → Lembretes SMS.'
-        )
+      if (novasTentativas >= LIMIAR_CRISE && !estado.alerta_registado_em) {
+        await registarAlertaGatewayOffline(admin)
         const { data: atualizadoAlerta } = await admin
           .from('estado_sms_gateway')
-          .update({ alerta_enviado_em: new Date().toISOString() })
+          .update({ alerta_registado_em: new Date().toISOString() })
           .eq('id', 1)
           .select()
           .single()

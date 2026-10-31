@@ -9,8 +9,9 @@ name: Lembretes de treino por SMS
 # Se o telemóvel do SMS Gate estiver offline, a rota devolve
 # "gatewayOffline":true — este workflow tenta de novo, até 3 vezes,
 # com 1 minuto de intervalo, exatamente como pedido. Ao 3º falhanço
-# consecutivo é a própria rota (lib/data/lembretesSms.ts) que dispara o
-# email de alerta, não este workflow.
+# consecutivo é a própria rota (lib/data/lembretesSms.ts) que regista o
+# alerta dentro da app (faixa vermelha + Centro de alertas), não este
+# workflow.
 on:
   schedule:
     - cron: '0 10 * * *' # hora de inverno (UTC+0)

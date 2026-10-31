@@ -473,7 +473,8 @@ export type EstadoSmsGateway = {
   id: number
   tentativas_falhadas: number
   ultima_falha_em: string | null
-  alerta_enviado_em: string | null
+  offline_desde: string | null
+  alerta_registado_em: string | null
   atualizado_em: string
 }
 

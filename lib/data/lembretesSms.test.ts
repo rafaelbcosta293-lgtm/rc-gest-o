@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { dataDeAmanhaEmLisboa, nomeDiaSemana, preencherTemplateLembrete, TEMPLATE_LEMBRETE_OMISSAO } from './lembretesSms'
+import {
+  dataDeAmanhaEmLisboa,
+  estadoParaBanner,
+  nomeDiaSemana,
+  preencherTemplateLembrete,
+  TEMPLATE_LEMBRETE_OMISSAO,
+} from './lembretesSms'
 
 describe('nomeDiaSemana', () => {
   it('devolve o nome por extenso, em minúsculas', () => {
@@ -30,6 +36,30 @@ describe('preencherTemplateLembrete', () => {
       horaInicio: '18:30:00',
     })
     expect(texto).toBe('18:30 · sábado · 7 · Bruno')
+  })
+})
+
+describe('estadoParaBanner', () => {
+  it('não mostra a faixa com menos de 3 falhas consecutivas', () => {
+    expect(estadoParaBanner({ tentativas_falhadas: 0, offline_desde: null })).toEqual({
+      offline: false,
+      desde: null,
+    })
+    expect(estadoParaBanner({ tentativas_falhadas: 2, offline_desde: '2026-10-31T10:00:00Z' })).toEqual({
+      offline: false,
+      desde: null,
+    })
+  })
+
+  it('mostra a faixa a partir de 3 falhas consecutivas, com a hora do início da crise', () => {
+    expect(estadoParaBanner({ tentativas_falhadas: 3, offline_desde: '2026-10-31T10:00:00Z' })).toEqual({
+      offline: true,
+      desde: '2026-10-31T10:00:00Z',
+    })
+    expect(estadoParaBanner({ tentativas_falhadas: 5, offline_desde: '2026-10-31T10:00:00Z' })).toEqual({
+      offline: true,
+      desde: '2026-10-31T10:00:00Z',
+    })
   })
 })
 

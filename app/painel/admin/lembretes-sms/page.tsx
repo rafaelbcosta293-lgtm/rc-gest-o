@@ -126,7 +126,7 @@ export default async function LembretesSmsPage({
               ` · última em ${new Date(estado.ultima_falha_em).toLocaleString('pt-PT', {
                 timeZone: 'Europe/Lisbon',
               })}`}
-            {estado.alerta_enviado_em && ' · email de alerta já enviado'}
+            {estado.alerta_registado_em && ' · alerta já registado na app'}
           </p>
         ) : (
           <p className="text-muted">Sem falhas de ligação registadas.</p>

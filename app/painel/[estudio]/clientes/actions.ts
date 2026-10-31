@@ -1,5 +1,6 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
@@ -62,4 +63,25 @@ export async function atualizarClienteRapido(input: {
   revalidatePath(`/painel/${input.estudioSlug}/clientes/${input.id}`)
   revalidatePath(`/painel/${input.estudioSlug}/treinos/${input.id}`)
   return { ok: true }
+}
+
+// Apaga o cliente a sério — pagamentos, sessões de treino, avaliações e
+// presenças vão juntos (apagados em cascata na base de dados); eventos
+// futuros na agenda e leads ligadas ficam sem o cliente associado, mas
+// não são apagados. Só quem gere o estúdio consegue (RLS "apagar_clientes",
+// e_gestao()) — isto nunca passa por aqui sem já ter sido confirmado duas
+// vezes no ApagarClienteModal, dado o impacto.
+export async function apagarCliente(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('clientes').delete().eq('id', id)
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/clientes/${id}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/clientes`)
+  redirect(`/painel/${estudioSlug}/clientes`)
 }

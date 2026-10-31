@@ -2,10 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ESTADOS_CLIENTE, ALERTAS } from '@/lib/data/constantes'
 import { mesesAtivo } from '@/lib/data/clientes'
 import { proximoAniversario, idadeEm, fmtDiaMes } from '@/lib/data/aniversarios'
 import { fmt, intervaloMes, MESES } from '@/lib/data/presencas'
+import ApagarClienteModal from './ApagarClienteModal'
 import type { Cliente, EstadoPagamento } from '@/lib/supabase/database.types'
 
 type ClienteCompleto = Cliente & { pt_principal: { nome: string } | null }
@@ -27,35 +29,42 @@ type SessaoResumo = {
 
 export default async function FichaCompletaClientePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ estudio: string; clienteId: string }>
+  searchParams: Promise<{ error?: string }>
 }) {
   const { estudio: slug, clienteId } = await params
+  const { error } = await searchParams
   const agora = new Date()
   const { ano, mes } = { ano: agora.getFullYear(), mes: agora.getMonth() + 1 }
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)
 
   const supabase = await createClient()
 
-  const [estudio, { data: cliente }] = await Promise.all([
+  const [estudio, { data: cliente }, sessao] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
     supabase
       .from('clientes')
       .select('*, pt_principal:perfis!pt_principal_id(nome)')
       .eq('id', clienteId)
       .maybeSingle(),
+    getSessaoAtual(),
   ])
 
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
   }
   const c = cliente as unknown as ClienteCompleto
+  const { ehGestao } = papeisDaSessao(sessao)
 
   const [
     { data: avaliacoesData, count: totalAvaliacoes },
     { data: sessoesData, count: totalSessoes },
     { data: presencasMes },
     pagamento,
+    { count: totalPagamentos },
+    { count: totalPresencas },
   ] = await Promise.all([
     supabase
       .from('avaliacoes')
@@ -76,6 +85,8 @@ export default async function FichaCompletaClientePage({
       .gte('data', inicio)
       .lt('data', fimExclusivo),
     supabase.from('v_estado_pagamento').select('*').eq('cliente_id', clienteId).maybeSingle(),
+    supabase.from('pagamentos').select('id', { count: 'exact', head: true }).eq('cliente_id', clienteId),
+    supabase.from('presencas').select('id', { count: 'exact', head: true }).eq('cliente_id', clienteId),
   ])
 
   const avaliacao = (avaliacoesData?.[0] ?? null) as AvaliacaoResumo | null
@@ -117,13 +128,34 @@ export default async function FichaCompletaClientePage({
             <p className="mt-1 text-sm text-muted">{c.objetivo}</p>
           )}
         </div>
-        <Link
-          href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=clientes`}
-          className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
-        >
-          Editar ficha
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=clientes`}
+            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
+          >
+            Editar ficha
+          </Link>
+          {ehGestao && (
+            <ApagarClienteModal
+              slug={slug}
+              clienteId={clienteId}
+              clienteNome={c.nome}
+              contagens={{
+                pagamentos: totalPagamentos ?? 0,
+                sessoes: totalSessoes ?? 0,
+                avaliacoes: totalAvaliacoes ?? 0,
+                presencas: totalPresencas ?? 0,
+              }}
+            />
+          )}
+        </div>
       </div>
+
+      {error && (
+        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          {decodeURIComponent(error)}
+        </p>
+      )}
 
       {c.alerta !== 'Nenhum' && (
         <div

@@ -12,6 +12,7 @@ const PUBLIC_PATHS = ['/', '/login', '/registo', '/recuperar-password']
 const PUBLIC_API_PATHS = [
   '/api/cron/retencao',
   '/api/cron/presencas-calendario',
+  '/api/cron/presencas-agenda',
   '/api/cron/alertas',
   '/api/cron/kpi-snapshot',
   '/api/leads/google-forms',

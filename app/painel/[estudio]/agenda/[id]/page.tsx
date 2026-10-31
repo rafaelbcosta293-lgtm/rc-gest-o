@@ -110,16 +110,38 @@ export default async function EventoAgendaPage({
 
       <div className="mt-8 flex flex-wrap items-start gap-3 border-t border-border-subtle pt-6">
         {!cancelado ? (
-          <form action={desmarcarEvento} className="flex flex-1 flex-wrap items-end gap-2">
+          <form
+            action={desmarcarEvento}
+            className="flex flex-1 flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40"
+          >
             <input type="hidden" name="estudio_slug" value={slug} />
             <input type="hidden" name="id" value={evento.id} />
-            <div className="flex flex-1 flex-col gap-1.5">
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Desmarcar este evento</p>
+
+            <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-muted">Motivo (opcional)</label>
               <input name="motivo_cancelamento" className={`${inputCls} w-full`} />
             </div>
+
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="text-xs font-semibold text-muted">
+                O treino foi realizado, mesmo assim? (obrigatório)
+              </legend>
+              <div className="flex gap-1.5">
+                <label className="flex-1 cursor-pointer rounded-md border border-border-subtle px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold">
+                  <input type="radio" name="conta_como_realizado" value="sim" required className="sr-only" />
+                  Sim, conta como realizado
+                </label>
+                <label className="flex-1 cursor-pointer rounded-md border border-border-subtle px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold">
+                  <input type="radio" name="conta_como_realizado" value="nao" required className="sr-only" />
+                  Não
+                </label>
+              </div>
+            </fieldset>
+
             <SubmitButton
               pendingText="…"
-              className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+              className="self-start rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
             >
               Desmarcar
             </SubmitButton>

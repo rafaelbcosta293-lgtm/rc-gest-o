@@ -3,6 +3,7 @@
 import { randomUUID } from 'crypto'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { gerarOcorrencias, type Repeticao } from '@/lib/data/agenda'
@@ -12,6 +13,64 @@ function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
   if (typeof v !== 'string' || v.trim() === '') return null
   return v.trim()
+}
+
+type LinhaParaReconciliar = { id: string; cliente_id: string | null; data: string; pt_id: string | null }
+
+// Mantém a ficha de presenças do cliente a bater certo com o estado do
+// evento, mesmo que a alteração aconteça muito depois (ex.: desmarcar
+// no dia seguinte um treino que o cron já tinha contado como presença).
+// Ligado ao evento por "agenda_evento_id" (nunca mexe numa presença
+// marcada à mão nem numa vinda do Google Calendar).
+async function reconciliarPresencasDoEvento(
+  supabase: SupabaseClient,
+  linhas: LinhaParaReconciliar[],
+  contarComoRealizado: boolean
+): Promise<string | null> {
+  for (const linha of linhas) {
+    if (!contarComoRealizado) {
+      // Não precisa do cliente_id — apaga só pelo evento, nunca uma
+      // presença marcada à mão nem vinda do Google Calendar.
+      const { error } = await supabase
+        .from('presencas')
+        .delete()
+        .eq('agenda_evento_id', linha.id)
+        .eq('origem', 'agenda')
+      if (error) return error.message
+      continue
+    }
+
+    if (!linha.cliente_id) continue // reunião/outro, sem cliente — nada a marcar
+
+    const { data: existente, error: erroExistente } = await supabase
+      .from('presencas')
+      .select('id, origem')
+      .eq('cliente_id', linha.cliente_id)
+      .eq('data', linha.data)
+      .maybeSingle()
+    if (erroExistente) return erroExistente.message
+
+    if (!existente) {
+      const { error } = await supabase.from('presencas').insert({
+        cliente_id: linha.cliente_id,
+        data: linha.data,
+        estado: 'Presente',
+        pt_id: linha.pt_id,
+        origem: 'agenda',
+        agenda_evento_id: linha.id,
+      })
+      if (error) return error.message
+    } else if (existente.origem === 'agenda') {
+      const { error } = await supabase
+        .from('presencas')
+        .update({ estado: 'Presente', agenda_evento_id: linha.id })
+        .eq('id', existente.id)
+      if (error) return error.message
+    }
+    // Já havia um registo manual (ou do calendário) para este dia —
+    // nunca se mexe nele.
+  }
+  return null
 }
 
 export async function criarEvento(formData: FormData) {
@@ -112,7 +171,17 @@ export async function desmarcarEvento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
   const motivo = campoOuNull(formData, 'motivo_cancelamento')
+  const contarComoRealizado = formData.get('conta_como_realizado') === 'sim'
   const supabase = await createClient()
+
+  const { data: linhaData, error: erroLinha } = await supabase
+    .from('agenda_eventos')
+    .select('id, cliente_id, data, pt_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (erroLinha || !linhaData) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroLinha?.message ?? 'Evento não encontrado.')}`)
+  }
 
   const { error } = await supabase
     .from('agenda_eventos')
@@ -121,6 +190,11 @@ export async function desmarcarEvento(formData: FormData) {
 
   if (error) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  const erroReconciliar = await reconciliarPresencasDoEvento(supabase, [linhaData], contarComoRealizado)
+  if (erroReconciliar) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroReconciliar)}`)
   }
 
   revalidatePath(`/painel/${estudioSlug}/agenda`)
@@ -139,6 +213,18 @@ export async function reativarEvento(formData: FormData) {
 
   if (error) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  // Volta a "Agendado" — deixa de estar concluído/cancelado, por isso
+  // desfaz a presença que a agenda tivesse criado (só essa, nunca uma
+  // marcada à mão); o cron volta a contá-la quando o evento terminar.
+  const erroReconciliar = await reconciliarPresencasDoEvento(
+    supabase,
+    [{ id, cliente_id: null, data: '', pt_id: null }],
+    false
+  )
+  if (erroReconciliar) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroReconciliar)}`)
   }
 
   revalidatePath(`/painel/${estudioSlug}/agenda`)
@@ -321,14 +407,25 @@ export async function desmarcarEventoRapido(input: {
   id: string
   grupoId: string | null
   motivo: string | null
+  contarComoRealizado: boolean
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
+
+  // Linhas afetadas (uma ou o grupo todo) antes de mudar o estado, para
+  // saber quem reconciliar depois na ficha de presenças.
+  const { data: linhasData, error: erroLinhas } = input.grupoId
+    ? await supabase.from('agenda_eventos').select('id, cliente_id, data, pt_id').eq('grupo_id', input.grupoId)
+    : await supabase.from('agenda_eventos').select('id, cliente_id, data, pt_id').eq('id', input.id)
+  if (erroLinhas) return { error: erroLinhas.message }
 
   const query = supabase
     .from('agenda_eventos')
     .update({ estado: 'Cancelado', motivo_cancelamento: input.motivo })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
+
+  const erroReconciliar = await reconciliarPresencasDoEvento(supabase, linhasData ?? [], input.contarComoRealizado)
+  if (erroReconciliar) return { error: erroReconciliar }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   return { ok: true }
@@ -341,9 +438,19 @@ export async function reativarEventoRapido(input: {
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
+  const { data: linhasData, error: erroLinhas } = input.grupoId
+    ? await supabase.from('agenda_eventos').select('id, cliente_id, data, pt_id').eq('grupo_id', input.grupoId)
+    : await supabase.from('agenda_eventos').select('id, cliente_id, data, pt_id').eq('id', input.id)
+  if (erroLinhas) return { error: erroLinhas.message }
+
   const query = supabase.from('agenda_eventos').update({ estado: 'Agendado', motivo_cancelamento: null })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
+
+  // Volta a "Agendado" — desfaz a presença que a agenda tivesse criado
+  // (só essa); o cron volta a contá-la quando o evento terminar.
+  const erroReconciliar = await reconciliarPresencasDoEvento(supabase, linhasData ?? [], false)
+  if (erroReconciliar) return { error: erroReconciliar }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   return { ok: true }

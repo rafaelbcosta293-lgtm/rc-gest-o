@@ -61,11 +61,14 @@ type EstadoModal =
   // uma pessoa, vários quando é um treino em simultâneo.
   | { aberto: true; modo: 'editar'; evento: EventoComNomes; grupo: EventoComNomes[] }
 
-// Níveis de zoom (pixels por minuto) — o valor por omissão mostra o dia
-// inteiro (00h–24h) sem precisar de scroll na maioria dos ecrãs; os
-// níveis seguintes aproximam para marcar/ver detalhe ao minuto.
+// Níveis de zoom (pixels por minuto) — a percentagem mostrada ao
+// utilizador é sempre relativa a NIVEIS_ZOOM[ZOOM_OMISSAO] = "100%".
+// O zoom com que a agenda abre é outro nível (ZOOM_INICIAL, 200%) —
+// aproximado o suficiente para ver bem os eventos sem precisar de dar
+// zoom manualmente, pedido pelo dono.
 const NIVEIS_ZOOM = [0.3, 0.45, 0.65, 0.9, 1.3, 1.8, 2.4]
 const ZOOM_OMISSAO = 1
+const ZOOM_INICIAL = 3
 
 export default function AgendaInterativa({
   slug,
@@ -84,7 +87,7 @@ export default function AgendaInterativa({
 }) {
   const router = useRouter()
   const [modal, setModal] = useState<EstadoModal>({ aberto: false })
-  const [zoomIndice, setZoomIndice] = useState(ZOOM_OMISSAO)
+  const [zoomIndice, setZoomIndice] = useState(ZOOM_INICIAL)
   const [aPendente, iniciarTransicao] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
   const pxPorMinuto = NIVEIS_ZOOM[zoomIndice]
@@ -151,11 +154,17 @@ export default function AgendaInterativa({
     })
   }
 
-  function desmarcar() {
+  function desmarcar(contarComoRealizado: boolean) {
     if (!(modal.aberto && modal.modo === 'editar')) return
     const { id, grupo_id } = modal.evento
     iniciarTransicao(async () => {
-      const resultado = await desmarcarEventoRapido({ estudioSlug: slug, id, grupoId: grupo_id, motivo: null })
+      const resultado = await desmarcarEventoRapido({
+        estudioSlug: slug,
+        id,
+        grupoId: grupo_id,
+        motivo: null,
+        contarComoRealizado,
+      })
       if ('error' in resultado) setErro(resultado.error)
       else aposSucesso()
     })
@@ -343,10 +352,6 @@ function GrelhaInterativa({
 
   const colRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const arrastoRef = useRef<Arrasto | null>(null)
-  // Fica true assim que um arrasto de "mover" se desloca de verdade —
-  // o clique que abre a ficha do evento olha para isto a seguir ao
-  // mouseup, para não abrir o modal logo depois de reagendar.
-  const ignorarProximoClickRef = useRef(false)
 
   const [previa, setPrevia] = useState<{ dia: string; inicioMin: number; fimMin: number } | null>(null)
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
@@ -407,10 +412,6 @@ function GrelhaInterativa({
           })
         }
       } else {
-        const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
-        if (loc.dia !== arrasto.evento.data || loc.minuto !== inicioOriginal) {
-          ignorarProximoClickRef.current = true
-        }
         setPrevia({ dia: loc.dia, inicioMin: loc.minuto, fimMin: loc.minuto + arrasto.evento.duracao_min })
       }
     }
@@ -490,7 +491,6 @@ function GrelhaInterativa({
     return (e: React.MouseEvent) => {
       if (e.button !== 0) return
       e.stopPropagation()
-      ignorarProximoClickRef.current = false
       arrastoRef.current = { tipo: 'mover', evento }
       setArrastandoId(evento.id)
       setPrevia({
@@ -501,13 +501,13 @@ function GrelhaInterativa({
     }
   }
 
-  function aoClicarEvento(evento: EventoComNomes) {
+  // A ordem para editar passa a ser dada com o botão direito — o
+  // esquerdo fica livre só para arrastar/mover, sem abrir nada ao
+  // simplesmente clicar.
+  function aoAbrirContexto(evento: EventoComNomes) {
     return (e: React.MouseEvent) => {
+      e.preventDefault()
       e.stopPropagation()
-      if (ignorarProximoClickRef.current) {
-        ignorarProximoClickRef.current = false
-        return
-      }
       onAbrirEvento(evento)
     }
   }
@@ -523,7 +523,7 @@ function GrelhaInterativa({
         <p className="text-xs text-muted">
           A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para
           criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o
-          mover, o topo ou o fundo para encurtar/alongar.
+          mover, o topo ou o fundo para encurtar/alongar; botão direito num evento para o editar.
         </p>
         <div className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-pop">
           <button
@@ -584,7 +584,7 @@ function GrelhaInterativa({
                 onIniciarCriacao={iniciarCriacao(dia)}
                 onIniciarRedimensionamento={iniciarRedimensionamento}
                 onIniciarMovimento={iniciarMovimento}
-                onClicarEvento={aoClicarEvento}
+                onAbrirContexto={aoAbrirContexto}
                 arrastandoId={arrastandoId}
                 previa={previa?.dia === dia ? previa : null}
                 pxPorMinuto={pxPorMinuto}
@@ -614,7 +614,7 @@ function ColunaDia({
   onIniciarCriacao,
   onIniciarRedimensionamento,
   onIniciarMovimento,
-  onClicarEvento,
+  onAbrirContexto,
   arrastandoId,
   previa,
   pxPorMinuto,
@@ -624,7 +624,7 @@ function ColunaDia({
   onIniciarCriacao: (e: React.MouseEvent) => void
   onIniciarRedimensionamento: (evento: EventoComNomes, pega: 'topo' | 'fundo') => (e: React.MouseEvent) => void
   onIniciarMovimento: (evento: EventoComNomes) => (e: React.MouseEvent) => void
-  onClicarEvento: (evento: EventoComNomes) => (e: React.MouseEvent) => void
+  onAbrirContexto: (evento: EventoComNomes) => (e: React.MouseEvent) => void
   arrastandoId: string | null
   previa: { inicioMin: number; fimMin: number } | null
   pxPorMinuto: number
@@ -659,8 +659,9 @@ function ColunaDia({
           <button
             key={evento.id}
             type="button"
+            title="Botão direito para editar · arrasta para mover"
             onMouseDown={onIniciarMovimento(evento)}
-            onClick={onClicarEvento(evento)}
+            onContextMenu={onAbrirContexto(evento)}
             className={`group absolute overflow-hidden rounded border px-1 py-0.5 text-left leading-tight transition-opacity ${
               evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''
             } ${emArrasto ? 'opacity-30' : ''}`}
@@ -717,7 +718,7 @@ function EventoModalOverlay({
   slug: string
   onFechar: () => void
   onSubmeter: (formData: FormData, clienteIds: string[]) => void
-  onDesmarcar: () => void
+  onDesmarcar: (contarComoRealizado: boolean) => void
   onReativar: () => void
   onApagar: () => void
 }) {
@@ -726,6 +727,12 @@ function EventoModalOverlay({
   const dataDefault = modal.modo === 'editar' ? modal.evento.data : modal.data
   const horaDefault = modal.modo === 'editar' ? modal.evento.hora_inicio.slice(0, 5) : modal.horaInicio
   const duracaoDefault = modal.modo === 'editar' ? modal.evento.duracao_min : modal.duracaoMin
+
+  // Desmarcar não é imediato — pede sempre, antes, se o treino foi
+  // realizado mesmo assim ou não (obrigatório, sem omissão possível),
+  // para a ficha do cliente nunca ficar errada por um clique a mais.
+  const [aConfirmarDesmarcar, setAConfirmarDesmarcar] = useState(false)
+  const [contarComoRealizado, setContarComoRealizado] = useState<boolean | null>(null)
 
   // Quem já está neste treino — para um treino em simultâneo, o grupo
   // tem mais do que uma pessoa; pode-se adicionar ou remover enquanto
@@ -889,17 +896,6 @@ function EventoModalOverlay({
               {aPendente ? 'A guardar…' : 'Guardar'}
             </button>
             <div className="flex items-center gap-1.5">
-              {editar && evento?.estado !== 'Cancelado' && (
-                <button
-                  type="button"
-                  onClick={onDesmarcar}
-                  disabled={aPendente}
-                  title="Desmarcar"
-                  className="rounded-full p-2 text-muted hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950"
-                >
-                  <Ban className="h-4 w-4" />
-                </button>
-              )}
               {editar && evento?.estado === 'Cancelado' && (
                 <button
                   type="button"
@@ -925,6 +921,90 @@ function EventoModalOverlay({
             </div>
           </div>
         </form>
+
+        {/* Desmarcar ganha uma caixa à parte, bem visível — não é um
+            ícone perdido ao lado de apagar/reativar — e nunca desmarca
+            de imediato: pede sempre, primeiro, se o treino foi
+            realizado mesmo assim ou não (sem valor por omissão). */}
+        {editar && evento?.estado !== 'Cancelado' && !aConfirmarDesmarcar && (
+          <button
+            type="button"
+            onClick={() => {
+              setContarComoRealizado(null)
+              setAConfirmarDesmarcar(true)
+            }}
+            disabled={aPendente}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70"
+          >
+            <Ban className="h-4 w-4" /> Desmarcar
+          </button>
+        )}
+
+        {editar && aConfirmarDesmarcar && (
+          <div className="mt-3 flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Desmarcar este evento</p>
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="text-xs font-semibold text-muted">
+                O treino foi realizado, mesmo assim? (obrigatório)
+              </legend>
+              <div className="flex gap-1.5">
+                <label
+                  className={`flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                    contarComoRealizado === true
+                      ? 'border-accent bg-accent-soft'
+                      : 'border-border-subtle bg-surface'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="conta_como_realizado_modal"
+                    className="sr-only"
+                    checked={contarComoRealizado === true}
+                    onChange={() => setContarComoRealizado(true)}
+                  />
+                  Sim, conta como realizado
+                </label>
+                <label
+                  className={`flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                    contarComoRealizado === false
+                      ? 'border-accent bg-accent-soft'
+                      : 'border-border-subtle bg-surface'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="conta_como_realizado_modal"
+                    className="sr-only"
+                    checked={contarComoRealizado === false}
+                    onChange={() => setContarComoRealizado(false)}
+                  />
+                  Não
+                </label>
+              </div>
+            </fieldset>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={aPendente || contarComoRealizado === null}
+                onClick={() => {
+                  if (contarComoRealizado === null) return
+                  onDesmarcar(contarComoRealizado)
+                }}
+                className="rounded-full bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {aPendente ? 'A desmarcar…' : 'Confirmar'}
+              </button>
+              <button
+                type="button"
+                disabled={aPendente}
+                onClick={() => setAConfirmarDesmarcar(false)}
+                className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         {editar && evento && (
           <Link

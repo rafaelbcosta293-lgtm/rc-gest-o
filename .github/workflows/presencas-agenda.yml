@@ -1,0 +1,19 @@
+name: Presenças automáticas (Agenda interna)
+
+# Marca presença automaticamente quando um treino agendado na agenda
+# interna termina sem ter sido desmarcado — a cada 15 minutos, para a
+# ficha do cliente atualizar pouco depois da sessão acabar.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Marcar presenças dos treinos que terminaram
+        run: |
+          curl --fail-with-body -sS -L -X GET \
+            "${{ secrets.APP_URL }}/api/cron/presencas-agenda" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

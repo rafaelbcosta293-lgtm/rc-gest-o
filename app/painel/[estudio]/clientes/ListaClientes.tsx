@@ -21,6 +21,7 @@ export type LinhaCliente = {
   estadoTx: string
   alertaDot: string
   inscricaoLabel: string
+  idadeLabel: string | null
   pagamentoLabel: string
   pagamentoEmDia: boolean | null
   treinosLabel: string
@@ -104,6 +105,7 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
               <span className="w-44 shrink-0">{l.inscricaoLabel}</span>
+              <span className="w-16 shrink-0">{l.idadeLabel ?? '—'}</span>
               <span className="w-36 shrink-0">
                 {l.pagamentoEmDia === null ? (
                   l.pagamentoLabel

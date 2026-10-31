@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { ESTADOS_CLIENTE, ALERTAS } from '@/lib/data/constantes'
 import { mesesAtivo } from '@/lib/data/clientes'
-import { proximoAniversario } from '@/lib/data/aniversarios'
+import { proximoAniversario, idadeEm } from '@/lib/data/aniversarios'
 import { treinosPrevistos, intervaloMes, fmt } from '@/lib/data/presencas'
 import ListaClientes, { type LinhaCliente } from './ListaClientes'
 import ExportarCsvButton from '@/components/ExportarCsvButton'
@@ -210,6 +210,7 @@ export default async function ClientesPage({
       inscricaoLabel: c.inicio_contrato
         ? `desde ${fmt(c.inicio_contrato)}${meses !== null ? ` · ${meses} ${meses === 1 ? 'mês' : 'meses'}` : ''}`
         : 'sem data de início',
+      idadeLabel: c.nascimento ? `${idadeEm(c.nascimento, agora)} anos` : null,
       pagamentoLabel: pagamento
         ? pagamento.valido_ate
           ? `pag. até ${fmt(pagamento.valido_ate)}`
@@ -252,6 +253,7 @@ export default async function ClientesPage({
               { chave: 'telefone', label: 'Telefone' },
               { chave: 'estadoLabel', label: 'Estado' },
               { chave: 'inscricaoLabel', label: 'Inscrição' },
+              { chave: 'idadeLabel', label: 'Idade' },
               { chave: 'pagamentoLabel', label: 'Pagamento' },
               { chave: 'treinosLabel', label: 'Treinos' },
             ]}

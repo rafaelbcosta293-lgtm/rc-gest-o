@@ -8,12 +8,12 @@ import { fmt } from '@/lib/data/presencas'
 import { somarDias } from '@/lib/data/horarios'
 import { PALETA } from '@/lib/data/constantes'
 import { criarMarco, apagarMarco } from './actions'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 import PortaSenha from '@/components/PortaSenha'
-import SubmitButton from '@/components/SubmitButton'
 import LineChart from '@/components/LineChart'
-import type { MarcoEmpresa, TipoMarcoEmpresa, KpiSnapshotDiario } from '@/lib/supabase/database.types'
+import CriarMarcoForm from './CriarMarcoForm'
+import type { MarcoEmpresa, KpiSnapshotDiario } from '@/lib/supabase/database.types'
 
-const TIPOS_MARCO: TipoMarcoEmpresa[] = ['Campanha', 'Preço', 'Equipa', 'Meta', 'Outro']
 const DIAS_HISTORICO = 60
 
 export default async function TimelineEmpresaPage({
@@ -105,58 +105,7 @@ export default async function TimelineEmpresaPage({
 
       <div className="mt-8">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Adicionar marco</h2>
-        <form action={criarMarco} className="mt-2 flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input
-              name="titulo"
-              required
-              placeholder="ex.: Campanha Instagram outubro"
-              className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
-            />
-            <input
-              type="date"
-              name="data"
-              required
-              defaultValue={hoje}
-              className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
-            />
-            <select
-              name="tipo"
-              defaultValue="Outro"
-              className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
-            >
-              {TIPOS_MARCO.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-            <select
-              name="estudio_id"
-              defaultValue=""
-              className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
-            >
-              <option value="">Ambos os estúdios</option>
-              {estudios.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <textarea
-            name="descricao"
-            rows={2}
-            placeholder="Notas (opcional)"
-            className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
-          />
-          <SubmitButton
-            pendingText="A guardar…"
-            className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-          >
-            Adicionar
-          </SubmitButton>
-        </form>
+        <CriarMarcoForm hoje={hoje} estudios={estudios} action={criarMarco} />
       </div>
 
       <div className="mt-8">
@@ -183,7 +132,10 @@ export default async function TimelineEmpresaPage({
                   <p className="mt-1 font-medium text-foreground">{m.titulo}</p>
                   {m.descricao && <p className="mt-0.5 text-xs text-muted">{m.descricao}</p>}
                 </div>
-                <form action={apagarMarco}>
+                <ConfirmarAcao
+                  action={apagarMarco}
+                  confirmacao={`Tens a certeza que queres apagar o marco "${m.titulo}"?`}
+                >
                   <input type="hidden" name="id" value={m.id} />
                   <button
                     type="submit"
@@ -192,7 +144,7 @@ export default async function TimelineEmpresaPage({
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
-                </form>
+                </ConfirmarAcao>
               </div>
             )
           })}

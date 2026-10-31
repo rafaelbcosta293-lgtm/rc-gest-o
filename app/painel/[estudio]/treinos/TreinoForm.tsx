@@ -9,6 +9,7 @@ import ExercicioPicker from './ExercicioPicker'
 // existe um ficheiro actions.ts, partilhado por todos os clientes.
 import { guardarLinhaExercicio, apagarLinhaExercicio } from './[clienteId]/treino/actions'
 import SubmitButton from '@/components/SubmitButton'
+import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 export type LinhaExercicio = {
   key: string
@@ -124,6 +125,7 @@ export default function TreinoForm({
   const [estados, setEstados] = useState<Record<string, EstadoLinha>>({})
   const [seletorPara, setSeletorPara] = useState<string | null>(null)
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const { marcarSujo } = useAvisoSairSemGuardar()
 
   const guardarLinha = async (linha: LinhaExercicio, ordem: number) => {
     if (!linha.exercicio_nome.trim()) return
@@ -358,7 +360,7 @@ export default function TreinoForm({
         }}
       />
 
-      <form action={action} className="flex flex-col gap-6">
+      <form action={action} onChange={marcarSujo} className="flex flex-col gap-6">
         <input type="hidden" name="estudio_slug" value={estudioSlug} />
         <input type="hidden" name="estudio_id" value={estudioId} />
         <input type="hidden" name="cliente_id" value={clienteId} />

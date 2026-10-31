@@ -6,6 +6,7 @@ import { fmt } from '@/lib/data/presencas'
 import { criarPagamento, apagarPagamento, registarPagamentoSeguro } from '../actions'
 import PagamentoForm from '../PagamentoForm'
 import SubmitButton from '@/components/SubmitButton'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 import type { Pagamento, Plano } from '@/lib/supabase/database.types'
 
 type PagamentoComExtras = Pagamento & {
@@ -170,7 +171,11 @@ export default async function PagamentosClientePage({
             {p.nota && (
               <span className="w-full text-xs text-muted">{p.nota}</span>
             )}
-            <form action={apagarPagamento} className="ml-auto">
+            <ConfirmarAcao
+              action={apagarPagamento}
+              confirmacao={`Tens a certeza que queres apagar o pagamento de ${p.valor}€ de ${fmt(p.data_pagamento)}? Esta ação não pode ser desfeita.`}
+              className="ml-auto"
+            >
               <input type="hidden" name="estudio_slug" value={slug} />
               <input type="hidden" name="cliente_id" value={clienteId} />
               <input type="hidden" name="id" value={p.id} />
@@ -181,7 +186,7 @@ export default async function PagamentosClientePage({
               >
                 ×
               </SubmitButton>
-            </form>
+            </ConfirmarAcao>
           </div>
         ))}
       </div>

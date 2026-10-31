@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import SubmitButton from '@/components/SubmitButton'
 import type { Plano } from '@/lib/supabase/database.types'
+import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 const inputCls =
   'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
@@ -34,6 +35,7 @@ export default function PagamentoForm({
   const [valor, setValor] = useState('')
   const [dataPagamento, setDataPagamento] = useState(hoje)
   const [validoAte, setValidoAte] = useState(somarDias(hoje, 30))
+  const { marcarSujo } = useAvisoSairSemGuardar()
 
   const escolherPlano = (id: string) => {
     setPlanoId(id)
@@ -42,7 +44,7 @@ export default function PagamentoForm({
   }
 
   return (
-    <form action={action} className="mt-4 flex flex-col gap-4">
+    <form action={action} onChange={marcarSujo} className="mt-4 flex flex-col gap-4">
       <input type="hidden" name="estudio_slug" value={estudioSlug} />
       <input type="hidden" name="cliente_id" value={clienteId} />
 

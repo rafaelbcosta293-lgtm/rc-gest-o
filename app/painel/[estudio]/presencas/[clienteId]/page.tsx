@@ -14,6 +14,7 @@ import {
 } from '@/lib/data/presencas'
 import { marcarPresenca, apagarPresenca } from '../actions'
 import SubmitButton from '@/components/SubmitButton'
+import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
 
 export default async function PresencasClientePage({
   params,
@@ -249,18 +250,15 @@ export default async function PresencasClientePage({
                   {p.nota}
                 </span>
               )}
-              <form action={apagarPresenca}>
-                <input type="hidden" name="estudio_slug" value={slug} />
-                <input type="hidden" name="cliente_id" value={clienteId} />
-                <input type="hidden" name="id" value={p.id} />
-                <SubmitButton
-                  pendingText="…"
-                  aria-label="Apagar"
-                  className="ml-auto text-lg text-zinc-400 hover:text-red-600"
-                >
-                  ×
-                </SubmitButton>
-              </form>
+              <ApagarComConfirmacao
+                action={apagarPresenca}
+                confirmacao={`Tens a certeza que queres apagar a presença de ${fmt(p.data)}? Esta ação não pode ser desfeita.`}
+                campos={{ estudio_slug: slug, cliente_id: clienteId, id: p.id }}
+                className="ml-auto text-lg text-zinc-400 hover:text-red-600"
+                ariaLabel="Apagar"
+              >
+                ×
+              </ApagarComConfirmacao>
             </div>
           )
         })}

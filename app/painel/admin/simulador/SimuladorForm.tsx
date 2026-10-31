@@ -5,6 +5,7 @@ import { Trash2 } from 'lucide-react'
 import { simular, type EntradasSimulador } from '@/lib/data/simulador'
 import { guardarCenario, apagarCenario } from './actions'
 import SubmitButton from '@/components/SubmitButton'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 
 const ENTRADAS_OMISSAO: EntradasSimulador = {
   leadsPorMes: 100,
@@ -192,7 +193,10 @@ export default function SimuladorForm({
                       {c.resultados.ratioLtvCac != null ? `${(c.resultados.ratioLtvCac as number).toFixed(1)}×` : '—'}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <form action={apagarCenario}>
+                      <ConfirmarAcao
+                        action={apagarCenario}
+                        confirmacao={`Tens a certeza que queres apagar o cenário "${c.nome}"?`}
+                      >
                         <input type="hidden" name="id" value={c.id} />
                         <button
                           type="submit"
@@ -201,7 +205,7 @@ export default function SimuladorForm({
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
-                      </form>
+                      </ConfirmarAcao>
                     </td>
                   </tr>
                 ))}

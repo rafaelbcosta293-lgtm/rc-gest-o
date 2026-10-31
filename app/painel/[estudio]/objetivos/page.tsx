@@ -14,6 +14,7 @@ import { mrrAtual } from '@/lib/data/financeiro'
 import { progressoFluxo, progressoStock, type Semaforo } from '@/lib/data/objetivos'
 import { definirMeta, apagarMeta } from './actions'
 import SubmitButton from '@/components/SubmitButton'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 import FunilInversoForm from './FunilInversoForm'
 import type { Goal } from '@/lib/supabase/database.types'
 
@@ -233,13 +234,16 @@ export default async function ObjetivosPage({
                   >
                     {progresso.semaforo}
                   </span>
-                  <form action={apagarMeta}>
+                  <ConfirmarAcao
+                    action={apagarMeta}
+                    confirmacao={`Tens a certeza que queres apagar a meta "${m.label}"?`}
+                  >
                     <input type="hidden" name="estudio_slug" value={slug} />
                     <input type="hidden" name="id" value={goal.id} />
                     <button type="submit" aria-label="Apagar meta" className="rounded-full p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950">
                       <Trash2 className="h-4 w-4" />
                     </button>
-                  </form>
+                  </ConfirmarAcao>
                 </div>
               </div>
               {progresso.tipo === 'fluxo' && (

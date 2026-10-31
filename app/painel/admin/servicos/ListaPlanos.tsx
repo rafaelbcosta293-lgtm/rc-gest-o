@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { GripVertical } from 'lucide-react'
 import SubmitButton from '@/components/SubmitButton'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 import { atualizarPlano, apagarPlano, reordenarPlanos } from './actions'
 import type { Plano } from '@/lib/supabase/database.types'
 
@@ -87,7 +88,10 @@ export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[
               Guardar
             </SubmitButton>
           </form>
-          <form action={apagarPlano}>
+          <ConfirmarAcao
+            action={apagarPlano}
+            confirmacao={`Tens a certeza que queres eliminar "${p.nome}"? Esta ação não pode ser desfeita.`}
+          >
             <input type="hidden" name="id" value={p.id} />
             <SubmitButton
               pendingText="…"
@@ -96,7 +100,7 @@ export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[
             >
               ×
             </SubmitButton>
-          </form>
+          </ConfirmarAcao>
         </div>
       ))}
       {planos.length === 0 && (

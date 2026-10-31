@@ -1,6 +1,9 @@
+'use client'
+
 import { ALERTAS } from '@/lib/data/constantes'
 import type { Cliente, Perfil } from '@/lib/supabase/database.types'
 import SubmitButton from '@/components/SubmitButton'
+import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 const inputCls =
   'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
@@ -23,8 +26,10 @@ export default function ClienteForm({
   error?: string
   voltar?: string
 }) {
+  const { marcarSujo } = useAvisoSairSemGuardar()
+
   return (
-    <form action={action} className="mt-6 flex flex-col gap-4">
+    <form action={action} onChange={marcarSujo} className="mt-6 flex flex-col gap-4">
       <input type="hidden" name="estudio_slug" value={estudioSlug} />
       <input type="hidden" name="estudio_id" value={estudioId} />
       {cliente && <input type="hidden" name="id" value={cliente.id} />}

@@ -5,6 +5,7 @@ import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import { alternarItem, guardarOcorrencia } from '../actions'
 import SubmitButton from '@/components/SubmitButton'
+import OcorrenciaForm from './OcorrenciaForm'
 import type { ChecklistResposta } from '@/lib/supabase/database.types'
 
 export default async function ChecklistRegistoPage({
@@ -124,23 +125,12 @@ export default async function ChecklistRegistoPage({
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
         Ocorrência (opcional)
       </h2>
-      <form action={guardarOcorrencia} className="mt-2 flex flex-col gap-2">
-        <input type="hidden" name="estudio_slug" value={slug} />
-        <input type="hidden" name="registo_id" value={registoId} />
-        <textarea
-          name="ocorrencia"
-          rows={3}
-          defaultValue={registo.ocorrencia ?? ''}
-          placeholder="ex.: torneira da casa de banho a pingar, avisar manutenção"
-          className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30"
-        />
-        <SubmitButton
-          pendingText="A guardar…"
-          className="self-start rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
-        >
-          Guardar ocorrência
-        </SubmitButton>
-      </form>
+      <OcorrenciaForm
+        slug={slug}
+        registoId={registoId}
+        valorInicial={registo.ocorrencia ?? ''}
+        action={guardarOcorrencia}
+      />
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { fmt } from '@/lib/data/presencas'
 import { iniciarChecklist, criarItemModelo, atualizarItemModelo, removerItemModelo } from './actions'
 import SubmitButton from '@/components/SubmitButton'
+import ItemModeloForm from './ItemModeloForm'
 import type { ChecklistModelo, TipoOperacao } from '@/lib/supabase/database.types'
 
 const TIPOS: TipoOperacao[] = ['Abertura', 'Fecho']
@@ -178,39 +179,13 @@ export default async function ChecklistPage({
                   <h3 className="text-sm font-semibold text-foreground">{tipo}</h3>
                   <div className="mt-2 flex flex-col gap-1.5">
                     {itens.map((m) => (
-                      <form
+                      <ItemModeloForm
                         key={m.id}
-                        action={atualizarItemModelo}
-                        className="flex flex-wrap items-center gap-1.5"
-                      >
-                        <input type="hidden" name="estudio_slug" value={slug} />
-                        <input type="hidden" name="id" value={m.id} />
-                        <input
-                          name="secao"
-                          defaultValue={m.secao}
-                          placeholder="Secção"
-                          className="w-28 rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
-                        />
-                        <input
-                          name="item"
-                          defaultValue={m.item}
-                          className="min-w-[160px] flex-1 rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
-                        />
-                        <SubmitButton
-                          pendingText="…"
-                          className="rounded-md border border-border-subtle px-2 py-1 text-xs"
-                        >
-                          Guardar
-                        </SubmitButton>
-                        <SubmitButton
-                          formAction={removerItemModelo}
-                          pendingText="…"
-                          aria-label="Remover item"
-                          className="text-lg text-zinc-400 hover:text-red-600"
-                        >
-                          ×
-                        </SubmitButton>
-                      </form>
+                        estudioSlug={slug}
+                        item={m}
+                        atualizar={atualizarItemModelo}
+                        remover={removerItemModelo}
+                      />
                     ))}
                     {itens.length === 0 && (
                       <p className="text-xs text-zinc-500">Sem itens ainda.</p>

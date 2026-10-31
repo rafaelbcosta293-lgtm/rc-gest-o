@@ -12,12 +12,14 @@ export default function ApagarComConfirmacao({
   campos,
   className,
   children,
+  ariaLabel,
 }: {
   action: (formData: FormData) => void
   confirmacao: string
   campos: Record<string, string>
   className: string
   children: React.ReactNode
+  ariaLabel?: string
 }) {
   return (
     <form
@@ -29,7 +31,7 @@ export default function ApagarComConfirmacao({
       {Object.entries(campos).map(([nome, valor]) => (
         <input key={nome} type="hidden" name={nome} value={valor} />
       ))}
-      <SubmitButton pendingText="A apagar…" className={className}>
+      <SubmitButton pendingText="A apagar…" className={className} aria-label={ariaLabel}>
         {children}
       </SubmitButton>
     </form>

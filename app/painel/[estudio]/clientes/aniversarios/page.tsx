@@ -8,6 +8,7 @@ import { fmt, MESES } from '@/lib/data/presencas'
 import { marcarEnviado, desfazerEnvio, guardarConfigAniversario } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import CopiarTexto from '@/components/CopiarTexto'
+import ConfigAniversarioForm from './ConfigAniversarioForm'
 import type { EnvioAniversario } from '@/lib/supabase/database.types'
 
 type ClienteAniversario = {
@@ -341,44 +342,20 @@ export default async function AniversariosPage({
               Usa <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{'{nome}'}</code> onde
               quiseres que apareça o nome da pessoa.
             </p>
-            <form action={guardarConfigAniversario} className="flex flex-col gap-1.5">
-              <input type="hidden" name="estudio_slug" value={slug} />
-              <input type="hidden" name="chave" value="msg_aniversario" />
-              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Mensagem para clientes ativos
-              </label>
-              <textarea
-                name="valor"
-                defaultValue={msgAtiva}
-                rows={3}
-                className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
-              />
-              <SubmitButton
-                pendingText="…"
-                className="self-start rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
-              >
-                Guardar
-              </SubmitButton>
-            </form>
-            <form action={guardarConfigAniversario} className="flex flex-col gap-1.5">
-              <input type="hidden" name="estudio_slug" value={slug} />
-              <input type="hidden" name="chave" value="msg_aniversario_ex" />
-              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Mensagem para ex-clientes
-              </label>
-              <textarea
-                name="valor"
-                defaultValue={msgExCliente}
-                rows={3}
-                className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
-              />
-              <SubmitButton
-                pendingText="…"
-                className="self-start rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
-              >
-                Guardar
-              </SubmitButton>
-            </form>
+            <ConfigAniversarioForm
+              slug={slug}
+              chave="msg_aniversario"
+              label="Mensagem para clientes ativos"
+              valorInicial={msgAtiva}
+              action={guardarConfigAniversario}
+            />
+            <ConfigAniversarioForm
+              slug={slug}
+              chave="msg_aniversario_ex"
+              label="Mensagem para ex-clientes"
+              valorInicial={msgExCliente}
+              action={guardarConfigAniversario}
+            />
           </div>
         </details>
       )}

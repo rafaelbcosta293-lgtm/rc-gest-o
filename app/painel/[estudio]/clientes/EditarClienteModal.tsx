@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { atualizarClienteRapido } from './actions'
 import type { EstadoCliente } from '@/lib/supabase/database.types'
+import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 export type ClienteEdicao = {
   id: string
@@ -37,6 +38,16 @@ export default function EditarClienteModal({
   const router = useRouter()
   const [aPendente, iniciarTransicao] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
+  const { sujo, marcarSujo, limparSujo } = useAvisoSairSemGuardar()
+
+  // Fechar pelo fundo ou pelo "X" (ao contrário de guardar com sucesso,
+  // que fecha sempre direto) pergunta primeiro se há alterações por
+  // guardar — o mesmo cuidado do resto da app, aplicado aqui porque o
+  // hook só interceta cliques em links, não o fundo/botão deste modal.
+  function fecharComAviso() {
+    if (sujo && !window.confirm('Tens alterações por guardar. Fechar sem guardar?')) return
+    onFechar()
+  }
 
   function aoSubmeter(formData: FormData) {
     const nome = (formData.get('nome') as string).trim()
@@ -64,6 +75,7 @@ export default function EditarClienteModal({
       if ('error' in resultado) {
         setErro(resultado.error)
       } else {
+        limparSujo()
         onFechar()
         router.refresh()
       }
@@ -71,7 +83,7 @@ export default function EditarClienteModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onFechar}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={fecharComAviso}>
       <div
         className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-5 shadow-pop"
         onClick={(e) => e.stopPropagation()}
@@ -80,7 +92,7 @@ export default function EditarClienteModal({
           <h2 className="text-lg font-bold text-foreground">Editar cliente</h2>
           <button
             type="button"
-            onClick={onFechar}
+            onClick={fecharComAviso}
             className="rounded-full p-1 text-muted hover:bg-brand/[.06] hover:text-foreground"
           >
             <X className="h-4 w-4" />
@@ -98,6 +110,7 @@ export default function EditarClienteModal({
             e.preventDefault()
             aoSubmeter(new FormData(e.currentTarget))
           }}
+          onChange={marcarSujo}
           className="mt-3 flex flex-col gap-3"
         >
           <div className="grid grid-cols-2 gap-3">

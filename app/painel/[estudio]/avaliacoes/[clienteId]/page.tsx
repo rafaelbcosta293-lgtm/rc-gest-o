@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import { apagarAvaliacao } from '../actions'
-import SubmitButton from '@/components/SubmitButton'
+import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
 import type { Avaliacao } from '@/lib/supabase/database.types'
 
 type AvaliacaoComPt = Avaliacao & { pt: { nome: string } | null }
@@ -174,18 +174,15 @@ export default async function AvaliacoesClientePage({
             >
               Editar
             </Link>
-            <form action={apagarAvaliacao}>
-              <input type="hidden" name="estudio_slug" value={slug} />
-              <input type="hidden" name="cliente_id" value={clienteId} />
-              <input type="hidden" name="id" value={a.id} />
-              <SubmitButton
-                pendingText="…"
-                aria-label="Apagar"
-                className="text-lg text-zinc-400 hover:text-red-600"
-              >
-                ×
-              </SubmitButton>
-            </form>
+            <ApagarComConfirmacao
+              action={apagarAvaliacao}
+              confirmacao={`Tens a certeza que queres apagar a avaliação de ${fmt(a.data)}? Esta ação não pode ser desfeita.`}
+              campos={{ estudio_slug: slug, cliente_id: clienteId, id: a.id }}
+              className="text-lg text-zinc-400 hover:text-red-600"
+              ariaLabel="Apagar"
+            >
+              ×
+            </ApagarComConfirmacao>
           </div>
         ))}
       </div>

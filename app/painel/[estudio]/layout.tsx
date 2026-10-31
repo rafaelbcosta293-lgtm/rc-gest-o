@@ -6,7 +6,7 @@ import { MODULOS } from '@/lib/data/constantes'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
-import { obterEstadoBanner } from '@/lib/data/lembretesSms'
+import { obterEstadosBanner } from '@/lib/data/lembretesSms'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import { NavLinkTopBar, NavLinkPhone } from './NavLink'
 
@@ -14,7 +14,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   const { estudio: slug } = await params
 
   const supabase = await createClient()
-  const [sessao, estadoBanner] = await Promise.all([getSessaoAtual(), obterEstadoBanner(supabase)])
+  const [sessao, estadosBanner] = await Promise.all([getSessaoAtual(), obterEstadosBanner(supabase)])
 
   // O acesso a cada estúdio é por email, não por "papel" — só quem está
   // na lista de lib/data/acessos.ts entra aqui, independentemente do que
@@ -39,7 +39,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           faixa ao fazer scroll (duas sticky top-0 ocupam o mesmo
           lugar; só uma, com ambas dentro, as mantém empilhadas). */}
       <div className="sticky top-0 z-10 flex flex-col">
-        <BarraSmsGatewayOffline offlineInicial={estadoBanner.offline} desdeInicial={estadoBanner.desde} />
+        <BarraSmsGatewayOffline estadosIniciais={estadosBanner} apenasEstudio={slug} />
 
         {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
             estúdio — os módulos ficam na barra de separadores do fundo,

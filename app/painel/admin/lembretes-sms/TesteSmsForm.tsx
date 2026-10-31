@@ -1,9 +1,16 @@
 import SubmitButton from '@/components/SubmitButton'
 import { enviarSmsTeste } from './actions'
 
-export default function TesteSmsForm({ textoInicial }: { textoInicial: string }) {
+export default function TesteSmsForm({
+  estudioSlug,
+  textoInicial,
+}: {
+  estudioSlug: string
+  textoInicial: string
+}) {
   return (
     <form action={enviarSmsTeste} className="flex flex-col gap-2">
+      <input type="hidden" name="estudio_slug" value={estudioSlug} />
       <input
         name="telefone"
         required

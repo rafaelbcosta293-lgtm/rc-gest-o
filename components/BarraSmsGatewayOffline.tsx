@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react'
 const INTERVALO_VERIFICACAO_MS = 60_000
 const INTERVALO_RELOGIO_MS = 30_000
 
+type EstadoEstudio = { estudioSlug: string; estudioNome: string; offline: boolean; desde: string | null }
+
 function formatarDuracao(desdeISO: string, agora: number): string {
   const minutos = Math.max(0, Math.round((agora - new Date(desdeISO).getTime()) / 60_000))
   if (minutos < 60) return `${minutos} min`
@@ -16,14 +18,17 @@ function formatarDuracao(desdeISO: string, agora: number): string {
   return resto === 0 ? `${horas}h` : `${horas}h${String(resto).padStart(2, '0')}`
 }
 
+// Sem "apenasEstudio", mostra qualquer estúdio que esteja offline (usado
+// em Administração/Coordenação, que veem os dois) — com "apenasEstudio",
+// só mostra esse (usado dentro do painel de cada estúdio).
 export default function BarraSmsGatewayOffline({
-  offlineInicial,
-  desdeInicial,
+  estadosIniciais,
+  apenasEstudio,
 }: {
-  offlineInicial: boolean
-  desdeInicial: string | null
+  estadosIniciais: EstadoEstudio[]
+  apenasEstudio?: string
 }) {
-  const [estado, setEstado] = useState({ offline: offlineInicial, desde: desdeInicial })
+  const [estados, setEstados] = useState(estadosIniciais)
   const [agora, setAgora] = useState(() => Date.now())
 
   useEffect(() => {
@@ -36,7 +41,7 @@ export default function BarraSmsGatewayOffline({
       try {
         const resposta = await fetch('/api/estado-sms-gateway', { cache: 'no-store' })
         if (!resposta.ok) return
-        setEstado(await resposta.json())
+        setEstados(await resposta.json())
       } catch {
         // falha a verificar não é motivo para esconder a faixa a meio
       }
@@ -45,13 +50,21 @@ export default function BarraSmsGatewayOffline({
     return () => clearInterval(intervalo)
   }, [])
 
-  if (!estado.offline || !estado.desde) return null
+  const visiveis = estados.filter((e) => e.offline && e.desde && (!apenasEstudio || e.estudioSlug === apenasEstudio))
+  if (visiveis.length === 0) return null
 
   return (
-    <div className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-red-600 px-4 py-2 text-center text-xs font-bold text-white sm:text-sm">
-      <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-white" />
-      Telemóvel do SMS Gateway offline há {formatarDuracao(estado.desde, agora)} — os lembretes de
-      treino não estão a ser enviados.
+    <div className="flex flex-col">
+      {visiveis.map((e) => (
+        <div
+          key={e.estudioSlug}
+          className="flex items-center justify-center gap-2 bg-red-600 px-4 py-2 text-center text-xs font-bold text-white sm:text-sm"
+        >
+          <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-white" />
+          Telemóvel do SMS Gateway ({e.estudioNome}) offline há {formatarDuracao(e.desde!, agora)} — os
+          lembretes de treino não estão a ser enviados.
+        </div>
+      ))}
     </div>
   )
 }

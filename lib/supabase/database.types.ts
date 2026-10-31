@@ -470,7 +470,7 @@ export type EventoAgenda = {
 }
 
 export type EstadoSmsGateway = {
-  id: number
+  estudio_id: number
   tentativas_falhadas: number
   ultima_falha_em: string | null
   offline_desde: string | null

@@ -3,6 +3,11 @@
 // HTTP Basic com o utilizador/password definidos na própria app do
 // telemóvel. Documentação: https://docs.sms-gate.app
 //
+// Cada estúdio tem o seu próprio telemóvel/gateway (mesmo padrão de
+// GOOGLE_CALENDAR_ID_FATIMA/_LEIRIA) — por isso as credenciais vêm de
+// três variáveis por estúdio: SMS_GATEWAY_{URL,USERNAME,PASSWORD}_FATIMA
+// e o equivalente _LEIRIA.
+//
 // Se o telemóvel/instância self-hosted usar uma versão da API que
 // difira neste detalhe, este é o único sítio a ajustar.
 const CAMINHO_ENVIO = '/3rdparty/v1/message'
@@ -28,21 +33,31 @@ export function normalizarTelefoneSms(telefone: string | null): string | null {
   return null
 }
 
-function baseUrl(): string {
-  const url = process.env.SMS_GATEWAY_URL
-  if (!url) throw new Error('SMS_GATEWAY_URL não está configurada.')
-  return url.replace(/\/$/, '')
+function credenciaisDoEstudio(estudioSlug: string): {
+  url: string | undefined
+  utilizador: string | undefined
+  password: string | undefined
+} {
+  const sufixo = estudioSlug.toUpperCase()
+  return {
+    url: process.env[`SMS_GATEWAY_URL_${sufixo}`],
+    utilizador: process.env[`SMS_GATEWAY_USERNAME_${sufixo}`],
+    password: process.env[`SMS_GATEWAY_PASSWORD_${sufixo}`],
+  }
 }
 
-export async function enviarSms(telefoneDestino: string, texto: string): Promise<ResultadoEnvioSms> {
-  const url = process.env.SMS_GATEWAY_URL
-  const utilizador = process.env.SMS_GATEWAY_USERNAME
-  const password = process.env.SMS_GATEWAY_PASSWORD
+export async function enviarSms(
+  estudioSlug: string,
+  telefoneDestino: string,
+  texto: string
+): Promise<ResultadoEnvioSms> {
+  const { url, utilizador, password } = credenciaisDoEstudio(estudioSlug)
   if (!url || !utilizador || !password) {
+    const sufixo = estudioSlug.toUpperCase()
     return {
       ok: false,
       tipo: 'configuracao',
-      mensagem: 'SMS_GATEWAY_URL / SMS_GATEWAY_USERNAME / SMS_GATEWAY_PASSWORD não estão configuradas.',
+      mensagem: `SMS_GATEWAY_URL/USERNAME/PASSWORD_${sufixo} não estão todas configuradas.`,
     }
   }
 
@@ -56,7 +71,7 @@ export async function enviarSms(telefoneDestino: string, texto: string): Promise
   const temporizador = setTimeout(() => controlador.abort(), TIMEOUT_MS)
 
   try {
-    const resposta = await fetch(`${baseUrl()}${CAMINHO_ENVIO}`, {
+    const resposta = await fetch(`${url.replace(/\/$/, '')}${CAMINHO_ENVIO}`, {
       method: 'POST',
       headers: {
         Authorization: `Basic ${autenticacao}`,

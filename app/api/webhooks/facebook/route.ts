@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { criarLeadAutomatica, normalizarTelefoneLead } from '@/lib/data/leads'
 
@@ -7,7 +8,21 @@ import { criarLeadAutomatica, normalizarTelefoneLead } from '@/lib/data/leads'
 // dados completos à Graph API (a notificação em si só traz o id).
 export const dynamic = 'force-dynamic'
 
-const GRAPH_VERSAO = 'v19.0'
+const GRAPH_VERSAO = 'v26.0'
+
+// A Meta assina cada pedido POST com HMAC-SHA256 do corpo, usando o App
+// Secret — confirma que o pedido veio mesmo dela e não de outra origem a
+// imitar o endpoint. Sem META_APP_SECRET configurado, a verificação é
+// saltada (só um aviso nos logs) para não quebrar o que já estava a
+// funcionar antes desta variável existir.
+function assinaturaValida(corpoBruto: string, assinaturaRecebida: string | null, appSecret: string): boolean {
+  if (!assinaturaRecebida) return false
+  const esperado = `sha256=${createHmac('sha256', appSecret).update(corpoBruto).digest('hex')}`
+  const bufEsperado = Buffer.from(esperado)
+  const bufRecebido = Buffer.from(assinaturaRecebida)
+  if (bufEsperado.length !== bufRecebido.length) return false
+  return timingSafeEqual(bufEsperado, bufRecebido)
+}
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
@@ -120,9 +135,22 @@ async function processarLeadgen(
 }
 
 export async function POST(request: Request) {
+  const corpoBruto = await request.text()
+
+  const appSecret = process.env.META_APP_SECRET
+  if (appSecret) {
+    const assinatura = request.headers.get('x-hub-signature-256')
+    if (!assinaturaValida(corpoBruto, assinatura, appSecret)) {
+      console.error('Meta Leads: assinatura do webhook inválida — pedido rejeitado.')
+      return new Response('Invalid signature', { status: 401 })
+    }
+  } else {
+    console.error('Meta Leads: META_APP_SECRET não configurado — a saltar verificação de assinatura.')
+  }
+
   let body: CorpoMeta
   try {
-    body = await request.json()
+    body = JSON.parse(corpoBruto)
   } catch {
     return Response.json({ ok: true })
   }

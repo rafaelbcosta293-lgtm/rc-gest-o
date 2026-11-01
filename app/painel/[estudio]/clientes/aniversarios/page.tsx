@@ -5,11 +5,11 @@ import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { idadeEm, fmtDiaMes, preencherMensagem, proximoAniversario } from '@/lib/data/aniversarios'
 import { fmt, MESES } from '@/lib/data/presencas'
-import { marcarEnviado, desfazerEnvio, guardarConfigAniversario } from './actions'
+import { marcarEnviado, desfazerEnvio, guardarConfigAniversario, reenviarAniversariosPendentes } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import CopiarTexto from '@/components/CopiarTexto'
 import ConfigAniversarioForm from './ConfigAniversarioForm'
-import type { EnvioAniversario } from '@/lib/supabase/database.types'
+import type { EnvioAniversario, EstadoSmsGateway } from '@/lib/supabase/database.types'
 
 type ClienteAniversario = {
   id: string
@@ -119,10 +119,19 @@ export default async function AniversariosPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string; vista?: string; mes?: string }>
+  searchParams: Promise<{
+    error?: string
+    vista?: string
+    mes?: string
+    reenvioEnviados?: string
+    reenvioFalhas?: string
+    reenvioPendentes?: string
+    reenvioOffline?: string
+  }>
 }) {
   const { estudio: slug } = await params
-  const { error, vista, mes: mesParam } = await searchParams
+  const { error, vista, mes: mesParam, reenvioEnviados, reenvioFalhas, reenvioPendentes, reenvioOffline } =
+    await searchParams
   const agora = new Date()
   const anoAtual = agora.getFullYear()
   // Calendário é a vista principal — só passa a lista se pedirem
@@ -142,6 +151,7 @@ export default async function AniversariosPage({
     { data: clientesData, error: erroClientes },
     { data: configData },
     { data: enviosData, error: erroEnvios },
+    { data: estadoGatewayData, error: erroEstadoGateway },
   ] = await Promise.all([
     supabase
       .from('clientes')
@@ -153,11 +163,14 @@ export default async function AniversariosPage({
       .from('envios_aniversario')
       .select('*, enviado:perfis!enviado_por(nome)')
       .eq('ano', anoAtual),
+    supabase.from('estado_sms_gateway').select('*').eq('estudio_id', estudio.id).single(),
   ])
 
-  if (erroClientes || erroEnvios) {
-    throw new Error((erroClientes ?? erroEnvios)!.message)
+  if (erroClientes || erroEnvios || erroEstadoGateway) {
+    throw new Error((erroClientes ?? erroEnvios ?? erroEstadoGateway)!.message)
   }
+  const estadoGateway = estadoGatewayData as EstadoSmsGateway
+  const emCrise = estadoGateway.tentativas_falhadas >= 3 && estadoGateway.offline_desde !== null
 
   const clientes = (clientesData ?? []) as ClienteAniversario[]
   const msgAtiva = configData?.find((c) => c.chave === 'msg_aniversario')?.valor ?? ''
@@ -206,8 +219,8 @@ export default async function AniversariosPage({
         Aniversários
       </h1>
       <p className="mt-1 text-sm text-muted">
-        {estudio.nome} · a mensagem já vem pronta a copiar — envia por onde costumas falar com
-        cada pessoa e marca como enviado.
+        {estudio.nome} · a mensagem é enviada automaticamente por SMS às 10:00 do próprio dia. A
+        mensagem também aparece pronta a copiar, para enviares à mão sempre que quiseres.
       </p>
 
       <div className="mt-4 flex gap-1.5">
@@ -332,7 +345,49 @@ export default async function AniversariosPage({
       )}
 
       {ehGestao && (
-        <details className="mt-10 rounded-xl border border-border-subtle">
+        <div
+          className={`mt-10 flex flex-col gap-2 rounded-xl border p-4 text-sm ${
+            emCrise
+              ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200'
+              : 'border-border-subtle bg-surface'
+          }`}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Envio automático por SMS
+          </p>
+          {emCrise ? (
+            <p>
+              {estadoGateway.tentativas_falhadas} tentativa{estadoGateway.tentativas_falhadas === 1 ? '' : 's'}{' '}
+              falhada{estadoGateway.tentativas_falhadas === 1 ? '' : 's'} a ligar ao telemóvel
+              {estadoGateway.ultima_falha_em &&
+                ` · última em ${new Date(estadoGateway.ultima_falha_em).toLocaleString('pt-PT', {
+                  timeZone: 'Europe/Lisbon',
+                })}`}
+            </p>
+          ) : (
+            <p className="text-muted">Sem falhas de ligação registadas.</p>
+          )}
+          {reenvioEnviados !== undefined && (
+            <p className="text-xs">
+              Último reenvio manual: {reenvioEnviados} enviado(s), {reenvioFalhas} rejeitado(s) pelo
+              gateway, {reenvioPendentes} ainda pendente(s)
+              {reenvioOffline === 'true' && ' · telemóvel continua offline'}.
+            </p>
+          )}
+          <form action={reenviarAniversariosPendentes} className="mt-1">
+            <input type="hidden" name="estudio_slug" value={slug} />
+            <SubmitButton
+              pendingText="A reenviar…"
+              className="self-start rounded-full border border-border-strong px-4 py-1.5 text-xs font-bold hover:bg-brand/[.08]"
+            >
+              Tentar Reenvio de Parabéns Pendentes
+            </SubmitButton>
+          </form>
+        </div>
+      )}
+
+      {ehGestao && (
+        <details className="mt-4 rounded-xl border border-border-subtle">
           <summary className="flex cursor-pointer items-center gap-1.5 p-4 text-xs font-semibold uppercase tracking-wider text-[#5B3FA0]">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#5B3FA0]" />
             Editar mensagens

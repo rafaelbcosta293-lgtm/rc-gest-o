@@ -17,6 +17,7 @@ const PUBLIC_API_PATHS = [
   '/api/cron/kpi-snapshot',
   '/api/cron/estado-clientes',
   '/api/cron/lembretes-sms',
+  '/api/cron/aniversarios-sms',
   '/api/leads/google-forms',
 ]
 

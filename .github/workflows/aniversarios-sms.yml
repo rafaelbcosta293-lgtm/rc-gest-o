@@ -1,0 +1,41 @@
+name: Parabéns de aniversário por SMS
+
+# Por volta das 10:00 em Lisboa (10 minutos depois do cron de
+# lembretes de treino, de propósito — os dois partilham o estado do
+# gateway por estúdio, e assim não correm ao mesmo tempo). Duas
+# entradas por causa da hora de verão/inverno; a rota é idempotente
+# (envios_aniversario é único por cliente+ano), por isso disparar a
+# mais nunca duplica SMS.
+#
+# Mesmo mecanismo de retries do cron de lembretes: até 3 tentativas,
+# 1 minuto de intervalo, se o telemóvel estiver offline. O alerta (faixa
+# vermelha + Centro de alertas) é o mesmo dos lembretes de treino — ver
+# lib/data/smsGateway.ts.
+on:
+  schedule:
+    - cron: '10 10 * * *' # hora de inverno (UTC+0)
+    - cron: '10 9 * * *' # hora de verão (UTC+1)
+  workflow_dispatch: {}
+
+jobs:
+  enviar-parabens:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar parabéns (com retries se o telemóvel estiver offline)
+        run: |
+          for tentativa in 1 2 3; do
+            resposta=$(curl -sS -L -X GET \
+              "${{ secrets.APP_URL }}/api/cron/aniversarios-sms" \
+              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+            echo "Tentativa $tentativa: $resposta"
+
+            offline=$(echo "$resposta" | jq -r '.gatewayOffline // false')
+            if [ "$offline" != "true" ]; then
+              exit 0
+            fi
+
+            if [ "$tentativa" -lt 3 ]; then
+              echo "Telemóvel offline — a esperar 1 minuto antes da próxima tentativa…"
+              sleep 60
+            fi
+          done

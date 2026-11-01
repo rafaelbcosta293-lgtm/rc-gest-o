@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { processarAniversariosSmsDoEstudio } from '@/lib/data/aniversariosSms'
 
 export async function marcarEnviado(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
@@ -38,6 +40,22 @@ export async function desfazerEnvio(formData: FormData) {
 
   revalidatePath(`/painel/${estudioSlug}/clientes/aniversarios`)
   redirect(`/painel/${estudioSlug}/clientes/aniversarios`)
+}
+
+// "Tentar Reenvio de Parabéns Pendentes" — mesma lógica do cron diário,
+// chamada manualmente para este estúdio (ex.: assim que o telemóvel
+// volta a ficar online).
+export async function reenviarAniversariosPendentes(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const admin = createAdminClient()
+  const resultado = await processarAniversariosSmsDoEstudio(admin, estudioSlug)
+
+  revalidatePath(`/painel/${estudioSlug}/clientes/aniversarios`)
+  redirect(
+    `/painel/${estudioSlug}/clientes/aniversarios?reenvioEnviados=${resultado.enviados}` +
+      `&reenvioFalhas=${resultado.falhasPorNumero}&reenvioPendentes=${resultado.pendentesRestantes}` +
+      `&reenvioOffline=${resultado.gatewayOffline}`
+  )
 }
 
 export async function guardarConfigAniversario(formData: FormData) {

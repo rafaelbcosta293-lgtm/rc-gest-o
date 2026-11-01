@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { obterEstadosBanner } from '@/lib/data/lembretesSms'
+import { obterEstadosBanner } from '@/lib/data/smsGateway'
 
 // Endpoint autenticado (não está em PUBLIC_API_PATHS — exige sessão,
 // como qualquer página de /painel) usado pela faixa vermelha para se

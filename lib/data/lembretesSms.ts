@@ -1,14 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { somarDias } from './horarios'
 import { getEstudios } from './estudios'
+import { obterEstadoGateway, registarFalhaGateway, registarSucessoGateway } from './smsGateway'
 import { enviarSms } from '@/lib/sms/gateway'
-import type { Estudio, EstadoSmsGateway } from '@/lib/supabase/database.types'
-
-// A partir de quantas falhas consecutivas se considera "offline" a
-// sério (não só um soluço passageiro de rede) — é o mesmo limiar que
-// decide quando a faixa vermelha e o alerta em Administração aparecem.
-const LIMIAR_CRISE = 3
-const REGRA_GATEWAY_OFFLINE = 'sms_gateway_offline'
+import type { Estudio } from '@/lib/supabase/database.types'
+import type { ResultadoEstudio } from './smsGateway'
 
 export const TEMPLATE_LEMBRETE_OMISSAO =
   'Olá {nome}! Lembramos que o teu treino é {dia_semana}, dia {dia_mes}, às {hora}. Contamos contigo! Com os melhores cumprimentos, Equipa RC Private Fitness Studio'
@@ -64,80 +60,11 @@ type EventoComCliente = {
   cliente: { nome: string; telefone: string | null } | null
 }
 
-export type ResultadoEstudio = {
-  estudioSlug: string
-  estudioNome: string
-  enviados: number
-  falhasPorNumero: number
-  pendentesRestantes: number
-  gatewayOffline: boolean
-}
-
 export type ResultadoProcessamentoLembretes = {
   porEstudio: ResultadoEstudio[]
   // true se o gateway de ALGUM estúdio ficou offline nesta execução —
   // é o que o workflow usa para decidir se vale a pena tentar de novo.
   gatewayOffline: boolean
-}
-
-// Estado que a faixa vermelha e o painel precisam de saber, por
-// estúdio — "offline" só fica verdadeiro a partir do limiar de crise,
-// não ao primeiro soluço.
-export type EstadoBannerGatewayEstudio = {
-  estudioSlug: string
-  estudioNome: string
-  offline: boolean
-  desde: string | null
-}
-
-export function emCrise(estado: Pick<EstadoSmsGateway, 'tentativas_falhadas' | 'offline_desde'>): boolean {
-  return estado.tentativas_falhadas >= LIMIAR_CRISE && estado.offline_desde !== null
-}
-
-export async function obterEstadosBanner(supabase: SupabaseClient): Promise<EstadoBannerGatewayEstudio[]> {
-  const [estudios, { data: estadosData }] = await Promise.all([
-    getEstudios(supabase),
-    supabase.from('estado_sms_gateway').select('estudio_id, tentativas_falhadas, offline_desde'),
-  ])
-  const porEstudioId = new Map((estadosData ?? []).map((e) => [e.estudio_id, e]))
-
-  return estudios.map((estudio) => {
-    const linha = porEstudioId.get(estudio.id)
-    const offline = !!linha && emCrise(linha)
-    return {
-      estudioSlug: estudio.slug,
-      estudioNome: estudio.nome,
-      offline,
-      desde: offline ? (linha!.offline_desde as string) : null,
-    }
-  })
-}
-
-// Cria um alerta "Crítico" (visível em Centro de alertas, só para
-// gestão) para este estúdio. Idempotente: só é chamada uma vez por
-// "crise" (ver alerta_registado_em em processarLembretesDoEstudio).
-async function registarAlertaGatewayOffline(admin: SupabaseClient, estudio: Pick<Estudio, 'id' | 'nome'>) {
-  await admin.from('alerts').insert({
-    estudio_id: estudio.id,
-    regra_chave: REGRA_GATEWAY_OFFLINE,
-    severidade: 'Crítico' as const,
-    titulo: `SMS Gateway (${estudio.nome}) offline — os lembretes de treino não estão a ser enviados`,
-    descricao:
-      `O telemóvel que envia os lembretes de treino por SMS em ${estudio.nome} está inacessível há 3 ` +
-      'tentativas consecutivas. Verifica se está ligado, com bateria e com rede, e depois usa ' +
-      '"Tentar Reenvio de Lembretes Pendentes" em Administração → Lembretes SMS.',
-  })
-}
-
-// Resolve o alerta de gateway offline ainda aberto deste estúdio —
-// espelha a faixa a desaparecer sozinha quando recupera.
-async function resolverAlertaGatewayOffline(admin: SupabaseClient, estudioId: number) {
-  await admin
-    .from('alerts')
-    .update({ estado: 'Resolvido', resolvido_em: new Date().toISOString(), atualizado_em: new Date().toISOString() })
-    .eq('regra_chave', REGRA_GATEWAY_OFFLINE)
-    .eq('estudio_id', estudioId)
-    .neq('estado', 'Resolvido')
 }
 
 async function obterTemplate(admin: SupabaseClient): Promise<string> {
@@ -147,7 +74,8 @@ async function obterTemplate(admin: SupabaseClient): Promise<string> {
 }
 
 // Processa um único estúdio — cada um tem o seu próprio telemóvel/
-// gateway (ver lib/sms/gateway.ts) e o seu próprio estado_sms_gateway,
+// gateway (ver lib/sms/gateway.ts) e o seu próprio estado_sms_gateway
+// (partilhado com os parabéns de aniversário — ver lib/data/smsGateway.ts),
 // por isso uma falha em Fátima nunca afeta Leiria (e vice-versa). O
 // telemóvel estar offline pára o processamento desse estúdio (não vale
 // a pena insistir cliente a cliente contra um gateway em baixo), mas
@@ -158,7 +86,7 @@ async function processarLembretesDoEstudio(
   amanha: string,
   template: string
 ): Promise<ResultadoEstudio> {
-  const [{ data: eventosData, error: erroEventos }, { data: estadoData, error: erroEstado }] = await Promise.all([
+  const [{ data: eventosData, error: erroEventos }, estadoInicial] = await Promise.all([
     admin
       .from('agenda_eventos')
       .select('id, data, hora_inicio, cliente:clientes(nome, telefone)')
@@ -168,13 +96,12 @@ async function processarLembretesDoEstudio(
       .eq('data', amanha)
       .eq('lembrete_enviado', false)
       .not('cliente_id', 'is', null),
-    admin.from('estado_sms_gateway').select('*').eq('estudio_id', estudio.id).single(),
+    obterEstadoGateway(admin, estudio.id),
   ])
 
   if (erroEventos) throw new Error(erroEventos.message)
-  if (erroEstado) throw new Error(erroEstado.message)
 
-  let estado = estadoData as EstadoSmsGateway
+  let estado = estadoInicial
   const pendentes = ((eventosData ?? []) as unknown as EventoComCliente[]).filter((e) => e.cliente)
 
   let enviados = 0
@@ -195,57 +122,13 @@ async function processarLembretesDoEstudio(
         .update({ lembrete_enviado: true, lembrete_enviado_em: new Date().toISOString() })
         .eq('id', evento.id)
       enviados++
-
-      if (estado.tentativas_falhadas > 0) {
-        if (estado.alerta_registado_em) {
-          await resolverAlertaGatewayOffline(admin, estudio.id)
-        }
-        const { data: atualizado } = await admin
-          .from('estado_sms_gateway')
-          .update({
-            tentativas_falhadas: 0,
-            ultima_falha_em: null,
-            offline_desde: null,
-            alerta_registado_em: null,
-            atualizado_em: new Date().toISOString(),
-          })
-          .eq('estudio_id', estudio.id)
-          .select()
-          .single()
-        if (atualizado) estado = atualizado as EstadoSmsGateway
-      }
+      estado = await registarSucessoGateway(admin, estudio, estado)
       continue
     }
 
     if (resultado.tipo === 'offline' || resultado.tipo === 'configuracao') {
       gatewayOffline = true
-      const novasTentativas = estado.tentativas_falhadas + 1
-      const agoraISO = new Date().toISOString()
-
-      const { data: atualizado } = await admin
-        .from('estado_sms_gateway')
-        .update({
-          tentativas_falhadas: novasTentativas,
-          ultima_falha_em: agoraISO,
-          offline_desde: estado.offline_desde ?? agoraISO,
-          atualizado_em: agoraISO,
-        })
-        .eq('estudio_id', estudio.id)
-        .select()
-        .single()
-      if (atualizado) estado = atualizado as EstadoSmsGateway
-
-      if (novasTentativas >= LIMIAR_CRISE && !estado.alerta_registado_em) {
-        await registarAlertaGatewayOffline(admin, estudio)
-        const { data: atualizadoAlerta } = await admin
-          .from('estado_sms_gateway')
-          .update({ alerta_registado_em: new Date().toISOString() })
-          .eq('estudio_id', estudio.id)
-          .select()
-          .single()
-        if (atualizadoAlerta) estado = atualizadoAlerta as EstadoSmsGateway
-      }
-
+      estado = await registarFalhaGateway(admin, estudio, estado)
       console.error(`Lembretes SMS (${estudio.slug}): gateway offline (${resultado.mensagem})`)
       break
     }
@@ -266,7 +149,7 @@ async function processarLembretesDoEstudio(
 
 // Partilhada pelo cron diário (processa todos os estúdios) e pelo
 // botão "Tentar Reenvio de Lembretes Pendentes" no painel (um estúdio
-// de cada vez — ver processarLembretesDoEstudioPorSlug).
+// de cada vez — ver processarLembretesSmsDoEstudio).
 export async function processarLembretesSms(admin: SupabaseClient): Promise<ResultadoProcessamentoLembretes> {
   const amanha = dataDeAmanhaEmLisboa()
   const [estudios, template] = await Promise.all([getEstudios(admin), obterTemplate(admin)])

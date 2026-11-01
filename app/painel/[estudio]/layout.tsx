@@ -6,7 +6,7 @@ import { MODULOS } from '@/lib/data/constantes'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
-import { obterEstadosBanner } from '@/lib/data/lembretesSms'
+import { obterEstadosBanner } from '@/lib/data/smsGateway'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import { NavLinkTopBar, NavLinkPhone } from './NavLink'
 

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { podeAcederAdmin } from '@/lib/data/acessos'
-import { obterEstadosBanner } from '@/lib/data/lembretesSms'
+import { obterEstadosBanner } from '@/lib/data/smsGateway'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import AdminNav from './AdminNav'
 

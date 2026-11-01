@@ -16,6 +16,18 @@ const CORES_TEMPERATURA: Record<TemperaturaLead, { bg: string; tx: string }> = {
   Quente: PALETA.vermelho,
 }
 
+// Badge da origem — só as 3 origens automáticas (webhooks) têm cor
+// própria; origens manuais ("Instagram", "indicação", texto livre tal
+// como sempre) ficam todas na mesma cor neutra.
+const CORES_ORIGEM: Record<string, { bg: string; tx: string }> = {
+  'Meta Ads': PALETA.azul,
+  'Google Forms': PALETA.verde,
+  Website: PALETA.ambar,
+}
+function corOrigem(origem: string) {
+  return CORES_ORIGEM[origem] ?? PALETA.neutro
+}
+
 export type LeadResumo = Pick<
   Lead,
   | 'id'
@@ -220,6 +232,14 @@ export default function LeadsKanban({
                         {l.responsavel && <span>· {l.responsavel.nome}</span>}
                         {l.valor_potencial != null && <span>· €{l.valor_potencial}</span>}
                       </div>
+                      {l.origem && (
+                        <span
+                          className="self-start rounded-full px-2 py-0.5 text-[11px] font-medium"
+                          style={{ background: corOrigem(l.origem).bg, color: corOrigem(l.origem).tx }}
+                        >
+                          {l.origem}
+                        </span>
+                      )}
                       {l.proximo_contacto && corUrgencia && (
                         <span
                           className="self-start rounded-full px-2 py-0.5 text-[11px] font-medium"

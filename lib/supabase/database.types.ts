@@ -177,6 +177,7 @@ export type Lead = {
   motivo_perda: string | null
   cliente_id: string | null
   nota: string | null
+  external_id: string | null
   criado_em: string
 }
 

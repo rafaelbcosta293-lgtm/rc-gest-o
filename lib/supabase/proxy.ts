@@ -6,9 +6,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 const PUBLIC_PATHS = ['/', '/login', '/registo', '/recuperar-password']
 
 // Endpoints chamados por serviços externos, sem sessão de utilizador
-// nenhuma (cron de retenção, webhook do Google Forms) — cada um valida
-// o seu próprio segredo lá dentro (CRON_SECRET / LEADS_WEBHOOK_SECRET),
-// por isso não ficam à espera de login.
+// nenhuma (cron de retenção, webhooks de leads) — cada um valida o seu
+// próprio segredo lá dentro (CRON_SECRET / LEADS_WEBHOOK_SECRET /
+// META_VERIFY_TOKEN), por isso não ficam à espera de login.
 const PUBLIC_API_PATHS = [
   '/api/cron/retencao',
   '/api/cron/presencas-calendario',
@@ -19,6 +19,8 @@ const PUBLIC_API_PATHS = [
   '/api/cron/lembretes-sms',
   '/api/cron/aniversarios-sms',
   '/api/leads/google-forms',
+  '/api/webhooks/leads',
+  '/api/webhooks/facebook',
 ]
 
 function isPublicPath(pathname: string) {

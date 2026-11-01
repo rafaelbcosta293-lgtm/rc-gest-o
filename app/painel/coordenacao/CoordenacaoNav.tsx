@@ -29,7 +29,7 @@ const PASTAS = [
 
 export default function CoordenacaoNav() {
   return (
-    <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+    <nav className="flex min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto">
       {PASTAS.map((p) => (
         <PillNavLink key={p.href} href={p.href} label={p.label} icone={p.icone} exato={p.exato} destaque />
       ))}

@@ -28,7 +28,7 @@ export function NavLinkTopBar({ href, id, nome }: { href: string; id: string; no
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-foreground transition-colors ${
+      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium tracking-tight text-foreground transition-colors ${
         ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.04]'
       }`}
       style={{
@@ -42,7 +42,7 @@ export function NavLinkTopBar({ href, id, nome }: { href: string; id: string; no
         color: ativo ? PALETA[cor].tx : undefined,
       }}
     >
-      <Icone className="h-4 w-4" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
+      <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
       {nome}
     </Link>
   )
@@ -105,7 +105,7 @@ export function NavLinkClientesComSubmenu({
       <Link
         ref={pillRef}
         href={clientesHref}
-        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-foreground transition-colors ${
+        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium tracking-tight text-foreground transition-colors ${
           ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.04]'
         }`}
         style={{
@@ -113,7 +113,7 @@ export function NavLinkClientesComSubmenu({
           color: ativo ? PALETA[cor].tx : undefined,
         }}
       >
-        <Icone className="h-4 w-4" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
+        <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
         Clientes
         <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />
       </Link>

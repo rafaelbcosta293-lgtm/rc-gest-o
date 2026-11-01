@@ -33,8 +33,8 @@ export default function PillNavLink({
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center whitespace-nowrap rounded-full transition-colors ${
-        destaque ? 'gap-2 border-2 px-4 py-2 text-[13px] font-medium' : 'gap-1.5 px-3 py-1.5 text-sm font-medium'
+      className={`flex shrink-0 items-center whitespace-nowrap rounded-full tracking-tight transition-colors ${
+        destaque ? 'gap-1.5 border-2 px-3.5 py-1.5 text-[12.5px] font-medium' : 'gap-1.5 px-3 py-1.5 text-[13px] font-medium'
       } ${
         ativo
           ? destaque
@@ -45,7 +45,7 @@ export default function PillNavLink({
             : 'text-foreground hover:bg-brand/[.07]'
       }`}
     >
-      <Icone className={destaque ? 'h-[18px] w-[18px]' : 'h-4 w-4'} strokeWidth={2.25} />
+      <Icone className={destaque ? 'h-4 w-4' : 'h-3.5 w-3.5'} strokeWidth={2.25} />
       {label}
     </Link>
   )

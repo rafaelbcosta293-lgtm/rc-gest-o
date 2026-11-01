@@ -75,7 +75,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
-          <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+          <nav className="flex min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto">
             {MODULOS.filter((m) => !SUBPASTAS_CLIENTES.has(m.id)).map((m) =>
               m.id === 'clientes' ? (
                 <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />
@@ -85,9 +85,9 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
                 <span
                   key={m.id}
                   title={tituloBloqueado(m)}
-                  className="flex shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-border-subtle px-3.5 py-2 text-sm font-medium text-muted opacity-40"
+                  className="flex shrink-0 cursor-not-allowed items-center gap-1.5 whitespace-nowrap rounded-full border border-border-subtle px-3 py-1.5 text-[13px] font-medium tracking-tight text-muted opacity-40"
                 >
-                  <m.icone className="h-4 w-4" strokeWidth={2.5} />
+                  <m.icone className="h-3.5 w-3.5" strokeWidth={2.5} />
                   {m.nome}
                 </span>
               )

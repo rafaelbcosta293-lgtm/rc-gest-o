@@ -2,14 +2,23 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getEstudios, getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ESTADOS_LEAD, TIPOS_CONTACTO } from '@/lib/data/constantes'
 import { fmt } from '@/lib/data/presencas'
-import { adicionarContacto, agendarExperimental, apagarLead, atualizarLead, converterEmCliente } from '../actions'
+import {
+  adicionarContacto,
+  agendarExperimental,
+  apagarLead,
+  atualizarLead,
+  converterEmCliente,
+  moverLeadEstudio,
+} from '../actions'
 import LeadForm from '../LeadForm'
 import ContactoRapido from '../ContactoRapido'
 import SubmitButton from '@/components/SubmitButton'
 import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 import type { Activity, LeadContacto } from '@/lib/supabase/database.types'
 
 export default async function LeadPage({
@@ -28,6 +37,8 @@ export default async function LeadPage({
     { data: lead },
     { data: contactosData, error: erroContactos },
     { data: atividadesData, error: erroAtividades },
+    todosEstudios,
+    sessao,
   ] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
     supabase.from('leads').select('*').eq('id', leadId).maybeSingle(),
@@ -42,6 +53,8 @@ export default async function LeadPage({
       .select('*')
       .eq('lead_id', leadId)
       .order('criado_em', { ascending: false }),
+    getEstudios(supabase),
+    getSessaoAtual(),
   ])
 
   if (!estudio || !lead || lead.estudio_id !== estudio.id) {
@@ -55,6 +68,8 @@ export default async function LeadPage({
     throw new Error(erroAtividades.message)
   }
 
+  const { ehGestao } = papeisDaSessao(sessao)
+  const outrosEstudios = todosEstudios.filter((e) => e.slug !== slug)
   const pts = await getEquipaDoEstudio(supabase, estudio.id)
 
   const contactos = (contactosData ?? []) as unknown as (LeadContacto & {
@@ -304,6 +319,37 @@ export default async function LeadPage({
         </div>
       )}
       <div className="mt-3 flex flex-col gap-2">{timeline.map((item) => item.node)}</div>
+
+      {ehGestao && !lead.cliente_id && outrosEstudios.length > 0 && (
+        <div className="mt-8 border-t border-border-subtle pt-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Corrigir estúdio
+          </h2>
+          <p className="mt-1 text-xs text-muted">
+            Útil para leads da Meta Ads que caem sempre no mesmo estúdio por omissão — move esta
+            lead para o estúdio certo sem perder o estado no funil nem o histórico.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {outrosEstudios.map((e) => (
+              <ConfirmarAcao
+                key={e.id}
+                action={moverLeadEstudio}
+                confirmacao={`Mover "${lead.nome}" para ${e.nome}? Mantém o estado atual ("${lead.estado}") e o histórico — só muda o estúdio.`}
+              >
+                <input type="hidden" name="estudio_slug_atual" value={slug} />
+                <input type="hidden" name="estudio_slug_destino" value={e.slug} />
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <SubmitButton
+                  pendingText="A mover…"
+                  className="rounded-full border border-border-strong px-4 py-2 text-sm font-medium transition-colors hover:bg-foreground/[.08]"
+                >
+                  Mover para {e.nome}
+                </SubmitButton>
+              </ConfirmarAcao>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 border-t border-border-subtle pt-6">
         <ApagarComConfirmacao

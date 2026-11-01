@@ -244,6 +244,45 @@ export async function adicionarContacto(formData: FormData) {
   redirect(`/painel/${estudioSlug}/leads/${leadId}`)
 }
 
+// Corrige a atribuição de estúdio de uma lead (ex.: leads da Meta Ads,
+// que por agora caem sempre em "fatima" por omissão — ver
+// META_LEADS_ESTUDIO_PADRAO — mas podem ser de Leiria). Só muda
+// estudio_id: o estado no funil, o histórico e os contactos já
+// registados mantêm-se tal como estavam, só vistos a partir do outro
+// estúdio a partir de agora.
+export async function moverLeadEstudio(formData: FormData) {
+  const estudioSlugAtual = formData.get('estudio_slug_atual') as string
+  const estudioSlugDestino = formData.get('estudio_slug_destino') as string
+  const leadId = formData.get('lead_id') as string
+  const supabase = await createClient()
+
+  const { data: destino, error: erroDestino } = await supabase
+    .from('estudios')
+    .select('id')
+    .eq('slug', estudioSlugDestino)
+    .eq('ativo', true)
+    .maybeSingle()
+
+  if (erroDestino || !destino) {
+    redirect(
+      `/painel/${estudioSlugAtual}/leads/${leadId}?error=${encodeURIComponent('Estúdio de destino não encontrado.')}`
+    )
+  }
+
+  const { error } = await supabase
+    .from('leads')
+    .update({ estudio_id: destino.id })
+    .eq('id', leadId)
+
+  if (error) {
+    redirect(`/painel/${estudioSlugAtual}/leads/${leadId}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlugAtual}/leads`)
+  revalidatePath(`/painel/${estudioSlugDestino}/leads`)
+  redirect(`/painel/${estudioSlugDestino}/leads/${leadId}`)
+}
+
 export async function apagarLead(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string

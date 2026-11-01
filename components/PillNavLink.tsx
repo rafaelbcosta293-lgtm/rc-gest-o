@@ -41,8 +41,8 @@ export default function PillNavLink({
             ? 'shadow-glow-brand border-brand bg-brand/20 text-foreground'
             : 'shadow-glow-brand bg-brand/15 text-foreground'
           : destaque
-            ? 'border-border-strong text-foreground/85 hover:border-brand/60 hover:bg-brand/[.1] hover:text-foreground'
-            : 'text-foreground/70 hover:bg-brand/[.07] hover:text-foreground'
+            ? 'border-border-strong text-foreground hover:border-brand/60 hover:bg-brand/[.1]'
+            : 'text-foreground hover:bg-brand/[.07]'
       }`}
     >
       <Icone className={destaque ? 'h-[18px] w-[18px]' : 'h-4 w-4'} strokeWidth={2.5} />

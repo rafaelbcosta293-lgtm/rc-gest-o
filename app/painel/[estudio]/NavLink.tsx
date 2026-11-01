@@ -25,19 +25,23 @@ export function NavLinkTopBar({ href, id, nome }: { href: string; id: string; no
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-bold tracking-wide transition-all ${
+      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-bold tracking-wide text-foreground transition-all ${
         ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.04]'
       }`}
       style={{
         background: ativo ? PALETA[cor].bg : undefined,
-        color: ativo ? PALETA[cor].tx : 'var(--muted)',
+        // Inativo: nome sempre a preto (var(--foreground), da className),
+        // bem legível em qualquer pasta — só o ícone fica na cor própria
+        // do módulo, para a barra continuar colorida e fácil de
+        // reconhecer de relance, mesmo sem nada selecionado.
+        color: ativo ? PALETA[cor].tx : undefined,
         // O brilho acompanha a cor do próprio módulo (em vez de um tom
         // único para todos) — cada separador ativo "ilumina-se" com a
         // sua própria cor, como os indicadores de um painel técnico.
         boxShadow: ativo ? `var(--shadow-pop-value), 0 0 0 1px ${PALETA[cor].tx}40, 0 6px 18px -4px ${PALETA[cor].tx}70` : undefined,
       }}
     >
-      <Icone className="h-4 w-4" strokeWidth={2.5} />
+      <Icone className="h-4 w-4" strokeWidth={2.5} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
       {nome}
     </Link>
   )

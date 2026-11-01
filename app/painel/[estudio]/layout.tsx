@@ -8,7 +8,12 @@ import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
 import { obterEstadosBanner } from '@/lib/data/smsGateway'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
-import { NavLinkTopBar, NavLinkPhone } from './NavLink'
+import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPhone } from './NavLink'
+
+// Na barra do computador/tablet, Treinos e Avaliações deixam de ter
+// pílula própria — passam a aparecer só dentro do submenu de Clientes
+// (ver NavLinkClientesComSubmenu). No telemóvel continuam como estavam.
+const SUBPASTAS_CLIENTES = new Set(['treinos', 'avaliacoes'])
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
@@ -71,8 +76,10 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
           <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
-            {MODULOS.map((m) =>
-              podeAceder(m) ? (
+            {MODULOS.filter((m) => !SUBPASTAS_CLIENTES.has(m.id)).map((m) =>
+              m.id === 'clientes' ? (
+                <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />
+              ) : podeAceder(m) ? (
                 <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
               ) : (
                 <span

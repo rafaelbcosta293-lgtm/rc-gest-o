@@ -25,6 +25,7 @@ function camposComuns(formData: FormData) {
     evento: campoOuNull(formData, 'evento'),
     evento_data: campoOuNull(formData, 'evento_data'),
     nascimento: campoOuNull(formData, 'nascimento'),
+    genero: campoOuNull(formData, 'genero'),
     notas: campoOuNull(formData, 'notas'),
   }
 }

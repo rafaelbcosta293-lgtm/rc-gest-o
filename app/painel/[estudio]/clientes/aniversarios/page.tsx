@@ -16,6 +16,7 @@ type ClienteAniversario = {
   nome: string
   nascimento: string
   estado: string
+  genero: 'Masculino' | 'Feminino' | null
 }
 
 const DIAS_SEMANA_CURTOS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
@@ -155,7 +156,7 @@ export default async function AniversariosPage({
   ] = await Promise.all([
     supabase
       .from('clientes')
-      .select('id, nome, nascimento, estado')
+      .select('id, nome, nascimento, estado, genero')
       .eq('estudio_id', estudio.id)
       .not('nascimento', 'is', null),
     supabase.from('config').select('*').in('chave', ['msg_aniversario', 'msg_aniversario_ex']),
@@ -190,7 +191,7 @@ export default async function AniversariosPage({
         dataProximo,
         dias,
         idade,
-        mensagem: preencherMensagem(template, c.nome),
+        mensagem: preencherMensagem(template, c.nome, c.genero),
         envio: enviosPorCliente.get(c.id) ?? null,
       }
     })
@@ -395,7 +396,10 @@ export default async function AniversariosPage({
           <div className="flex flex-col gap-4 border-t border-border-subtle p-4">
             <p className="text-xs text-zinc-500">
               Usa <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{'{nome}'}</code> onde
-              quiseres que apareça o nome da pessoa.
+              quiseres que apareça o nome da pessoa, e{' '}
+              <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{'{estimado}'}</code> onde
+              quiseres &ldquo;estimado&rdquo;/&ldquo;estimada&rdquo; (ajusta-se ao género da ficha;
+              sem género definido, usa &ldquo;estimado&rdquo;).
             </p>
             <ConfigAniversarioForm
               slug={slug}

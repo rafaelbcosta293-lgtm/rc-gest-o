@@ -18,6 +18,7 @@ type ClienteComAniversarioHoje = {
   nome: string
   telefone: string | null
   estado: string
+  genero: 'Masculino' | 'Feminino' | null
 }
 
 async function obterTemplates(admin: SupabaseClient): Promise<{ ativo: string; exCliente: string }> {
@@ -44,7 +45,7 @@ async function processarAniversariosDoEstudio(
   const [{ data: clientesData, error: erroClientes }, estadoInicial] = await Promise.all([
     admin
       .from('clientes')
-      .select('id, nome, telefone, estado, nascimento')
+      .select('id, nome, telefone, estado, genero, nascimento')
       .eq('estudio_id', estudio.id)
       .not('nascimento', 'is', null),
     obterEstadoGateway(admin, estudio.id),
@@ -91,7 +92,7 @@ async function processarAniversariosDoEstudio(
       continue
     }
 
-    const texto = preencherMensagem(template, cliente.nome)
+    const texto = preencherMensagem(template, cliente.nome, cliente.genero)
     const resultado = await enviarSms(estudio.slug, cliente.telefone ?? '', texto)
 
     if (resultado.ok) {

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
 import EditarClienteModal, { type ClienteEdicao } from './EditarClienteModal'
-import type { EstadoCliente } from '@/lib/supabase/database.types'
+import type { EstadoCliente, GeneroCliente } from '@/lib/supabase/database.types'
 
 export type LinhaCliente = {
   id: string
@@ -16,6 +16,7 @@ export type LinhaCliente = {
   nascimento: string | null
   frequenciaSemanal: number | null
   estado: EstadoCliente
+  genero: GeneroCliente | null
   estadoLabel: string
   estadoBg: string
   estadoTx: string
@@ -87,6 +88,7 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
                       nascimento: l.nascimento,
                       frequenciaSemanal: l.frequenciaSemanal,
                       estado: l.estado,
+                      genero: l.genero,
                     })
                   }}
                 >

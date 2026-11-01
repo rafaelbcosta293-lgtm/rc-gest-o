@@ -22,6 +22,7 @@ export type Perfil = {
 }
 
 export type EstadoCliente = 'Ativo' | 'Suspenso' | 'Ex-cliente'
+export type GeneroCliente = 'Masculino' | 'Feminino'
 
 export type Cliente = {
   id: string
@@ -37,6 +38,7 @@ export type Cliente = {
   objetivo: string | null
   frequencia_semanal: number | null
   pt_principal_id: string | null
+  genero: GeneroCliente | null
   estado: EstadoCliente
   estado_automatico: boolean
   alerta: string

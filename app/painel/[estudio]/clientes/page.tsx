@@ -9,7 +9,7 @@ import { proximoAniversario, idadeEm } from '@/lib/data/aniversarios'
 import { treinosPrevistos, intervaloMes, fmt } from '@/lib/data/presencas'
 import ListaClientes, { type LinhaCliente } from './ListaClientes'
 import ExportarCsvButton from '@/components/ExportarCsvButton'
-import type { EstadoCliente } from '@/lib/supabase/database.types'
+import type { EstadoCliente, GeneroCliente } from '@/lib/supabase/database.types'
 
 type ClienteLista = {
   id: string
@@ -18,6 +18,7 @@ type ClienteLista = {
   telefone: string | null
   email: string | null
   estado: EstadoCliente
+  genero: GeneroCliente | null
   alerta: string
   nascimento: string | null
   inicio_contrato: string | null
@@ -106,7 +107,7 @@ export default async function ClientesPage({
   let query = supabase
     .from('clientes')
     .select(
-      'id, numero_socio, nome, telefone, email, estado, alerta, nascimento, inicio_contrato, saiu_em, frequencia_semanal'
+      'id, numero_socio, nome, telefone, email, estado, genero, alerta, nascimento, inicio_contrato, saiu_em, frequencia_semanal'
     )
     .eq('estudio_id', estudio.id)
 
@@ -203,6 +204,7 @@ export default async function ClientesPage({
       nascimento: c.nascimento,
       frequenciaSemanal: c.frequencia_semanal,
       estado: c.estado,
+      genero: c.genero,
       estadoLabel: est.label,
       estadoBg: est.bg,
       estadoTx: est.tx,

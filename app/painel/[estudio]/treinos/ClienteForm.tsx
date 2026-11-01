@@ -126,6 +126,17 @@ export default function ClienteForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
+          <label htmlFor="genero" className={labelCls}>
+            Género
+          </label>
+          <select id="genero" name="genero" defaultValue={cliente?.genero ?? ''} className={inputCls}>
+            <option value="">—</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Feminino">Feminino</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="pt_principal_id" className={labelCls}>
             PT principal
           </label>

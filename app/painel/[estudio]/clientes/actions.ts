@@ -19,6 +19,7 @@ export async function atualizarClienteRapido(input: {
   nascimento: string | null
   frequenciaSemanal: number | null
   estado: string
+  genero: string | null
 }): Promise<ResultadoClienteRapido> {
   const nome = input.nome.trim()
   if (!nome) {
@@ -51,6 +52,7 @@ export async function atualizarClienteRapido(input: {
       nascimento: input.nascimento,
       frequencia_semanal: input.frequenciaSemanal,
       estado: input.estado,
+      genero: input.genero,
       ...(mudouEstado ? { estado_automatico: false } : {}),
     })
     .eq('id', input.id)

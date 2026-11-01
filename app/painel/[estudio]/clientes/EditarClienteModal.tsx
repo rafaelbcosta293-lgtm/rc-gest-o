@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { atualizarClienteRapido } from './actions'
-import type { EstadoCliente } from '@/lib/supabase/database.types'
+import type { EstadoCliente, GeneroCliente } from '@/lib/supabase/database.types'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 export type ClienteEdicao = {
@@ -16,6 +16,7 @@ export type ClienteEdicao = {
   nascimento: string | null
   frequenciaSemanal: number | null
   estado: EstadoCliente
+  genero: GeneroCliente | null
 }
 
 const inputCls =
@@ -59,6 +60,7 @@ export default function EditarClienteModal({
       ? Number(formData.get('frequencia_semanal'))
       : null
     const estado = formData.get('estado') as string
+    const genero = (formData.get('genero') as string) || null
 
     iniciarTransicao(async () => {
       const resultado = await atualizarClienteRapido({
@@ -71,6 +73,7 @@ export default function EditarClienteModal({
         nascimento,
         frequenciaSemanal,
         estado,
+        genero,
       })
       if ('error' in resultado) {
         setErro(resultado.error)
@@ -193,6 +196,17 @@ export default function EditarClienteModal({
                     {n}× por semana
                   </option>
                 ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="genero" className={labelCls}>
+                Género
+              </label>
+              <select id="genero" name="genero" defaultValue={cliente.genero ?? ''} className={inputCls}>
+                <option value="">—</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Feminino">Feminino</option>
               </select>
             </div>
           </div>

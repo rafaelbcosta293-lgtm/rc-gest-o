@@ -19,8 +19,12 @@ export function idadeEm(nascimentoISO: string, naData: Date): number {
   return idade
 }
 
-export function preencherMensagem(template: string, nome: string) {
-  return template.replaceAll('{nome}', nome)
+// Género desconhecido usa "estimado" (convenção, não é perfeito, mas
+// evita deixar a frase incompleta para quem ainda não tem o campo
+// preenchido na ficha).
+export function preencherMensagem(template: string, nome: string, genero?: 'Masculino' | 'Feminino' | null) {
+  const estimado = genero === 'Feminino' ? 'estimada' : 'estimado'
+  return template.replaceAll('{nome}', nome).replaceAll('{estimado}', estimado)
 }
 
 export function fmtDiaMes(data: Date) {

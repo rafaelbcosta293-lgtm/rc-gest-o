@@ -160,23 +160,23 @@ type Modulo = {
 }
 
 // Ordem pedida para a barra superior (computador/tablet) e para a barra
-// do telemóvel: Clientes, Agenda, Leads, Objetivos, Presenças,
-// Pagamentos, Alertas, Horários, Abertura/Fecho. Treinos e Avaliações
-// não têm pílula própria na barra do computador (ver
-// NavLinkClientesComSubmenu, aparecem como subpastas de Clientes), mas
-// continuam na barra do telemóvel — ficam logo a seguir a Clientes, de
-// quem são conceptualmente uma extensão.
+// do telemóvel: Clientes, Agenda, Leads, Presenças, Pagamentos, Alertas,
+// Horários, Objetivos, Abertura/Fecho. Treinos e Avaliações não têm
+// pílula própria na barra do computador (ver NavLinkClientesComSubmenu,
+// aparecem como subpastas de Clientes), mas continuam na barra do
+// telemóvel — ficam logo a seguir a Clientes, de quem são
+// conceptualmente uma extensão.
 export const MODULOS: Modulo[] = [
   { id: 'clientes', nome: 'Clientes', icone: UsersRound, cor: 'teal', desc: 'Ficha completa de cada cliente, tudo num só sítio', pronto: true },
   { id: 'treinos', nome: 'Treinos', icone: Dumbbell, cor: 'roxo', desc: 'Planos, histórico e notas entre PTs', pronto: true },
   { id: 'avaliacoes', nome: 'Avaliações', icone: Gauge, cor: 'azul', desc: 'Avaliações, reavaliações e evolução', pronto: true },
   { id: 'agenda', nome: 'Agenda', icone: CalendarDays, cor: 'roxo', desc: 'Treinos, avaliações e reuniões — dia, semana e mês', pronto: true },
   { id: 'leads', nome: 'Leads', icone: Megaphone, cor: 'laranja', desc: 'Contactos, origem e seguimento', pronto: true },
-  { id: 'objetivos', nome: 'Objetivos', icone: Target, cor: 'verde', desc: 'Metas do mês, progresso e a calculadora de funil inverso', pronto: true },
   { id: 'presencas', nome: 'Presenças', icone: CalendarCheck2, cor: 'verde', desc: 'Quem treinou e quem faltou', pronto: true },
   { id: 'pagamentos', nome: 'Pagamentos', icone: CreditCard, cor: 'ambar', desc: 'Quem tem o pagamento em dia', pronto: true },
   { id: 'alertas', nome: 'Alertas', icone: BellRing, cor: 'vermelho', desc: 'Leads, clientes e pagamentos que precisam de atenção agora', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: AlarmClock, cor: 'vermelho', desc: 'Escala da semana e ausências da equipa', pronto: true },
+  { id: 'objetivos', nome: 'Objetivos', icone: Target, cor: 'verde', desc: 'Metas do mês, progresso e a calculadora de funil inverso', pronto: true },
   { id: 'checklist', nome: 'Abertura / Fecho', curto: 'Checklist', icone: KeyRound, cor: 'neutro', desc: 'Checklist diária do estúdio', pronto: true },
 ]
 

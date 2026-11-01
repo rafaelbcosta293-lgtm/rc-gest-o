@@ -472,6 +472,27 @@ export type EventoAgenda = {
   criado_em: string
 }
 
+export type RepeticaoSerieAgenda = 'semanal' | 'quinzenal'
+
+// Modelo de uma série "indefinida" — guarda os dados precisos para o
+// cron gerar mais ocorrências à frente, sem depender de nenhuma linha
+// de agenda_eventos em concreto já existir.
+export type AgendaSerie = {
+  id: string
+  estudio_id: number
+  cliente_id: string | null
+  pt_id: string | null
+  tipo: TipoEventoAgenda
+  titulo: string | null
+  hora_inicio: string
+  duracao_min: number
+  repeticao: RepeticaoSerieAgenda
+  nota: string | null
+  ativa: boolean
+  criado_por: string | null
+  criado_em: string
+}
+
 export type EstadoSmsGateway = {
   estudio_id: number
   tentativas_falhadas: number

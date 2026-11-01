@@ -4,9 +4,10 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { corTipoEvento } from '@/lib/data/agenda'
-import { atualizarEvento, desmarcarEvento, reativarEvento, apagarEvento } from '../actions'
+import { atualizarEvento, desmarcarEvento, reativarEvento, apagarEvento, pararSerie } from '../actions'
 import SubmitButton from '@/components/SubmitButton'
 import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 import EditarEventoForm from './EditarEventoForm'
 import type { EventoAgenda } from '@/lib/supabase/database.types'
 
@@ -88,10 +89,26 @@ export default async function EventoAgendaPage({
       <p className="mt-1 text-sm text-muted">{estudio.nome}</p>
 
       {evento.serie_id && (
-        <p className="mt-3 rounded-lg bg-brand/[.06] px-3 py-2 text-xs text-muted">
-          Esta é uma ocorrência de uma série de eventos repetidos — alterar, desmarcar ou apagar
-          afeta só este dia, nunca as outras ocorrências.
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-brand/[.06] px-3 py-2">
+          <p className="text-xs text-muted">
+            Esta é uma ocorrência de uma série de eventos repetidos — alterar, desmarcar ou apagar
+            afeta só este dia, nunca as outras ocorrências.
+          </p>
+          <ConfirmarAcao
+            action={pararSerie}
+            confirmacao="Parar esta série de vez? As próximas ocorrências já agendadas ficam desmarcadas (o histórico mantém-se); a série deixa de gerar mais."
+          >
+            <input type="hidden" name="estudio_slug" value={slug} />
+            <input type="hidden" name="id" value={evento.id} />
+            <input type="hidden" name="serie_id" value={evento.serie_id} />
+            <SubmitButton
+              pendingText="…"
+              className="shrink-0 rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]"
+            >
+              Parar repetição
+            </SubmitButton>
+          </ConfirmarAcao>
+        </div>
       )}
 
       {cancelado && evento.motivo_cancelamento && (

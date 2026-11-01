@@ -1,0 +1,20 @@
+name: Estender séries indefinidas da Agenda
+
+# Uma vez por dia: para cada série "indefinida" ainda ativa, gera mais
+# ocorrências à frente, mantendo sempre a mesma janela de ~90 dias já
+# visível na Agenda. Para de estender uma série assim que ela é
+# interrompida ("Parar repetição").
+on:
+  schedule:
+    - cron: '30 6 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Estender séries ativas
+        run: |
+          curl --fail-with-body -sS -L -X GET \
+            "${{ secrets.APP_URL }}/api/cron/agenda-series" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

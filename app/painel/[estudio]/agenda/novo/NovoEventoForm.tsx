@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
 import SubmitButton from '@/components/SubmitButton'
 import ClienteCombobox from '@/components/ClienteCombobox'
@@ -24,6 +25,8 @@ export default function NovoEventoForm({
   action: (formData: FormData) => void
 }) {
   const { marcarSujo } = useAvisoSairSemGuardar()
+  const [repete, setRepete] = useState(false)
+  const [limiteModo, setLimiteModo] = useState<'vezes' | 'ate' | 'indefinido'>('vezes')
 
   return (
     <form action={action} onChange={marcarSujo} className="mt-6 flex flex-col gap-5">
@@ -108,24 +111,66 @@ export default function NovoEventoForm({
 
       <div className="rounded-xl border border-border-subtle bg-surface p-4 shadow-card">
         <label className="text-xs font-semibold text-muted">Repetição</label>
-        <select name="repeticao" defaultValue="nao" className={`${inputCls} mt-1.5 w-full`}>
+        <select
+          name="repeticao"
+          defaultValue="nao"
+          onChange={(e) => setRepete(e.target.value !== 'nao')}
+          className={`${inputCls} mt-1.5 w-full`}
+        >
           <option value="nao">Não repete</option>
           <option value="semanal">Semanal</option>
           <option value="quinzenal">Quinzenal</option>
         </select>
-        <p className="mt-2 text-xs text-muted">
-          Se repetir, preenche um dos dois campos abaixo (se deixares os dois em branco, repete 8 vezes).
-        </p>
-        <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-muted">Repetir até</label>
-            <input type="date" name="repete_ate" className={inputCls} />
+
+        {repete && (
+          <div className="mt-3 flex flex-col gap-2">
+            <label className="text-xs text-muted">Até quando</label>
+            <div className="grid grid-cols-3 gap-1.5 rounded-full bg-border-subtle p-1">
+              {(
+                [
+                  { valor: 'vezes', label: 'Nº de vezes' },
+                  { valor: 'ate', label: 'Até uma data' },
+                  { valor: 'indefinido', label: 'Indefinidamente' },
+                ] as const
+              ).map((o) => (
+                <label key={o.valor} className="relative">
+                  <input
+                    type="radio"
+                    name="limite_modo"
+                    value={o.valor}
+                    checked={limiteModo === o.valor}
+                    onChange={() => setLimiteModo(o.valor)}
+                    className="peer sr-only"
+                  />
+                  <span className="block cursor-pointer rounded-full px-1.5 py-1.5 text-center text-[11px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
+                    {o.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {limiteModo === 'vezes' && (
+              <input
+                type="number"
+                name="repete_vezes"
+                min={1}
+                max={52}
+                defaultValue={8}
+                className={inputCls}
+                placeholder="Quantas vezes"
+              />
+            )}
+            {limiteModo === 'ate' && (
+              <input type="date" name="repete_ate" required className={inputCls} />
+            )}
+            {limiteModo === 'indefinido' && (
+              <p className="text-xs text-muted">
+                Repete sempre à mesma hora, toda a semana (ou quinzena), até interromperes a série
+                na ficha de um dos eventos — não precisa de data de fim.
+              </p>
+            )}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-muted">Número de vezes</label>
-            <input type="number" name="repete_vezes" min={1} max={52} className={inputCls} />
-          </div>
-        </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">

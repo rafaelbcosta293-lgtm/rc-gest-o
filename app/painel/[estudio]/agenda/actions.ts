@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
-import { gerarOcorrencias, type Repeticao } from '@/lib/data/agenda'
+import { gerarOcorrencias, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
 import type { TipoEventoAgenda } from '@/lib/supabase/database.types'
 
 function campoOuNull(formData: FormData, nome: string) {
@@ -85,6 +85,7 @@ export async function criarEvento(formData: FormData) {
   const duracaoMin = Number(formData.get('duracao_min')) || 40
   const nota = campoOuNull(formData, 'nota')
   const repeticao = (formData.get('repeticao') as Repeticao) || 'nao'
+  const limiteModo = (formData.get('limite_modo') as string) || 'vezes'
   const repeteAte = campoOuNull(formData, 'repete_ate')
   const repeteVezes = campoOuNull(formData, 'repete_vezes')
 
@@ -97,14 +98,46 @@ export async function criarEvento(formData: FormData) {
   const sessao = await getSessaoAtual()
   const supabase = await createClient()
 
-  const ocorrencias = gerarOcorrencias(
-    data,
-    repeticao,
-    repeteAte
-      ? { modo: 'ate', ate: repeteAte }
-      : { modo: 'vezes', vezes: repeteVezes ? Number(repeteVezes) : 8 }
-  )
-  const serieId = ocorrencias.length > 1 ? randomUUID() : null
+  const limite: LimiteRepeticao =
+    limiteModo === 'indefinido'
+      ? { modo: 'indefinido' }
+      : limiteModo === 'ate' && repeteAte
+        ? { modo: 'ate', ate: repeteAte }
+        : { modo: 'vezes', vezes: repeteVezes ? Number(repeteVezes) : 8 }
+
+  const ocorrencias = gerarOcorrencias(data, repeticao, limite)
+
+  // Uma série indefinida precisa de um modelo em agenda_series, para o
+  // cron saber como continuar a gerá-la depois desta janela inicial —
+  // as de duração definida (até data/N vezes) continuam sem ele, tal
+  // como antes.
+  let serieId: string | null = null
+  if (repeticao !== 'nao' && limite.modo === 'indefinido') {
+    const { data: serie, error: erroSerie } = await supabase
+      .from('agenda_series')
+      .insert({
+        estudio_id: estudioId,
+        cliente_id: clienteId,
+        pt_id: ptId,
+        tipo,
+        titulo,
+        hora_inicio: horaInicio,
+        duracao_min: duracaoMin,
+        repeticao,
+        nota,
+        criado_por: sessao.userId,
+      })
+      .select('id')
+      .single()
+    if (erroSerie || !serie) {
+      redirect(
+        `/painel/${estudioSlug}/agenda/novo?error=${encodeURIComponent(erroSerie?.message ?? 'Não foi possível criar a série.')}`
+      )
+    }
+    serieId = serie.id
+  } else if (ocorrencias.length > 1) {
+    serieId = randomUUID()
+  }
 
   const linhas = ocorrencias.map((dataOcorrencia) => ({
     estudio_id: estudioId,
@@ -161,6 +194,37 @@ export async function atualizarEvento(formData: FormData) {
 
   if (error) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/agenda`)
+  redirect(`/painel/${estudioSlug}/agenda/${id}`)
+}
+
+// Para uma série indefinida de vez — "interromper", distinto de
+// desmarcar/apagar uma única ocorrência: marca a série como inativa (o
+// cron deixa de a estender) e cancela (nunca apaga — fica no histórico)
+// as ocorrências futuras que ainda estivessem agendadas. O que já
+// aconteceu, ou já tinha sido desmarcado/apagado à parte, não muda.
+export async function pararSerie(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const serieId = formData.get('serie_id') as string
+  const supabase = await createClient()
+
+  const { error: erroSerie } = await supabase.from('agenda_series').update({ ativa: false }).eq('id', serieId)
+  if (erroSerie) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroSerie.message)}`)
+  }
+
+  const hoje = new Date().toISOString().slice(0, 10)
+  const { error: erroCancelar } = await supabase
+    .from('agenda_eventos')
+    .update({ estado: 'Cancelado', motivo_cancelamento: 'Série interrompida' })
+    .eq('serie_id', serieId)
+    .eq('estado', 'Agendado')
+    .gte('data', hoje)
+  if (erroCancelar) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroCancelar.message)}`)
   }
 
   revalidatePath(`/painel/${estudioSlug}/agenda`)
@@ -272,27 +336,59 @@ type CamposEvento = {
 }
 
 export async function criarEventoRapido(
-  input: CamposEvento & { estudioId: number }
+  input: CamposEvento & { estudioId: number; repeticao: Repeticao; limite: LimiteRepeticao }
 ): Promise<ResultadoAcaoRapida> {
   const sessao = await getSessaoAtual()
   const supabase = await createClient()
 
   const idsClientes: (string | null)[] = input.clienteIds.length > 0 ? input.clienteIds : [null]
-  const grupoId = idsClientes.length > 1 ? randomUUID() : null
+  const ocorrencias = gerarOcorrencias(input.data, input.repeticao, input.limite)
 
-  const linhas = idsClientes.map((clienteId) => ({
-    estudio_id: input.estudioId,
-    cliente_id: clienteId,
-    pt_id: input.ptId,
-    tipo: input.tipo,
-    titulo: input.titulo,
-    data: input.data,
-    hora_inicio: input.horaInicio,
-    duracao_min: input.duracaoMin,
-    grupo_id: grupoId,
-    nota: input.nota,
-    criado_por: sessao.userId,
-  }))
+  // Uma série indefinida precisa do modelo em agenda_series para o cron
+  // a conseguir continuar — guarda só a primeira pessoa quando é um
+  // treino em simultâneo (caso raro de combinar as duas coisas; para
+  // grupos recorrentes, "N vezes" ou "até data" descrevem isto melhor).
+  let serieId: string | null = null
+  if (input.repeticao !== 'nao' && input.limite.modo === 'indefinido') {
+    const { data: serie, error: erroSerie } = await supabase
+      .from('agenda_series')
+      .insert({
+        estudio_id: input.estudioId,
+        cliente_id: idsClientes.length === 1 ? idsClientes[0] : null,
+        pt_id: input.ptId,
+        tipo: input.tipo,
+        titulo: input.titulo,
+        hora_inicio: input.horaInicio,
+        duracao_min: input.duracaoMin,
+        repeticao: input.repeticao,
+        nota: input.nota,
+        criado_por: sessao.userId,
+      })
+      .select('id')
+      .single()
+    if (erroSerie || !serie) return { error: erroSerie?.message ?? 'Não foi possível criar a série.' }
+    serieId = serie.id
+  } else if (ocorrencias.length > 1) {
+    serieId = randomUUID()
+  }
+
+  const linhas = ocorrencias.flatMap((dataOcorrencia) => {
+    const grupoId = idsClientes.length > 1 ? randomUUID() : null
+    return idsClientes.map((clienteId) => ({
+      estudio_id: input.estudioId,
+      cliente_id: clienteId,
+      pt_id: input.ptId,
+      tipo: input.tipo,
+      titulo: input.titulo,
+      data: dataOcorrencia,
+      hora_inicio: input.horaInicio,
+      duracao_min: input.duracaoMin,
+      grupo_id: grupoId,
+      serie_id: serieId,
+      nota: input.nota,
+      criado_por: sessao.userId,
+    }))
+  })
 
   const { error } = await supabase.from('agenda_eventos').insert(linhas)
   if (error) return { error: error.message }
@@ -451,6 +547,28 @@ export async function reativarEventoRapido(input: {
   // (só essa); o cron volta a contá-la quando o evento terminar.
   const erroReconciliar = await reconciliarPresencasDoEvento(supabase, linhasData ?? [], false)
   if (erroReconciliar) return { error: erroReconciliar }
+
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}
+
+export async function pararSerieRapido(input: {
+  estudioSlug: string
+  serieId: string
+}): Promise<ResultadoAcaoRapida> {
+  const supabase = await createClient()
+
+  const { error: erroSerie } = await supabase.from('agenda_series').update({ ativa: false }).eq('id', input.serieId)
+  if (erroSerie) return { error: erroSerie.message }
+
+  const hoje = new Date().toISOString().slice(0, 10)
+  const { error: erroCancelar } = await supabase
+    .from('agenda_eventos')
+    .update({ estado: 'Cancelado', motivo_cancelamento: 'Série interrompida' })
+    .eq('serie_id', input.serieId)
+    .eq('estado', 'Agendado')
+    .gte('data', hoje)
+  if (erroCancelar) return { error: erroCancelar.message }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   return { ok: true }

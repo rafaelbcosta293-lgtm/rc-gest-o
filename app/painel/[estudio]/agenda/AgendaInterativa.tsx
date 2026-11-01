@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { X, Trash2, Ban, RotateCcw, Minus, Plus } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
-import { corTipoEvento, TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
+import { corTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import {
   criarEventoRapido,
@@ -15,6 +15,7 @@ import {
   desmarcarEventoRapido,
   reativarEventoRapido,
   apagarEventoRapido,
+  pararSerieRapido,
 } from './actions'
 import type { EventoAgenda, TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
 
@@ -140,15 +141,44 @@ export default function AgendaInterativa({
     }
 
     iniciarTransicao(async () => {
-      const resultado =
-        modal.aberto && modal.modo === 'editar'
-          ? await atualizarEventoRapido({
-              ...campos,
-              id: modal.evento.id,
-              grupoId: modal.evento.grupo_id,
-              estudioId,
-            })
-          : await criarEventoRapido({ ...campos, estudioId })
+      let resultado
+      if (modal.aberto && modal.modo === 'editar') {
+        resultado = await atualizarEventoRapido({
+          ...campos,
+          id: modal.evento.id,
+          grupoId: modal.evento.grupo_id,
+          estudioId,
+        })
+      } else {
+        const repeticao = (formData.get('repeticao') as Repeticao) || 'nao'
+        const limiteModo = (formData.get('limite_modo') as string) || 'vezes'
+        const repeteAte = (formData.get('repete_ate') as string) || null
+        const repeteVezes = (formData.get('repete_vezes') as string) || null
+        const limite: LimiteRepeticao =
+          limiteModo === 'indefinido'
+            ? { modo: 'indefinido' }
+            : limiteModo === 'ate' && repeteAte
+              ? { modo: 'ate', ate: repeteAte }
+              : { modo: 'vezes', vezes: repeteVezes ? Number(repeteVezes) : 8 }
+        resultado = await criarEventoRapido({ ...campos, estudioId, repeticao, limite })
+      }
+      if ('error' in resultado) setErro(resultado.error)
+      else aposSucesso()
+    })
+  }
+
+  function pararSerie() {
+    if (!(modal.aberto && modal.modo === 'editar' && modal.evento.serie_id)) return
+    if (
+      !window.confirm(
+        'Parar esta série de vez? As próximas ocorrências já agendadas ficam desmarcadas (o histórico mantém-se); a série deixa de gerar mais.'
+      )
+    ) {
+      return
+    }
+    const serieId = modal.evento.serie_id
+    iniciarTransicao(async () => {
+      const resultado = await pararSerieRapido({ estudioSlug: slug, serieId })
       if ('error' in resultado) setErro(resultado.error)
       else aposSucesso()
     })
@@ -236,6 +266,7 @@ export default function AgendaInterativa({
           onDesmarcar={desmarcar}
           onReativar={reativar}
           onApagar={apagar}
+          onPararSerie={pararSerie}
         />
       )}
     </>
@@ -416,6 +447,12 @@ function GrelhaInterativa({
       }
     }
 
+    function cancelarArrasto() {
+      arrastoRef.current = null
+      setPrevia(null)
+      setArrastandoId(null)
+    }
+
     function soltar(e: MouseEvent) {
       const arrasto = arrastoRef.current
       if (!arrasto) return
@@ -450,11 +487,19 @@ function GrelhaInterativa({
       }
     }
 
+    // Esc cancela um arrasto em curso (criar, mover ou redimensionar) sem
+    // gravar nada — tal como no Google Calendar.
+    function aoPressionarTecla(e: KeyboardEvent) {
+      if (e.key === 'Escape' && arrastoRef.current) cancelarArrasto()
+    }
+
     window.addEventListener('mousemove', mover)
     window.addEventListener('mouseup', soltar)
+    window.addEventListener('keydown', aoPressionarTecla)
     return () => {
       window.removeEventListener('mousemove', mover)
       window.removeEventListener('mouseup', soltar)
+      window.removeEventListener('keydown', aoPressionarTecla)
     }
   }, [localizar, onClickVazio, onRedimensionar, onMover])
 
@@ -523,7 +568,8 @@ function GrelhaInterativa({
         <p className="text-xs text-muted">
           A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para
           criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o
-          mover, o topo ou o fundo para encurtar/alongar; botão direito num evento para o editar.
+          mover, o topo ou o fundo para encurtar/alongar; botão direito num evento para o editar;
+          Esc cancela um arrasto a meio.
         </p>
         <div className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-pop">
           <button
@@ -633,7 +679,7 @@ function ColunaDia({
     <div
       ref={registarRef}
       onMouseDown={onIniciarCriacao}
-      className="relative cursor-pointer border-l border-border-subtle bg-surface transition-colors select-none"
+      className="relative cursor-crosshair border-l border-border-subtle bg-surface transition-colors select-none"
     >
       {HORAS_GRADE.map((h) => (
         <div
@@ -644,12 +690,16 @@ function ColunaDia({
       ))}
       {previa && (
         <div
-          className="pointer-events-none absolute inset-x-1 rounded border-2 border-dashed border-brand bg-brand/20"
+          className="pointer-events-none absolute inset-x-1 overflow-hidden rounded border-2 border-dashed border-brand bg-brand/20 px-1 py-0.5"
           style={{
             top: previa.inicioMin * pxPorMinuto,
             height: Math.max((previa.fimMin - previa.inicioMin) * pxPorMinuto, 4),
           }}
-        />
+        >
+          <span className="block truncate text-[10px] font-bold text-brand">
+            {minutosParaHora(previa.inicioMin)}–{minutosParaHora(previa.fimMin)}
+          </span>
+        </div>
       )}
       {disporEventosDoDia(eventos).map(({ evento, grupo, coluna, colunas }) => {
         const cor = corTipoEvento(evento.tipo)
@@ -659,12 +709,13 @@ function ColunaDia({
           <button
             key={evento.id}
             type="button"
-            title="Botão direito para editar · arrasta para mover"
+            draggable={false}
+            title="Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar"
             onMouseDown={onIniciarMovimento(evento)}
             onContextMenu={onAbrirContexto(evento)}
-            className={`group absolute overflow-hidden rounded border px-1 py-0.5 text-left leading-tight transition-opacity ${
-              evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''
-            } ${emArrasto ? 'opacity-30' : ''}`}
+            className={`group absolute rounded border text-left leading-tight transition-opacity select-none ${
+              emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
+            } ${evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''}`}
             style={{
               top: inicioMin * pxPorMinuto,
               height: Math.max(evento.duracao_min * pxPorMinuto, 18),
@@ -675,21 +726,32 @@ function ColunaDia({
               borderColor: cor.tx,
             }}
           >
-            <span className="block truncate text-[9px] font-semibold">
-              {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
+            {/* Conteúdo num wrapper à parte, só este com overflow-hidden
+                (para o texto truncar) — o botão em si fica sem isso, para
+                as pegas de redimensionar poderem crescer um pouco para
+                fora da borda sem ficarem cortadas. */}
+            <span className="block h-full overflow-hidden px-1 py-0.5">
+              <span className="block truncate text-[9px] font-semibold">
+                {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
+              </span>
+              <span className="block truncate text-[10px] font-medium">{rotuloEvento(grupo)}</span>
             </span>
-            <span className="block truncate text-[10px] font-medium">{rotuloEvento(grupo)}</span>
-            {/* Pegas de redimensionar, ao estilo Google Calendar — só o
-                cursor muda de resto; ficam discretas até se precisar
-                delas. */}
+            {/* Pegas de redimensionar, ao estilo Google Calendar — zona de
+                clique bem maior do que a risca visível (que só aparece ao
+                passar o rato), para não ser preciso acertar em poucos
+                pixéis exatos. */}
             <span
               onMouseDown={onIniciarRedimensionamento(evento, 'topo')}
-              className="absolute inset-x-0 top-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
-            />
+              className="absolute inset-x-0 -top-1.5 flex h-3.5 cursor-ns-resize items-start justify-center"
+            >
+              <span className="mt-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />
+            </span>
             <span
               onMouseDown={onIniciarRedimensionamento(evento, 'fundo')}
-              className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
-            />
+              className="absolute inset-x-0 -bottom-1.5 flex h-3.5 cursor-ns-resize items-end justify-center"
+            >
+              <span className="mb-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />
+            </span>
           </button>
         )
       })}
@@ -709,6 +771,7 @@ function EventoModalOverlay({
   onDesmarcar,
   onReativar,
   onApagar,
+  onPararSerie,
 }: {
   modal: Extract<EstadoModal, { aberto: true }>
   clientes: ClienteOpcao[]
@@ -721,6 +784,7 @@ function EventoModalOverlay({
   onDesmarcar: (contarComoRealizado: boolean) => void
   onReativar: () => void
   onApagar: () => void
+  onPararSerie: () => void
 }) {
   const editar = modal.modo === 'editar'
   const evento = modal.modo === 'editar' ? modal.evento : null
@@ -745,6 +809,11 @@ function EventoModalOverlay({
       : []
   )
 
+  // Repetição só existe ao criar — uma ocorrência já guardada edita-se
+  // sempre sozinha (ver aviso "só afeta esta ocorrência" mais abaixo).
+  const [repete, setRepete] = useState(false)
+  const [limiteModo, setLimiteModo] = useState<'vezes' | 'ate' | 'indefinido'>('vezes')
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onFechar}>
       <div
@@ -763,9 +832,17 @@ function EventoModalOverlay({
         </div>
 
         {evento?.serie_id && (
-          <p className="mt-2 rounded-lg bg-brand/[.06] px-3 py-2 text-xs text-muted">
-            Parte de uma série repetida — isto só afeta esta ocorrência.
-          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-brand/[.06] px-3 py-2">
+            <p className="text-xs text-muted">Parte de uma série repetida — isto só afeta esta ocorrência.</p>
+            <button
+              type="button"
+              onClick={onPararSerie}
+              disabled={aPendente}
+              className="shrink-0 rounded-full border border-border-strong px-2.5 py-1 text-xs font-bold hover:bg-foreground/[.08] disabled:opacity-60"
+            >
+              Parar repetição
+            </button>
+          </div>
         )}
 
         {participantes.length > 1 && (
@@ -878,6 +955,70 @@ function EventoModalOverlay({
               ))}
             </datalist>
           </div>
+
+          {!editar && (
+            <div className="rounded-lg border border-border-subtle bg-surface p-3">
+              <label className="text-xs font-semibold text-muted">Repetição</label>
+              <select
+                name="repeticao"
+                defaultValue="nao"
+                onChange={(e) => setRepete(e.target.value !== 'nao')}
+                className={`${inputCls} mt-1.5`}
+              >
+                <option value="nao">Não repete</option>
+                <option value="semanal">Semanal</option>
+                <option value="quinzenal">Quinzenal</option>
+              </select>
+
+              {repete && (
+                <div className="mt-2 flex flex-col gap-2">
+                  <div className="grid grid-cols-3 gap-1 rounded-full bg-border-subtle p-1">
+                    {(
+                      [
+                        { valor: 'vezes', label: 'Nº de vezes' },
+                        { valor: 'ate', label: 'Até uma data' },
+                        { valor: 'indefinido', label: 'Indefinidamente' },
+                      ] as const
+                    ).map((o) => (
+                      <label key={o.valor} className="relative">
+                        <input
+                          type="radio"
+                          name="limite_modo"
+                          value={o.valor}
+                          checked={limiteModo === o.valor}
+                          onChange={() => setLimiteModo(o.valor)}
+                          className="peer sr-only"
+                        />
+                        <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[10px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
+                          {o.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  {limiteModo === 'vezes' && (
+                    <input
+                      type="number"
+                      name="repete_vezes"
+                      min={1}
+                      max={52}
+                      defaultValue={8}
+                      className={inputCls}
+                      placeholder="Quantas vezes"
+                    />
+                  )}
+                  {limiteModo === 'ate' && (
+                    <input type="date" name="repete_ate" required className={inputCls} />
+                  )}
+                  {limiteModo === 'indefinido' && (
+                    <p className="text-xs text-muted">
+                      Repete sempre à mesma hora até interromperes a série na ficha de um dos
+                      eventos — não precisa de data de fim.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <textarea
             name="nota"

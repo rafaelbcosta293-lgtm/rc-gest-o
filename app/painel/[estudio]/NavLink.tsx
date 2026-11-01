@@ -28,7 +28,7 @@ export function NavLinkTopBar({ href, id, nome }: { href: string; id: string; no
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-bold tracking-wide text-foreground transition-all ${
+      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-foreground transition-colors ${
         ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.04]'
       }`}
       style={{
@@ -36,15 +36,13 @@ export function NavLinkTopBar({ href, id, nome }: { href: string; id: string; no
         // Inativo: nome sempre a preto (var(--foreground), da className),
         // bem legível em qualquer pasta — só o ícone fica na cor própria
         // do módulo, para a barra continuar colorida e fácil de
-        // reconhecer de relance, mesmo sem nada selecionado.
+        // reconhecer de relance, mesmo sem nada selecionado. Sem sombra:
+        // o preenchimento sólido já basta para marcar o separador ativo,
+        // de forma limpa.
         color: ativo ? PALETA[cor].tx : undefined,
-        // O brilho acompanha a cor do próprio módulo (em vez de um tom
-        // único para todos) — cada separador ativo "ilumina-se" com a
-        // sua própria cor, como os indicadores de um painel técnico.
-        boxShadow: ativo ? `var(--shadow-pop-value), 0 0 0 1px ${PALETA[cor].tx}40, 0 6px 18px -4px ${PALETA[cor].tx}70` : undefined,
       }}
     >
-      <Icone className="h-4 w-4" strokeWidth={2.5} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
+      <Icone className="h-4 w-4" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
       {nome}
     </Link>
   )
@@ -107,18 +105,15 @@ export function NavLinkClientesComSubmenu({
       <Link
         ref={pillRef}
         href={clientesHref}
-        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-bold tracking-wide text-foreground transition-all ${
+        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-foreground transition-colors ${
           ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.04]'
         }`}
         style={{
           background: ativo ? PALETA[cor].bg : undefined,
           color: ativo ? PALETA[cor].tx : undefined,
-          boxShadow: ativo
-            ? `var(--shadow-pop-value), 0 0 0 1px ${PALETA[cor].tx}40, 0 6px 18px -4px ${PALETA[cor].tx}70`
-            : undefined,
         }}
       >
-        <Icone className="h-4 w-4" strokeWidth={2.5} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
+        <Icone className="h-4 w-4" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
         Clientes
         <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />
       </Link>
@@ -142,7 +137,7 @@ export function NavLinkClientesComSubmenu({
                     key={m.id}
                     href={href}
                     onClick={() => setAberto(false)}
-                    className="flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-foreground transition-colors hover:bg-brand/[.08]"
+                    className="flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-brand/[.08]"
                     style={{
                       background: subAtivo ? PALETA[m.cor].bg : undefined,
                       color: subAtivo ? PALETA[m.cor].tx : undefined,

@@ -85,7 +85,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
                 <span
                   key={m.id}
                   title={tituloBloqueado(m)}
-                  className="flex shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-border-subtle px-3.5 py-2 text-sm font-bold tracking-wide text-muted opacity-40"
+                  className="flex shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-border-subtle px-3.5 py-2 text-sm font-medium text-muted opacity-40"
                 >
                   <m.icone className="h-4 w-4" strokeWidth={2.5} />
                   {m.nome}

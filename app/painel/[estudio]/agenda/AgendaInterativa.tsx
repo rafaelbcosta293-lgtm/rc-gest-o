@@ -386,6 +386,13 @@ function GrelhaInterativa({
 
   const [previa, setPrevia] = useState<{ dia: string; inicioMin: number; fimMin: number } | null>(null)
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
+  // Um evento só fica com as pegas de redimensionar ativas depois de um
+  // clique a selecioná-lo — sem isto, a pega (que é maior do que a
+  // risca visível, de propósito) ficava sempre pronta a agarrar, e
+  // tentar criar um evento novo logo a seguir a outro (ex.: às 7h40,
+  // encostado a um das 7h-7h40) acabava sempre por redimensionar o
+  // anterior em vez de criar um novo.
+  const [selecionadoId, setSelecionadoId] = useState<string | null>(null)
   // Hora sob o rato — acompanha sempre o cursor (ao contrário da régua
   // antiga, fixa na coluna da esquerda), tanto em repouso como durante
   // qualquer arrasto, arredondada aos 10 minutos.
@@ -512,6 +519,7 @@ function GrelhaInterativa({
   function iniciarCriacao(dia: string) {
     return (e: React.MouseEvent) => {
       if (e.button !== 0) return
+      setSelecionadoId(null)
       const loc = localizar(e.clientX, e.clientY)
       const inicioMin = loc?.minuto ?? 0
       arrastoRef.current = { tipo: 'criar', dia, inicioMin }
@@ -536,6 +544,7 @@ function GrelhaInterativa({
     return (e: React.MouseEvent) => {
       if (e.button !== 0) return
       e.stopPropagation()
+      setSelecionadoId(evento.id)
       arrastoRef.current = { tipo: 'mover', evento }
       setArrastandoId(evento.id)
       setPrevia({
@@ -568,8 +577,8 @@ function GrelhaInterativa({
         <p className="text-xs text-muted">
           A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para
           criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o
-          mover, o topo ou o fundo para encurtar/alongar; botão direito num evento para o editar;
-          Esc cancela um arrasto a meio.
+          mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo;
+          botão direito num evento para o editar; Esc cancela um arrasto a meio.
         </p>
         <div className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-pop">
           <button
@@ -632,6 +641,7 @@ function GrelhaInterativa({
                 onIniciarMovimento={iniciarMovimento}
                 onAbrirContexto={aoAbrirContexto}
                 arrastandoId={arrastandoId}
+                selecionadoId={selecionadoId}
                 previa={previa?.dia === dia ? previa : null}
                 pxPorMinuto={pxPorMinuto}
               />
@@ -662,6 +672,7 @@ function ColunaDia({
   onIniciarMovimento,
   onAbrirContexto,
   arrastandoId,
+  selecionadoId,
   previa,
   pxPorMinuto,
 }: {
@@ -672,6 +683,7 @@ function ColunaDia({
   onIniciarMovimento: (evento: EventoComNomes) => (e: React.MouseEvent) => void
   onAbrirContexto: (evento: EventoComNomes) => (e: React.MouseEvent) => void
   arrastandoId: string | null
+  selecionadoId: string | null
   previa: { inicioMin: number; fimMin: number } | null
   pxPorMinuto: number
 }) {
@@ -705,17 +717,22 @@ function ColunaDia({
         const cor = corTipoEvento(evento.tipo)
         const inicioMin = minutosDoDia(evento.hora_inicio)
         const emArrasto = arrastandoId === evento.id
+        const emSelecionado = selecionadoId === evento.id
         return (
           <button
             key={evento.id}
             type="button"
             draggable={false}
-            title="Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar"
+            title={
+              emSelecionado
+                ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar'
+                : 'Arrasta para mover · clica uma vez para poder encurtar/alongar · botão direito para editar'
+            }
             onMouseDown={onIniciarMovimento(evento)}
             onContextMenu={onAbrirContexto(evento)}
             className={`group absolute rounded border text-left leading-tight transition-opacity select-none ${
               emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
-            } ${evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''}`}
+            } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''}`}
             style={{
               top: inicioMin * pxPorMinuto,
               height: Math.max(evento.duracao_min * pxPorMinuto, 18),
@@ -739,16 +756,27 @@ function ColunaDia({
             {/* Pegas de redimensionar, ao estilo Google Calendar — zona de
                 clique bem maior do que a risca visível (que só aparece ao
                 passar o rato), para não ser preciso acertar em poucos
-                pixéis exatos. */}
+                pixéis exatos. Só ficam clicáveis depois de o evento estar
+                selecionado (um clique antes): como esta zona ultrapassa a
+                própria caixa do evento, sem isto intercetava sempre o
+                clique de quem estava só a tentar criar um evento novo logo
+                a seguir a este (ex.: às 7h40, encostado a um das 7h-7h40) —
+                com "pointer-events-none" enquanto não selecionado, esse
+                clique passa à coluna por baixo e cria o evento novo em vez
+                de redimensionar este. */}
             <span
-              onMouseDown={onIniciarRedimensionamento(evento, 'topo')}
-              className="absolute inset-x-0 -top-1.5 flex h-3.5 cursor-ns-resize items-start justify-center"
+              onMouseDown={emSelecionado ? onIniciarRedimensionamento(evento, 'topo') : undefined}
+              className={`absolute inset-x-0 -top-1.5 flex h-3.5 items-start justify-center ${
+                emSelecionado ? 'cursor-ns-resize' : 'pointer-events-none'
+              }`}
             >
               <span className="mt-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />
             </span>
             <span
-              onMouseDown={onIniciarRedimensionamento(evento, 'fundo')}
-              className="absolute inset-x-0 -bottom-1.5 flex h-3.5 cursor-ns-resize items-end justify-center"
+              onMouseDown={emSelecionado ? onIniciarRedimensionamento(evento, 'fundo') : undefined}
+              className={`absolute inset-x-0 -bottom-1.5 flex h-3.5 items-end justify-center ${
+                emSelecionado ? 'cursor-ns-resize' : 'pointer-events-none'
+              }`}
             >
               <span className="mb-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />
             </span>

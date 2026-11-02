@@ -38,11 +38,15 @@ export function calcularTransicaoAutomatica(
   if (cliente.estado === 'Suspenso') return null
   if (cliente.estado === 'Inativo') return null
 
-  // Sem nenhum pagamento registado, não há base nenhuma para avaliar —
-  // fica de fora (em vez de ser marcado às cegas, por exemplo pela
-  // data de início de contrato de clientes antigos cujo histórico de
-  // pagamentos nunca foi registado na app).
-  if (!cliente.validoAte) return null
+  // Sem nenhum pagamento registado (ex.: cliente antigo cujo histórico
+  // nunca foi lançado na app) também conta como "sem pagamento em
+  // dia" — vai para Pendente tal como quem tem um pagamento expirado.
+  // Não há data nenhuma para calcular há quanto tempo está em
+  // atraso, por isso não avança sozinho para Inativo: fica em
+  // Pendente até alguém registar um pagamento ou decidir à mão.
+  if (!cliente.validoAte) {
+    return cliente.estado === 'Pendente' ? null : 'Pendente'
+  }
 
   const dias = diasEntre(cliente.validoAte, hojeISO)
   if (dias >= DIAS_PARA_INATIVO) return 'Inativo'

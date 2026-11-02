@@ -61,7 +61,13 @@ describe('calcularTransicaoAutomatica', () => {
     ).toBeNull()
   })
 
-  it('sem nenhum pagamento registado, não há como avaliar (ex.: clientes antigos sem histórico na app)', () => {
-    expect(calcularTransicaoAutomatica(cliente({ validoAte: null }), '2026-03-02')).toBeNull()
+  it('sem nenhum pagamento registado conta como sem pagamento em dia — passa a Pendente', () => {
+    expect(calcularTransicaoAutomatica(cliente({ validoAte: null }), '2026-03-02')).toBe('Pendente')
+  })
+
+  it('não repete a transição para quem já está Pendente sem nenhum pagamento registado', () => {
+    expect(
+      calcularTransicaoAutomatica(cliente({ estado: 'Pendente', validoAte: null }), '2026-03-02')
+    ).toBeNull()
   })
 })

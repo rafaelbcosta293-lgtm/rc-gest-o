@@ -1,20 +1,20 @@
 name: Parabéns de aniversário por SMS
 
-# Por volta das 10:00 em Lisboa (10 minutos depois do cron de
+# O disparo diário já não é daqui — é do Cron do Vercel (ver
+# vercel.json, "/api/cron/aniversarios-sms", 10 minutos depois do de
 # lembretes de treino, de propósito — os dois partilham o estado do
-# gateway por estúdio, e assim não correm ao mesmo tempo). Duas
-# entradas por causa da hora de verão/inverno; a rota é idempotente
-# (envios_aniversario é único por cliente+ano), por isso disparar a
-# mais nunca duplica SMS.
+# gateway por estúdio, e assim não correm ao mesmo tempo). O
+# agendamento do GitHub Actions falhava em disparar à hora certa sem
+# aviso (aconteceu mais do que uma vez, até 8h+ de atraso). Este
+# workflow fica só para disparar à mão quando for preciso reenviar com
+# as tentativas automáticas — ver botão "workflow_dispatch" ou o de
+# reenvio na própria página de Aniversários.
 #
 # Mesmo mecanismo de retries do cron de lembretes: até 3 tentativas,
 # 1 minuto de intervalo, se o telemóvel estiver offline. O alerta (faixa
 # vermelha + Centro de alertas) é o mesmo dos lembretes de treino — ver
 # lib/data/smsGateway.ts.
 on:
-  schedule:
-    - cron: '10 10 * * *' # hora de inverno (UTC+0)
-    - cron: '10 9 * * *' # hora de verão (UTC+1)
   workflow_dispatch: {}
 
 jobs:

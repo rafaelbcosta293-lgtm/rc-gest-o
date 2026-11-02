@@ -1,9 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { processarLembretesSms } from '@/lib/data/lembretesSms'
 
-// Corre todos os dias às 10:00 em Lisboa (ver .github/workflows/lembretes-sms.yml,
-// que também faz as tentativas espaçadas de 1 minuto quando o gateway
-// está offline). Protegido por CRON_SECRET, como os outros crons.
+// Disparado todos os dias às 9h UTC pelo Cron do Vercel (ver
+// vercel.json) — o GitHub Actions (.github/workflows/lembretes-sms.yml)
+// falhava em disparar à hora certa sem aviso, por isso deixou de ser o
+// agendador; fica só disponível para disparar à mão, com as tentativas
+// espaçadas de 1 minuto quando o gateway está offline. Protegido por
+// CRON_SECRET, como os outros crons (o Vercel Cron já inclui este
+// cabeçalho sozinho, por a variável estar configurada no projeto).
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {

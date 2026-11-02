@@ -1,10 +1,12 @@
 name: Lembretes de treino por SMS
 
-# Todos os dias às 10:00 em Lisboa. O cron do GitHub Actions só entende
-# UTC, e Lisboa muda de fuso (DST) — por isso há duas entradas, uma
-# para cada estação. A rota é idempotente (só processa quem ainda não
-# tem o lembrete marcado como enviado), por isso disparar duas vezes
-# por engano nunca duplica SMS.
+# O disparo diário já não é daqui — é do Cron do Vercel (ver
+# vercel.json, "/api/cron/lembretes-sms"), porque o agendamento do
+# GitHub Actions falhava em disparar à hora certa sem aviso (aconteceu
+# mais do que uma vez, até 8h+ de atraso). Este workflow fica só para
+# disparar à mão quando for preciso reenviar com as tentativas
+# automáticas — ver botão "workflow_dispatch" ou o de reenvio no
+# próprio painel (Lembretes SMS).
 #
 # Se o telemóvel do SMS Gate estiver offline, a rota devolve
 # "gatewayOffline":true — este workflow tenta de novo, até 3 vezes,
@@ -13,9 +15,6 @@ name: Lembretes de treino por SMS
 # alerta dentro da app (faixa vermelha + Centro de alertas), não este
 # workflow.
 on:
-  schedule:
-    - cron: '0 10 * * *' # hora de inverno (UTC+0)
-    - cron: '0 9 * * *' # hora de verão (UTC+1)
   workflow_dispatch: {}
 
 jobs:

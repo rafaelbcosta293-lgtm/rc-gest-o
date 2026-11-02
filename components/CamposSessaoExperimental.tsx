@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
+import { criarLeadRapida } from '@/app/painel/[estudio]/leads/actions'
 
 export type LeadOpcao = { id: string; nome: string; telefone: string | null }
 
@@ -12,13 +13,20 @@ const inputCls =
 // e telemóvel, sempre editável à mão mesmo depois de escolher uma
 // lead. É daqui, não de uma ficha de cliente, que o lembrete SMS do
 // dia seguinte vai buscar o contacto: a pessoa ainda não é cliente.
+//
+// Quando a pessoa ainda não está nas leads, um botão cria a lead já
+// aqui (sem sair do agendamento) — a lead nova fica logo escolhida.
 export default function CamposSessaoExperimental({
   leads,
+  estudioSlug,
+  estudioId,
   defaultNome = '',
   defaultTelefone = '',
   defaultLeadId = '',
 }: {
   leads: LeadOpcao[]
+  estudioSlug: string
+  estudioId: number
   defaultNome?: string
   defaultTelefone?: string
   defaultLeadId?: string
@@ -26,7 +34,10 @@ export default function CamposSessaoExperimental({
   const [nome, setNome] = useState(defaultNome)
   const [telefone, setTelefone] = useState(defaultTelefone)
   const [leadId, setLeadId] = useState(defaultLeadId)
+  const [leadsCriadas, setLeadsCriadas] = useState<LeadOpcao[]>([])
   const [aberto, setAberto] = useState(false)
+  const [aCriar, iniciarCriacao] = useTransition()
+  const [erroCriar, setErroCriar] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -39,10 +50,32 @@ export default function CamposSessaoExperimental({
     return () => document.removeEventListener('mousedown', aoClicarFora)
   }, [])
 
+  const todasLeads = [...leadsCriadas, ...leads]
   const termo = nome.trim().toLowerCase()
   const filtrados = termo
-    ? leads.filter((l) => l.nome.toLowerCase().startsWith(termo)).slice(0, 8)
-    : leads.slice(0, 8)
+    ? todasLeads.filter((l) => l.nome.toLowerCase().startsWith(termo)).slice(0, 8)
+    : todasLeads.slice(0, 8)
+
+  function criarLead() {
+    setErroCriar(null)
+    iniciarCriacao(async () => {
+      const resultado = await criarLeadRapida({
+        estudioSlug,
+        estudioId,
+        nome: nome.trim(),
+        telefone: telefone.trim() || null,
+      })
+      if ('error' in resultado) {
+        setErroCriar(resultado.error)
+        return
+      }
+      setLeadsCriadas((lista) => [resultado.lead, ...lista])
+      setNome(resultado.lead.nome)
+      setTelefone(resultado.lead.telefone ?? '')
+      setLeadId(resultado.lead.id)
+      setAberto(false)
+    })
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -55,6 +88,7 @@ export default function CamposSessaoExperimental({
           onChange={(e) => {
             setNome(e.target.value)
             setLeadId('')
+            setErroCriar(null)
             setAberto(true)
           }}
           placeholder="Escreve para procurar nas leads…"
@@ -84,8 +118,17 @@ export default function CamposSessaoExperimental({
           </div>
         )}
         {aberto && termo && filtrados.length === 0 && (
-          <div className="absolute top-full z-20 mt-1 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-xs text-muted shadow-pop">
-            Sem leads com esse nome — podes escrever à mão e preencher o telemóvel abaixo.
+          <div className="absolute top-full z-20 mt-1 w-full rounded-lg border border-border-subtle bg-surface p-3 text-xs text-muted shadow-pop">
+            <p>Sem leads com esse nome.</p>
+            <button
+              type="button"
+              onClick={criarLead}
+              disabled={aCriar}
+              className="mt-2 inline-flex items-center gap-1 rounded-full border border-brand bg-brand/10 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-brand/20 disabled:opacity-60"
+            >
+              {aCriar ? 'A criar lead…' : `+ Criar lead "${nome.trim()}"`}
+            </button>
+            {erroCriar && <p className="mt-1.5 text-red-600 dark:text-red-400">{erroCriar}</p>}
           </div>
         )}
       </div>

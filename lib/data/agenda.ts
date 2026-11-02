@@ -12,7 +12,7 @@ export const TIPOS_EVENTO_AGENDA: TipoEventoAgenda[] = [
 
 const COR_TIPO_EVENTO: Record<TipoEventoAgenda, keyof typeof PALETA> = {
   Treino: 'teal',
-  'Sessão experimental': 'laranja',
+  'Sessão experimental': 'teal',
   Avaliação: 'azul',
   Reunião: 'roxo',
   Outro: 'neutro',

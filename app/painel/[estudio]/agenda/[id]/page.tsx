@@ -137,6 +137,7 @@ export default async function EventoAgendaPage({
 
       <EditarEventoForm
         slug={slug}
+        estudioId={estudio.id}
         evento={evento}
         pts={pts}
         clientes={clientes}

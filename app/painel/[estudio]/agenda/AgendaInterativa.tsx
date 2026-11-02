@@ -266,6 +266,7 @@ export default function AgendaInterativa({
           clientes={clientes}
           leads={leads}
           pts={pts}
+          estudioId={estudioId}
           erro={erro}
           aPendente={aPendente}
           slug={slug}
@@ -818,6 +819,7 @@ function EventoModalOverlay({
   clientes,
   leads,
   pts,
+  estudioId,
   erro,
   aPendente,
   slug,
@@ -832,6 +834,7 @@ function EventoModalOverlay({
   clientes: ClienteOpcao[]
   leads: LeadOpcao[]
   pts: PtOpcao[]
+  estudioId: number
   erro: string | null
   aPendente: boolean
   slug: string
@@ -948,6 +951,8 @@ function EventoModalOverlay({
           {experimental ? (
             <CamposSessaoExperimental
               leads={leads}
+              estudioSlug={slug}
+              estudioId={estudioId}
               defaultNome={evento?.titulo ?? ''}
               defaultTelefone={evento?.telefone ?? ''}
               defaultLeadId={evento?.lead_id ?? ''}

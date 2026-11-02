@@ -59,6 +59,33 @@ export async function criarLead(formData: FormData) {
   redirect(`/painel/${estudioSlug}/leads/${data.id}`)
 }
 
+// Variante rápida de criarLead — chamada diretamente (sem FormData, sem
+// redirect) a partir do agendamento de uma Sessão experimental, quando
+// a pessoa ainda não está nas leads: cria a lead sem sair do
+// agendamento, para o nome já aparecer logo a seguir nas sugestões
+// (ver CamposSessaoExperimental).
+export async function criarLeadRapida(input: {
+  estudioSlug: string
+  estudioId: number
+  nome: string
+  telefone: string | null
+}): Promise<{ ok: true; lead: { id: string; nome: string; telefone: string | null } } | { error: string }> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('leads')
+    .insert({ estudio_id: input.estudioId, nome: input.nome, telefone: input.telefone })
+    .select('id, nome, telefone')
+    .single()
+
+  if (error || !data) {
+    return { error: error?.message ?? 'Não foi possível criar a lead.' }
+  }
+
+  revalidatePath(`/painel/${input.estudioSlug}/leads`)
+  return { ok: true, lead: data }
+}
+
 export async function atualizarLead(formData: FormData) {
   const id = formData.get('id') as string
   const estudioSlug = formData.get('estudio_slug') as string

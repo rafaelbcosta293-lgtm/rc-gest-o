@@ -15,6 +15,7 @@ const inputCls =
 
 export default function EditarEventoForm({
   slug,
+  estudioId,
   evento,
   pts,
   clientes,
@@ -22,6 +23,7 @@ export default function EditarEventoForm({
   action,
 }: {
   slug: string
+  estudioId: number
   evento: EventoComCliente
   pts: { id: string; nome: string }[]
   clientes: { id: string; nome: string }[]
@@ -61,6 +63,8 @@ export default function EditarEventoForm({
       {experimental ? (
         <CamposSessaoExperimental
           leads={leads}
+          estudioSlug={slug}
+          estudioId={estudioId}
           defaultNome={evento.titulo ?? ''}
           defaultTelefone={evento.telefone ?? ''}
           defaultLeadId={evento.lead_id ?? ''}

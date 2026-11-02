@@ -1,3 +1,5 @@
+import { primeiroNome } from './clientes'
+
 export function proximoAniversario(nascimentoISO: string, hoje: Date): { data: Date; dias: number } {
   const nasc = new Date(`${nascimentoISO}T00:00:00`)
   const hojeSemHora = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
@@ -24,7 +26,7 @@ export function idadeEm(nascimentoISO: string, naData: Date): number {
 // preenchido na ficha).
 export function preencherMensagem(template: string, nome: string, genero?: 'Masculino' | 'Feminino' | null) {
   const estimado = genero === 'Feminino' ? 'estimada' : 'estimado'
-  return template.replaceAll('{nome}', nome).replaceAll('{estimado}', estimado)
+  return template.replaceAll('{nome}', primeiroNome(nome)).replaceAll('{estimado}', estimado)
 }
 
 export function fmtDiaMes(data: Date) {

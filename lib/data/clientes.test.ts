@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { mesesAtivo, dataRenovacaoSeguroEmDivida, segurosPorPagar } from './clientes'
+import { mesesAtivo, dataRenovacaoSeguroEmDivida, segurosPorPagar, primeiroNome } from './clientes'
+
+describe('primeiroNome', () => {
+  it('devolve só a primeira palavra de um nome composto', () => {
+    expect(primeiroNome('José Manuel Antunes Alves de Freitas')).toBe('José')
+  })
+
+  it('nome de uma só palavra fica como está', () => {
+    expect(primeiroNome('Ana')).toBe('Ana')
+  })
+
+  it('ignora espaços a mais', () => {
+    expect(primeiroNome('  Rosa   Maria Oliveira  ')).toBe('Rosa')
+  })
+})
 
 describe('mesesAtivo', () => {
   it('null sem início de contrato', () => {

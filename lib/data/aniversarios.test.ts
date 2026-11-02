@@ -6,6 +6,10 @@ describe('preencherMensagem', () => {
     expect(preencherMensagem('Olá {nome}!', 'Ana')).toBe('Olá Ana!')
   })
 
+  it('usa só o primeiro nome quando o nome é composto', () => {
+    expect(preencherMensagem('Olá {nome}!', 'Maria Albertina Rodrigues Nunes Pena')).toBe('Olá Maria!')
+  })
+
   it('substitui {estimado} por "estimada" para género Feminino', () => {
     expect(preencherMensagem('{nome}, {estimado} cliente', 'Ana', 'Feminino')).toBe('Ana, estimada cliente')
   })

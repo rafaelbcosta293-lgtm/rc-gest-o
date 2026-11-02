@@ -31,6 +31,15 @@ describe('preencherTemplateLembrete', () => {
     })
     expect(texto).toBe('18:30 · sábado · 7 · Bruno')
   })
+
+  it('usa só o primeiro nome quando o nome do cliente é composto', () => {
+    const texto = preencherTemplateLembrete('Olá {nome}!', {
+      nome: 'José Manuel Antunes Alves de Freitas',
+      data: '2026-11-03',
+      horaInicio: '10:00:00',
+    })
+    expect(texto).toBe('Olá José!')
+  })
 })
 
 describe('dataDeAmanhaEmLisboa', () => {

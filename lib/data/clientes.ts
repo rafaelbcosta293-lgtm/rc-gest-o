@@ -1,3 +1,9 @@
+// Para SMS (lembretes, parabéns) — só o primeiro nome, não o nome
+// completo todo ("José Manuel Antunes Alves de Freitas" → "José").
+export function primeiroNome(nomeCompleto: string): string {
+  return nomeCompleto.trim().split(/\s+/)[0] ?? nomeCompleto.trim()
+}
+
 // Meses entre o início de contrato e hoje (ou até à saída, se já não é
 // cliente). Arredondado por baixo — "3 meses" só depois de passarem 3
 // meses completos.

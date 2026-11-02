@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { somarDias } from './horarios'
 import { getEstudios } from './estudios'
+import { primeiroNome } from './clientes'
 import { obterEstadoGateway, registarFalhaGateway, registarSucessoGateway } from './smsGateway'
 import { enviarSms } from '@/lib/sms/gateway'
 import type { Estudio } from '@/lib/supabase/database.types'
@@ -39,7 +40,7 @@ export function preencherTemplateLembrete(
   const diaMes = Number(dados.data.slice(8, 10))
   const hora = dados.horaInicio.slice(0, 5)
   return template
-    .replaceAll('{nome}', dados.nome)
+    .replaceAll('{nome}', primeiroNome(dados.nome))
     .replaceAll('{dia_semana}', nomeDiaSemana(dados.data))
     .replaceAll('{dia_mes}', String(diaMes))
     .replaceAll('{hora}', hora)

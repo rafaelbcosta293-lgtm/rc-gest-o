@@ -53,11 +53,11 @@ type MensagemMeta = { message?: { is_echo?: boolean } }
 type EntradaMeta = { id: string; changes?: MudancaMeta[]; messaging?: MensagemMeta[] }
 type CorpoMeta = { object?: string; entry?: EntradaMeta[] }
 
-// Um estúdio por omissão (META_LEADS_ESTUDIO_PADRAO) cobre o caso comum —
-// uma só Página/conta de anúncios para o negócio todo. Se, no futuro, cada
-// estúdio passar a ter o seu próprio formulário de lead ads dentro dessa
-// mesma Página, META_FORM_ESTUDIO_MAP permite atribuir por form_id sem
-// precisar de outra Página nem de outro token.
+// Usado só quando o formulário não tem (ou a pessoa não respondeu) a
+// pergunta "Leiria ou Fátima" — ver estudioDaResposta, que tem
+// prioridade. Se um estúdio passar a ter o seu próprio formulário
+// dentro da mesma Página, META_FORM_ESTUDIO_MAP permite atribuir por
+// form_id sem precisar de outra Página nem de outro token.
 function estudioDoFormulario(formId: string | undefined): string | null {
   if (!formId) return null
   const mapaBruto = process.env.META_FORM_ESTUDIO_MAP
@@ -77,6 +77,42 @@ function extrairCampo(dados: DadoGraph[], ...nomes: string[]): string | null {
   for (const nome of nomes) {
     const campo = dados.find((d) => d.name.toLowerCase() === nome)
     if (campo?.values?.[0]) return campo.values[0]
+  }
+  return null
+}
+
+function normalizarTexto(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+// Nomes de campo já tratados à parte (nome/telefone/email) — nunca
+// entram na procura abaixo, para o nome de alguém nunca ser lido por
+// engano como resposta à pergunta do estúdio.
+const CAMPOS_PADRAO = new Set(['full_name', 'nome', 'name', 'phone_number', 'telefone', 'email'])
+
+// O formulário de anúncios tem uma pergunta própria a deixar a pessoa
+// escolher "Leiria" ou "Fátima" — mais fiável do que adivinhar por
+// form_id ou cair sempre no estúdio por omissão. Procura em qualquer
+// campo que não seja nome/telefone/email um valor que bata certo
+// (sem acentos/maiúsculas) com o slug ou o nome de um estúdio ativo;
+// o nome exato da pergunta no formulário não importa, só a resposta.
+function estudioDaResposta(
+  campos: DadoGraph[],
+  estudios: { id: number; slug: string; nome: string }[]
+): { id: number; slug: string } | null {
+  for (const campo of campos) {
+    if (CAMPOS_PADRAO.has(campo.name.toLowerCase())) continue
+    for (const valorBruto of campo.values ?? []) {
+      const valor = normalizarTexto(valorBruto)
+      const encontrado = estudios.find(
+        (e) => valor === normalizarTexto(e.slug) || valor === normalizarTexto(e.nome)
+      )
+      if (encontrado) return encontrado
+    }
   }
   return null
 }
@@ -111,21 +147,21 @@ async function processarLeadgen(
     return
   }
 
-  const estudioSlug = estudioDoFormulario(formId) ?? process.env.META_LEADS_ESTUDIO_PADRAO
-  if (!estudioSlug) {
-    console.error('Meta Leads: sem estúdio por omissão configurado (META_LEADS_ESTUDIO_PADRAO).')
-    return
-  }
+  const estudios = await getEstudios(admin)
+  const estudioRespondido = estudioDaResposta(campos, estudios)
 
-  const { data: estudio, error: erroEstudio } = await admin
-    .from('estudios')
-    .select('id')
-    .eq('slug', estudioSlug)
-    .eq('ativo', true)
-    .maybeSingle()
-  if (erroEstudio || !estudio) {
-    console.error(`Meta Leads: estúdio "${estudioSlug}" não encontrado.`)
-    return
+  let estudio: { id: number } | null = estudioRespondido ? { id: estudioRespondido.id } : null
+  if (!estudio) {
+    const estudioSlug = estudioDoFormulario(formId) ?? process.env.META_LEADS_ESTUDIO_PADRAO
+    if (!estudioSlug) {
+      console.error('Meta Leads: sem estúdio por omissão configurado (META_LEADS_ESTUDIO_PADRAO).')
+      return
+    }
+    estudio = estudios.find((e) => e.slug === estudioSlug) ?? null
+    if (!estudio) {
+      console.error(`Meta Leads: estúdio "${estudioSlug}" não encontrado.`)
+      return
+    }
   }
 
   const resultado = await criarLeadAutomatica(admin, {

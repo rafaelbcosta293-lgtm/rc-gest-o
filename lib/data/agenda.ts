@@ -2,10 +2,17 @@ import { somarDias } from '@/lib/data/horarios'
 import { PALETA } from '@/lib/data/constantes'
 import type { RepeticaoSerieAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
 
-export const TIPOS_EVENTO_AGENDA: TipoEventoAgenda[] = ['Treino', 'Avaliação', 'Reunião', 'Outro']
+export const TIPOS_EVENTO_AGENDA: TipoEventoAgenda[] = [
+  'Treino',
+  'Sessão experimental',
+  'Avaliação',
+  'Reunião',
+  'Outro',
+]
 
 const COR_TIPO_EVENTO: Record<TipoEventoAgenda, keyof typeof PALETA> = {
   Treino: 'teal',
+  'Sessão experimental': 'laranja',
   Avaliação: 'azul',
   Reunião: 'roxo',
   Outro: 'neutro',
@@ -13,6 +20,13 @@ const COR_TIPO_EVENTO: Record<TipoEventoAgenda, keyof typeof PALETA> = {
 
 export function corTipoEvento(tipo: TipoEventoAgenda) {
   return PALETA[COR_TIPO_EVENTO[tipo]]
+}
+
+// "SE - Nome" é só a forma de apresentar — o que fica guardado em
+// "titulo" é sempre o nome, nunca o prefixo.
+export function rotuloTipoEvento(tipo: TipoEventoAgenda, titulo: string | null): string {
+  if (tipo === 'Sessão experimental' && titulo) return `SE - ${titulo}`
+  return titulo ?? tipo
 }
 
 export type Repeticao = 'nao' | 'semanal' | 'quinzenal'

@@ -132,6 +132,7 @@ export async function agendarExperimental(formData: FormData) {
   const estudioId = Number(formData.get('estudio_id'))
   const leadId = formData.get('lead_id') as string
   const nomeLead = formData.get('nome_lead') as string
+  const telefoneLead = campoOuNull(formData, 'telefone_lead')
   const data = formData.get('data') as string
   const horaInicio = formData.get('hora_inicio') as string
   const hoje = new Date().toISOString().slice(0, 10)
@@ -141,12 +142,13 @@ export async function agendarExperimental(formData: FormData) {
 
   const { error: erroAgenda } = await supabase.from('agenda_eventos').insert({
     estudio_id: estudioId,
-    tipo: 'Avaliação',
-    titulo: `Experimental — ${nomeLead}`,
+    tipo: 'Sessão experimental',
+    titulo: nomeLead,
+    lead_id: leadId,
+    telefone: telefoneLead,
     data,
     hora_inicio: horaInicio,
     duracao_min: 40,
-    nota: `Lead: ${nomeLead}`,
     criado_por: sessao.userId,
   })
 

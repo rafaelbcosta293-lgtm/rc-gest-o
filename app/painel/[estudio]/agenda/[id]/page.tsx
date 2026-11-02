@@ -9,6 +9,7 @@ import SubmitButton from '@/components/SubmitButton'
 import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import EditarEventoForm from './EditarEventoForm'
+import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda } from '@/lib/supabase/database.types'
 
 type EventoComCliente = EventoAgenda & { cliente: { id: string; nome: string } | null }
@@ -46,19 +47,30 @@ export default async function EventoAgendaPage({
     notFound()
   }
 
-  const [pts, { data: clientesData, error: erroClientes }] = await Promise.all([
-    getEquipaDoEstudio(supabase, estudio.id),
-    supabase
-      .from('clientes')
-      .select('id, nome')
-      .eq('estudio_id', estudio.id)
-      .neq('estado', 'Ex-cliente')
-      .order('nome'),
-  ])
+  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }] =
+    await Promise.all([
+      getEquipaDoEstudio(supabase, estudio.id),
+      supabase
+        .from('clientes')
+        .select('id, nome')
+        .eq('estudio_id', estudio.id)
+        .neq('estado', 'Ex-cliente')
+        .order('nome'),
+      supabase
+        .from('leads')
+        .select('id, nome, telefone')
+        .eq('estudio_id', estudio.id)
+        .neq('estado', 'Perdida')
+        .order('nome'),
+    ])
   if (erroClientes) {
     throw new Error(erroClientes.message)
   }
+  if (erroLeads) {
+    throw new Error(erroLeads.message)
+  }
   const clientes = (clientesData ?? []) as { id: string; nome: string }[]
+  const leads = (leadsData ?? []) as LeadOpcao[]
 
   const cor = corTipoEvento(evento.tipo)
   const cancelado = evento.estado === 'Cancelado'
@@ -123,7 +135,14 @@ export default async function EventoAgendaPage({
         </p>
       )}
 
-      <EditarEventoForm slug={slug} evento={evento} pts={pts} clientes={clientes} action={atualizarEvento} />
+      <EditarEventoForm
+        slug={slug}
+        evento={evento}
+        pts={pts}
+        clientes={clientes}
+        leads={leads}
+        action={atualizarEvento}
+      />
 
       <div className="mt-8 flex flex-wrap items-start gap-3 border-t border-border-subtle pt-6">
         {!cancelado ? (

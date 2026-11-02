@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { X, Trash2, Ban, RotateCcw, Minus, Plus } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
-import { corTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
+import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
+import { corTipoEvento, rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import {
   criarEventoRapido,
@@ -35,9 +36,11 @@ const DURACOES_COMUNS = [30, 40, 45, 60, 90, 120]
 // partilhado) — o rótulo junta os nomes para se ver logo quem treina
 // junto, sem abrir o evento.
 function rotuloEvento(grupo: EventoComNomes[]) {
+  const primeiro = grupo[0]
+  if (primeiro.tipo === 'Sessão experimental') return rotuloTipoEvento(primeiro.tipo, primeiro.titulo)
   const nomes = grupo.map((e) => e.cliente?.nome).filter((n): n is string => !!n)
   if (nomes.length > 0) return nomes.join(' + ')
-  return grupo[0].titulo ?? grupo[0].tipo
+  return primeiro.titulo ?? primeiro.tipo
 }
 
 function minutosParaHora(minutos: number) {
@@ -77,6 +80,7 @@ export default function AgendaInterativa({
   dias,
   eventos,
   clientes,
+  leads,
   pts,
 }: {
   slug: string
@@ -84,6 +88,7 @@ export default function AgendaInterativa({
   dias: string[]
   eventos: EventoComNomes[]
   clientes: ClienteOpcao[]
+  leads: LeadOpcao[]
   pts: PtOpcao[]
 }) {
   const router = useRouter()
@@ -134,6 +139,8 @@ export default function AgendaInterativa({
       clienteIds,
       ptId: (formData.get('pt_id') as string) || null,
       titulo: (formData.get('titulo') as string)?.trim() || null,
+      leadId: (formData.get('lead_id') as string) || null,
+      telefone: (formData.get('telefone') as string)?.trim() || null,
       data: formData.get('data') as string,
       horaInicio: formData.get('hora_inicio') as string,
       duracaoMin: Number(formData.get('duracao_min')) || 40,
@@ -257,6 +264,7 @@ export default function AgendaInterativa({
         <EventoModalOverlay
           modal={modal}
           clientes={clientes}
+          leads={leads}
           pts={pts}
           erro={erro}
           aPendente={aPendente}
@@ -808,6 +816,7 @@ function ColunaDia({
 function EventoModalOverlay({
   modal,
   clientes,
+  leads,
   pts,
   erro,
   aPendente,
@@ -821,6 +830,7 @@ function EventoModalOverlay({
 }: {
   modal: Extract<EstadoModal, { aberto: true }>
   clientes: ClienteOpcao[]
+  leads: LeadOpcao[]
   pts: PtOpcao[]
   erro: string | null
   aPendente: boolean
@@ -837,6 +847,9 @@ function EventoModalOverlay({
   const dataDefault = modal.modo === 'editar' ? modal.evento.data : modal.data
   const horaDefault = modal.modo === 'editar' ? modal.evento.hora_inicio.slice(0, 5) : modal.horaInicio
   const duracaoDefault = modal.modo === 'editar' ? modal.evento.duracao_min : modal.duracaoMin
+
+  const [tipo, setTipo] = useState<TipoEvento>(evento?.tipo ?? 'Treino')
+  const experimental = tipo === 'Sessão experimental'
 
   // Desmarcar não é imediato — pede sempre, antes, se o treino foi
   // realizado mesmo assim ou não (obrigatório, sem omissão possível),
@@ -914,55 +927,65 @@ function EventoModalOverlay({
           }}
           className="mt-3 flex flex-col gap-3"
         >
-          <div className="grid grid-cols-4 gap-1 rounded-full bg-border-subtle p-1">
+          <div className="grid grid-cols-5 gap-1 rounded-full bg-border-subtle p-1">
             {TIPOS_EVENTO_AGENDA.map((t) => (
               <label key={t} className="relative">
                 <input
                   type="radio"
                   name="tipo"
                   value={t}
-                  defaultChecked={evento ? t === evento.tipo : t === 'Treino'}
+                  checked={tipo === t}
+                  onChange={() => setTipo(t)}
                   className="peer sr-only"
                 />
-                <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[10px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
+                <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[9px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
                   {t}
                 </span>
               </label>
             ))}
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            {participantes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {participantes.map((c) => (
-                  <span
-                    key={c.id}
-                    className="inline-flex items-center gap-1 rounded-full bg-brand/[.12] px-2.5 py-1 text-xs font-medium text-foreground"
-                  >
-                    {c.nome}
-                    <button
-                      type="button"
-                      onClick={() => setParticipantes((lista) => lista.filter((x) => x.id !== c.id))}
-                      className="text-muted hover:text-foreground"
-                      title={`Remover ${c.nome} deste treino`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <ClienteCombobox
-              clientes={clientes}
-              excluirIds={participantes.map((c) => c.id)}
-              onSelecionar={(c) => setParticipantes((lista) => [...lista, c])}
-              placeholder={
-                participantes.length === 0
-                  ? '— Reunião / outro (sem cliente) — ou escreve para adicionar'
-                  : 'Adicionar mais alguém ao mesmo treino…'
-              }
+          {experimental ? (
+            <CamposSessaoExperimental
+              leads={leads}
+              defaultNome={evento?.titulo ?? ''}
+              defaultTelefone={evento?.telefone ?? ''}
+              defaultLeadId={evento?.lead_id ?? ''}
             />
-          </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {participantes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {participantes.map((c) => (
+                    <span
+                      key={c.id}
+                      className="inline-flex items-center gap-1 rounded-full bg-brand/[.12] px-2.5 py-1 text-xs font-medium text-foreground"
+                    >
+                      {c.nome}
+                      <button
+                        type="button"
+                        onClick={() => setParticipantes((lista) => lista.filter((x) => x.id !== c.id))}
+                        className="text-muted hover:text-foreground"
+                        title={`Remover ${c.nome} deste treino`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <ClienteCombobox
+                clientes={clientes}
+                excluirIds={participantes.map((c) => c.id)}
+                onSelecionar={(c) => setParticipantes((lista) => [...lista, c])}
+                placeholder={
+                  participantes.length === 0
+                    ? '— Reunião / outro (sem cliente) — ou escreve para adicionar'
+                    : 'Adicionar mais alguém ao mesmo treino…'
+                }
+              />
+            </div>
+          )}
 
           <select name="pt_id" defaultValue={evento?.pt_id ?? ''} className={inputCls}>
             <option value="">— Sem instrutor —</option>
@@ -973,12 +996,14 @@ function EventoModalOverlay({
             ))}
           </select>
 
-          <input
-            name="titulo"
-            defaultValue={evento?.titulo ?? ''}
-            placeholder="Título (sem cliente)"
-            className={inputCls}
-          />
+          {!experimental && (
+            <input
+              name="titulo"
+              defaultValue={evento?.titulo ?? ''}
+              placeholder="Título (sem cliente)"
+              className={inputCls}
+            />
+          )}
 
           <div className="grid grid-cols-3 gap-2">
             <input type="date" name="data" defaultValue={dataDefault} required className={inputCls} />

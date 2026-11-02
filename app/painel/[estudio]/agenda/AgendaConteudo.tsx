@@ -7,6 +7,7 @@ import { fmt, MESES, DIAS_SEMANA, diasDoMes, offsetPrimeiroDia } from '@/lib/dat
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { corTipoEvento } from '@/lib/data/agenda'
 import AgendaInterativa from './AgendaInterativa'
+import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda, Estudio } from '@/lib/supabase/database.types'
 
 const VISTAS = ['dia', 'semana', 'mes'] as const
@@ -148,19 +149,30 @@ export default async function AgendaConteudo({
 
   const supabase = await createClient()
 
-  const [pts, { data: clientesData, error: erroClientes }] = await Promise.all([
-    getEquipaDoEstudio(supabase, estudio.id),
-    supabase
-      .from('clientes')
-      .select('id, nome')
-      .eq('estudio_id', estudio.id)
-      .neq('estado', 'Ex-cliente')
-      .order('nome'),
-  ])
+  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }] =
+    await Promise.all([
+      getEquipaDoEstudio(supabase, estudio.id),
+      supabase
+        .from('clientes')
+        .select('id, nome')
+        .eq('estudio_id', estudio.id)
+        .neq('estado', 'Ex-cliente')
+        .order('nome'),
+      supabase
+        .from('leads')
+        .select('id, nome, telefone')
+        .eq('estudio_id', estudio.id)
+        .neq('estado', 'Perdida')
+        .order('nome'),
+    ])
   if (erroClientes) {
     throw new Error(erroClientes.message)
   }
+  if (erroLeads) {
+    throw new Error(erroLeads.message)
+  }
   const clientes = (clientesData ?? []) as { id: string; nome: string }[]
+  const leads = (leadsData ?? []) as LeadOpcao[]
   const qsExtra = ptFiltro ? `&pt=${ptFiltro}` : ''
 
   let inicio: string
@@ -295,6 +307,7 @@ export default async function AgendaConteudo({
           dias={vista === 'dia' ? [dataSel] : diasSemana}
           eventos={eventos}
           clientes={clientes}
+          leads={leads}
           pts={pts}
         />
       )}

@@ -75,11 +75,10 @@ export default async function LembretesSmsPage({
             .from('agenda_eventos')
             .select('id', { count: 'exact', head: true })
             .eq('estudio_id', estudio.id)
-            .eq('tipo', 'Treino')
+            .in('tipo', ['Treino', 'Sessão experimental'])
             .eq('estado', 'Agendado')
             .eq('data', amanha)
-            .eq('lembrete_enviado', false)
-            .not('cliente_id', 'is', null),
+            .eq('lembrete_enviado', false),
         ])
         if (erroEstado) throw new Error(erroEstado.message)
         return { estudio, estado: estadoData as EstadoSmsGateway, pendentes: pendentesCount ?? 0 }

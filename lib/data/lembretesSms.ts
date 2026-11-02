@@ -54,11 +54,26 @@ export function dataDeAmanhaEmLisboa(agora: Date = new Date()): string {
   return somarDias(hojeLisboa, 1)
 }
 
-type EventoComCliente = {
+type EventoParaLembrete = {
   id: string
+  tipo: string
   data: string
   hora_inicio: string
+  titulo: string | null
+  telefone: string | null
   cliente: { nome: string; telefone: string | null } | null
+}
+
+// Um Treino tem cliente (nome/telefone vêm da ficha); uma Sessão
+// experimental não — a pessoa ainda não é cliente, por isso o nome e o
+// telemóvel ficam guardados diretamente no próprio evento, preenchidos
+// ao agendar (ver CamposSessaoExperimental).
+function destinoLembrete(evento: EventoParaLembrete): { nome: string; telefone: string | null } | null {
+  if (evento.cliente) return { nome: evento.cliente.nome, telefone: evento.cliente.telefone }
+  if (evento.tipo === 'Sessão experimental' && evento.titulo) {
+    return { nome: evento.titulo, telefone: evento.telefone }
+  }
+  return null
 }
 
 export type ResultadoProcessamentoLembretes = {
@@ -90,32 +105,35 @@ async function processarLembretesDoEstudio(
   const [{ data: eventosData, error: erroEventos }, estadoInicial] = await Promise.all([
     admin
       .from('agenda_eventos')
-      .select('id, data, hora_inicio, cliente:clientes(nome, telefone)')
+      .select('id, tipo, data, hora_inicio, titulo, telefone, cliente:clientes(nome, telefone)')
       .eq('estudio_id', estudio.id)
-      .eq('tipo', 'Treino')
+      .in('tipo', ['Treino', 'Sessão experimental'])
       .eq('estado', 'Agendado')
       .eq('data', amanha)
-      .eq('lembrete_enviado', false)
-      .not('cliente_id', 'is', null),
+      .eq('lembrete_enviado', false),
     obterEstadoGateway(admin, estudio.id),
   ])
 
   if (erroEventos) throw new Error(erroEventos.message)
 
   let estado = estadoInicial
-  const pendentes = ((eventosData ?? []) as unknown as EventoComCliente[]).filter((e) => e.cliente)
+  const pendentes = ((eventosData ?? []) as unknown as EventoParaLembrete[])
+    .map((evento) => ({ evento, destino: destinoLembrete(evento) }))
+    .filter((x): x is { evento: EventoParaLembrete; destino: { nome: string; telefone: string | null } } =>
+      x.destino !== null
+    )
 
   let enviados = 0
   let falhasPorNumero = 0
   let gatewayOffline = false
 
-  for (const evento of pendentes) {
+  for (const { evento, destino } of pendentes) {
     const texto = preencherTemplateLembrete(template, {
-      nome: evento.cliente!.nome,
+      nome: destino.nome,
       data: evento.data,
       horaInicio: evento.hora_inicio,
     })
-    const resultado = await enviarSms(estudio.slug, evento.cliente!.telefone ?? '', texto)
+    const resultado = await enviarSms(estudio.slug, destino.telefone ?? '', texto)
 
     if (resultado.ok) {
       await admin

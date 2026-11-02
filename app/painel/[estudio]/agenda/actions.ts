@@ -17,6 +17,32 @@ function campoOuNull(formData: FormData, nome: string) {
 
 type LinhaParaReconciliar = { id: string; cliente_id: string | null; data: string; pt_id: string | null }
 
+// Agendar uma "Sessão experimental" a partir da Agenda também avança a
+// lead no funil — mesmo efeito que o botão "Agendar experimental" já
+// tinha na própria ficha da lead (ver agendarExperimental em
+// leads/actions.ts), para o painel de Coordenação (que lê visita_data/
+// visita_hora da lead, não a Agenda) nunca ficar dessincronizado,
+// seja qual for o sítio onde a sessão foi marcada.
+async function sincronizarVisitaLead(
+  supabase: SupabaseClient,
+  leadId: string | null,
+  data: string,
+  horaInicio: string
+) {
+  if (!leadId) return null
+  const hoje = new Date().toISOString().slice(0, 10)
+  const { error } = await supabase
+    .from('leads')
+    .update({
+      visita_data: data,
+      visita_hora: horaInicio,
+      visita_marcada_em: hoje,
+      estado: 'Experimental agendada',
+    })
+    .eq('id', leadId)
+  return error?.message ?? null
+}
+
 // Mantém a ficha de presenças do cliente a bater certo com o estado do
 // evento, mesmo que a alteração aconteça muito depois (ex.: desmarcar
 // no dia seguinte um treino que o cron já tinha contado como presença).
@@ -80,6 +106,8 @@ export async function criarEvento(formData: FormData) {
   const clienteId = campoOuNull(formData, 'cliente_id')
   const ptId = campoOuNull(formData, 'pt_id')
   const titulo = campoOuNull(formData, 'titulo')
+  const leadId = campoOuNull(formData, 'lead_id')
+  const telefone = campoOuNull(formData, 'telefone')
   const data = formData.get('data') as string
   const horaInicio = formData.get('hora_inicio') as string
   const duracaoMin = Number(formData.get('duracao_min')) || 40
@@ -145,6 +173,8 @@ export async function criarEvento(formData: FormData) {
     pt_id: ptId,
     tipo,
     titulo,
+    lead_id: leadId,
+    telefone,
     data: dataOcorrencia,
     hora_inicio: horaInicio,
     duracao_min: duracaoMin,
@@ -159,6 +189,13 @@ export async function criarEvento(formData: FormData) {
     redirect(`/painel/${estudioSlug}/agenda/novo?error=${encodeURIComponent(error.message)}`)
   }
 
+  if (tipo === 'Sessão experimental') {
+    const erroLead = await sincronizarVisitaLead(supabase, leadId, data, horaInicio)
+    if (erroLead) {
+      redirect(`/painel/${estudioSlug}/agenda/novo?error=${encodeURIComponent(erroLead)}`)
+    }
+  }
+
   revalidatePath(`/painel/${estudioSlug}/agenda`)
   redirect(`/painel/${estudioSlug}/agenda?vista=dia&data=${data}`)
 }
@@ -170,6 +207,8 @@ export async function atualizarEvento(formData: FormData) {
   const clienteId = campoOuNull(formData, 'cliente_id')
   const ptId = campoOuNull(formData, 'pt_id')
   const titulo = campoOuNull(formData, 'titulo')
+  const leadId = campoOuNull(formData, 'lead_id')
+  const telefone = campoOuNull(formData, 'telefone')
   const data = formData.get('data') as string
   const horaInicio = formData.get('hora_inicio') as string
   const duracaoMin = Number(formData.get('duracao_min')) || 40
@@ -185,6 +224,8 @@ export async function atualizarEvento(formData: FormData) {
       cliente_id: clienteId,
       pt_id: ptId,
       titulo,
+      lead_id: leadId,
+      telefone,
       data,
       hora_inicio: horaInicio,
       duracao_min: duracaoMin,
@@ -329,6 +370,9 @@ type CamposEvento = {
   clienteIds: string[]
   ptId: string | null
   titulo: string | null
+  // Só para "Sessão experimental" — a pessoa ainda não é cliente.
+  leadId: string | null
+  telefone: string | null
   data: string
   horaInicio: string
   duracaoMin: number
@@ -380,6 +424,8 @@ export async function criarEventoRapido(
       pt_id: input.ptId,
       tipo: input.tipo,
       titulo: input.titulo,
+      lead_id: input.leadId,
+      telefone: input.telefone,
       data: dataOcorrencia,
       hora_inicio: input.horaInicio,
       duracao_min: input.duracaoMin,
@@ -392,6 +438,11 @@ export async function criarEventoRapido(
 
   const { error } = await supabase.from('agenda_eventos').insert(linhas)
   if (error) return { error: error.message }
+
+  if (input.tipo === 'Sessão experimental') {
+    const erroLead = await sincronizarVisitaLead(supabase, input.leadId, input.data, input.horaInicio)
+    if (erroLead) return { error: erroLead }
+  }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   return { ok: true }
@@ -423,6 +474,8 @@ export async function atualizarEventoRapido(
     tipo: input.tipo,
     pt_id: input.ptId,
     titulo: input.titulo,
+    lead_id: input.leadId,
+    telefone: input.telefone,
     data: input.data,
     hora_inicio: input.horaInicio,
     duracao_min: input.duracaoMin,

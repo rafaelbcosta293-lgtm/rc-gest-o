@@ -215,6 +215,7 @@ export default async function LeadPage({
             <input type="hidden" name="estudio_id" value={estudio.id} />
             <input type="hidden" name="lead_id" value={lead.id} />
             <input type="hidden" name="nome_lead" value={lead.nome} />
+            <input type="hidden" name="telefone_lead" value={lead.telefone ?? ''} />
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Dia</label>
               <input

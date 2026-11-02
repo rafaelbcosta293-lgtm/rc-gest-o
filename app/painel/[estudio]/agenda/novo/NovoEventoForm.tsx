@@ -4,7 +4,9 @@ import { useState } from 'react'
 import { TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
 import SubmitButton from '@/components/SubmitButton'
 import ClienteCombobox from '@/components/ClienteCombobox'
+import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
+import type { TipoEventoAgenda } from '@/lib/supabase/database.types'
 
 const inputCls =
   'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
@@ -15,6 +17,7 @@ export default function NovoEventoForm({
   dataInicial,
   pts,
   clientes,
+  leads,
   action,
 }: {
   slug: string
@@ -22,11 +25,14 @@ export default function NovoEventoForm({
   dataInicial: string
   pts: { id: string; nome: string }[]
   clientes: { id: string; nome: string }[]
+  leads: LeadOpcao[]
   action: (formData: FormData) => void
 }) {
   const { marcarSujo } = useAvisoSairSemGuardar()
+  const [tipo, setTipo] = useState<TipoEventoAgenda>('Treino')
   const [repete, setRepete] = useState(false)
   const [limiteModo, setLimiteModo] = useState<'vezes' | 'ate' | 'indefinido'>('vezes')
+  const experimental = tipo === 'Sessão experimental'
 
   return (
     <form action={action} onChange={marcarSujo} className="mt-6 flex flex-col gap-5">
@@ -35,17 +41,18 @@ export default function NovoEventoForm({
 
       <div>
         <label className="text-xs font-semibold text-muted">Tipo</label>
-        <div className="mt-1.5 grid grid-cols-4 gap-1.5 rounded-full bg-border-subtle p-1">
+        <div className="mt-1.5 grid grid-cols-5 gap-1.5 rounded-full bg-border-subtle p-1">
           {TIPOS_EVENTO_AGENDA.map((t) => (
             <label key={t} className="relative">
               <input
                 type="radio"
                 name="tipo"
                 value={t}
-                defaultChecked={t === 'Treino'}
+                checked={tipo === t}
+                onChange={() => setTipo(t)}
                 className="peer sr-only"
               />
-              <span className="block cursor-pointer rounded-full px-1.5 py-1.5 text-center text-[11px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
+              <span className="block cursor-pointer rounded-full px-1 py-1.5 text-center text-[10px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
                 {t}
               </span>
             </label>
@@ -53,11 +60,29 @@ export default function NovoEventoForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-muted">Cliente (opcional)</label>
-          <ClienteCombobox clientes={clientes} placeholder="— Reunião / outro (sem cliente) —" />
+      {experimental ? (
+        <CamposSessaoExperimental leads={leads} />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-muted">Cliente (opcional)</label>
+            <ClienteCombobox clientes={clientes} placeholder="— Reunião / outro (sem cliente) —" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-muted">Instrutor (opcional)</label>
+            <select name="pt_id" defaultValue="" className={inputCls}>
+              <option value="">— Sem instrutor —</option>
+              {pts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+      )}
+
+      {experimental && (
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-muted">Instrutor (opcional)</label>
           <select name="pt_id" defaultValue="" className={inputCls}>
@@ -69,14 +94,16 @@ export default function NovoEventoForm({
             ))}
           </select>
         </div>
-      </div>
+      )}
 
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold text-muted">
-          Título (só se não houver cliente — ex: &quot;Briefing de equipa&quot;)
-        </label>
-        <input name="titulo" className={inputCls} />
-      </div>
+      {!experimental && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-muted">
+            Título (só se não houver cliente — ex: &quot;Briefing de equipa&quot;)
+          </label>
+          <input name="titulo" className={inputCls} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">

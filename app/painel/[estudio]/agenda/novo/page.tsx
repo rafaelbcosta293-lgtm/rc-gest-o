@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { criarEvento } from '../actions'
 import NovoEventoForm from './NovoEventoForm'
+import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 
 export default async function NovoEventoPage({
   params,
@@ -24,19 +25,30 @@ export default async function NovoEventoPage({
     notFound()
   }
 
-  const [pts, { data: clientesData, error: erroClientes }] = await Promise.all([
-    getEquipaDoEstudio(supabase, estudio.id),
-    supabase
-      .from('clientes')
-      .select('id, nome')
-      .eq('estudio_id', estudio.id)
-      .neq('estado', 'Ex-cliente')
-      .order('nome'),
-  ])
+  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }] =
+    await Promise.all([
+      getEquipaDoEstudio(supabase, estudio.id),
+      supabase
+        .from('clientes')
+        .select('id, nome')
+        .eq('estudio_id', estudio.id)
+        .neq('estado', 'Ex-cliente')
+        .order('nome'),
+      supabase
+        .from('leads')
+        .select('id, nome, telefone')
+        .eq('estudio_id', estudio.id)
+        .neq('estado', 'Perdida')
+        .order('nome'),
+    ])
   if (erroClientes) {
     throw new Error(erroClientes.message)
   }
+  if (erroLeads) {
+    throw new Error(erroLeads.message)
+  }
   const clientes = (clientesData ?? []) as { id: string; nome: string }[]
+  const leads = (leadsData ?? []) as LeadOpcao[]
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -62,6 +74,7 @@ export default async function NovoEventoPage({
         dataInicial={dataInicial}
         pts={pts}
         clientes={clientes}
+        leads={leads}
         action={criarEvento}
       />
     </div>

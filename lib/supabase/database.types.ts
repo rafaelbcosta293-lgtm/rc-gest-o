@@ -448,7 +448,7 @@ export type EnvioAniversario = {
   enviado_por: string | null
 }
 
-export type TipoEventoAgenda = 'Treino' | 'Avaliação' | 'Reunião' | 'Outro'
+export type TipoEventoAgenda = 'Treino' | 'Sessão experimental' | 'Avaliação' | 'Reunião' | 'Outro'
 export type EstadoEventoAgenda = 'Agendado' | 'Cancelado' | 'Concluído'
 
 export type EventoAgenda = {
@@ -468,6 +468,11 @@ export type EventoAgenda = {
   motivo_cancelamento: string | null
   lembrete_enviado: boolean
   lembrete_enviado_em: string | null
+  // Só preenchidos para "Sessão experimental" — a lead ainda não é
+  // cliente, por isso não há cliente_id: lead_id liga aos dados dela, e
+  // telefone fica guardado diretamente aqui para o lembrete SMS.
+  lead_id: string | null
+  telefone: string | null
   criado_por: string | null
   criado_em: string
 }

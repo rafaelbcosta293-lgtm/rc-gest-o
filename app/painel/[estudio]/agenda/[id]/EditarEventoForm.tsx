@@ -1,10 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
 import SubmitButton from '@/components/SubmitButton'
 import ClienteCombobox from '@/components/ClienteCombobox'
+import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
-import type { EventoAgenda } from '@/lib/supabase/database.types'
+import type { EventoAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
 
 type EventoComCliente = EventoAgenda & { cliente: { id: string; nome: string } | null }
 
@@ -16,15 +18,19 @@ export default function EditarEventoForm({
   evento,
   pts,
   clientes,
+  leads,
   action,
 }: {
   slug: string
   evento: EventoComCliente
   pts: { id: string; nome: string }[]
   clientes: { id: string; nome: string }[]
+  leads: LeadOpcao[]
   action: (formData: FormData) => void
 }) {
   const { marcarSujo } = useAvisoSairSemGuardar()
+  const [tipo, setTipo] = useState<TipoEventoAgenda>(evento.tipo)
+  const experimental = tipo === 'Sessão experimental'
 
   return (
     <form action={action} onChange={marcarSujo} className="mt-6 flex flex-col gap-5">
@@ -33,17 +39,18 @@ export default function EditarEventoForm({
 
       <div>
         <label className="text-xs font-semibold text-muted">Tipo</label>
-        <div className="mt-1.5 grid grid-cols-4 gap-1.5 rounded-full bg-border-subtle p-1">
+        <div className="mt-1.5 grid grid-cols-5 gap-1.5 rounded-full bg-border-subtle p-1">
           {TIPOS_EVENTO_AGENDA.map((t) => (
             <label key={t} className="relative">
               <input
                 type="radio"
                 name="tipo"
                 value={t}
-                defaultChecked={t === evento.tipo}
+                checked={tipo === t}
+                onChange={() => setTipo(t)}
                 className="peer sr-only"
               />
-              <span className="block cursor-pointer rounded-full px-1.5 py-1.5 text-center text-[11px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
+              <span className="block cursor-pointer rounded-full px-1 py-1.5 text-center text-[10px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
                 {t}
               </span>
             </label>
@@ -51,15 +58,38 @@ export default function EditarEventoForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-muted">Cliente (opcional)</label>
-          <ClienteCombobox
-            clientes={clientes}
-            defaultValue={evento.cliente}
-            placeholder="— Reunião / outro (sem cliente) —"
-          />
+      {experimental ? (
+        <CamposSessaoExperimental
+          leads={leads}
+          defaultNome={evento.titulo ?? ''}
+          defaultTelefone={evento.telefone ?? ''}
+          defaultLeadId={evento.lead_id ?? ''}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-muted">Cliente (opcional)</label>
+            <ClienteCombobox
+              clientes={clientes}
+              defaultValue={evento.cliente}
+              placeholder="— Reunião / outro (sem cliente) —"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-muted">Instrutor (opcional)</label>
+            <select name="pt_id" defaultValue={evento.pt_id ?? ''} className={inputCls}>
+              <option value="">— Sem instrutor —</option>
+              {pts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+      )}
+
+      {experimental && (
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-muted">Instrutor (opcional)</label>
           <select name="pt_id" defaultValue={evento.pt_id ?? ''} className={inputCls}>
@@ -71,12 +101,14 @@ export default function EditarEventoForm({
             ))}
           </select>
         </div>
-      </div>
+      )}
 
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold text-muted">Título (só se não houver cliente)</label>
-        <input name="titulo" defaultValue={evento.titulo ?? ''} className={inputCls} />
-      </div>
+      {!experimental && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-muted">Título (só se não houver cliente)</label>
+          <input name="titulo" defaultValue={evento.titulo ?? ''} className={inputCls} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">

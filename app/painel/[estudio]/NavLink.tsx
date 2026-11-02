@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { MODULOS, PALETA } from '@/lib/data/constantes'
+import { useModoIcone } from '@/components/BarraAjustavel'
 
 // Destaca o módulo atual no menu — sem isto, a navegação não dava
 // nenhuma pista de "estás aqui".
@@ -20,28 +21,27 @@ function moduloPorId(id: string) {
   return MODULOS.find((m) => m.id === id)!
 }
 
-// Computador/tablet (≥768px): mesmo formato compacto da barra do
-// telemóvel (ícone em cima, nome por baixo) — cabem muitas mais
-// pastas por pixel de largura do que o formato antigo de pílula
-// horizontal, por isso a barra deixa de precisar de scroll mesmo com a
-// janela do computador reduzida (ver também BarraAjustavel, que ainda
-// encolhe tudo um pouco mais se mesmo assim não couber).
+// Computador/tablet (≥768px): ícone e nome lado a lado, numa pílula —
+// a largura toda é gerida pelo BarraAjustavel (espalha quando há
+// espaço, encolhe sem esconder nada quando não há).
 export function NavLinkTopBar({ href, id }: { href: string; id: string }) {
-  const { icone: Icone, cor, nome, curto } = moduloPorId(id)
+  const { icone: Icone, cor, nome } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
+  const soIcone = useModoIcone()
   return (
     <Link
       href={href}
-      className="flex min-w-12 shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 transition-colors hover:bg-foreground/[.05]"
-      style={ativo ? { background: PALETA[cor].bg } : undefined}
+      title={soIcone ? nome : undefined}
+      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-medium tracking-tight text-foreground transition-colors ${
+        soIcone ? 'p-2' : 'px-3 py-1.5'
+      } ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
+      style={{
+        background: ativo ? PALETA[cor].bg : undefined,
+        color: ativo ? PALETA[cor].tx : undefined,
+      }}
     >
-      <Icone className="h-[18px] w-[18px]" strokeWidth={ativo ? 2.5 : 2.25} style={{ color: PALETA[cor].tx }} />
-      <span
-        className={`text-[10px] leading-none tracking-tight ${ativo ? 'font-semibold' : 'font-medium text-foreground'}`}
-        style={ativo ? { color: PALETA[cor].tx } : undefined}
-      >
-        {curto ?? nome}
-      </span>
+      <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
+      {!soIcone && nome}
     </Link>
   )
 }
@@ -66,6 +66,7 @@ export function NavLinkClientesComSubmenu({
   const clientesHref = `/painel/${slug}/clientes`
   const { icone: Icone, cor } = moduloPorId('clientes')
   const subModulos = SUBPASTAS_CLIENTES.map((id) => moduloPorId(id))
+  const soIcone = useModoIcone()
 
   function podeAceder(m: ReturnType<typeof moduloPorId>) {
     return m.pronto && (!m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao))
@@ -103,17 +104,18 @@ export function NavLinkClientesComSubmenu({
       <Link
         ref={pillRef}
         href={clientesHref}
-        className="flex min-w-12 shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 transition-colors hover:bg-foreground/[.05]"
-        style={ativo ? { background: PALETA[cor].bg } : undefined}
+        title={soIcone ? 'Clientes' : undefined}
+        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-medium tracking-tight text-foreground transition-colors ${
+          soIcone ? 'p-2' : 'px-3 py-1.5'
+        } ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
+        style={{
+          background: ativo ? PALETA[cor].bg : undefined,
+          color: ativo ? PALETA[cor].tx : undefined,
+        }}
       >
-        <Icone className="h-[18px] w-[18px]" strokeWidth={ativo ? 2.5 : 2.25} style={{ color: PALETA[cor].tx }} />
-        <span
-          className={`flex items-center gap-0.5 text-[10px] leading-none tracking-tight ${ativo ? 'font-semibold' : 'font-medium text-foreground'}`}
-          style={ativo ? { color: PALETA[cor].tx } : undefined}
-        >
-          Clientes
-          <ChevronDown className="h-2.5 w-2.5 opacity-60" strokeWidth={3} />
-        </span>
+        <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
+        {!soIcone && 'Clientes'}
+        {!soIcone && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
       </Link>
 
       {aberto &&
@@ -164,6 +166,24 @@ export function NavLinkClientesComSubmenu({
           document.body
         )}
     </div>
+  )
+}
+
+// Módulo ainda não acessível a este papel — mesma pílula visual dos
+// outros, mas desativada, e também reage ao modo só-ícone.
+export function NavLinkBloqueado({ id, titulo }: { id: string; titulo: string }) {
+  const { icone: Icone, nome } = moduloPorId(id)
+  const soIcone = useModoIcone()
+  return (
+    <span
+      title={titulo}
+      className={`flex shrink-0 cursor-not-allowed items-center gap-1.5 whitespace-nowrap rounded-full border border-border-subtle text-[13px] font-medium tracking-tight text-muted opacity-40 ${
+        soIcone ? 'p-2' : 'px-3 py-1.5'
+      }`}
+    >
+      <Icone className="h-3.5 w-3.5" strokeWidth={2.5} />
+      {!soIcone && nome}
+    </span>
   )
 }
 

@@ -9,7 +9,7 @@ import { podeAcederEstudio } from '@/lib/data/acessos'
 import { obterEstadosBanner } from '@/lib/data/smsGateway'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import BarraAjustavel from '@/components/BarraAjustavel'
-import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPhone } from './NavLink'
+import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPhone, NavLinkBloqueado } from './NavLink'
 
 // Na barra do computador/tablet, Treinos e Avaliações deixam de ter
 // pílula própria — passam a aparecer só dentro do submenu de Clientes
@@ -79,21 +79,14 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
-          <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center justify-between gap-1">
+          <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
             {MODULOS.filter((m) => !SUBPASTAS_CLIENTES.has(m.id)).map((m) =>
               m.id === 'clientes' ? (
                 <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />
               ) : podeAceder(m) ? (
                 <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} />
               ) : (
-                <span
-                  key={m.id}
-                  title={tituloBloqueado(m)}
-                  className="flex min-w-12 shrink-0 cursor-not-allowed flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 text-[10px] font-medium text-muted opacity-40"
-                >
-                  <m.icone className="h-[18px] w-[18px]" strokeWidth={2.5} />
-                  <span className="leading-none tracking-tight">{m.curto ?? m.nome}</span>
-                </span>
+                <NavLinkBloqueado key={m.id} id={m.id} titulo={tituloBloqueado(m)} />
               )
             )}
           </BarraAjustavel>

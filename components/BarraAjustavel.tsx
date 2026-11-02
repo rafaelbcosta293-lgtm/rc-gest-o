@@ -1,15 +1,21 @@
 'use client'
 
-import { useLayoutEffect, useRef, useState } from 'react'
+import { createContext, useContext, useLayoutEffect, useRef, useState } from 'react'
 
-// Quando há espaço a mais, as pastas espalham-se ao longo da barra
-// toda (justify-between, largura 100%) em vez de ficarem agrupadas no
-// centro. Quando não há espaço suficiente nem para o espaçamento
-// mínimo entre elas, encolhe tudo (ícones e texto juntos, na mesma
-// proporção) só o necessário para caber — nunca esconde nada, nunca
-// aumenta acima de 100%, e nunca encolhe abaixo de ESCALA_MINIMA
-// (continua legível mesmo em janelas muito estreitas; a esse ponto
-// passa a ser preciso fazer scroll, como antes).
+// Os itens (NavLinkTopBar, PillNavLink, ...) perguntam aqui se devem
+// esconder o nome e mostrar só o ícone — decidido pelo BarraAjustavel,
+// consoante o espaço disponível.
+const ModoIconeContext = createContext(false)
+export function useModoIcone() {
+  return useContext(ModoIconeContext)
+}
+
+// Centrada enquanto tudo cabe. Só quando a janela fica pequena a mais
+// para os nomes caberem é que começa a ajustar — primeiro escondendo
+// os nomes (só ícone), e só se mesmo assim não couber é que encolhe
+// tudo (ícones incluídos) a partir daí. Nunca aumenta acima de 100%, e
+// nunca encolhe abaixo de ESCALA_MINIMA (a esse ponto passa a ser
+// preciso fazer scroll).
 const ESCALA_MINIMA = 0.55
 
 export default function BarraAjustavel({
@@ -22,21 +28,37 @@ export default function BarraAjustavel({
   navClassName?: string
 }) {
   const exteriorRef = useRef<HTMLDivElement>(null)
-  const navRef = useRef<HTMLElement>(null)
+  // Duas cópias escondidas (nunca visíveis, fora do fluxo normal da
+  // página) só para medir a largura real com nomes e só com ícones —
+  // a visível reflete a decisão, sem nunca precisar de "tentar e
+  // voltar atrás" (isso é que arriscava ciclos sem fim nalgumas
+  // larguras, com a barra a ficar presa a meio da troca).
+  const medirComNomesRef = useRef<HTMLElement>(null)
+  const medirSoIconesRef = useRef<HTMLElement>(null)
+  const [modoIcone, setModoIcone] = useState(false)
   const [escala, setEscala] = useState(1)
 
   useLayoutEffect(() => {
     const exterior = exteriorRef.current
-    const nav = navRef.current
-    if (!exterior || !nav) return
+    const comNomes = medirComNomesRef.current
+    const soIcones = medirSoIconesRef.current
+    if (!exterior || !comNomes || !soIcones) return
 
-    // Com justify-between e largura 100%, scrollWidth só ultrapassa
-    // clientWidth quando mesmo o espaçamento mínimo (gap) não cabe —
-    // exatamente o sinal certo para começar a encolher.
     function recalcular() {
       const disponivel = exterior!.clientWidth
-      const necessaria = nav!.scrollWidth
-      setEscala(necessaria > 0 && necessaria > disponivel ? Math.max(ESCALA_MINIMA, disponivel / necessaria) : 1)
+      const larguraComNomes = comNomes!.scrollWidth
+      const larguraSoIcones = soIcones!.scrollWidth
+
+      if (larguraComNomes <= disponivel) {
+        setModoIcone(false)
+        setEscala(1)
+      } else if (larguraSoIcones <= disponivel) {
+        setModoIcone(true)
+        setEscala(1)
+      } else {
+        setModoIcone(true)
+        setEscala(larguraSoIcones > 0 ? Math.max(ESCALA_MINIMA, disponivel / larguraSoIcones) : 1)
+      }
     }
 
     recalcular()
@@ -46,21 +68,23 @@ export default function BarraAjustavel({
   }, [])
 
   return (
-    <div ref={exteriorRef} className={`flex items-center overflow-hidden ${className}`}>
+    <div ref={exteriorRef} className={`flex items-center justify-center overflow-hidden ${className}`}>
+      <div aria-hidden className="pointer-events-none fixed top-0 left-0 opacity-0 -z-10">
+        <nav ref={medirComNomesRef as React.RefObject<HTMLElement>} className={`w-max ${navClassName}`}>
+          <ModoIconeContext.Provider value={false}>{children}</ModoIconeContext.Provider>
+        </nav>
+      </div>
+      <div aria-hidden className="pointer-events-none fixed top-0 left-0 opacity-0 -z-10">
+        <nav ref={medirSoIconesRef as React.RefObject<HTMLElement>} className={`w-max ${navClassName}`}>
+          <ModoIconeContext.Provider value={true}>{children}</ModoIconeContext.Provider>
+        </nav>
+      </div>
+
       <nav
-        ref={navRef as React.RefObject<HTMLElement>}
-        className={`w-full ${navClassName}`}
-        style={
-          escala < 1
-            // Âncora à esquerda (não ao centro): com justify-between a
-            // encolher, o que ultrapassa a caixa fica sempre à direita,
-            // nunca dos dois lados — ancorar ao centro deixava sempre um
-            // bocado por cortar do lado direito, mesmo com a escala certa.
-            ? { transform: `scale(${escala})`, transformOrigin: 'left center' }
-            : undefined
-        }
+        className={`w-max ${navClassName}`}
+        style={escala < 1 ? { transform: `scale(${escala})`, transformOrigin: 'center' } : undefined}
       >
-        {children}
+        <ModoIconeContext.Provider value={modoIcone}>{children}</ModoIconeContext.Provider>
       </nav>
     </div>
   )

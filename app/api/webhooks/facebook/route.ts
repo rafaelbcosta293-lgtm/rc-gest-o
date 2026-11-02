@@ -1,11 +1,15 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEstudios } from '@/lib/data/estudios'
 import { criarLeadAutomatica, normalizarTelefoneLead } from '@/lib/data/leads'
 
-// Webhook de "leadgen" da Meta (Facebook/Instagram Ads) — chamado pela
-// própria Meta, nunca pela app. O GET só serve para a Meta validar a
-// subscrição; o POST recebe o aviso de um novo lead e vai buscar os
-// dados completos à Graph API (a notificação em si só traz o id).
+// Webhook da Meta (Facebook/Instagram) — chamado pela própria Meta,
+// nunca pela app. O GET só serve para a Meta validar a subscrição; o
+// POST trata dois tipos de aviso diferentes: "leadgen" (um lead novo
+// de um formulário de anúncios — vai buscar os dados completos à
+// Graph API) e "messaging" (uma mensagem nova no Messenger/Instagram —
+// aqui só cria um alerta a avisar, sem guardar nome nem conteúdo da
+// mensagem; a equipa responde diretamente no Instagram/Messenger).
 export const dynamic = 'force-dynamic'
 
 const GRAPH_VERSAO = 'v26.0'
@@ -42,7 +46,11 @@ type CampoLeadgen = {
 }
 
 type MudancaMeta = { field: string; value: CampoLeadgen }
-type EntradaMeta = { id: string; changes?: MudancaMeta[] }
+// Não se lê nada de dentro de "message" (nem texto, nem sender.id) —
+// só interessa saber que existe, e se é um eco (mensagem enviada pela
+// própria Página, não recebida) para não a confundir com uma nova.
+type MensagemMeta = { message?: { is_echo?: boolean } }
+type EntradaMeta = { id: string; changes?: MudancaMeta[]; messaging?: MensagemMeta[] }
 type CorpoMeta = { object?: string; entry?: EntradaMeta[] }
 
 // Um estúdio por omissão (META_LEADS_ESTUDIO_PADRAO) cobre o caso comum —
@@ -134,6 +142,49 @@ async function processarLeadgen(
   }
 }
 
+const REGRA_MENSAGEM_MESSENGER = 'mensagem_messenger'
+const REGRA_MENSAGEM_INSTAGRAM = 'mensagem_instagram'
+
+// Conta partilhada pelos dois estúdios, sem forma de saber a qual se
+// refere uma mensagem — por isso o alerta aparece nos dois. Só um
+// alerta em aberto de cada vez por rede/estúdio (regra_chave faz de
+// chave de deduplicação): várias mensagens seguidas da mesma conversa
+// não inundam de alertas — o seguinte só volta a poder nascer depois
+// de este ser marcado como resolvido.
+async function avisarNovaMensagem(
+  admin: ReturnType<typeof createAdminClient>,
+  regraChave: string,
+  rede: string
+) {
+  const estudios = await getEstudios(admin)
+  for (const estudio of estudios) {
+    const { data: existente, error: erroExistente } = await admin
+      .from('alerts')
+      .select('id')
+      .eq('estudio_id', estudio.id)
+      .eq('regra_chave', regraChave)
+      .neq('estado', 'Resolvido')
+      .limit(1)
+      .maybeSingle()
+    if (erroExistente) {
+      console.error(`Meta Mensagens: erro ao verificar alerta existente (${estudio.slug}): ${erroExistente.message}`)
+      continue
+    }
+    if (existente) continue
+
+    const { error } = await admin.from('alerts').insert({
+      estudio_id: estudio.id,
+      regra_chave: regraChave,
+      severidade: 'Atenção' as const,
+      titulo: `Nova mensagem no ${rede}`,
+      papel_destinatario: 'comercial',
+    })
+    if (error) {
+      console.error(`Meta Mensagens: erro ao criar alerta (${estudio.slug}): ${error.message}`)
+    }
+  }
+}
+
 export async function POST(request: Request) {
   const corpoBruto = await request.text()
 
@@ -171,6 +222,18 @@ export async function POST(request: Request) {
       const leadgenId = mudanca.value?.leadgen_id
       if (!leadgenId) continue
       await processarLeadgen(admin, leadgenId, mudanca.value?.form_id)
+    }
+
+    // "messaging" (Messenger ou Instagram) — só quando há mesmo uma
+    // mensagem recebida (ignora ecos, entregas e leituras).
+    const temMensagemNova = (entrada.messaging ?? []).some((m) => m.message && !m.message.is_echo)
+    if (temMensagemNova) {
+      const instagram = body.object === 'instagram'
+      await avisarNovaMensagem(
+        admin,
+        instagram ? REGRA_MENSAGEM_INSTAGRAM : REGRA_MENSAGEM_MESSENGER,
+        instagram ? 'Instagram' : 'Messenger'
+      )
     }
   }
 

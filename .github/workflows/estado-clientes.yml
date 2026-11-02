@@ -1,7 +1,8 @@
 name: Transição automática de estado dos clientes
 
-# Uma vez por dia: suspende quem está há 1 mês sem mensalidade ativa e
-# passa a Ex-cliente quem está há 2 meses ou mais. Nunca mexe em quem
+# Uma vez por dia: passa a Pendente logo no 1º dia sem pagamento
+# válido, e a Inativo quem está há 2 meses (60 dias) ou mais sem
+# pagar. Nunca mexe em quem está Suspenso (manual apenas) nem em quem
 # teve o estado alterado à mão.
 on:
   schedule:

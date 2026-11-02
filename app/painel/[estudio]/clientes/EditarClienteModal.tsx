@@ -142,8 +142,9 @@ export default function EditarClienteModal({
               </label>
               <select id="estado" name="estado" defaultValue={cliente.estado} className={inputCls}>
                 <option value="Ativo">Ativo</option>
+                <option value="Pendente">Pendente</option>
                 <option value="Suspenso">Suspenso</option>
-                <option value="Ex-cliente">Ex-cliente</option>
+                <option value="Inativo">Inativo</option>
               </select>
             </div>
 

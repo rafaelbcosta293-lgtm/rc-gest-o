@@ -4,12 +4,13 @@ import { calcularTransicaoAutomatica } from '@/lib/data/estadoClientes'
 import type { Cliente, EstadoCliente } from '@/lib/supabase/database.types'
 
 // Corre uma vez por dia (ver .github/workflows/estado-clientes.yml).
-// Transição automática de estado por falta de pagamento: 1 mês sem
-// mensalidade ativa -> Suspenso, 2 meses ou mais -> Ex-cliente. Nunca
-// mexe num cliente com o estado alterado manualmente (estado_automatico
-// = false) — essa é a única exceção pedida. Voltar a Ativo não é tarefa
-// deste cron: isso só acontece ao registar um pagamento (ver
-// criarPagamento em app/painel/[estudio]/pagamentos/actions.ts).
+// Transição automática de estado por falta de pagamento: logo no
+// primeiro dia sem pagamento válido -> Pendente, 2 meses (60 dias) ou
+// mais -> Inativo. Nunca mexe num cliente Suspenso (essa saída é
+// sempre manual) nem num com o estado alterado manualmente
+// (estado_automatico = false). Voltar a Ativo não é tarefa deste
+// cron: isso só acontece ao registar um pagamento (ver criarPagamento
+// em app/painel/[estudio]/pagamentos/actions.ts).
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
   const estudios = await getEstudios(admin)
   const estudioIds = estudios.map((e) => e.id)
   if (estudioIds.length === 0) {
-    return Response.json({ ok: true, suspensos: 0, exClientes: 0 })
+    return Response.json({ ok: true, pendentes: 0, inativos: 0 })
   }
 
   const [
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
     admin
       .from('clientes')
       .select('id, estado, estado_automatico')
-      .neq('estado', 'Ex-cliente')
+      .not('estado', 'in', '(Suspenso,Inativo)')
       .in('estudio_id', estudioIds),
     admin.from('pagamentos').select('cliente_id, valido_ate'),
   ])
@@ -50,7 +51,12 @@ export async function GET(request: Request) {
 
   const clientes = (clientesData ?? []) as Pick<Cliente, 'id' | 'estado' | 'estado_automatico'>[]
 
-  const idsPorNovoEstado: Record<EstadoCliente, string[]> = { Ativo: [], Suspenso: [], 'Ex-cliente': [] }
+  const idsPorNovoEstado: Record<EstadoCliente, string[]> = {
+    Ativo: [],
+    Pendente: [],
+    Suspenso: [],
+    Inativo: [],
+  }
 
   for (const c of clientes) {
     const novoEstado = calcularTransicaoAutomatica(
@@ -73,7 +79,7 @@ export async function GET(request: Request) {
 
   return Response.json({
     ok: true,
-    suspensos: idsPorNovoEstado.Suspenso.length,
-    exClientes: idsPorNovoEstado['Ex-cliente'].length,
+    pendentes: idsPorNovoEstado.Pendente.length,
+    inativos: idsPorNovoEstado.Inativo.length,
   })
 }

@@ -21,7 +21,7 @@ export type Perfil = {
   criado_em: string
 }
 
-export type EstadoCliente = 'Ativo' | 'Suspenso' | 'Ex-cliente'
+export type EstadoCliente = 'Ativo' | 'Pendente' | 'Suspenso' | 'Inativo'
 export type GeneroCliente = 'Masculino' | 'Feminino'
 
 export type Cliente = {

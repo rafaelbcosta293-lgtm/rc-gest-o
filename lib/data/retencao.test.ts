@@ -26,7 +26,7 @@ describe('resumoMensalClientes', () => {
   it('conta novos por inicio_contrato, e cancelados/suspensos/reativados pelas activities do mês', () => {
     const clientes = [
       cliente({ estado: 'Ativo', inicio_contrato: '2026-03-05' }),
-      cliente({ estado: 'Ex-cliente', inicio_contrato: '2026-01-01' }),
+      cliente({ estado: 'Inativo', inicio_contrato: '2026-01-01' }),
     ]
     const atividades = [
       { tipo: 'Cancelamento', criado_em: '2026-03-10T10:00:00Z' },

@@ -54,7 +54,6 @@ export default async function EventoAgendaPage({
         .from('clientes')
         .select('id, nome')
         .eq('estudio_id', estudio.id)
-        .neq('estado', 'Ex-cliente')
         .order('nome'),
       supabase
         .from('leads')

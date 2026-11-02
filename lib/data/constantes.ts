@@ -92,13 +92,17 @@ export const PRESENCAS = {
   Remarcado: PALETA.azul,
 } as const
 
-// "Ex-cliente" na base de dados é mostrado como "Inativo" na interface —
-// mais claro para quem não mexeu na ficha. Não existe ainda um estado
-// "Pendente" na base de dados (só Ativo / Suspenso / Ex-cliente).
+// Ativo só vale com o pagamento em dia — qualquer atraso passa logo a
+// Pendente (atribuído pelo cron diário, ver app/api/cron/estado-clientes),
+// e aos 60 dias sem pagar passa a Inativo. Suspenso é só para casos
+// específicos (saúde ou outras) e é sempre manual — nunca atribuído
+// nem retirado automaticamente. Nenhum destes estados afeta
+// agendamentos ou o envio de mensagens.
 export const ESTADOS_CLIENTE = {
   Ativo: { ...PALETA.verde, label: 'Ativo' },
+  Pendente: { ...PALETA.laranja, label: 'Pendente' },
   Suspenso: { ...PALETA.ambar, label: 'Suspenso' },
-  'Ex-cliente': { ...PALETA.neutro, label: 'Inativo' },
+  Inativo: { ...PALETA.neutro, label: 'Inativo' },
 } as const
 
 // Ordem = ordem do funil (ver docs/ESPECIFICACAO_CRM_ANALITICA.md §3) —

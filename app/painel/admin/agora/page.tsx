@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, UserCheck, PauseCircle, UserMinus, CalendarCheck2 } from 'lucide-react'
+import { ArrowLeft, UserCheck, Hourglass, PauseCircle, UserMinus, CalendarCheck2 } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
@@ -90,16 +90,18 @@ async function AgoraEstudio({ estudio }: { estudio: Pick<Estudio, 'id' | 'nome'>
 
   const clientes = (clientesData ?? []) as ClienteResumo[]
   const clientesAtivos = clientes.filter((c) => c.estado === 'Ativo').length
+  const clientesPendentes = clientes.filter((c) => c.estado === 'Pendente').length
   const clientesSuspensos = clientes.filter((c) => c.estado === 'Suspenso').length
-  const clientesInativos = clientes.filter((c) => c.estado === 'Ex-cliente').length
+  const clientesInativos = clientes.filter((c) => c.estado === 'Inativo').length
   const leads = (leadsData ?? []) as LeadResumo[]
   const sessoesAgendadas = leads.filter(
     (l) => l.visita_data && l.visita_data >= hoje && l.estado !== 'Perdida' && l.estado !== 'Ganha'
   ).length
 
   return (
-    <div className="bg-tech-grid mt-3 grid grid-cols-2 gap-3 rounded-2xl p-1">
+    <div className="bg-tech-grid mt-3 grid grid-cols-2 gap-3 rounded-2xl p-1 sm:grid-cols-3">
       <StatCard icone={UserCheck} cor={PALETA.teal} label="Clientes ativos" valor={clientesAtivos} aoVivo />
+      <StatCard icone={Hourglass} cor={PALETA.laranja} label="Pendentes" valor={clientesPendentes} />
       <StatCard icone={PauseCircle} cor={PALETA.ambar} label="Suspensos" valor={clientesSuspensos} />
       <StatCard icone={UserMinus} cor={PALETA.neutro} label="Inativos" valor={clientesInativos} />
       <StatCard icone={CalendarCheck2} cor={PALETA.roxo} label="Sessões agendadas" valor={sessoesAgendadas} />

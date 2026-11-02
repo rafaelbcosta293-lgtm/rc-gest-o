@@ -12,34 +12,43 @@ function cliente(partial: Partial<ClienteParaEstadoAutomatico>): ClienteParaEsta
 }
 
 describe('calcularTransicaoAutomatica', () => {
-  it('não muda nada enquanto o pagamento ainda está dentro do mês', () => {
-    expect(calcularTransicaoAutomatica(cliente({ validoAte: '2026-02-10' }), '2026-02-20')).toBeNull()
+  it('não muda nada enquanto o pagamento ainda está em dia', () => {
+    expect(calcularTransicaoAutomatica(cliente({ validoAte: '2026-02-10' }), '2026-02-10')).toBeNull()
+    expect(calcularTransicaoAutomatica(cliente({ validoAte: '2026-02-10' }), '2026-02-09')).toBeNull()
   })
 
-  it('passa a Suspenso a partir de 30 dias sem pagamento ativo', () => {
-    expect(calcularTransicaoAutomatica(cliente({ validoAte: '2026-01-01' }), '2026-01-31')).toBe('Suspenso')
-    expect(calcularTransicaoAutomatica(cliente({ validoAte: '2026-01-01' }), '2026-01-20')).toBeNull()
+  it('passa a Pendente logo no primeiro dia sem pagamento válido', () => {
+    expect(calcularTransicaoAutomatica(cliente({ validoAte: '2026-01-01' }), '2026-01-02')).toBe('Pendente')
   })
 
-  it('passa a Ex-cliente a partir de 60 dias sem pagamento ativo', () => {
-    expect(calcularTransicaoAutomatica(cliente({ validoAte: '2026-01-01' }), '2026-03-02')).toBe('Ex-cliente')
-  })
-
-  it('vai direto para Ex-cliente mesmo que ainda estivesse Ativo (cron não correu há tempos)', () => {
+  it('não repete a mesma transição (já está Pendente)', () => {
     expect(
-      calcularTransicaoAutomatica(cliente({ estado: 'Ativo', validoAte: '2026-01-01' }), '2026-03-02')
-    ).toBe('Ex-cliente')
-  })
-
-  it('nunca mexe num cliente já Ex-cliente', () => {
-    expect(
-      calcularTransicaoAutomatica(cliente({ estado: 'Ex-cliente', validoAte: '2020-01-01' }), '2026-03-02')
+      calcularTransicaoAutomatica(cliente({ estado: 'Pendente', validoAte: '2026-01-01' }), '2026-01-20')
     ).toBeNull()
   })
 
-  it('não repete a mesma transição (já está Suspenso)', () => {
+  it('passa a Inativo a partir de 60 dias sem pagamento válido', () => {
+    expect(calcularTransicaoAutomatica(cliente({ validoAte: '2026-01-01' }), '2026-03-02')).toBe('Inativo')
     expect(
-      calcularTransicaoAutomatica(cliente({ estado: 'Suspenso', validoAte: '2026-01-01' }), '2026-01-31')
+      calcularTransicaoAutomatica(cliente({ estado: 'Pendente', validoAte: '2026-01-01' }), '2026-03-02')
+    ).toBe('Inativo')
+  })
+
+  it('vai direto para Inativo mesmo que ainda estivesse Ativo (cron não correu há tempos)', () => {
+    expect(
+      calcularTransicaoAutomatica(cliente({ estado: 'Ativo', validoAte: '2026-01-01' }), '2026-03-02')
+    ).toBe('Inativo')
+  })
+
+  it('nunca mexe num cliente já Inativo', () => {
+    expect(
+      calcularTransicaoAutomatica(cliente({ estado: 'Inativo', validoAte: '2020-01-01' }), '2026-03-02')
+    ).toBeNull()
+  })
+
+  it('nunca mexe num cliente Suspenso — essa saída é sempre manual', () => {
+    expect(
+      calcularTransicaoAutomatica(cliente({ estado: 'Suspenso', validoAte: '2020-01-01' }), '2026-03-02')
     ).toBeNull()
   })
 

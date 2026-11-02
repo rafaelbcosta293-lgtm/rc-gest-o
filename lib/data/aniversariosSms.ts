@@ -85,7 +85,7 @@ async function processarAniversariosDoEstudio(
   let gatewayOffline = false
 
   for (const cliente of pendentes) {
-    const template = cliente.estado === 'Ex-cliente' ? templates.exCliente : templates.ativo
+    const template = cliente.estado === 'Inativo' ? templates.exCliente : templates.ativo
     if (!template) {
       falhasPorNumero++
       console.error(`Parabéns SMS: sem modelo de mensagem configurado para "${cliente.estado}" (${estudio.slug}).`)

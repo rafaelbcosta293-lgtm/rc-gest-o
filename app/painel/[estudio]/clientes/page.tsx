@@ -31,8 +31,9 @@ type PagamentoResumo = { cliente_id: string; valido_ate: string | null; em_dia: 
 const FILTROS: { valor: EstadoCliente | 'Todos'; label: string }[] = [
   { valor: 'Todos', label: 'Todos' },
   { valor: 'Ativo', label: 'Ativos' },
+  { valor: 'Pendente', label: 'Pendentes' },
   { valor: 'Suspenso', label: 'Suspensos' },
-  { valor: 'Ex-cliente', label: 'Inativos' },
+  { valor: 'Inativo', label: 'Inativos' },
 ]
 
 type Ordem = 'nome' | 'numero' | 'inscricao'
@@ -174,8 +175,9 @@ export default async function ClientesPage({
   const contagens: Record<EstadoCliente | 'Todos', number> = {
     Todos: todos.length,
     Ativo: todos.filter((c) => c.estado === 'Ativo').length,
+    Pendente: todos.filter((c) => c.estado === 'Pendente').length,
     Suspenso: todos.filter((c) => c.estado === 'Suspenso').length,
-    'Ex-cliente': todos.filter((c) => c.estado === 'Ex-cliente').length,
+    Inativo: todos.filter((c) => c.estado === 'Inativo').length,
   }
   const pagamentoPorCliente = new Map(
     ((pagamentosData ?? []) as PagamentoResumo[]).map((p) => [p.cliente_id, p])

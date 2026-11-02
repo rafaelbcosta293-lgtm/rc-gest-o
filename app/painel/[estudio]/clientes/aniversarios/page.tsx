@@ -185,7 +185,7 @@ export default async function AniversariosPage({
     .map((c) => {
       const { data: dataProximo, dias } = proximoAniversario(c.nascimento, agora)
       const idade = idadeEm(c.nascimento, dataProximo)
-      const template = c.estado === 'Ex-cliente' ? msgExCliente : msgAtiva
+      const template = c.estado === 'Inativo' ? msgExCliente : msgAtiva
       return {
         cliente: c,
         dataProximo,
@@ -272,7 +272,7 @@ export default async function AniversariosPage({
                 </strong>
                 <span className="ml-2 text-xs text-zinc-500">
                   {fmtDiaMes(dataProximo)} · faz {idade} anos
-                  {cliente.estado === 'Ex-cliente' && ' · ex-cliente'}
+                  {cliente.estado === 'Inativo' && ' · inativo'}
                 </span>
               </div>
               <span

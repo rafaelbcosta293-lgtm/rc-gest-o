@@ -48,7 +48,7 @@ describe('retencaoEAssiduidadePorPt', () => {
     const r = retencaoEAssiduidadePorPt(
       [
         { id: 'c1', pt_principal_id: 'pt1', estado: 'Ativo', frequencia_semanal: 2 },
-        { id: 'c2', pt_principal_id: 'pt1', estado: 'Ex-cliente', frequencia_semanal: 2 },
+        { id: 'c2', pt_principal_id: 'pt1', estado: 'Inativo', frequencia_semanal: 2 },
       ],
       new Map(),
       2026,

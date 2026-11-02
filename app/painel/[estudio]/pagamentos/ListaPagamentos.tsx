@@ -151,7 +151,7 @@ export default function ListaPagamentos({
         <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
           {filtro
             ? 'Nenhum cliente com esse nome.'
-            : 'Ainda não há clientes ativos neste estúdio.'}
+            : 'Ainda não há clientes neste estúdio.'}
         </div>
       )}
     </>

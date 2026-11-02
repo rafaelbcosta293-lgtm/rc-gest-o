@@ -6,7 +6,6 @@ import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt, treinosNoPeriodo } from '@/lib/data/presencas'
 import { segurosPorPagar } from '@/lib/data/clientes'
 import ListaPagamentos, { type LinhaPagamentoAtraso, type LinhaSeguro } from './ListaPagamentos'
-import type { EstadoPagamento } from '@/lib/supabase/database.types'
 
 type PagamentoDetalhe = {
   cliente_id: string
@@ -15,7 +14,11 @@ type PagamentoDetalhe = {
   plano: { nome: string; sessoes_por_semana: number | null } | null
 }
 
-type ClientePagamento = EstadoPagamento & {
+type ClientePagamento = {
+  cliente_id: string
+  nome: string
+  valido_ate: string | null
+  em_dia: boolean
   tipoMensalidade: string | null
   realizados: number
   adquiridos: number | null
@@ -34,9 +37,13 @@ export default async function PagamentosPage({
     notFound()
   }
 
+  // Todos os clientes do estúdio, independentemente do estado — um
+  // cliente inativo ou suspenso pode voltar a treinar, e é preciso
+  // conseguir encontrá-lo aqui para lhe registar um pagamento (o que,
+  // por si só, já o reativa).
   const { data, error } = await supabase
-    .from('v_estado_pagamento')
-    .select('*')
+    .from('clientes')
+    .select('id, nome')
     .eq('estudio_id', estudio.id)
     .order('nome')
 
@@ -44,8 +51,8 @@ export default async function PagamentosPage({
     throw new Error(error.message)
   }
 
-  const clientes = (data ?? []) as EstadoPagamento[]
-  const idsClientes = clientes.map((c) => c.cliente_id)
+  const clientesBase = data ?? []
+  const idsClientes = clientesBase.map((c) => c.id)
   const hoje = new Date().toISOString().slice(0, 10)
 
   // Estas quatro só precisam dos ids dos clientes, não dos resultados
@@ -119,10 +126,18 @@ export default async function PagamentosPage({
     presencasPorCliente.set(p.cliente_id, lista)
   }
 
-  const clientesComResumo: ClientePagamento[] = clientes.map((c) => {
-    const pagamento = ultimoPagamentoPorCliente.get(c.cliente_id)
+  const clientesComResumo: ClientePagamento[] = clientesBase.map((c) => {
+    const pagamento = ultimoPagamentoPorCliente.get(c.id)
     if (!pagamento) {
-      return { ...c, tipoMensalidade: null, realizados: 0, adquiridos: null }
+      return {
+        cliente_id: c.id,
+        nome: c.nome,
+        valido_ate: null,
+        em_dia: false,
+        tipoMensalidade: null,
+        realizados: 0,
+        adquiridos: null,
+      }
     }
     const fimPeriodo = pagamento.valido_ate < hoje ? pagamento.valido_ate : hoje
     const adquiridos = treinosNoPeriodo(
@@ -130,10 +145,18 @@ export default async function PagamentosPage({
       pagamento.data_pagamento,
       fimPeriodo
     )
-    const realizados = (presencasPorCliente.get(c.cliente_id) ?? []).filter(
+    const realizados = (presencasPorCliente.get(c.id) ?? []).filter(
       (d) => d >= pagamento.data_pagamento && d <= fimPeriodo
     ).length
-    return { ...c, tipoMensalidade: pagamento.plano?.nome ?? null, realizados, adquiridos }
+    return {
+      cliente_id: c.id,
+      nome: c.nome,
+      valido_ate: pagamento.valido_ate,
+      em_dia: pagamento.valido_ate >= hoje,
+      tipoMensalidade: pagamento.plano?.nome ?? null,
+      realizados,
+      adquiridos,
+    }
   })
 
   const emDia = clientesComResumo.filter((c) => c.em_dia)
@@ -142,10 +165,10 @@ export default async function PagamentosPage({
   const inicioContratoPorCliente = new Map(
     (clientesInicioData ?? []).map((c) => [c.id, c.inicio_contrato])
   )
-  const clientesParaSeguro = clientes.map((c) => ({
-    id: c.cliente_id,
+  const clientesParaSeguro = clientesBase.map((c) => ({
+    id: c.id,
     nome: c.nome,
-    inicio_contrato: inicioContratoPorCliente.get(c.cliente_id) ?? null,
+    inicio_contrato: inicioContratoPorCliente.get(c.id) ?? null,
   }))
   const segurosARenovar = segurosPorPagar(
     clientesParaSeguro,
@@ -188,7 +211,7 @@ export default async function PagamentosPage({
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Pagamentos</h1>
       <p className="mt-1 text-sm text-muted">
         {estudio.nome} · {atrasados.length} {atrasados.length === 1 ? 'atrasado' : 'atrasados'} de{' '}
-        {clientes.length} clientes ativos
+        {clientesBase.length} clientes
         {segurosARenovar.length > 0 &&
           ` · ${segurosARenovar.length} ${segurosARenovar.length === 1 ? 'seguro' : 'seguros'} a renovar`}
         .

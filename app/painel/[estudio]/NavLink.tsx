@@ -20,30 +20,27 @@ function moduloPorId(id: string) {
   return MODULOS.find((m) => m.id === id)!
 }
 
-// Computador/tablet (≥768px): barra superior horizontal, ícone + nome,
-// numa pílula — substitui as duas barras laterais antigas.
-export function NavLinkTopBar({ href, id, nome }: { href: string; id: string; nome: string }) {
-  const { icone: Icone, cor } = moduloPorId(id)
+// Computador/tablet (≥768px): mesmo formato compacto da barra do
+// telemóvel (ícone em cima, nome por baixo) — cabem muitas mais
+// pastas por pixel de largura do que o formato antigo de pílula
+// horizontal, por isso a barra deixa de precisar de scroll mesmo com a
+// janela do computador reduzida (ver também BarraAjustavel, que ainda
+// encolhe tudo um pouco mais se mesmo assim não couber).
+export function NavLinkTopBar({ href, id }: { href: string; id: string }) {
+  const { icone: Icone, cor, nome, curto } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium tracking-tight text-foreground transition-colors ${
-        ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.04]'
-      }`}
-      style={{
-        background: ativo ? PALETA[cor].bg : undefined,
-        // Inativo: nome sempre a preto (var(--foreground), da className),
-        // bem legível em qualquer pasta — só o ícone fica na cor própria
-        // do módulo, para a barra continuar colorida e fácil de
-        // reconhecer de relance, mesmo sem nada selecionado. Sem sombra:
-        // o preenchimento sólido já basta para marcar o separador ativo,
-        // de forma limpa.
-        color: ativo ? PALETA[cor].tx : undefined,
-      }}
+      className="flex min-w-12 shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 transition-colors hover:bg-foreground/[.05]"
     >
-      <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
-      {nome}
+      <Icone className="h-[18px] w-[18px]" strokeWidth={ativo ? 2.5 : 2.25} style={{ color: PALETA[cor].tx }} />
+      <span
+        className={`text-[10px] leading-none tracking-tight ${ativo ? 'font-semibold' : 'font-medium text-foreground'}`}
+        style={ativo ? { color: PALETA[cor].tx } : undefined}
+      >
+        {curto ?? nome}
+      </span>
     </Link>
   )
 }
@@ -105,17 +102,16 @@ export function NavLinkClientesComSubmenu({
       <Link
         ref={pillRef}
         href={clientesHref}
-        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium tracking-tight text-foreground transition-colors ${
-          ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.04]'
-        }`}
-        style={{
-          background: ativo ? PALETA[cor].bg : undefined,
-          color: ativo ? PALETA[cor].tx : undefined,
-        }}
+        className="flex min-w-12 shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 transition-colors hover:bg-foreground/[.05]"
       >
-        <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
-        Clientes
-        <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />
+        <Icone className="h-[18px] w-[18px]" strokeWidth={ativo ? 2.5 : 2.25} style={{ color: PALETA[cor].tx }} />
+        <span
+          className={`flex items-center gap-0.5 text-[10px] leading-none tracking-tight ${ativo ? 'font-semibold' : 'font-medium text-foreground'}`}
+          style={ativo ? { color: PALETA[cor].tx } : undefined}
+        >
+          Clientes
+          <ChevronDown className="h-2.5 w-2.5 opacity-60" strokeWidth={3} />
+        </span>
       </Link>
 
       {aberto &&

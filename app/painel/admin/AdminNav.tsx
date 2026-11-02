@@ -73,7 +73,7 @@ export default function AdminNav() {
   const pastaAberta = PASTAS.find((p) => p.href === aberto)
 
   return (
-    <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center justify-center gap-2">
+    <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-1">
       {PASTAS.map((p) =>
         p.filtravel ? (
           <div
@@ -82,10 +82,10 @@ export default function AdminNav() {
             onMouseEnter={(e) => abrir(p.href, e.currentTarget)}
             onMouseLeave={agendarFechar}
           >
-            <PillNavLink href={p.href} label={p.label} icone={p.icone} exato={p.exato} destaque />
+            <PillNavLink href={p.href} label={p.label} icone={p.icone} exato={p.exato} />
           </div>
         ) : (
-          <PillNavLink key={p.href} href={p.href} label={p.label} icone={p.icone} exato={p.exato} destaque />
+          <PillNavLink key={p.href} href={p.href} label={p.label} icone={p.icone} exato={p.exato} />
         )
       )}
 

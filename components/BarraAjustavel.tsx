@@ -29,9 +29,11 @@ export default function BarraAjustavel({
     const nav = navRef.current
     if (!exterior || !nav) return
 
-    // scrollWidth do próprio <nav> continua a refletir a largura real
-    // (sem escala) do conteúdo, mesmo já com transform:scale() aplicado
-    // — transform só afeta o desenho, nunca o tamanho de layout.
+    // "nav" tem largura própria (w-max, nunca esticada ao contentor) —
+    // por isso o scrollWidth mede sempre o conteúdo real todo. Centrar
+    // um <nav> esticado (ex.: com justify-center) faria o conteúdo
+    // ultrapassar os dois lados por igual, e scrollWidth só conta a
+    // ultrapassagem à direita — o lado esquerdo ficava sempre cortado.
     function recalcular() {
       const disponivel = exterior!.clientWidth
       const necessaria = nav!.scrollWidth
@@ -45,10 +47,10 @@ export default function BarraAjustavel({
   }, [])
 
   return (
-    <div ref={exteriorRef} className={`overflow-hidden ${className}`}>
+    <div ref={exteriorRef} className={`flex items-center justify-center overflow-hidden ${className}`}>
       <nav
         ref={navRef as React.RefObject<HTMLElement>}
-        className={navClassName}
+        className={`w-max ${navClassName}`}
         style={escala < 1 ? { transform: `scale(${escala})`, transformOrigin: 'center' } : undefined}
       >
         {children}

@@ -76,20 +76,20 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
-          <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center justify-center gap-2">
+          <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-1">
             {MODULOS.filter((m) => !SUBPASTAS_CLIENTES.has(m.id)).map((m) =>
               m.id === 'clientes' ? (
                 <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />
               ) : podeAceder(m) ? (
-                <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} nome={m.nome} />
+                <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} />
               ) : (
                 <span
                   key={m.id}
                   title={tituloBloqueado(m)}
-                  className="flex shrink-0 cursor-not-allowed items-center gap-1.5 whitespace-nowrap rounded-full border border-border-subtle px-3 py-1.5 text-[13px] font-medium tracking-tight text-muted opacity-40"
+                  className="flex min-w-12 shrink-0 cursor-not-allowed flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 text-[10px] font-medium text-muted opacity-40"
                 >
-                  <m.icone className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  {m.nome}
+                  <m.icone className="h-[18px] w-[18px]" strokeWidth={2.5} />
+                  <span className="leading-none tracking-tight">{m.curto ?? m.nome}</span>
                 </span>
               )
             )}

@@ -7,7 +7,10 @@ import type { LucideIcon } from 'lucide-react'
 // Item do menu horizontal de "pastas" (Administração/Coordenação) —
 // cada área tem o seu próprio conjunto fixo, por isso recebe os dados
 // como props em vez de ler de uma constante partilhada (essa, MODULOS,
-// é só para os módulos por estúdio).
+// é só para os módulos por estúdio). Mesmo formato compacto (ícone em
+// cima, nome por baixo) da barra do telemóvel — cabem muito mais
+// pastas por pixel de largura do que no formato antigo de pílula
+// horizontal.
 export function estaAtivoPill(pathname: string, href: string, exato = false) {
   if (exato) return pathname === href
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -18,35 +21,22 @@ export default function PillNavLink({
   label,
   icone: Icone,
   exato = false,
-  // Pílulas maiores, com contorno sempre visível e letras mais fortes —
-  // só a Administração pede este destaque; a Coordenação mantém o
-  // visual mais discreto de sempre (prop por omissão a false).
-  destaque = false,
 }: {
   href: string
   label: string
   icone: LucideIcon
   exato?: boolean
-  destaque?: boolean
 }) {
   const ativo = estaAtivoPill(usePathname(), href, exato)
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center whitespace-nowrap rounded-full tracking-tight transition-colors ${
-        destaque ? 'gap-1.5 border-2 px-3.5 py-1.5 text-[12.5px] font-medium' : 'gap-1.5 px-3 py-1.5 text-[13px] font-medium'
-      } ${
-        ativo
-          ? destaque
-            ? 'border-brand bg-brand/20 text-foreground'
-            : 'bg-brand/15 text-foreground'
-          : destaque
-            ? 'border-border-strong text-foreground hover:border-brand/60 hover:bg-brand/[.1]'
-            : 'text-foreground hover:bg-brand/[.07]'
+      className={`flex min-w-12 shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 transition-colors hover:bg-brand/[.08] ${
+        ativo ? 'font-semibold text-brand' : 'font-medium text-foreground'
       }`}
     >
-      <Icone className={destaque ? 'h-4 w-4' : 'h-3.5 w-3.5'} strokeWidth={2.25} />
-      {label}
+      <Icone className="h-[18px] w-[18px]" strokeWidth={ativo ? 2.5 : 2.25} />
+      <span className="text-[10px] leading-none tracking-tight">{label}</span>
     </Link>
   )
 }

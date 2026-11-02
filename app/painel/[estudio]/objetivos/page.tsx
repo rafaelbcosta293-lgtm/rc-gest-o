@@ -54,6 +54,11 @@ export default async function ObjetivosPage({
   if (!estudio) {
     notFound()
   }
+  // Capturado à parte (em vez de usar "estudio.id" dentro das funções
+  // abaixo) porque o TypeScript não propaga o "estudio não é null" do
+  // notFound() para dentro de funções aninhadas — só para esta, que já
+  // nasce com o tipo certo.
+  const estudioId = estudio.id
   const { ehAdmin } = papeisDaSessao(sessao)
 
   const hoje = new Date().toISOString().slice(0, 10)
@@ -90,12 +95,15 @@ export default async function ObjetivosPage({
   ).length
   const clientesAtivos = (clientesData ?? []).filter((c) => c.estado === 'Ativo').length
 
-  let churnPct: number | null = null
-  if (metaPorChave.has('churn')) {
+  // Cada métrica só é calculada se houver meta definida para ela (como
+  // já era), mas agora as 4 (mais o funil, que corre sempre) são todas
+  // independentes entre si — não há razão para esperar por uma para
+  // começar a outra, por isso correm todas ao mesmo tempo.
+  async function calcularChurn(): Promise<number | null> {
     const { data: atividadesData } = await supabase
       .from('activities')
       .select('tipo, criado_em')
-      .eq('estudio_id', estudio.id)
+      .eq('estudio_id', estudioId)
       .in('tipo', ['Cancelamento'])
     const resumo = resumoMensalClientes(
       (clientesData ?? []).map((c) => ({ ...c, frequencia_semanal: null, inicio_contrato: null, fim_experiencia: null, saiu_em: null })),
@@ -103,43 +111,38 @@ export default async function ObjetivosPage({
       inicio,
       fimExclusivo
     )
-    churnPct = churnMensal(clientesAtivos, resumo.cancelados) * 100
+    return churnMensal(clientesAtivos, resumo.cancelados) * 100
   }
 
-  let showRatePct: number | null = null
-  if (metaPorChave.has('show_rate')) {
+  async function calcularShowRate(): Promise<number | null> {
     const leadsDoMesIds = (
-      await supabase.from('leads').select('id').eq('estudio_id', estudio.id).gte('entrada', inicio).lt('entrada', fimExclusivo)
+      await supabase.from('leads').select('id').eq('estudio_id', estudioId).gte('entrada', inicio).lt('entrada', fimExclusivo)
     ).data?.map((l) => l.id) ?? []
-    if (leadsDoMesIds.length > 0) {
-      const { data: historicoData } = await supabase
-        .from('lead_stage_history')
-        .select('lead_id, estado_anterior, estado_novo, criado_em')
-        .in('lead_id', leadsDoMesIds)
-      const metricas = calcularMetricasFunil(leadsDoMesIds, historicoData ?? [], ORDEM_FUNIL)
-      showRatePct = metricas.taxaComparecimento != null ? metricas.taxaComparecimento * 100 : null
-    }
+    if (leadsDoMesIds.length === 0) return null
+    const { data: historicoData } = await supabase
+      .from('lead_stage_history')
+      .select('lead_id, estado_anterior, estado_novo, criado_em')
+      .in('lead_id', leadsDoMesIds)
+    const metricas = calcularMetricasFunil(leadsDoMesIds, historicoData ?? [], ORDEM_FUNIL)
+    return metricas.taxaComparecimento != null ? metricas.taxaComparecimento * 100 : null
   }
 
-  let ocupacaoPct: number | null = null
-  if (metaPorChave.has('ocupacao_pt')) {
+  async function calcularOcupacao(): Promise<number | null> {
     const [{ data: registosData }, { data: escalasData }, { data: ptsData }] = await Promise.all([
-      supabase.from('registos_pt').select('pt_id, horas, treinos_40, treinos_60').eq('estudio_id', estudio.id).gte('data', inicio).lt('data', fimExclusivo),
-      supabase.from('escalas').select('pt_id').eq('estudio_id', estudio.id).gte('data', inicio).lt('data', fimExclusivo),
-      supabase.from('perfis_estudios').select('perfil:perfis!perfil_id(id, nome)').eq('estudio_id', estudio.id),
+      supabase.from('registos_pt').select('pt_id, horas, treinos_40, treinos_60').eq('estudio_id', estudioId).gte('data', inicio).lt('data', fimExclusivo),
+      supabase.from('escalas').select('pt_id').eq('estudio_id', estudioId).gte('data', inicio).lt('data', fimExclusivo),
+      supabase.from('perfis_estudios').select('perfil:perfis!perfil_id(id, nome)').eq('estudio_id', estudioId),
     ])
     const pts = (ptsData ?? [])
       .map((p) => p.perfil as unknown as { id: string; nome: string } | null)
       .filter((p): p is { id: string; nome: string } => p !== null)
     const ocupacoes = ocupacaoPorPt(registosData ?? [], escalasData ?? [], pts).filter((o) => o.ocupacao != null)
-    ocupacaoPct =
-      ocupacoes.length > 0
-        ? (ocupacoes.reduce((soma, o) => soma + (o.ocupacao ?? 0), 0) / ocupacoes.length) * 100
-        : null
+    return ocupacoes.length > 0
+      ? (ocupacoes.reduce((soma, o) => soma + (o.ocupacao ?? 0), 0) / ocupacoes.length) * 100
+      : null
   }
 
-  let mrrValor: number | null = null
-  if (ehAdmin && metaPorChave.has('mrr')) {
+  async function calcularMrr(): Promise<number | null> {
     const { data: pagamentosData } = await supabase
       .from('pagamentos')
       .select('cliente_id, valor, valido_ate')
@@ -150,8 +153,41 @@ export default async function ObjetivosPage({
         maisRecentePorCliente.set(p.cliente_id, { valor: p.valor, valido_ate: p.valido_ate })
       }
     }
-    mrrValor = mrrAtual(Array.from(maisRecentePorCliente.values()), hoje)
+    return mrrAtual(Array.from(maisRecentePorCliente.values()), hoje)
   }
+
+  // --- Funil inverso: últimos 90 dias --- (não depende de metas nenhumas,
+  // por isso corre ao mesmo tempo que as 4 métricas acima, não depois)
+  async function calcularFunilRecente() {
+    const limiteFunil = somarDias(hoje, -JANELA_FUNIL_DIAS)
+    const { data: leadsRecentes } = await supabase
+      .from('leads')
+      .select('id, entrada')
+      .eq('estudio_id', estudioId)
+      .gte('entrada', limiteFunil)
+    const idsRecentes = (leadsRecentes ?? []).map((l) => l.id)
+    if (idsRecentes.length === 0) {
+      return { funilRecente: { total: 0, porEtapa: {} as Record<string, number> }, contactosRecentes: 0 }
+    }
+    const [{ data: historicoRecente }, { count: contactosCount }] = await Promise.all([
+      supabase.from('lead_stage_history').select('lead_id, estado_anterior, estado_novo, criado_em').in('lead_id', idsRecentes),
+      supabase.from('lead_contactos').select('id', { count: 'exact', head: true }).in('lead_id', idsRecentes),
+    ])
+    return {
+      funilRecente: calcularMetricasFunil(idsRecentes, historicoRecente ?? [], ORDEM_FUNIL),
+      contactosRecentes: contactosCount ?? 0,
+    }
+  }
+
+  const [[churnPct, showRatePct, ocupacaoPct, mrrValor], { funilRecente, contactosRecentes }] = await Promise.all([
+    Promise.all([
+      metaPorChave.has('churn') ? calcularChurn() : Promise.resolve(null),
+      metaPorChave.has('show_rate') ? calcularShowRate() : Promise.resolve(null),
+      metaPorChave.has('ocupacao_pt') ? calcularOcupacao() : Promise.resolve(null),
+      ehAdmin && metaPorChave.has('mrr') ? calcularMrr() : Promise.resolve(null),
+    ]),
+    calcularFunilRecente(),
+  ])
 
   const realizadoPorChave: Record<MetricaChave, number | null> = {
     leads: leadsNoMes,
@@ -161,25 +197,6 @@ export default async function ObjetivosPage({
     show_rate: showRatePct,
     ocupacao_pt: ocupacaoPct,
     mrr: mrrValor,
-  }
-
-  // --- Funil inverso: últimos 90 dias ---
-  const limiteFunil = somarDias(hoje, -JANELA_FUNIL_DIAS)
-  const { data: leadsRecentes } = await supabase
-    .from('leads')
-    .select('id, entrada')
-    .eq('estudio_id', estudio.id)
-    .gte('entrada', limiteFunil)
-  const idsRecentes = (leadsRecentes ?? []).map((l) => l.id)
-  let funilRecente = { total: 0, porEtapa: {} as Record<string, number> }
-  let contactosRecentes = 0
-  if (idsRecentes.length > 0) {
-    const [{ data: historicoRecente }, { count: contactosCount }] = await Promise.all([
-      supabase.from('lead_stage_history').select('lead_id, estado_anterior, estado_novo, criado_em').in('lead_id', idsRecentes),
-      supabase.from('lead_contactos').select('id', { count: 'exact', head: true }).in('lead_id', idsRecentes),
-    ])
-    funilRecente = calcularMetricasFunil(idsRecentes, historicoRecente ?? [], ORDEM_FUNIL)
-    contactosRecentes = contactosCount ?? 0
   }
 
   return (

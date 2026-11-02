@@ -16,6 +16,7 @@ import {
   MessageSquare,
 } from 'lucide-react'
 import PillNavLink from '@/components/PillNavLink'
+import BarraAjustavel from '@/components/BarraAjustavel'
 
 // Os ícones têm de ser resolvidos aqui dentro (componente cliente),
 // nunca recebidos como prop vindos do layout (componente servidor) —
@@ -72,7 +73,7 @@ export default function AdminNav() {
   const pastaAberta = PASTAS.find((p) => p.href === aberto)
 
   return (
-    <nav className="flex min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto">
+    <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center justify-center gap-2">
       {PASTAS.map((p) =>
         p.filtravel ? (
           <div
@@ -112,6 +113,6 @@ export default function AdminNav() {
           </div>,
           document.body
         )}
-    </nav>
+    </BarraAjustavel>
   )
 }

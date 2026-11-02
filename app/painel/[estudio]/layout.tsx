@@ -8,6 +8,7 @@ import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
 import { obterEstadosBanner } from '@/lib/data/smsGateway'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
+import BarraAjustavel from '@/components/BarraAjustavel'
 import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPhone } from './NavLink'
 
 // Na barra do computador/tablet, Treinos e Avaliações deixam de ter
@@ -75,7 +76,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
-          <nav className="flex min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto">
+          <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center justify-center gap-2">
             {MODULOS.filter((m) => !SUBPASTAS_CLIENTES.has(m.id)).map((m) =>
               m.id === 'clientes' ? (
                 <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />
@@ -92,7 +93,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
                 </span>
               )
             )}
-          </nav>
+          </BarraAjustavel>
           <Link
             href={`/painel/${slug}/pesquisa`}
             title="Pesquisar"

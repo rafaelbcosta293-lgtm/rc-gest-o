@@ -343,6 +343,12 @@ function minutoNoClique(clienteY: number, rectTop: number, pxPorMinuto: number) 
   return Math.max(0, Math.min(GRADE_HORA_FIM * 60 - 10, minutos))
 }
 
+// Ao mover um evento, o início nunca pode sair da grelha nem empurrar o
+// fim para fora dela.
+function limitarInicio(inicioMin: number, duracaoMin: number) {
+  return Math.max(0, Math.min(GRADE_HORA_FIM * 60 - duracaoMin, inicioMin))
+}
+
 // Um só arrasto de cada vez — a criar um evento novo (a partir de um
 // espaço vazio), a redimensionar um existente (a partir de uma pega) ou
 // a mover um existente (a partir do meio) — pode atravessar colunas
@@ -352,7 +358,11 @@ function minutoNoClique(clienteY: number, rectTop: number, pxPorMinuto: number) 
 type Arrasto =
   | { tipo: 'criar'; dia: string; inicioMin: number }
   | { tipo: 'redimensionar'; evento: EventoComNomes; pega: 'topo' | 'fundo' }
-  | { tipo: 'mover'; evento: EventoComNomes }
+  // "offsetMin" guarda a quantos minutos do início do evento é que o
+  // rato agarrou (ex.: evento às 17h00, clicado a meio, às 17h20 → 20)
+  // para o bloco se deslocar mantendo esse ponto fixo sob o rato, em
+  // vez de "saltar" para o início do evento ficar sempre sob o rato.
+  | { tipo: 'mover'; evento: EventoComNomes; offsetMin: number }
 
 function GrelhaInterativa({
   dias,
@@ -450,7 +460,8 @@ function GrelhaInterativa({
           })
         }
       } else {
-        setPrevia({ dia: loc.dia, inicioMin: loc.minuto, fimMin: loc.minuto + arrasto.evento.duracao_min })
+        const novoInicio = limitarInicio(loc.minuto - arrasto.offsetMin, arrasto.evento.duracao_min)
+        setPrevia({ dia: loc.dia, inicioMin: novoInicio, fimMin: novoInicio + arrasto.evento.duracao_min })
       }
     }
 
@@ -489,8 +500,9 @@ function GrelhaInterativa({
       }
 
       const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
-      if (loc.dia !== arrasto.evento.data || loc.minuto !== inicioOriginal) {
-        onMover(arrasto.evento.id, loc.dia, minutosParaHora(loc.minuto))
+      const novoInicioMover = limitarInicio(loc.minuto - arrasto.offsetMin, arrasto.evento.duracao_min)
+      if (loc.dia !== arrasto.evento.data || novoInicioMover !== inicioOriginal) {
+        onMover(arrasto.evento.id, loc.dia, minutosParaHora(novoInicioMover))
       }
     }
 
@@ -545,7 +557,13 @@ function GrelhaInterativa({
       if (e.button !== 0) return
       e.stopPropagation()
       setSelecionadoId(evento.id)
-      arrastoRef.current = { tipo: 'mover', evento }
+      const inicioOriginal = minutosDoDia(evento.hora_inicio)
+      const loc = localizar(e.clientX, e.clientY)
+      // Quantos minutos do início do evento é que o rato agarrou — para
+      // o bloco se deslocar mantendo esse ponto fixo sob o rato, em vez
+      // de "saltar" com o início do evento sempre colado ao cursor.
+      const offsetMin = loc ? loc.minuto - inicioOriginal : 0
+      arrastoRef.current = { tipo: 'mover', evento, offsetMin }
       setArrastandoId(evento.id)
       setPrevia({
         dia: evento.data,

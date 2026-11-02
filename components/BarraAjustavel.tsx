@@ -2,13 +2,14 @@
 
 import { useLayoutEffect, useRef, useState } from 'react'
 
-// Encolhe o conteúdo todo (ícones e texto incluídos, na mesma
-// proporção) só o suficiente para caber na largura disponível, em vez
-// de deixar scroll horizontal quando a janela do computador está mais
-// estreita (ex.: a meio ecrã) — nunca aumenta acima de 100%, e nunca
-// encolhe abaixo de ESCALA_MINIMA (continua legível mesmo em janelas
-// muito estreitas; a esse ponto passa a ser preciso fazer scroll, como
-// antes).
+// Quando há espaço a mais, as pastas espalham-se ao longo da barra
+// toda (justify-between, largura 100%) em vez de ficarem agrupadas no
+// centro. Quando não há espaço suficiente nem para o espaçamento
+// mínimo entre elas, encolhe tudo (ícones e texto juntos, na mesma
+// proporção) só o necessário para caber — nunca esconde nada, nunca
+// aumenta acima de 100%, e nunca encolhe abaixo de ESCALA_MINIMA
+// (continua legível mesmo em janelas muito estreitas; a esse ponto
+// passa a ser preciso fazer scroll, como antes).
 const ESCALA_MINIMA = 0.55
 
 export default function BarraAjustavel({
@@ -29,11 +30,9 @@ export default function BarraAjustavel({
     const nav = navRef.current
     if (!exterior || !nav) return
 
-    // "nav" tem largura própria (w-max, nunca esticada ao contentor) —
-    // por isso o scrollWidth mede sempre o conteúdo real todo. Centrar
-    // um <nav> esticado (ex.: com justify-center) faria o conteúdo
-    // ultrapassar os dois lados por igual, e scrollWidth só conta a
-    // ultrapassagem à direita — o lado esquerdo ficava sempre cortado.
+    // Com justify-between e largura 100%, scrollWidth só ultrapassa
+    // clientWidth quando mesmo o espaçamento mínimo (gap) não cabe —
+    // exatamente o sinal certo para começar a encolher.
     function recalcular() {
       const disponivel = exterior!.clientWidth
       const necessaria = nav!.scrollWidth
@@ -47,11 +46,19 @@ export default function BarraAjustavel({
   }, [])
 
   return (
-    <div ref={exteriorRef} className={`flex items-center justify-center overflow-hidden ${className}`}>
+    <div ref={exteriorRef} className={`flex items-center overflow-hidden ${className}`}>
       <nav
         ref={navRef as React.RefObject<HTMLElement>}
-        className={`w-max ${navClassName}`}
-        style={escala < 1 ? { transform: `scale(${escala})`, transformOrigin: 'center' } : undefined}
+        className={`w-full ${navClassName}`}
+        style={
+          escala < 1
+            // Âncora à esquerda (não ao centro): com justify-between a
+            // encolher, o que ultrapassa a caixa fica sempre à direita,
+            // nunca dos dois lados — ancorar ao centro deixava sempre um
+            // bocado por cortar do lado direito, mesmo com a escala certa.
+            ? { transform: `scale(${escala})`, transformOrigin: 'left center' }
+            : undefined
+        }
       >
         {children}
       </nav>

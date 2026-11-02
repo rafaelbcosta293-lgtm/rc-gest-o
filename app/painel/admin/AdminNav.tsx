@@ -73,7 +73,7 @@ export default function AdminNav() {
   const pastaAberta = PASTAS.find((p) => p.href === aberto)
 
   return (
-    <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-1">
+    <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center justify-between gap-1">
       {PASTAS.map((p) =>
         p.filtravel ? (
           <div

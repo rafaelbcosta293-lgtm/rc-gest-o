@@ -30,7 +30,7 @@ const PASTAS = [
 
 export default function CoordenacaoNav() {
   return (
-    <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-1">
+    <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center justify-between gap-1">
       {PASTAS.map((p) => (
         <PillNavLink key={p.href} href={p.href} label={p.label} icone={p.icone} exato={p.exato} />
       ))}

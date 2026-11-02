@@ -76,7 +76,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
-          <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-1">
+          <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center justify-between gap-1">
             {MODULOS.filter((m) => !SUBPASTAS_CLIENTES.has(m.id)).map((m) =>
               m.id === 'clientes' ? (
                 <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />

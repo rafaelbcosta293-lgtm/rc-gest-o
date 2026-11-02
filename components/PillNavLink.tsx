@@ -32,7 +32,7 @@ export default function PillNavLink({
     <Link
       href={href}
       className={`flex min-w-12 shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 transition-colors hover:bg-brand/[.08] ${
-        ativo ? 'font-semibold text-brand' : 'font-medium text-foreground'
+        ativo ? 'bg-brand/20 font-semibold text-brand' : 'font-medium text-foreground'
       }`}
     >
       <Icone className="h-[18px] w-[18px]" strokeWidth={ativo ? 2.5 : 2.25} />

@@ -71,8 +71,11 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
 
         {/* Computador/tablet (≥768px): barra superior fixa, com o
             logótipo, os módulos (pílulas, numa linha com scroll
-            horizontal se não couberem) e as ações à direita. */}
-        <header className="shadow-deep hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl md:flex">
+            horizontal se não couberem) e as ações à direita. Só esta
+            faixa fica com o tema escuro ("dark tema-proprio") — o resto
+            da página continua no modelo claro, ao contrário da
+            Administração, onde o escuro é a área toda. */}
+        <header className="dark tema-proprio shadow-deep hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl md:flex">
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>

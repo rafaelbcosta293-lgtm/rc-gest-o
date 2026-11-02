@@ -25,7 +25,7 @@ export default async function CoordenacaoLayout({ children }: { children: React.
           em app/painel/[estudio]/layout.tsx. */}
       <div className="sticky top-0 z-10 flex flex-col">
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} />
-        <header className="shadow-deep flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl">
+        <header className="dark tema-proprio shadow-deep flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl">
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>

@@ -33,6 +33,7 @@ export function NavLinkTopBar({ href, id }: { href: string; id: string }) {
     <Link
       href={href}
       className="flex min-w-12 shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 transition-colors hover:bg-foreground/[.05]"
+      style={ativo ? { background: PALETA[cor].bg } : undefined}
     >
       <Icone className="h-[18px] w-[18px]" strokeWidth={ativo ? 2.5 : 2.25} style={{ color: PALETA[cor].tx }} />
       <span
@@ -103,6 +104,7 @@ export function NavLinkClientesComSubmenu({
         ref={pillRef}
         href={clientesHref}
         className="flex min-w-12 shrink-0 flex-col items-center gap-0.5 whitespace-nowrap rounded-lg px-1.5 py-1 transition-colors hover:bg-foreground/[.05]"
+        style={ativo ? { background: PALETA[cor].bg } : undefined}
       >
         <Icone className="h-[18px] w-[18px]" strokeWidth={ativo ? 2.5 : 2.25} style={{ color: PALETA[cor].tx }} />
         <span

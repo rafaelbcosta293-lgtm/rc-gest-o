@@ -11,10 +11,12 @@ const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
 const METODOS = ['Numerário', 'Multibanco', 'MB Way', 'Transferência', 'Cartão']
 
-function somarDias(dataISO: string, dias: number) {
+// Último dia do mês da data dada — valor por omissão do "válido até"
+// (a mensalidade cobre o mês em que é paga, de ponta a ponta).
+function fimDoMes(dataISO: string) {
   const d = new Date(`${dataISO}T00:00:00`)
-  d.setDate(d.getDate() + dias)
-  return d.toISOString().slice(0, 10)
+  const fim = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+  return fim.toISOString().slice(0, 10)
 }
 
 export default function PagamentoForm({
@@ -33,8 +35,7 @@ export default function PagamentoForm({
   const hoje = new Date().toISOString().slice(0, 10)
   const [planoId, setPlanoId] = useState('')
   const [valor, setValor] = useState('')
-  const [dataPagamento, setDataPagamento] = useState(hoje)
-  const [validoAte, setValidoAte] = useState(somarDias(hoje, 30))
+  const [validoAte, setValidoAte] = useState(fimDoMes(hoje))
   const { marcarSujo } = useAvisoSairSemGuardar()
 
   const escolherPlano = (id: string) => {
@@ -88,7 +89,8 @@ export default function PagamentoForm({
 
         <div className="flex flex-col gap-1.5">
           <label className={labelCls}>Método</label>
-          <select name="metodo" required defaultValue="Numerário" className={inputCls}>
+          <select name="metodo" required defaultValue="" className={inputCls}>
+            <option value="">— escolhe um método —</option>
             {METODOS.map((m) => (
               <option key={m} value={m}>
                 {m}
@@ -99,13 +101,15 @@ export default function PagamentoForm({
 
         <div className="flex flex-col gap-1.5">
           <label className={labelCls}>Data do pagamento</label>
+          {/* Sempre o dia de hoje, o dia em que o pagamento está a ser
+              registado — não é um campo editável (ver pedido do dono). */}
+          <input type="hidden" name="data_pagamento" value={hoje} />
           <input
-            name="data_pagamento"
             type="date"
-            required
-            value={dataPagamento}
-            onChange={(e) => setDataPagamento(e.target.value)}
-            className={inputCls}
+            value={hoje}
+            readOnly
+            disabled
+            className={`${inputCls} cursor-not-allowed opacity-60`}
           />
         </div>
 

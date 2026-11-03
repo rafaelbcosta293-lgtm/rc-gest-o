@@ -174,6 +174,11 @@ export default async function ServicosPage({
         </SubmitButton>
       </form>
       <p className="mt-2 text-xs text-zinc-500">
+        &quot;Sessões/sem&quot; é a frequência semanal, não o total do ciclo — ex.: Express/Premium
+        4 → 1, 8 → 2, 12 → 3. É o número usado em Pagamentos para calcular a meta de treinos do
+        mês.
+      </p>
+      <p className="mt-2 text-xs text-zinc-500">
         Eliminar um serviço já usado em pagamentos antigos pode não ser possível — nesse caso,
         desmarca &quot;ativo&quot; em vez de eliminar.
       </p>

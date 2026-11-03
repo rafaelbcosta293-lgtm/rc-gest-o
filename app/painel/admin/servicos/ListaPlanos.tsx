@@ -75,6 +75,7 @@ export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[
               name="sessoes_por_semana"
               type="number"
               placeholder="sessões/sem"
+              title="Frequência semanal, não o total do ciclo — ex.: Express/Premium 4 → 1, 8 → 2, 12 → 3"
               defaultValue={p.sessoes_por_semana ?? ''}
               className={`${inputCls} w-28`}
             />

@@ -65,7 +65,7 @@ export default async function PagamentosPage({
   // por si só, já o reativa).
   const { data, error } = await supabase
     .from('clientes')
-    .select('id, nome')
+    .select('id, nome, frequencia_semanal')
     .eq('estudio_id', estudio.id)
     .order('nome')
 
@@ -180,8 +180,11 @@ export default async function PagamentosPage({
       }
     }
     const fimPeriodo = pagamento.valido_ate < hoje ? pagamento.valido_ate : hoje
+    // O plano pode não ter sessões por semana definidas (nem todos têm
+    // uma frequência fixa) — nesse caso usa-se a frequência semanal da
+    // própria ficha do cliente, em vez de ficar sem nenhuma meta.
     const adquiridos = treinosNoPeriodo(
-      pagamento.plano?.sessoes_por_semana ?? null,
+      pagamento.plano?.sessoes_por_semana ?? c.frequencia_semanal,
       pagamento.data_pagamento,
       fimPeriodo
     )

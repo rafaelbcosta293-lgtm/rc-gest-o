@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01 } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
 
 export type LinhaPagamentoAtraso = {
@@ -13,6 +14,7 @@ export type LinhaPagamentoAtraso = {
   realizados: number
   adquiridos: number | null
   dataReferencia: string | null
+  dataPagamento: string | null
 }
 
 export type LinhaSeguro = {
@@ -22,31 +24,109 @@ export type LinhaSeguro = {
   dataReferencia: string
 }
 
-type Ordem = 'recente' | 'antigo'
+type Direcao = 'asc' | 'desc'
 
-// Quem não tem data (nunca pagou) fica sempre no fim, seja qual for a
-// ordem escolhida — não há "mais recente"/"mais antigo" para comparar.
-function ordenarPorData<T extends { dataReferencia: string | null }>(linhas: T[], ordem: Ordem): T[] {
+type CampoOrdem<T> = {
+  valor: string
+  label: string
+  obter: (l: T) => string | null
+  omissao: Direcao
+}
+
+const CAMPO_NOME = <T extends { nome: string }>(): CampoOrdem<T> => ({
+  valor: 'nome',
+  label: 'Nome',
+  obter: (l) => normalizarTexto(l.nome),
+  omissao: 'asc',
+})
+
+const CAMPOS_ATRASADO_EMDIA: CampoOrdem<LinhaPagamentoAtraso>[] = [
+  { valor: 'validade', label: 'Válido até', obter: (l) => l.dataReferencia, omissao: 'desc' },
+  { valor: 'pagamento', label: 'Data de pagamento', obter: (l) => l.dataPagamento, omissao: 'desc' },
+  CAMPO_NOME<LinhaPagamentoAtraso>(),
+]
+
+const CAMPOS_SEGURO: CampoOrdem<LinhaSeguro>[] = [
+  { valor: 'renovacao', label: 'Data de renovação', obter: (l) => l.dataReferencia, omissao: 'desc' },
+  CAMPO_NOME<LinhaSeguro>(),
+]
+
+// Quem não tem data (nunca pagou, por exemplo) fica sempre no fim,
+// seja qual for a direção escolhida — não há "mais recente"/"mais
+// antigo" para comparar.
+function ordenarPor<T>(linhas: T[], campo: CampoOrdem<T>, direcao: Direcao): T[] {
   return [...linhas].sort((a, b) => {
-    if (!a.dataReferencia && !b.dataReferencia) return 0
-    if (!a.dataReferencia) return 1
-    if (!b.dataReferencia) return -1
-    return ordem === 'recente'
-      ? b.dataReferencia.localeCompare(a.dataReferencia)
-      : a.dataReferencia.localeCompare(b.dataReferencia)
+    const va = campo.obter(a)
+    const vb = campo.obter(b)
+    if (va === null && vb === null) return 0
+    if (va === null) return 1
+    if (vb === null) return -1
+    const cmp = va.localeCompare(vb)
+    return direcao === 'desc' ? -cmp : cmp
   })
 }
 
-function BotaoOrdem({ ordem, onChange }: { ordem: Ordem; onChange: (o: Ordem) => void }) {
+function useOrdem<T>(campos: CampoOrdem<T>[]) {
+  const [valor, setValor] = useState(campos[0].valor)
+  const [direcao, setDirecao] = useState<Direcao>(campos[0].omissao)
+  const campo = campos.find((c) => c.valor === valor) ?? campos[0]
+
+  function mudarCampo(novoValor: string) {
+    const novoCampo = campos.find((c) => c.valor === novoValor)
+    setValor(novoValor)
+    if (novoCampo) setDirecao(novoCampo.omissao)
+  }
+
+  return { campo, direcao, mudarCampo, setDirecao }
+}
+
+function SeletorOrdem<T>({
+  campos,
+  campo,
+  direcao,
+  onCampo,
+  onDirecao,
+}: {
+  campos: CampoOrdem<T>[]
+  campo: CampoOrdem<T>
+  direcao: Direcao
+  onCampo: (valor: string) => void
+  onDirecao: (d: Direcao) => void
+}) {
+  const ehNome = campo.valor === 'nome'
+  const IconeAsc = ehNome ? ArrowDownAZ : ArrowUp01
+  const IconeDesc = ehNome ? ArrowUpAZ : ArrowDown01
   return (
-    <button
-      type="button"
-      onClick={() => onChange(ordem === 'recente' ? 'antigo' : 'recente')}
-      className="shrink-0 rounded-full border border-border-subtle px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-muted transition-colors hover:border-border-strong hover:bg-brand/[.06]"
-      title="Mudar a ordem desta coluna"
-    >
-      {ordem === 'recente' ? 'Mais recentes' : 'Mais antigos'}
-    </button>
+    <div className="flex shrink-0 items-center gap-1">
+      <select
+        value={campo.valor}
+        onChange={(e) => onCampo(e.target.value)}
+        className="rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-muted outline-none transition-colors hover:border-border-strong"
+        title="Ordenar por"
+      >
+        {campos.map((c) => (
+          <option key={c.valor} value={c.valor}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={() => onDirecao(direcao === 'asc' ? 'desc' : 'asc')}
+        className="rounded-full border border-border-subtle p-1 text-muted transition-colors hover:border-border-strong hover:bg-brand/[.06]"
+        title={
+          ehNome
+            ? direcao === 'asc'
+              ? 'A → Z'
+              : 'Z → A'
+            : direcao === 'desc'
+              ? 'Mais recentes primeiro'
+              : 'Mais antigos primeiro'
+        }
+      >
+        {direcao === 'asc' ? <IconeAsc className="h-3 w-3" /> : <IconeDesc className="h-3 w-3" />}
+      </button>
+    </div>
   )
 }
 
@@ -101,9 +181,9 @@ export default function ListaPagamentos({
   segurosARenovar: LinhaSeguro[]
 }) {
   const [filtro, setFiltro] = useState('')
-  const [ordemAtrasados, setOrdemAtrasados] = useState<Ordem>('recente')
-  const [ordemSeguros, setOrdemSeguros] = useState<Ordem>('recente')
-  const [ordemEmDia, setOrdemEmDia] = useState<Ordem>('recente')
+  const ordemAtrasados = useOrdem(CAMPOS_ATRASADO_EMDIA)
+  const ordemSeguros = useOrdem(CAMPOS_SEGURO)
+  const ordemEmDia = useOrdem(CAMPOS_ATRASADO_EMDIA)
 
   const { atrasadosFiltrados, emDiaFiltrados, segurosFiltrados } = useMemo(() => {
     const alvo = filtro ? normalizarTexto(filtro) : null
@@ -111,11 +191,22 @@ export default function ListaPagamentos({
       alvo ? lista.filter((l) => normalizarTexto(l.nome).includes(alvo)) : lista
 
     return {
-      atrasadosFiltrados: ordenarPorData(porNome(atrasados), ordemAtrasados),
-      emDiaFiltrados: ordenarPorData(porNome(emDia), ordemEmDia),
-      segurosFiltrados: ordenarPorData(porNome(segurosARenovar), ordemSeguros),
+      atrasadosFiltrados: ordenarPor(porNome(atrasados), ordemAtrasados.campo, ordemAtrasados.direcao),
+      emDiaFiltrados: ordenarPor(porNome(emDia), ordemEmDia.campo, ordemEmDia.direcao),
+      segurosFiltrados: ordenarPor(porNome(segurosARenovar), ordemSeguros.campo, ordemSeguros.direcao),
     }
-  }, [atrasados, emDia, segurosARenovar, filtro, ordemAtrasados, ordemSeguros, ordemEmDia])
+  }, [
+    atrasados,
+    emDia,
+    segurosARenovar,
+    filtro,
+    ordemAtrasados.campo,
+    ordemAtrasados.direcao,
+    ordemSeguros.campo,
+    ordemSeguros.direcao,
+    ordemEmDia.campo,
+    ordemEmDia.direcao,
+  ])
 
   const semResultados =
     atrasadosFiltrados.length === 0 && emDiaFiltrados.length === 0 && segurosFiltrados.length === 0
@@ -142,7 +233,13 @@ export default function ListaPagamentos({
                 Por regularizar ({atrasadosFiltrados.length})
               </h2>
               {atrasadosFiltrados.length > 1 && (
-                <BotaoOrdem ordem={ordemAtrasados} onChange={setOrdemAtrasados} />
+                <SeletorOrdem
+                  campos={CAMPOS_ATRASADO_EMDIA}
+                  campo={ordemAtrasados.campo}
+                  direcao={ordemAtrasados.direcao}
+                  onCampo={ordemAtrasados.mudarCampo}
+                  onDirecao={ordemAtrasados.setDirecao}
+                />
               )}
             </div>
             {atrasadosFiltrados.length > 0 ? (
@@ -161,7 +258,15 @@ export default function ListaPagamentos({
               <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-600">
                 Seguro a renovar ({segurosFiltrados.length})
               </h2>
-              {segurosFiltrados.length > 1 && <BotaoOrdem ordem={ordemSeguros} onChange={setOrdemSeguros} />}
+              {segurosFiltrados.length > 1 && (
+                <SeletorOrdem
+                  campos={CAMPOS_SEGURO}
+                  campo={ordemSeguros.campo}
+                  direcao={ordemSeguros.direcao}
+                  onCampo={ordemSeguros.mudarCampo}
+                  onDirecao={ordemSeguros.setDirecao}
+                />
+              )}
             </div>
             {segurosFiltrados.length > 0 ? (
               <div className="mt-2 flex flex-col overflow-hidden rounded-2xl border border-amber-200 shadow-card dark:border-amber-900">
@@ -190,7 +295,15 @@ export default function ListaPagamentos({
               <h2 className="text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400">
                 Em dia ({emDiaFiltrados.length})
               </h2>
-              {emDiaFiltrados.length > 1 && <BotaoOrdem ordem={ordemEmDia} onChange={setOrdemEmDia} />}
+              {emDiaFiltrados.length > 1 && (
+                <SeletorOrdem
+                  campos={CAMPOS_ATRASADO_EMDIA}
+                  campo={ordemEmDia.campo}
+                  direcao={ordemEmDia.direcao}
+                  onCampo={ordemEmDia.mudarCampo}
+                  onDirecao={ordemEmDia.setDirecao}
+                />
+              )}
             </div>
             {emDiaFiltrados.length > 0 ? (
               <div className="mt-2 flex flex-col overflow-hidden rounded-2xl border border-teal-200 shadow-card dark:border-teal-900">

@@ -30,6 +30,7 @@ type ClientePagamento = {
   cliente_id: string
   nome: string
   valido_ate: string | null
+  dataPagamento: string | null
   em_dia: boolean
   tipoMensalidade: string | null
   realizados: number
@@ -171,6 +172,7 @@ export default async function PagamentosPage({
         cliente_id: c.id,
         nome: c.nome,
         valido_ate: null,
+        dataPagamento: null,
         em_dia: false,
         tipoMensalidade: null,
         realizados: 0,
@@ -190,6 +192,7 @@ export default async function PagamentosPage({
       cliente_id: c.id,
       nome: c.nome,
       valido_ate: pagamento.valido_ate,
+      dataPagamento: pagamento.data_pagamento,
       em_dia: pagamento.valido_ate >= hoje,
       tipoMensalidade: pagamento.plano?.nome ?? null,
       realizados,
@@ -229,6 +232,7 @@ export default async function PagamentosPage({
     realizados: c.realizados,
     adquiridos: c.adquiridos,
     dataReferencia: c.valido_ate,
+    dataPagamento: c.dataPagamento,
   })
   const linhasAtrasados = atrasados.map((c) => paraLinha(c, 'atrasado'))
   const linhasEmDia = emDia.map((c) => paraLinha(c, 'emDia'))

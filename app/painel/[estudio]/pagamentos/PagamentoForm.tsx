@@ -59,11 +59,12 @@ export default function PagamentoForm({
           <label className={labelCls}>Plano</label>
           <select
             name="plano_id"
+            required
             value={planoId}
             onChange={(e) => escolherPlano(e.target.value)}
             className={inputCls}
           >
-            <option value="">— sem plano —</option>
+            <option value="">— escolhe um plano —</option>
             {planos.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nome} · {p.valor}€
@@ -87,7 +88,7 @@ export default function PagamentoForm({
 
         <div className="flex flex-col gap-1.5">
           <label className={labelCls}>Método</label>
-          <select name="metodo" defaultValue="Numerário" className={inputCls}>
+          <select name="metodo" required defaultValue="Numerário" className={inputCls}>
             {METODOS.map((m) => (
               <option key={m} value={m}>
                 {m}
@@ -101,6 +102,7 @@ export default function PagamentoForm({
           <input
             name="data_pagamento"
             type="date"
+            required
             value={dataPagamento}
             onChange={(e) => setDataPagamento(e.target.value)}
             className={inputCls}

@@ -13,16 +13,33 @@ function campoOuNull(formData: FormData, nome: string) {
 export async function criarPagamento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const clienteId = formData.get('cliente_id') as string
+
+  // Plano, valor, método, data de pagamento e válido até são sempre
+  // obrigatórios — o formulário já impede isto com "required", mas
+  // confirma-se aqui também (nunca confiar só na validação do browser).
+  const planoId = campoOuNull(formData, 'plano_id')
+  const valorBruto = campoOuNull(formData, 'valor')
+  const metodo = campoOuNull(formData, 'metodo')
+  const dataPagamento = campoOuNull(formData, 'data_pagamento')
+  const validoAte = campoOuNull(formData, 'valido_ate')
+  if (!planoId || !valorBruto || !metodo || !dataPagamento || !validoAte) {
+    redirect(
+      `/painel/${estudioSlug}/pagamentos/${clienteId}?error=${encodeURIComponent(
+        'Plano, valor, método, data de pagamento e válido até são obrigatórios.'
+      )}`
+    )
+  }
+
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
 
   const { error } = await supabase.from('pagamentos').insert({
     cliente_id: clienteId,
-    plano_id: campoOuNull(formData, 'plano_id'),
-    valor: Number(formData.get('valor')),
-    metodo: campoOuNull(formData, 'metodo'),
-    data_pagamento: formData.get('data_pagamento') as string,
-    valido_ate: formData.get('valido_ate') as string,
+    plano_id: planoId,
+    valor: Number(valorBruto),
+    metodo,
+    data_pagamento: dataPagamento,
+    valido_ate: validoAte,
     inclui_inscricao: formData.get('inclui_inscricao') === 'on',
     inclui_seguro: formData.get('inclui_seguro') === 'on',
     inclui_reativacao: formData.get('inclui_reativacao') === 'on',

@@ -1,11 +1,15 @@
 name: Presenças automáticas (Agenda interna)
 
-# Marca presença automaticamente quando um treino agendado na agenda
-# interna termina sem ter sido desmarcado — a cada 15 minutos, para a
-# ficha do cliente atualizar pouco depois da sessão acabar.
+# O disparo automático já não é daqui — é do pg_cron do Supabase (job
+# "presencas-agenda", ver supabase/migrations/0054): a cada 15 minutos,
+# só entre as 07h e as 23h (hora de Portugal). O agendamento do GitHub
+# Actions ("*/15") só disparava de ~6 em ~6 horas. Este workflow fica só
+# para disparar à mão quando for preciso — botão "Run workflow".
+#
+# A lógica está na função public.marcar_presencas_agenda (migração
+# 0053); o endpoint só a chama, por isso o botão manual e o pg_cron
+# fazem exatamente o mesmo.
 on:
-  schedule:
-    - cron: '*/15 * * * *'
   workflow_dispatch: {}
 
 jobs:

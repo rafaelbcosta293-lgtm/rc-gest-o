@@ -441,9 +441,16 @@ function GrelhaInterativa({
   useEffect(() => {
     function mover(e: MouseEvent) {
       const loc = localizar(e.clientX, e.clientY)
-      if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto })
-
       const arrasto = arrastoRef.current
+      if (loc) {
+        setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto })
+      } else if (!arrasto) {
+        // Fora da grelha e sem nenhum arrasto em curso — a hora some,
+        // em vez de ficar presa no sítio onde o rato saiu (ex.: por
+        // cima da barra de filtros, ou depois de rolar a grelha).
+        setCursor(null)
+      }
+
       if (!arrasto || !loc) return
 
       if (arrasto.tipo === 'criar') {
@@ -681,7 +688,7 @@ function GrelhaInterativa({
           fixa ao ecrã, por isso não é afetada pelo scroll interno. */}
       {cursor && (
         <div
-          className="pointer-events-none fixed z-30 rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-white shadow-pop"
+          className="pointer-events-none fixed z-30 text-[11px] font-semibold whitespace-nowrap text-black"
           style={{ left: cursor.x + 14, top: cursor.y - 10 }}
         >
           {minutosParaHora(cursor.minuto)}

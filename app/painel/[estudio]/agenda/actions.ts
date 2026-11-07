@@ -215,6 +215,24 @@ export async function atualizarEvento(formData: FormData) {
   const nota = campoOuNull(formData, 'nota')
   const supabase = await createClient()
 
+  // Se o dia ou a hora mudarem depois de o lembrete já ter sido
+  // enviado, esse SMS ficou a falar de um treino que já não existe
+  // (ou já foi enviado para a data errada) — sem repor isto a app
+  // nunca mais avisa, porque o lembrete já conta como "enviado" para
+  // sempre, mesmo sendo para outro dia.
+  const { data: eventoAtual, error: erroAtual } = await supabase
+    .from('agenda_eventos')
+    .select('data, hora_inicio, lembrete_enviado')
+    .eq('id', id)
+    .maybeSingle()
+  if (erroAtual) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroAtual.message)}`)
+  }
+  const mudouQuandoOuHora =
+    !!eventoAtual &&
+    (eventoAtual.data !== data || eventoAtual.hora_inicio.slice(0, 5) !== horaInicio.slice(0, 5))
+  const repoeLembrete = eventoAtual?.lembrete_enviado === true && mudouQuandoOuHora
+
   // Só afeta esta linha (uma ocorrência) — nunca o resto da série,
   // mesmo que serie_id esteja preenchido.
   const { error } = await supabase
@@ -230,6 +248,7 @@ export async function atualizarEvento(formData: FormData) {
       hora_inicio: horaInicio,
       duracao_min: duracaoMin,
       nota,
+      ...(repoeLembrete ? { lembrete_enviado: false, lembrete_enviado_em: null } : {}),
     })
     .eq('id', id)
 
@@ -524,7 +543,12 @@ export async function moverEventoRapido(input: {
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  const query = supabase.from('agenda_eventos').update({ data: input.data, hora_inicio: input.horaInicio })
+  // Mover para outro dia/hora invalida um lembrete já enviado (ficou a
+  // falar do dia errado) — repõe-se para o cron voltar a avisar na
+  // véspera do novo dia. Ver o mesmo cuidado em atualizarEvento.
+  const query = supabase
+    .from('agenda_eventos')
+    .update({ data: input.data, hora_inicio: input.horaInicio, lembrete_enviado: false, lembrete_enviado_em: null })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
@@ -541,9 +565,14 @@ export async function redimensionarEventoRapido(input: {
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  const query = supabase
-    .from('agenda_eventos')
-    .update({ hora_inicio: input.horaInicio, duracao_min: input.duracaoMin })
+  // Mesmo cuidado que em moverEventoRapido: mudar a hora de início
+  // invalida um lembrete já enviado (ficou a dizer uma hora errada).
+  const query = supabase.from('agenda_eventos').update({
+    hora_inicio: input.horaInicio,
+    duracao_min: input.duracaoMin,
+    lembrete_enviado: false,
+    lembrete_enviado_em: null,
+  })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 

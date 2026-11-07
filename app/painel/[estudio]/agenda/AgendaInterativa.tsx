@@ -544,6 +544,21 @@ function GrelhaInterativa({
     if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto })
   }
 
+  // Deslizar a grelha (roda do rato ou gesto) nunca dispara "mousemove"
+  // — sem isto, a hora ficava presa no sítio onde o rato estava antes
+  // de rolar, já sem corresponder a nenhuma linha visível. Recalcula-se
+  // para o mesmo ponto do ecrã (o rato não se moveu, só o conteúdo por
+  // baixo), ou esconde-se se esse ponto deixou de estar em cima da
+  // grelha.
+  function aoRolarGrelha() {
+    if (arrastoRef.current) return
+    setCursor((atual) => {
+      if (!atual) return atual
+      const loc = localizar(atual.x, atual.y)
+      return loc ? { ...atual, minuto: loc.minuto } : null
+    })
+  }
+
   function iniciarCriacao(dia: string) {
     return (e: React.MouseEvent) => {
       if (e.button !== 0) return
@@ -606,6 +621,7 @@ function GrelhaInterativa({
       onMouseLeave={() => {
         if (!arrastoRef.current) setCursor(null)
       }}
+      onScroll={aoRolarGrelha}
     >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted">
@@ -651,6 +667,7 @@ function GrelhaInterativa({
         </div>
         <div
           onMouseMove={aoMoverRatoEmRepouso}
+          onScroll={aoRolarGrelha}
           className="h-[calc(100vh-280px)] min-h-[360px] overflow-y-auto rounded-b-xl border border-border-subtle"
         >
           <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: alturaGrade }}>

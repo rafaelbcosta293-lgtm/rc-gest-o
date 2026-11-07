@@ -13,6 +13,8 @@ type PagamentoRow = {
   valor: number
   metodo: string | null
   data_pagamento: string
+  inclui_seguro: boolean
+  inclui_inscricao: boolean
   clientes: { nome: string; estudio_id: number } | null
   plano: { nome: string } | null
 }
@@ -52,7 +54,9 @@ export default async function AdminPagamentosPage({
   const { data, error } = idsEstudios.length
     ? await supabase
         .from('pagamentos')
-        .select('id, valor, metodo, data_pagamento, clientes!inner(nome, estudio_id), plano:planos(nome)')
+        .select(
+          'id, valor, metodo, data_pagamento, inclui_seguro, inclui_inscricao, clientes!inner(nome, estudio_id), plano:planos(nome)'
+        )
         .in('clientes.estudio_id', idsEstudios)
         .gte('data_pagamento', inicio)
         .lt('data_pagamento', fimExclusivo)
@@ -75,6 +79,8 @@ export default async function AdminPagamentosPage({
         metodo: p.metodo,
         valor: p.valor,
         plano: p.plano?.nome ?? null,
+        incluiSeguro: p.inclui_seguro,
+        incluiInscricao: p.inclui_inscricao,
         estudioNome: est?.nome ?? null,
         estudioSlug: est?.slug ?? null,
       }

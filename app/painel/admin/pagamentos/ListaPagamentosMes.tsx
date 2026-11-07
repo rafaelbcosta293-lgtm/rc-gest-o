@@ -12,6 +12,8 @@ export type LinhaPagamentoMes = {
   metodo: string | null
   valor: number
   plano: string | null
+  incluiSeguro: boolean
+  incluiInscricao: boolean
   estudioNome: string | null
   estudioSlug: string | null
 }
@@ -62,6 +64,8 @@ export default function ListaPagamentosMes({
 
   const porMetodo = contarPor(linhasFiltradas, (l) => l.metodo ?? 'Sem método')
   const porPlano = contarPor(linhasFiltradas, (l) => l.plano ?? 'Sem plano')
+  const totalSeguros = linhasFiltradas.filter((l) => l.incluiSeguro).length
+  const totalInscricoes = linhasFiltradas.filter((l) => l.incluiInscricao).length
 
   function mudarCampo(novoCampo: Campo) {
     setCampo(novoCampo)
@@ -71,7 +75,7 @@ export default function ListaPagamentosMes({
   return (
     <div className="mt-6">
       <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Resumo do mês</h2>
-      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Total recebido</h3>
           <p className="mt-2 font-mono text-2xl font-bold text-foreground">{fmtEuro(total)}</p>
@@ -108,6 +112,16 @@ export default function ListaPagamentosMes({
               ))
             )}
           </div>
+        </div>
+        <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Seguros</h3>
+          <p className="mt-2 font-mono text-2xl font-bold text-foreground">{totalSeguros}</p>
+          <p className="mt-1 text-xs text-muted">pagamentos com seguro incluído</p>
+        </div>
+        <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Inscrições</h3>
+          <p className="mt-2 font-mono text-2xl font-bold text-foreground">{totalInscricoes}</p>
+          <p className="mt-1 text-xs text-muted">pagamentos com inscrição incluída</p>
         </div>
       </div>
 

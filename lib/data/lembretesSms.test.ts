@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { dataDeAmanhaEmLisboa, nomeDiaSemana, preencherTemplateLembrete, TEMPLATE_LEMBRETE_OMISSAO } from './lembretesSms'
+import {
+  dataDeAmanhaEmLisboa,
+  nomeDiaSemana,
+  preencherTemplateLembrete,
+  proximoDiaAlvoLembrete,
+  TEMPLATE_LEMBRETE_OMISSAO,
+} from './lembretesSms'
 
 describe('nomeDiaSemana', () => {
   it('devolve o nome por extenso, em minúsculas', () => {
@@ -39,6 +45,22 @@ describe('preencherTemplateLembrete', () => {
       horaInicio: '10:00:00',
     })
     expect(texto).toBe('Olá José!')
+  })
+})
+
+describe('proximoDiaAlvoLembrete', () => {
+  it('no Fátima, salta de domingo para segunda — o lembrete de segunda sai no sábado', () => {
+    // 2026-11-08 é domingo, 2026-11-09 é segunda (confirmado acima).
+    expect(proximoDiaAlvoLembrete('2026-11-08', 'fatima')).toBe('2026-11-09')
+  })
+
+  it('não mexe em dias que não sejam de fecho', () => {
+    expect(proximoDiaAlvoLembrete('2026-11-07', 'fatima')).toBe('2026-11-07') // sábado
+    expect(proximoDiaAlvoLembrete('2026-11-09', 'fatima')).toBe('2026-11-09') // segunda
+  })
+
+  it('não mexe em estúdios sem dias de fecho configurados (ex.: Leiria)', () => {
+    expect(proximoDiaAlvoLembrete('2026-11-08', 'leiria')).toBe('2026-11-08')
   })
 })
 

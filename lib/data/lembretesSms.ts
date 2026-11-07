@@ -54,6 +54,32 @@ export function dataDeAmanhaEmLisboa(agora: Date = new Date()): string {
   return somarDias(hojeLisboa, 1)
 }
 
+// Dias da semana em que cada estúdio está fechado (0 = domingo … 6 =
+// sábado, como Date.getDay()) — hoje só o Fátima, aos domingos. Nesse
+// dia nunca há lembrete a sair no dia anterior (o estúdio está
+// fechado, o telemóvel do gateway pode nem estar ligado), por isso o
+// lembrete de segunda-feira sai mais cedo, já no sábado.
+const DIAS_FECHO_POR_ESTUDIO: Record<string, number[]> = {
+  fatima: [0],
+}
+
+function diaDaSemanaNumero(dataISO: string): number {
+  return new Date(`${dataISO}T00:00:00Z`).getUTCDay()
+}
+
+// Ponto de partida de "amanhã" para este estúdio: avança por cima de
+// qualquer dia fechado, até ao próximo dia aberto. Nos estúdios sem
+// dias de fecho (ou em qualquer dia que não caia num deles) devolve a
+// mesma data recebida, sem alterar o comportamento de sempre.
+export function proximoDiaAlvoLembrete(amanha: string, estudioSlug: string): string {
+  const fechados = DIAS_FECHO_POR_ESTUDIO[estudioSlug] ?? []
+  let dia = amanha
+  while (fechados.includes(diaDaSemanaNumero(dia))) {
+    dia = somarDias(dia, 1)
+  }
+  return dia
+}
+
 type EventoParaLembrete = {
   id: string
   tipo: string
@@ -102,6 +128,12 @@ async function processarLembretesDoEstudio(
   amanha: string,
   template: string
 ): Promise<ResultadoEstudio> {
+  // Normalmente é mesmo "amanhã" — só avança quando amanhã cai num dia
+  // de fecho deste estúdio (ver proximoDiaAlvoLembrete), para o
+  // lembrete sair no último dia aberto antes do evento, em vez de
+  // nunca sair.
+  const diaAlvo = proximoDiaAlvoLembrete(amanha, estudio.slug)
+
   const [{ data: eventosData, error: erroEventos }, estadoInicial] = await Promise.all([
     admin
       .from('agenda_eventos')
@@ -109,7 +141,7 @@ async function processarLembretesDoEstudio(
       .eq('estudio_id', estudio.id)
       .in('tipo', ['Treino', 'Sessão experimental'])
       .eq('estado', 'Agendado')
-      .eq('data', amanha)
+      .eq('data', diaAlvo)
       .eq('lembrete_enviado', false),
     obterEstadoGateway(admin, estudio.id),
   ])

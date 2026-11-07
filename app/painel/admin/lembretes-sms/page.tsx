@@ -9,6 +9,7 @@ import {
   VARIAVEIS_TEMPLATE_LEMBRETE,
   dataDeAmanhaEmLisboa,
   preencherTemplateLembrete,
+  proximoDiaAlvoLembrete,
 } from '@/lib/data/lembretesSms'
 import PortaSenha from '@/components/PortaSenha'
 import SubmitButton from '@/components/SubmitButton'
@@ -69,6 +70,9 @@ export default async function LembretesSmsPage({
     supabase.from('config').select('valor').eq('chave', 'msg_lembrete_treino').maybeSingle(),
     Promise.all(
       estudios.map(async (estudio): Promise<EstadoDoEstudio> => {
+        // O dia visado pode não ser "amanhã" — ver proximoDiaAlvoLembrete
+        // (hoje só muda para o Fátima, à véspera de um domingo).
+        const diaAlvo = proximoDiaAlvoLembrete(amanha, estudio.slug)
         const [{ data: estadoData, error: erroEstado }, { count: pendentesCount }] = await Promise.all([
           supabase.from('estado_sms_gateway').select('*').eq('estudio_id', estudio.id).single(),
           supabase
@@ -77,7 +81,7 @@ export default async function LembretesSmsPage({
             .eq('estudio_id', estudio.id)
             .in('tipo', ['Treino', 'Sessão experimental'])
             .eq('estado', 'Agendado')
-            .eq('data', amanha)
+            .eq('data', diaAlvo)
             .eq('lembrete_enviado', false),
         ])
         if (erroEstado) throw new Error(erroEstado.message)

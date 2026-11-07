@@ -3,21 +3,9 @@ import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { fmt, treinosNoPeriodo, intervaloMes, MESES } from '@/lib/data/presencas'
+import { fmt, treinosNoPeriodo } from '@/lib/data/presencas'
 import { segurosPorPagar } from '@/lib/data/clientes'
 import ListaPagamentos, { type LinhaPagamentoAtraso, type LinhaSeguro } from './ListaPagamentos'
-
-type PagamentoDoMes = {
-  id: string
-  valor: number
-  metodo: string | null
-  data_pagamento: string
-  clientes: { nome: string } | null
-}
-
-function fmtEuro(v: number) {
-  return `€${v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
 
 type PagamentoDetalhe = {
   cliente_id: string
@@ -39,25 +27,16 @@ type ClientePagamento = {
 
 export default async function PagamentosPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ mes?: string }>
 }) {
   const { estudio: slug } = await params
-  const sp = await searchParams
 
   const supabase = await createClient()
   const estudio = await getEstudioPorSlug(supabase, slug)
   if (!estudio) {
     notFound()
   }
-
-  const hojeDate = new Date()
-  const [anoMes, mesMes] = /^\d{4}-\d{2}$/.test(sp.mes ?? '')
-    ? sp.mes!.split('-').map(Number)
-    : [hojeDate.getFullYear(), hojeDate.getMonth() + 1]
-  const { inicio: inicioMes, fimExclusivo: fimMesExclusivo } = intervaloMes(anoMes, mesMes)
 
   // Todos os clientes do estúdio, independentemente do estado — um
   // cliente inativo ou suspenso pode voltar a treinar, e é preciso
@@ -76,23 +55,6 @@ export default async function PagamentosPage({
   const clientesBase = data ?? []
   const idsClientes = clientesBase.map((c) => c.id)
   const hoje = new Date().toISOString().slice(0, 10)
-
-  // Para "consultar os pagamentos por mês" — uma lista à parte, por
-  // pagamento (não por cliente), de tudo o que foi recebido no mês
-  // escolhido. Independente do resto da página, que mostra o estado
-  // atual, não um histórico.
-  const { data: pagamentosMesData, error: erroPagamentosMes } = await supabase
-    .from('pagamentos')
-    .select('id, valor, metodo, data_pagamento, clientes!inner(nome, estudio_id)')
-    .eq('clientes.estudio_id', estudio.id)
-    .gte('data_pagamento', inicioMes)
-    .lt('data_pagamento', fimMesExclusivo)
-    .order('data_pagamento', { ascending: false })
-  if (erroPagamentosMes) {
-    throw new Error(erroPagamentosMes.message)
-  }
-  const pagamentosMes = (pagamentosMesData ?? []) as unknown as PagamentoDoMes[]
-  const totalPagamentosMes = pagamentosMes.reduce((soma, p) => soma + p.valor, 0)
 
   // Estas quatro só precisam dos ids dos clientes, não dos resultados
   // umas das outras — correm todas ao mesmo tempo.
@@ -246,11 +208,6 @@ export default async function PagamentosPage({
     dataReferencia: c.dataRenovacao,
   }))
 
-  const anoMesAnterior = mesMes === 1 ? anoMes - 1 : anoMes
-  const mesMesAnterior = mesMes === 1 ? 12 : mesMes - 1
-  const anoMesSeguinte = mesMes === 12 ? anoMes + 1 : anoMes
-  const mesMesSeguinte = mesMes === 12 ? 1 : mesMes + 1
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <Link
@@ -275,62 +232,6 @@ export default async function PagamentosPage({
         emDia={linhasEmDia}
         segurosARenovar={linhasSeguros}
       />
-
-      {/* Histórico por mês — pagamentos recebidos num mês em concreto,
-          independente do estado atual de cada cliente (acima). */}
-      <div className="mt-10 border-t border-border-subtle pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold tracking-tight text-foreground">Pagamentos por mês</h2>
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/painel/${slug}/pagamentos?mes=${anoMesAnterior}-${String(mesMesAnterior).padStart(2, '0')}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
-            >
-              ← {MESES[mesMesAnterior - 1].slice(0, 3)}
-            </Link>
-            <strong className="text-sm text-foreground">
-              {MESES[mesMes - 1]} {anoMes}
-            </strong>
-            <Link
-              href={`/painel/${slug}/pagamentos?mes=${anoMesSeguinte}-${String(mesMesSeguinte).padStart(2, '0')}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
-            >
-              {MESES[mesMesSeguinte - 1].slice(0, 3)} →
-            </Link>
-          </div>
-        </div>
-
-        <p className="mt-2 text-sm text-muted">
-          {pagamentosMes.length} {pagamentosMes.length === 1 ? 'pagamento' : 'pagamentos'} · total{' '}
-          <span className="font-mono font-semibold text-foreground">{fmtEuro(totalPagamentosMes)}</span>
-        </p>
-
-        {pagamentosMes.length === 0 ? (
-          <div className="mt-4 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
-            Sem pagamentos registados em {MESES[mesMes - 1].toLowerCase()}.
-          </div>
-        ) : (
-          <div className="mt-4 flex flex-col overflow-hidden rounded-2xl border border-border-subtle shadow-card">
-            {pagamentosMes.map((p, i) => (
-              <div
-                key={p.id}
-                className={`flex flex-wrap items-center justify-between gap-2 bg-surface px-4 py-3 text-sm ${
-                  i === 0 ? '' : 'border-t border-border-subtle'
-                }`}
-              >
-                <div>
-                  <span className="font-medium text-foreground">{p.clientes?.nome ?? '—'}</span>
-                  <span className="ml-2 text-xs text-muted">
-                    {fmt(p.data_pagamento)}
-                    {p.metodo && ` · ${p.metodo}`}
-                  </span>
-                </div>
-                <span className="font-mono font-semibold text-foreground">{fmtEuro(p.valor)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

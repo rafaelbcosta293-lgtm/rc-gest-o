@@ -2,24 +2,29 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { TriangleAlert, CalendarX, UsersRound, CalendarOff, Repeat, type LucideIcon } from 'lucide-react'
+import { TriangleAlert, CalendarX, UsersRound, CalendarOff, Repeat, Ban, type LucideIcon } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
 import AnelProgresso from '@/components/AnelProgresso'
+import type { EstadoCliente } from '@/lib/supabase/database.types'
 
 export type LinhaPresenca = {
   id: string
   nome: string
+  estado: EstadoCliente
   feitos: number
   faltas: number
   avisadas: number
   alvo: number | null
   pct: number | null
   pago: boolean
+  temAgendado: boolean
 }
 
 export type LinhaDesmarcacao = {
   clienteId: string
   nome: string
+  estado: EstadoCliente
+  pago: boolean
   total: number
   remarcadas: number
   naoRemarcadas: number
@@ -65,6 +70,7 @@ function CartaoResumo({
 function LinhaCliente({
   href,
   nome,
+  estadoLabel,
   primeira,
   corFundo,
   corBorda,
@@ -73,6 +79,7 @@ function LinhaCliente({
 }: {
   href: string
   nome: string
+  estadoLabel?: string
   primeira: boolean
   corFundo: string
   corBorda: string
@@ -86,7 +93,14 @@ function LinhaCliente({
         primeira ? '' : corBorda
       }`}
     >
-      <span className="truncate font-medium text-foreground">{nome}</span>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate font-medium text-foreground">{nome}</span>
+        {estadoLabel && (
+          <span className="shrink-0 rounded-full bg-zinc-200/70 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            {estadoLabel}
+          </span>
+        )}
+      </span>
       <div className="flex shrink-0 items-center gap-2.5">
         {children}
         {pct != null && (
@@ -121,22 +135,35 @@ export default function ListaPresencas({
 }) {
   const [filtro, setFiltro] = useState('')
 
+  const idsComDesmarcacao = useMemo(() => new Set(desmarcacoes.map((d) => d.clienteId)), [desmarcacoes])
+
+  // O caso mais delicado: treinar (ou ter treino agendado, ou ter
+  // desmarcado um) sem o pagamento em dia. É precisamente o que o
+  // dono pediu para deixar de passar escondido por a página só
+  // mostrar quem está "Ativo" e pago.
+  const ehConflito = useMemo(
+    () => (l: LinhaPresenca) => !l.pago && (l.feitos > 0 || l.temAgendado || idsComDesmarcacao.has(l.id)),
+    [idsComDesmarcacao]
+  )
+
   // Quem já pagou mas ainda não apareceu uma única vez este mês — é o
   // caso que precisa de ação (um telefonema, por exemplo), por isso
   // fica destacado e separado do resto em vez de se perder na lista.
   const semTreinoPago = useMemo(() => linhas.filter((l) => l.pago && l.feitos === 0), [linhas])
   const comFaltas = useMemo(() => linhas.filter((l) => l.faltas > 0), [linhas])
+  const semPagamentoEmDia = useMemo(() => linhas.filter(ehConflito), [linhas, ehConflito])
   const totalDesmarcacoes = useMemo(() => desmarcacoes.reduce((soma, d) => soma + d.total, 0), [desmarcacoes])
 
-  const { alertaFiltrado, restoFiltrado } = useMemo(() => {
+  const { alertaFiltrado, conflitoFiltrado, restoFiltrado } = useMemo(() => {
     const filtrados = porNomeSimples(linhas, filtro)
     const porNome = (a: LinhaPresenca, b: LinhaPresenca) =>
       normalizarTexto(a.nome).localeCompare(normalizarTexto(b.nome))
     return {
       alertaFiltrado: filtrados.filter((l) => l.pago && l.feitos === 0).sort(porNome),
-      restoFiltrado: filtrados.filter((l) => !(l.pago && l.feitos === 0)).sort(porNome),
+      conflitoFiltrado: filtrados.filter(ehConflito).sort(porNome),
+      restoFiltrado: filtrados.filter((l) => !(l.pago && l.feitos === 0) && !ehConflito(l)).sort(porNome),
     }
-  }, [linhas, filtro])
+  }, [linhas, filtro, ehConflito])
 
   // Quem mais desmarca primeiro — é a leitura que interessa para
   // perceber "quantas pessoas estão a desmarcar" de um olhar.
@@ -148,16 +175,22 @@ export default function ListaPresencas({
   }, [desmarcacoes, filtro])
 
   const aPesquisar = filtro.trim().length > 0
-  const semResultados = alertaFiltrado.length === 0 && restoFiltrado.length === 0
+  const semResultados = alertaFiltrado.length === 0 && conflitoFiltrado.length === 0 && restoFiltrado.length === 0
 
   return (
     <>
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <CartaoResumo
           icone={TriangleAlert}
           cor="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
           label="Pagaram, sem treinos"
           valor={semTreinoPago.length}
+        />
+        <CartaoResumo
+          icone={Ban}
+          cor="bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
+          label="Sem pagamento em dia"
+          valor={semPagamentoEmDia.length}
         />
         <CartaoResumo
           icone={CalendarX}
@@ -180,7 +213,7 @@ export default function ListaPresencas({
         <CartaoResumo
           icone={UsersRound}
           cor="bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300"
-          label="Total ativos"
+          label="Total de clientes"
           valor={linhas.length}
         />
       </div>
@@ -195,7 +228,7 @@ export default function ListaPresencas({
 
       {semResultados ? (
         <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-zinc-500">
-          {aPesquisar ? 'Nenhum cliente ativo com esse nome.' : 'Ainda não há clientes ativos neste estúdio.'}
+          {aPesquisar ? 'Nenhum cliente com esse nome.' : 'Ainda não há clientes neste estúdio.'}
         </div>
       ) : (
         <>
@@ -228,6 +261,43 @@ export default function ListaPresencas({
             )}
           </div>
 
+          {/* O conflito que o dono pediu para deixar de passar
+              escondido: gente a treinar (feito, agendado ou desmarcado
+              este mês) sem ter o pagamento em dia. */}
+          <div className="mt-6">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+              A treinar sem pagamento em dia ({conflitoFiltrado.length})
+            </h2>
+            {conflitoFiltrado.length > 0 ? (
+              <div
+                className={`mt-2 flex flex-col overflow-hidden rounded-xl border border-rose-200 dark:border-rose-900 ${ALTURA_LISTA}`}
+              >
+                {conflitoFiltrado.map((l, i) => (
+                  <LinhaCliente
+                    key={l.id}
+                    href={`/painel/${slug}/presencas/${l.id}?ano=${ano}&mes=${mes}`}
+                    nome={l.nome}
+                    estadoLabel={l.estado !== 'Ativo' ? l.estado : undefined}
+                    primeira={i === 0}
+                    corFundo="bg-rose-50 hover:bg-rose-100/70 dark:bg-rose-950/40 dark:hover:bg-rose-950/70"
+                    corBorda="border-t border-rose-200 dark:border-rose-900"
+                    pct={l.pct}
+                  >
+                    <span className="font-medium text-rose-700 dark:text-rose-300">
+                      {l.feitos > 0
+                        ? 'já treinou sem pagamento em dia'
+                        : l.temAgendado
+                          ? 'tem treino agendado sem pagamento em dia'
+                          : 'desmarcou sem pagamento em dia'}
+                    </span>
+                  </LinhaCliente>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted">Ninguém nesta situação.</p>
+            )}
+          </div>
+
           <div className="mt-6">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
               Restantes clientes ({restoFiltrado.length})
@@ -239,6 +309,7 @@ export default function ListaPresencas({
                     key={l.id}
                     href={`/painel/${slug}/presencas/${l.id}?ano=${ano}&mes=${mes}`}
                     nome={l.nome}
+                    estadoLabel={l.estado !== 'Ativo' ? l.estado : undefined}
                     primeira={i === 0}
                     corFundo="bg-surface hover:bg-brand/[.06]"
                     corBorda="border-t border-border-subtle"
@@ -285,6 +356,7 @@ export default function ListaPresencas({
                 key={d.clienteId}
                 href={`/painel/${slug}/presencas/${d.clienteId}?ano=${ano}&mes=${mes}`}
                 nome={d.nome}
+                estadoLabel={d.estado !== 'Ativo' ? d.estado : undefined}
                 primeira={i === 0}
                 corFundo="bg-orange-50 hover:bg-orange-100/70 dark:bg-orange-950/40 dark:hover:bg-orange-950/70"
                 corBorda="border-t border-orange-200 dark:border-orange-900"
@@ -302,6 +374,11 @@ export default function ListaPresencas({
                   {d.naoRemarcadas > 0 && (
                     <span className="rounded-full bg-red-50 px-1.5 py-0.5 font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
                       {d.naoRemarcadas} não remarcada{d.naoRemarcadas === 1 ? '' : 's'}
+                    </span>
+                  )}
+                  {!d.pago && (
+                    <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-medium text-rose-800 dark:bg-rose-900 dark:text-rose-200">
+                      sem pagamento em dia
                     </span>
                   )}
                 </div>

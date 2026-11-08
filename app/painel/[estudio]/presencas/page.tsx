@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { treinosPrevistos, intervaloMes, MESES, agruparDesmarcacoesPorCliente } from '@/lib/data/presencas'
 import ListaPresencas, { type LinhaPresenca, type LinhaDesmarcacao } from './ListaPresencas'
+import type { EstadoCliente } from '@/lib/supabase/database.types'
 
 export default async function PresencasPage({
   params,
@@ -25,23 +26,29 @@ export default async function PresencasPage({
     notFound()
   }
 
+  // Também entram Pendente/Suspenso — alguém pode ter treino agendado,
+  // já realizado ou desmarcado este mês sem o pagamento em dia, e é
+  // precisamente isso que esta página precisa de deixar visível, não
+  // escondido por só mostrar clientes "Ativo". Só os Inativo (há muito
+  // sem pagar, dados como perdidos) ficam mesmo de fora.
   const { data: clientes } = await supabase
     .from('clientes')
-    .select('id, nome, frequencia_semanal')
+    .select('id, nome, frequencia_semanal, estado')
     .eq('estudio_id', estudio.id)
-    .eq('estado', 'Ativo')
+    .neq('estado', 'Inativo')
     .order('nome')
 
   const ids = (clientes ?? []).map((c) => c.id)
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)
   const hoje = new Date().toISOString().slice(0, 10)
 
-  // Estas três só precisam dos ids dos clientes, não dos resultados umas
-  // das outras — correm todas ao mesmo tempo.
+  // Estas quatro só precisam dos ids dos clientes, não dos resultados
+  // umas das outras — correm todas ao mesmo tempo.
   const [
     { data: presencas, error: erroPresencas },
     { data: pagamentosData, error: erroPagamentos },
     { data: desmarcacoesData, error: erroDesmarcacoes },
+    { data: agendadosData, error: erroAgendados },
   ] = ids.length
     ? await Promise.all([
         supabase
@@ -64,15 +71,26 @@ export default async function PresencasPage({
           .eq('estado', 'Cancelado')
           .gte('data', inicio)
           .lt('data', fimExclusivo),
+        // Quem tem treino agendado a partir de hoje — independente do
+        // mês visto na página, é sobre o compromisso atual, não sobre
+        // histórico de um mês em concreto.
+        supabase
+          .from('agenda_eventos')
+          .select('cliente_id')
+          .in('cliente_id', ids)
+          .eq('tipo', 'Treino')
+          .eq('estado', 'Agendado')
+          .gte('data', hoje),
       ])
     : [
         { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
+        { data: [], error: null },
       ]
 
-  if (erroPresencas || erroPagamentos || erroDesmarcacoes) {
-    throw new Error((erroPresencas ?? erroPagamentos ?? erroDesmarcacoes)!.message)
+  if (erroPresencas || erroPagamentos || erroDesmarcacoes || erroAgendados) {
+    throw new Error((erroPresencas ?? erroPagamentos ?? erroDesmarcacoes ?? erroAgendados)!.message)
   }
 
   const statsPorCliente = new Map<string, { feitos: number; faltas: number; avisadas: number }>()
@@ -92,12 +110,22 @@ export default async function PresencasPage({
     }
   }
 
+  const idsComAgendado = new Set((agendadosData ?? []).map((e) => e.cliente_id))
+
   const mesAnterior = mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 }
   const mesSeguinte = mes === 12 ? { ano: ano + 1, mes: 1 } : { ano, mes: mes + 1 }
 
   const nomePorCliente = new Map((clientes ?? []).map((c) => [c.id, c.nome]))
-  const linhasDesmarcacao: LinhaDesmarcacao[] = agruparDesmarcacoesPorCliente(desmarcacoesData ?? [])
-    .map((d) => ({ ...d, nome: nomePorCliente.get(d.clienteId) ?? '—' }))
+  const estadoPorCliente = new Map((clientes ?? []).map((c) => [c.id, c.estado as EstadoCliente]))
+  const linhasDesmarcacao: LinhaDesmarcacao[] = agruparDesmarcacoesPorCliente(desmarcacoesData ?? []).map((d) => {
+    const validade = validadeMaximaPorCliente.get(d.clienteId)
+    return {
+      ...d,
+      nome: nomePorCliente.get(d.clienteId) ?? '—',
+      estado: estadoPorCliente.get(d.clienteId) ?? 'Ativo',
+      pago: validade != null && validade >= hoje,
+    }
+  })
 
   const linhas: LinhaPresenca[] = (clientes ?? []).map((c) => {
     const s = statsPorCliente.get(c.id) ?? { feitos: 0, faltas: 0, avisadas: 0 }
@@ -107,12 +135,14 @@ export default async function PresencasPage({
     return {
       id: c.id,
       nome: c.nome,
+      estado: c.estado as EstadoCliente,
       feitos: s.feitos,
       faltas: s.faltas,
       avisadas: s.avisadas,
       alvo,
       pct,
       pago: validade != null && validade >= hoje,
+      temAgendado: idsComAgendado.has(c.id),
     }
   })
 

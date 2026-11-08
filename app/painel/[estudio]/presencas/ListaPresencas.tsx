@@ -62,11 +62,10 @@ function CartaoResumo({
   )
 }
 
-// Uma linha por pessoa, tudo alinhado à esquerda e encostado — nome,
-// estado, aviso e anel de progresso seguidos uns dos outros, como nas
-// colunas de Pagamentos, em vez de espalhados de um lado ao outro da
-// coluna (com "justify-between" o aviso ficava solto lá longe à
-// direita, com muito espaço vazio ao meio — mais difícil de ler).
+// Mesma formatação da LinhaCompacta de Pagamentos: nome a truncar à
+// esquerda, um único bloco fixo (shrink-0, nunca quebra linha) à
+// direita — aqui com estado + aviso + anel, em vez de só o aviso,
+// mas com a mesma mecânica exata.
 function LinhaCliente({
   href,
   nome,
@@ -89,22 +88,24 @@ function LinhaCliente({
   return (
     <Link
       href={href}
-      className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-2 text-xs ${corFundo} ${
+      className={`flex items-center justify-between gap-2 px-3 py-2 text-xs ${corFundo} ${
         primeira ? '' : corBorda
       }`}
     >
-      <span className="font-medium text-foreground">{nome}</span>
-      {estadoLabel && (
-        <span className="shrink-0 rounded-full bg-zinc-200/70 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-          {estadoLabel}
-        </span>
-      )}
-      {children}
-      {pct != null && (
-        <AnelProgresso size={28} strokeWidth={3} percent={pct} color={pct >= 100 ? '#1E7145' : '#0E9594'}>
-          <span className="text-[9px] font-semibold text-foreground">{pct}%</span>
-        </AnelProgresso>
-      )}
+      <span className="truncate font-medium text-foreground">{nome}</span>
+      <span className="flex shrink-0 items-center gap-1.5">
+        {estadoLabel && (
+          <span className="rounded-full bg-zinc-200/70 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            {estadoLabel}
+          </span>
+        )}
+        {children}
+        {pct != null && (
+          <AnelProgresso size={28} strokeWidth={3} percent={pct} color={pct >= 100 ? '#1E7145' : '#0E9594'}>
+            <span className="text-[9px] font-semibold text-foreground">{pct}%</span>
+          </AnelProgresso>
+        )}
+      </span>
     </Link>
   )
 }

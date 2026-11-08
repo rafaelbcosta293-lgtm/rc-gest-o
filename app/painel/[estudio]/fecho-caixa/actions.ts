@@ -3,7 +3,10 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { somarNumerario } from '@/lib/data/fechoCaixa'
+import { calcularFechoCaixa, somarNumerario } from '@/lib/data/fechoCaixa'
+import { fmt } from '@/lib/data/presencas'
+
+const REGRA_DIFERENCA_FECHO = 'fecho_caixa_diferenca'
 
 // O saldo anterior nunca é introduzido à mão — é sempre o valor
 // contado no fecho mais recente antes de hoje (normalmente ontem;
@@ -41,20 +44,25 @@ export async function registarFechoCaixa(formData: FormData) {
 
   const { data: userData } = await supabase.auth.getUser()
 
-  const { data: clientes, error: erroClientes } = await supabase
-    .from('clientes')
-    .select('id')
-    .eq('estudio_id', estudioId)
+  const [
+    { data: estudio, error: erroEstudio },
+    { data: clientes, error: erroClientes },
+  ] = await Promise.all([
+    supabase.from('estudios').select('nome').eq('id', estudioId).single(),
+    supabase.from('clientes').select('id').eq('estudio_id', estudioId),
+  ])
 
-  if (erroClientes) {
-    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(erroClientes.message)}`)
+  if (erroEstudio || erroClientes) {
+    redirect(
+      `/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent((erroEstudio ?? erroClientes)!.message)}`
+    )
   }
 
   const idsClientes = (clientes ?? []).map((c) => c.id)
 
   const { data: pagamentosHoje, error: erroPagamentos } = idsClientes.length
     ? await supabase
-        .from('pagamentos')
+        .from('pagamentos_ativos')
         .select('valor, metodo')
         .in('cliente_id', idsClientes)
         .eq('data_pagamento', hoje)
@@ -68,6 +76,7 @@ export async function registarFechoCaixa(formData: FormData) {
     (pagamentosHoje ?? []).map((p) => ({ valor: Number(p.valor), metodo: p.metodo }))
   )
   const saldoAnterior = await obterSaldoAnterior(supabase, estudioId, hoje)
+  const { diferenca } = calcularFechoCaixa({ saldoAnterior, valorNumerarioDia, valorContado })
 
   const { error } = await supabase.from('fechos_caixa').upsert(
     {
@@ -87,7 +96,46 @@ export async function registarFechoCaixa(formData: FormData) {
     redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(error.message)}`)
   }
 
+  await avisarGestaoSeDiferente(supabase, estudioId, estudio?.nome ?? estudioSlug, hoje, diferenca)
+
   revalidatePath(`/painel/${estudioSlug}/fecho-caixa`)
   revalidatePath(`/painel/${estudioSlug}/checklist`)
   redirect(`/painel/${estudioSlug}/fecho-caixa`)
+}
+
+// Nunca diz o valor da diferença (regra geral dos alertas: nunca
+// valores em € na descrição) — só que há uma, para a gestão ir ver o
+// fecho. Sem papel_destinatario definido, fica só visível à gestão
+// (ver app/painel/[estudio]/alertas/page.tsx). Resolve sempre o
+// alerta anterior deste mesmo dia primeiro, para uma correção ao
+// valor contado não deixar duplicados nem alertas "fantasma" depois
+// de a diferença ser corrigida para zero.
+async function avisarGestaoSeDiferente(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  estudioId: number,
+  estudioNome: string,
+  hoje: string,
+  diferenca: number
+) {
+  const titulo = `Fecho de caixa (${estudioNome}) de ${fmt(hoje)} com diferença`
+
+  await supabase
+    .from('alerts')
+    .update({ estado: 'Resolvido', resolvido_em: new Date().toISOString() })
+    .eq('estudio_id', estudioId)
+    .eq('regra_chave', REGRA_DIFERENCA_FECHO)
+    .eq('titulo', titulo)
+    .neq('estado', 'Resolvido')
+
+  if (diferenca === 0) return
+
+  await supabase.from('alerts').insert({
+    estudio_id: estudioId,
+    regra_chave: REGRA_DIFERENCA_FECHO,
+    severidade: 'Crítico' as const,
+    titulo,
+    descricao:
+      'O valor contado na caixa não coincide com o valor esperado (saldo anterior + numerário recebido hoje). ' +
+      'Confirma o fecho de caixa deste dia.',
+  })
 }

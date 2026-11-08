@@ -135,7 +135,7 @@ async function EsteMesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
     await Promise.all([
       idsClientes.length
         ? supabase
-            .from('pagamentos')
+            .from('pagamentos_ativos')
             .select('valor')
             .in('cliente_id', idsClientes)
             .gte('data_pagamento', inicioMes)

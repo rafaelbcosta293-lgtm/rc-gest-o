@@ -64,18 +64,18 @@ export default async function PagamentosPage({
   ] = idsClientes.length
     ? await Promise.all([
         supabase
-          .from('pagamentos')
+          .from('pagamentos_ativos')
           .select('cliente_id, data_pagamento, valido_ate')
           .in('cliente_id', idsClientes)
           .order('data_pagamento', { ascending: false }),
         supabase.from('clientes').select('id, inicio_contrato').in('id', idsClientes),
         supabase
-          .from('pagamentos')
+          .from('pagamentos_ativos')
           .select('cliente_id, data_pagamento')
           .in('cliente_id', idsClientes)
           .eq('inclui_seguro', true),
         supabase
-          .from('pagamentos')
+          .from('pagamentos_ativos')
           .select('cliente_id, data_pagamento')
           .in('cliente_id', idsClientes)
           .eq('inclui_reativacao', true),

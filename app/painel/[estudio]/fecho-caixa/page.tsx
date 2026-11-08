@@ -122,7 +122,7 @@ export default async function FechoCaixaPage({
   const idsClientes = (clientes ?? []).map((c) => c.id)
   const { data: pagamentosHojeData, error: erroPagamentos } = idsClientes.length
     ? await supabase
-        .from('pagamentos')
+        .from('pagamentos_ativos')
         .select('valor, metodo')
         .in('cliente_id', idsClientes)
         .eq('data_pagamento', hoje)

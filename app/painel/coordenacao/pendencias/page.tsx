@@ -134,7 +134,7 @@ async function PendenciasEstudio({ estudio }: { estudio: Pick<Estudio, 'id' | 's
   const idsClientesAtivos = clientesAtivos.map((c) => c.id)
   const { data: segurosPagosData, error: erroSegurosPagos } = idsClientesAtivos.length
     ? await supabase
-        .from('pagamentos')
+        .from('pagamentos_ativos')
         .select('cliente_id, data_pagamento')
         .in('cliente_id', idsClientesAtivos)
         .eq('inclui_seguro', true)
@@ -144,7 +144,7 @@ async function PendenciasEstudio({ estudio }: { estudio: Pick<Estudio, 'id' | 's
   }
   const { data: reativacoesData, error: erroReativacoesSeguro } = idsClientesAtivos.length
     ? await supabase
-        .from('pagamentos')
+        .from('pagamentos_ativos')
         .select('cliente_id, data_pagamento')
         .in('cliente_id', idsClientesAtivos)
         .eq('inclui_reativacao', true)

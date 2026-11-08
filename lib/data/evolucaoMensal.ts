@@ -55,7 +55,7 @@ export async function getEvolucaoMensal(
     // recurso embutido, que não é um caminho tão bem testado nesta app
     // como ".eq()" (já usado assim na página "Este mês").
     supabase
-      .from('pagamentos')
+      .from('pagamentos_ativos')
       .select('valor, data_pagamento, clientes!inner(estudio_id)')
       .gte('data_pagamento', inicioAno)
       .lt('data_pagamento', fimAnoExclusivo),

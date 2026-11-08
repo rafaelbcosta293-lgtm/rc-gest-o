@@ -119,12 +119,12 @@ export default async function EstudioPage({
   const [{ data: segurosPagosData }, { data: reativacoesData }] = idsClientesAtivos.length
     ? await Promise.all([
         supabase
-          .from('pagamentos')
+          .from('pagamentos_ativos')
           .select('cliente_id, data_pagamento')
           .in('cliente_id', idsClientesAtivos)
           .eq('inclui_seguro', true),
         supabase
-          .from('pagamentos')
+          .from('pagamentos_ativos')
           .select('cliente_id, data_pagamento')
           .in('cliente_id', idsClientesAtivos)
           .eq('inclui_reativacao', true),

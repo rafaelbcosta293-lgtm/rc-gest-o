@@ -63,7 +63,7 @@ export default async function FinanceiroPage({
   ] = await Promise.all([
     supabase.from('clientes').select('id, estudio_id, estado'),
     supabase
-      .from('pagamentos')
+      .from('pagamentos_ativos')
       .select('cliente_id, valor, data_pagamento, valido_ate, inclui_inscricao, inclui_seguro, inclui_reativacao')
       .gte('data_pagamento', inicioHistorico)
       .order('data_pagamento', { ascending: false }),

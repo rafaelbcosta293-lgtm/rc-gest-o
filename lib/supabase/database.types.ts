@@ -402,6 +402,9 @@ export type Pagamento = {
   nota: string | null
   registado_por: string | null
   criado_em: string
+  anulado_em: string | null
+  anulado_por: string | null
+  motivo_anulacao: string | null
 }
 
 export type EstadoPagamento = {

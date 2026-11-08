@@ -144,7 +144,7 @@ export default async function ObjetivosPage({
 
   async function calcularMrr(): Promise<number | null> {
     const { data: pagamentosData } = await supabase
-      .from('pagamentos')
+      .from('pagamentos_ativos')
       .select('cliente_id, valor, valido_ate')
       .order('data_pagamento', { ascending: false })
     const maisRecentePorCliente = new Map<string, { valor: number; valido_ate: string }>()

@@ -94,7 +94,7 @@ export async function registarPagamentoSeguro(formData: FormData) {
   const { data: userData } = await supabase.auth.getUser()
 
   const { data: ultimoPagamento, error: erroUltimo } = await supabase
-    .from('pagamentos')
+    .from('pagamentos_ativos')
     .select('plano_id, valido_ate')
     .eq('cliente_id', clienteId)
     .order('data_pagamento', { ascending: false })
@@ -127,13 +127,25 @@ export async function registarPagamentoSeguro(formData: FormData) {
   redirect(`/painel/${estudioSlug}/pagamentos/${clienteId}`)
 }
 
-export async function apagarPagamento(formData: FormData) {
+// Nunca apaga a sério — fica a linha, marcada como anulada (quem,
+// quando, porquê), para nunca desaparecer dinheiro sem deixar rasto.
+// Só a gestão consegue (RLS "editar_pagamentos", e_gestao()).
+export async function anularPagamento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const clienteId = formData.get('cliente_id') as string
   const id = formData.get('id') as string
+  const motivo = campoOuNull(formData, 'motivo')
   const supabase = await createClient()
+  const { data: userData } = await supabase.auth.getUser()
 
-  const { error } = await supabase.from('pagamentos').delete().eq('id', id)
+  const { error } = await supabase
+    .from('pagamentos')
+    .update({
+      anulado_em: new Date().toISOString(),
+      anulado_por: userData.user?.id ?? null,
+      motivo_anulacao: motivo,
+    })
+    .eq('id', id)
 
   if (error) {
     redirect(

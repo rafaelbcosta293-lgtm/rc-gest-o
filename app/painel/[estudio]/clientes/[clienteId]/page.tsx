@@ -85,7 +85,7 @@ export default async function FichaCompletaClientePage({
       .gte('data', inicio)
       .lt('data', fimExclusivo),
     supabase.from('v_estado_pagamento').select('*').eq('cliente_id', clienteId).maybeSingle(),
-    supabase.from('pagamentos').select('id', { count: 'exact', head: true }).eq('cliente_id', clienteId),
+    supabase.from('pagamentos_ativos').select('id', { count: 'exact', head: true }).eq('cliente_id', clienteId),
     supabase.from('presencas').select('id', { count: 'exact', head: true }).eq('cliente_id', clienteId),
   ])
 

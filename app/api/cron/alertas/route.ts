@@ -75,7 +75,7 @@ export async function GET(request: Request) {
     admin.from('agenda_eventos').select('cliente_id, data, estado, tipo').eq('tipo', 'Treino'),
     admin.from('presencas').select('cliente_id, data, estado').order('data', { ascending: false }),
     admin.from('avaliacoes').select('cliente_id, data, proxima_reavaliacao').order('data', { ascending: false }),
-    admin.from('pagamentos').select('cliente_id, valido_ate'),
+    admin.from('pagamentos_ativos').select('cliente_id, valido_ate'),
     admin.from('alert_rules').select('chave, ativo'),
     admin.from('alerts').select('id, regra_chave, lead_id, cliente_id, estado, adiado_ate'),
   ])

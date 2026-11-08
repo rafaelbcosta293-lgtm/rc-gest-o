@@ -2,8 +2,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { fmt } from '@/lib/data/presencas'
-import { criarPagamento, apagarPagamento, registarPagamentoSeguro } from '../actions'
+import { criarPagamento, anularPagamento, registarPagamentoSeguro } from '../actions'
 import PagamentoForm from '../PagamentoForm'
 import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
@@ -12,6 +13,7 @@ import type { Pagamento, Plano } from '@/lib/supabase/database.types'
 type PagamentoComExtras = Pagamento & {
   plano: { nome: string } | null
   registado: { nome: string } | null
+  anulado: { nome: string } | null
 }
 
 export default async function PagamentosClientePage({
@@ -28,15 +30,17 @@ export default async function PagamentosClientePage({
   const supabase = await createClient()
   const [
     estudio,
+    sessao,
     { data: cliente },
     { data: pagamentosData, error: erroPagamentos },
     { data: planosData },
   ] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
+    getSessaoAtual(),
     supabase.from('clientes').select('id, nome, estudio_id').eq('id', clienteId).maybeSingle(),
     supabase
       .from('pagamentos')
-      .select('*, plano:planos(nome), registado:perfis!registado_por(nome)')
+      .select('*, plano:planos(nome), registado:perfis!registado_por(nome), anulado:perfis!anulado_por(nome)')
       .eq('cliente_id', clienteId)
       .order('data_pagamento', { ascending: false }),
     supabase.from('planos').select('*').eq('ativo', true).order('valor'),
@@ -50,10 +54,13 @@ export default async function PagamentosClientePage({
     throw new Error(erroPagamentos.message)
   }
 
+  const { ehGestao } = papeisDaSessao(sessao)
   const pagamentos = (pagamentosData ?? []) as unknown as PagamentoComExtras[]
   const planos = (planosData ?? []) as Plano[]
+  // Um pagamento anulado não conta para a validade — é como se nunca
+  // tivesse existido para efeitos de "em dia/atrasado".
   const validoAte = pagamentos.reduce<string | null>(
-    (max, p) => (!max || p.valido_ate > max ? p.valido_ate : max),
+    (max, p) => (!p.anulado_em && (!max || p.valido_ate > max) ? p.valido_ate : max),
     null
   )
   const emDia = validoAte !== null && validoAte >= hoje
@@ -146,9 +153,11 @@ export default async function PagamentosClientePage({
         {pagamentos.map((p) => (
           <div
             key={p.id}
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface p-3 text-sm"
+            className={`flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface p-3 text-sm ${p.anulado_em ? 'opacity-50' : ''}`}
           >
-            <span className="font-medium text-foreground">{p.valor}€</span>
+            <span className={`font-medium text-foreground ${p.anulado_em ? 'line-through' : ''}`}>
+              {p.valor}€
+            </span>
             <span className="text-xs text-zinc-500">{p.plano?.nome ?? 'sem plano'}</span>
             <span className="text-xs text-zinc-500">{p.metodo}</span>
             <span className="text-xs text-zinc-500">
@@ -171,22 +180,36 @@ export default async function PagamentosClientePage({
             {p.nota && (
               <span className="w-full text-xs text-muted">{p.nota}</span>
             )}
-            <ConfirmarAcao
-              action={apagarPagamento}
-              confirmacao={`Tens a certeza que queres apagar o pagamento de ${p.valor}€ de ${fmt(p.data_pagamento)}? Esta ação não pode ser desfeita.`}
-              className="ml-auto"
-            >
-              <input type="hidden" name="estudio_slug" value={slug} />
-              <input type="hidden" name="cliente_id" value={clienteId} />
-              <input type="hidden" name="id" value={p.id} />
-              <SubmitButton
-                pendingText="…"
-                aria-label="Apagar"
-                className="text-lg text-zinc-400 hover:text-red-600"
-              >
-                ×
-              </SubmitButton>
-            </ConfirmarAcao>
+            {p.anulado_em ? (
+              <span className="w-full text-xs font-medium text-red-600">
+                Anulado{p.anulado ? ` por ${p.anulado.nome}` : ''} em {fmt(p.anulado_em.slice(0, 10))}
+                {p.motivo_anulacao ? ` · ${p.motivo_anulacao}` : ''}
+              </span>
+            ) : (
+              ehGestao && (
+                <ConfirmarAcao
+                  action={anularPagamento}
+                  confirmacao={`Anular o pagamento de ${p.valor}€ de ${fmt(p.data_pagamento)}? Fica registado quem anulou e porquê — não pode ser desfeito.`}
+                  className="ml-auto flex items-center gap-1.5"
+                >
+                  <input type="hidden" name="estudio_slug" value={slug} />
+                  <input type="hidden" name="cliente_id" value={clienteId} />
+                  <input type="hidden" name="id" value={p.id} />
+                  <input
+                    name="motivo"
+                    placeholder="Motivo da anulação"
+                    className="w-40 rounded-md border border-border-subtle px-2 py-1 text-xs dark:bg-zinc-900"
+                  />
+                  <SubmitButton
+                    pendingText="…"
+                    aria-label="Anular"
+                    className="text-lg text-zinc-400 hover:text-red-600"
+                  >
+                    ×
+                  </SubmitButton>
+                </ConfirmarAcao>
+              )
+            )}
           </div>
         ))}
       </div>

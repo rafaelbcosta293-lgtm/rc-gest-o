@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       .select('id, estado, estado_automatico')
       .not('estado', 'in', '(Suspenso,Inativo)')
       .in('estudio_id', estudioIds),
-    admin.from('pagamentos').select('cliente_id, valido_ate'),
+    admin.from('pagamentos_ativos').select('cliente_id, valido_ate'),
   ])
   if (erroClientes) return Response.json({ error: erroClientes.message }, { status: 500 })
   if (erroPagamentos) return Response.json({ error: erroPagamentos.message }, { status: 500 })

@@ -53,7 +53,7 @@ export default async function AdminPagamentosPage({
 
   const { data, error } = idsEstudios.length
     ? await supabase
-        .from('pagamentos')
+        .from('pagamentos_ativos')
         .select(
           'id, valor, metodo, data_pagamento, inclui_seguro, inclui_inscricao, clientes!inner(nome, estudio_id), plano:planos(nome)'
         )

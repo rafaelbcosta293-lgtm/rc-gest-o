@@ -62,11 +62,11 @@ function CartaoResumo({
   )
 }
 
-// Uma linha por pessoa, nome à esquerda e o que importa à direita —
-// nada de avatares decorativos, para a lista caber mais gente por
-// ecrã e ler-se de uma vez. O anel de progresso fica sempre no fim,
-// como pedido, a indicar visualmente a % de treinos feitos face ao
-// previsto para quem tem frequência semanal definida.
+// Uma linha por pessoa, tudo alinhado à esquerda e encostado — nome,
+// estado, aviso e anel de progresso seguidos uns dos outros, como nas
+// colunas de Pagamentos, em vez de espalhados de um lado ao outro da
+// coluna (com "justify-between" o aviso ficava solto lá longe à
+// direita, com muito espaço vazio ao meio — mais difícil de ler).
 function LinhaCliente({
   href,
   nome,
@@ -89,35 +89,22 @@ function LinhaCliente({
   return (
     <Link
       href={href}
-      className={`flex items-center justify-between gap-3 px-3 py-2 text-xs ${corFundo} ${
+      className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-2 text-xs ${corFundo} ${
         primeira ? '' : corBorda
       }`}
     >
-      <span className="flex min-w-0 shrink items-center gap-1.5">
-        <span className="truncate font-medium text-foreground">{nome}</span>
-        {estadoLabel && (
-          <span className="shrink-0 rounded-full bg-zinc-200/70 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-            {estadoLabel}
-          </span>
-        )}
-      </span>
-      {/* flex-wrap (em vez de shrink-0 a forçar tudo numa linha só) —
-          com avisos mais longos numa coluna estreita, isto deixa o
-          conteúdo passar para uma segunda linha em vez de ficar
-          espremido/sobreposto ao nome. */}
-      <div className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1">
-        {children}
-        {pct != null && (
-          <AnelProgresso
-            size={28}
-            strokeWidth={3}
-            percent={pct}
-            color={pct >= 100 ? '#1E7145' : '#0E9594'}
-          >
-            <span className="text-[9px] font-semibold text-foreground">{pct}%</span>
-          </AnelProgresso>
-        )}
-      </div>
+      <span className="font-medium text-foreground">{nome}</span>
+      {estadoLabel && (
+        <span className="shrink-0 rounded-full bg-zinc-200/70 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+          {estadoLabel}
+        </span>
+      )}
+      {children}
+      {pct != null && (
+        <AnelProgresso size={28} strokeWidth={3} percent={pct} color={pct >= 100 ? '#1E7145' : '#0E9594'}>
+          <span className="text-[9px] font-semibold text-foreground">{pct}%</span>
+        </AnelProgresso>
+      )}
     </Link>
   )
 }
@@ -315,21 +302,19 @@ export default function ListaPresencas({
                     corBorda="border-t border-border-subtle"
                     pct={l.pct}
                   >
-                    <div className="flex flex-wrap items-center justify-end gap-1.5">
-                      <span className="text-muted">
-                        {l.feitos}{l.alvo != null ? `/${l.alvo}` : ''} treinos
+                    <span className="text-muted">
+                      {l.feitos}{l.alvo != null ? `/${l.alvo}` : ''} treinos
+                    </span>
+                    {l.faltas > 0 && (
+                      <span className="rounded-full bg-red-50 px-1.5 py-0.5 font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
+                        {l.faltas} {l.faltas === 1 ? 'falta' : 'faltas'}
                       </span>
-                      {l.faltas > 0 && (
-                        <span className="rounded-full bg-red-50 px-1.5 py-0.5 font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
-                          {l.faltas} {l.faltas === 1 ? 'falta' : 'faltas'}
-                        </span>
-                      )}
-                      {l.avisadas > 0 && (
-                        <span className="rounded-full bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                          {l.avisadas} {l.avisadas === 1 ? 'avisada' : 'avisadas'}
-                        </span>
-                      )}
-                    </div>
+                    )}
+                    {l.avisadas > 0 && (
+                      <span className="rounded-full bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                        {l.avisadas} {l.avisadas === 1 ? 'avisada' : 'avisadas'}
+                      </span>
+                    )}
                   </LinhaCliente>
                 ))}
               </div>

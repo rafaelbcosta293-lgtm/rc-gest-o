@@ -129,7 +129,10 @@ export async function registarPagamentoSeguro(formData: FormData) {
 
 // Nunca apaga a sério — fica a linha, marcada como anulada (quem,
 // quando, porquê), para nunca desaparecer dinheiro sem deixar rasto.
-// Só a gestão consegue (RLS "editar_pagamentos", e_gestao()).
+// Qualquer PT/funcionário consegue (decisão do dono: a restrição à
+// gestão trocou-se por um alerta sempre enviado à administração em
+// vez de bloquear a ação); um gatilho na base de dados impede quem
+// não é gestão de alterar outra coisa no pagamento além disto.
 export async function anularPagamento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const clienteId = formData.get('cliente_id') as string
@@ -137,6 +140,12 @@ export async function anularPagamento(formData: FormData) {
   const motivo = campoOuNull(formData, 'motivo')
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
+
+  const { data: cliente } = await supabase
+    .from('clientes')
+    .select('nome, estudio_id')
+    .eq('id', clienteId)
+    .maybeSingle()
 
   const { error } = await supabase
     .from('pagamentos')
@@ -151,6 +160,19 @@ export async function anularPagamento(formData: FormData) {
     redirect(
       `/painel/${estudioSlug}/pagamentos/${clienteId}?error=${encodeURIComponent(error.message)}`
     )
+  }
+
+  if (cliente) {
+    await supabase.from('alerts').insert({
+      estudio_id: cliente.estudio_id,
+      regra_chave: 'pagamento_anulado',
+      severidade: 'Crítico' as const,
+      titulo: `${cliente.nome}: pagamento anulado`,
+      descricao: motivo
+        ? `Motivo indicado: ${motivo}. Confirma na ficha do cliente quem anulou e quando.`
+        : 'Sem motivo indicado. Confirma na ficha do cliente quem anulou e quando.',
+      cliente_id: clienteId,
+    })
   }
 
   revalidatePath(`/painel/${estudioSlug}/pagamentos`)

@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { fmt } from '@/lib/data/presencas'
 import { criarPagamento, anularPagamento, registarPagamentoSeguro } from '../actions'
 import PagamentoForm from '../PagamentoForm'
@@ -30,13 +29,11 @@ export default async function PagamentosClientePage({
   const supabase = await createClient()
   const [
     estudio,
-    sessao,
     { data: cliente },
     { data: pagamentosData, error: erroPagamentos },
     { data: planosData },
   ] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
-    getSessaoAtual(),
     supabase.from('clientes').select('id, nome, estudio_id').eq('id', clienteId).maybeSingle(),
     supabase
       .from('pagamentos')
@@ -54,7 +51,6 @@ export default async function PagamentosClientePage({
     throw new Error(erroPagamentos.message)
   }
 
-  const { ehGestao } = papeisDaSessao(sessao)
   const pagamentos = (pagamentosData ?? []) as unknown as PagamentoComExtras[]
   const planos = (planosData ?? []) as Plano[]
   // Um pagamento anulado não conta para a validade — é como se nunca
@@ -186,29 +182,28 @@ export default async function PagamentosClientePage({
                 {p.motivo_anulacao ? ` · ${p.motivo_anulacao}` : ''}
               </span>
             ) : (
-              ehGestao && (
-                <ConfirmarAcao
-                  action={anularPagamento}
-                  confirmacao={`Anular o pagamento de ${p.valor}€ de ${fmt(p.data_pagamento)}? Fica registado quem anulou e porquê — não pode ser desfeito.`}
-                  className="ml-auto flex items-center gap-1.5"
+              <ConfirmarAcao
+                action={anularPagamento}
+                confirmacao={`Anular o pagamento de ${p.valor}€ de ${fmt(p.data_pagamento)}? Fica registado quem anulou e porquê, e a administração recebe sempre um alerta — não pode ser desfeito.`}
+                className="ml-auto flex items-center gap-1.5"
+              >
+                <input type="hidden" name="estudio_slug" value={slug} />
+                <input type="hidden" name="cliente_id" value={clienteId} />
+                <input type="hidden" name="id" value={p.id} />
+                <input
+                  name="motivo"
+                  required
+                  placeholder="Motivo da anulação"
+                  className="w-40 rounded-md border border-border-subtle px-2 py-1 text-xs dark:bg-zinc-900"
+                />
+                <SubmitButton
+                  pendingText="…"
+                  aria-label="Anular"
+                  className="text-lg text-zinc-400 hover:text-red-600"
                 >
-                  <input type="hidden" name="estudio_slug" value={slug} />
-                  <input type="hidden" name="cliente_id" value={clienteId} />
-                  <input type="hidden" name="id" value={p.id} />
-                  <input
-                    name="motivo"
-                    placeholder="Motivo da anulação"
-                    className="w-40 rounded-md border border-border-subtle px-2 py-1 text-xs dark:bg-zinc-900"
-                  />
-                  <SubmitButton
-                    pendingText="…"
-                    aria-label="Anular"
-                    className="text-lg text-zinc-400 hover:text-red-600"
-                  >
-                    ×
-                  </SubmitButton>
-                </ConfirmarAcao>
-              )
+                  ×
+                </SubmitButton>
+              </ConfirmarAcao>
             )}
           </div>
         ))}

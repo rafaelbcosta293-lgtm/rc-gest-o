@@ -179,11 +179,7 @@ export default function ListaPresencas({
   }, [desmarcacoes, filtro])
 
   const aPesquisar = filtro.trim().length > 0
-  const semResultados =
-    alertaFiltrado.length === 0 &&
-    conflitoFiltrado.length === 0 &&
-    restoFiltrado.length === 0 &&
-    desmarcacoesFiltradas.length === 0
+  const semResultados = alertaFiltrado.length === 0 && conflitoFiltrado.length === 0 && restoFiltrado.length === 0
 
   return (
     <>
@@ -239,7 +235,7 @@ export default function ListaPresencas({
           {aPesquisar ? 'Nenhum cliente com esse nome.' : 'Ainda não há clientes neste estúdio.'}
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-red-600">
               Pagaram e ainda não treinaram ({alertaFiltrado.length})
@@ -341,60 +337,52 @@ export default function ListaPresencas({
               <p className="mt-2 text-sm text-muted">Ninguém com esse nome.</p>
             )}
           </div>
-
-          {/* Além das presenças de cada um — quem está a desmarcar
-              treinos este mês, quantas vezes, e se essas sessões já
-              foram ou não remarcadas para outro dia. */}
-          <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">
-              Desmarcações este mês ({desmarcacoesFiltradas.length})
-            </h2>
-            {desmarcacoesFiltradas.length > 0 ? (
-              <div
-                className={`mt-2 flex flex-col overflow-hidden rounded-xl border border-orange-200 dark:border-orange-900 ${ALTURA_LISTA}`}
-              >
-                {desmarcacoesFiltradas.map((d, i) => (
-                  <LinhaCliente
-                    key={d.clienteId}
-                    href={`/painel/${slug}/presencas/${d.clienteId}?ano=${ano}&mes=${mes}`}
-                    nome={d.nome}
-                    estadoLabel={d.estado !== 'Ativo' ? d.estado : undefined}
-                    primeira={i === 0}
-                    corFundo="bg-orange-50 hover:bg-orange-100/70 dark:bg-orange-950/40 dark:hover:bg-orange-950/70"
-                    corBorda="border-t border-orange-200 dark:border-orange-900"
-                    pct={null}
-                  >
-                    <div className="flex flex-wrap items-center justify-end gap-1.5">
-                      <span className="rounded-full bg-orange-100 px-1.5 py-0.5 font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                        {d.total} {d.total === 1 ? 'desmarcação' : 'desmarcações'}
-                      </span>
-                      {d.remarcadas > 0 && (
-                        <span className="rounded-full bg-teal-50 px-1.5 py-0.5 font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300">
-                          {d.remarcadas} remarcada{d.remarcadas === 1 ? '' : 's'}
-                        </span>
-                      )}
-                      {d.naoRemarcadas > 0 && (
-                        <span className="rounded-full bg-red-50 px-1.5 py-0.5 font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
-                          {d.naoRemarcadas} não remarcada{d.naoRemarcadas === 1 ? '' : 's'}
-                        </span>
-                      )}
-                      {!d.pago && (
-                        <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-medium text-rose-800 dark:bg-rose-900 dark:text-rose-200">
-                          sem pagamento em dia
-                        </span>
-                      )}
-                    </div>
-                  </LinhaCliente>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-muted">
-                {aPesquisar ? 'Ninguém com esse nome desmarcou este mês.' : 'Ninguém desmarcou treinos este mês.'}
-              </p>
-            )}
-          </div>
         </div>
       )}
+
+      {/* Além das presenças de cada um — quem está a desmarcar treinos
+          este mês, quantas vezes, e se essas sessões já foram ou não
+          remarcadas para outro dia. Fica a toda a largura (é a secção
+          com mais informação por linha, precisa do espaço). */}
+      <div className="mt-6">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+          Desmarcações este mês ({desmarcacoesFiltradas.length})
+        </h2>
+        {desmarcacoesFiltradas.length > 0 ? (
+          <div
+            className={`mt-2 flex flex-col overflow-hidden rounded-xl border border-orange-200 dark:border-orange-900 ${ALTURA_LISTA}`}
+          >
+            {desmarcacoesFiltradas.map((d, i) => (
+              <LinhaCliente
+                key={d.clienteId}
+                href={`/painel/${slug}/presencas/${d.clienteId}?ano=${ano}&mes=${mes}`}
+                nome={d.nome}
+                estadoLabel={d.estado !== 'Ativo' ? d.estado : undefined}
+                primeira={i === 0}
+                corFundo="bg-orange-50 hover:bg-orange-100/70 dark:bg-orange-950/40 dark:hover:bg-orange-950/70"
+                corBorda="border-t border-orange-200 dark:border-orange-900"
+                pct={null}
+              >
+                <span className="text-orange-800 dark:text-orange-200">
+                  {d.total} {d.total === 1 ? 'desmarcação' : 'desmarcações'}
+                  {d.remarcadas > 0 && ` · ${d.remarcadas} remarcada${d.remarcadas === 1 ? '' : 's'}`}
+                  {d.naoRemarcadas > 0 &&
+                    ` · ${d.naoRemarcadas} não remarcada${d.naoRemarcadas === 1 ? '' : 's'}`}
+                </span>
+                {!d.pago && (
+                  <span className="rounded-full bg-rose-100 px-1.5 py-0.5 font-medium text-rose-800 dark:bg-rose-900 dark:text-rose-200">
+                    sem pagamento em dia
+                  </span>
+                )}
+              </LinhaCliente>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-muted">
+            {aPesquisar ? 'Ninguém com esse nome desmarcou este mês.' : 'Ninguém desmarcou treinos este mês.'}
+          </p>
+        )}
+      </div>
     </>
   )
 }

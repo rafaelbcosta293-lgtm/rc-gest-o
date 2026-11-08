@@ -9,7 +9,7 @@ const inputCls =
   'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
 const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
-const METODOS = ['Numerário', 'Multibanco', 'MB Way', 'Transferência', 'Cartão']
+const METODOS = ['Numerário', 'Multibanco', 'MB Way', 'Transferência']
 
 // Último dia do mês da data dada — valor por omissão do "válido até"
 // (a mensalidade cobre o mês em que é paga, de ponta a ponta).

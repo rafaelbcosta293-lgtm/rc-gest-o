@@ -93,7 +93,7 @@ function LinhaCliente({
         primeira ? '' : corBorda
       }`}
     >
-      <span className="flex min-w-0 items-center gap-1.5">
+      <span className="flex min-w-0 shrink items-center gap-1.5">
         <span className="truncate font-medium text-foreground">{nome}</span>
         {estadoLabel && (
           <span className="shrink-0 rounded-full bg-zinc-200/70 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
@@ -101,7 +101,11 @@ function LinhaCliente({
           </span>
         )}
       </span>
-      <div className="flex shrink-0 items-center gap-2.5">
+      {/* flex-wrap (em vez de shrink-0 a forçar tudo numa linha só) —
+          com avisos mais longos numa coluna estreita, isto deixa o
+          conteúdo passar para uma segunda linha em vez de ficar
+          espremido/sobreposto ao nome. */}
+      <div className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1">
         {children}
         {pct != null && (
           <AnelProgresso
@@ -288,11 +292,7 @@ export default function ListaPresencas({
                     pct={l.pct}
                   >
                     <span className="font-medium text-rose-700 dark:text-rose-300">
-                      {l.feitos > 0
-                        ? 'já treinou sem pagamento em dia'
-                        : l.temAgendado
-                          ? 'tem treino agendado sem pagamento em dia'
-                          : 'desmarcou sem pagamento em dia'}
+                      {l.feitos > 0 ? 'já treinou' : l.temAgendado ? 'tem treino agendado' : 'desmarcou treino'}
                     </span>
                   </LinhaCliente>
                 ))}
@@ -319,7 +319,7 @@ export default function ListaPresencas({
                     corBorda="border-t border-border-subtle"
                     pct={l.pct}
                   >
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
                       <span className="text-muted">
                         {l.feitos}{l.alvo != null ? `/${l.alvo}` : ''} treinos
                       </span>
@@ -364,7 +364,7 @@ export default function ListaPresencas({
                     corBorda="border-t border-orange-200 dark:border-orange-900"
                     pct={null}
                   >
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
                       <span className="rounded-full bg-orange-100 px-1.5 py-0.5 font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                         {d.total} {d.total === 1 ? 'desmarcação' : 'desmarcações'}
                       </span>

@@ -64,10 +64,12 @@ function CartaoResumo({
 
 // Mesma formatação da LinhaCompacta de Pagamentos: nome a truncar à
 // esquerda, bloco fixo (shrink-0, nunca quebra linha) à direita —
-// aqui com estado + aviso + anel, em vez de só o aviso. O nome tem
-// largura fixa (em vez de ajustar-se ao texto) para a etiqueta de
-// estado começar sempre na mesma posição, linha a linha — para ver
-// a coluna de "Pendente"/"Suspenso" alinhada pela letra P.
+// aqui com estado + aviso + anel, em vez de só o aviso. Nome e
+// estado têm largura fixa (em vez de ajustar-se ao texto), e o
+// aviso fica encostado à esquerda logo a seguir (não "justify-end"
+// a empurrar para a direita) — tudo para ficar alinhado em coluna,
+// linha a linha, só o anel (que varia de tamanho conforme o texto
+// antes dele) é que fica à parte, sempre no fim.
 function LinhaCliente({
   href,
   nome,
@@ -100,7 +102,7 @@ function LinhaCliente({
           </span>
         )}
       </span>
-      <span className="flex flex-1 items-center justify-end gap-1.5">
+      <span className="flex flex-1 items-center gap-1.5">
         {children}
         {pct != null && (
           <AnelProgresso size={28} strokeWidth={3} percent={pct} color={pct >= 100 ? '#1E7145' : '#0E9594'}>

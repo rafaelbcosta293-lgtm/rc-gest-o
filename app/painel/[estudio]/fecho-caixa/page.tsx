@@ -359,14 +359,7 @@ export default async function FechoCaixaPage({
         <LinhaResumo label="Valor esperado em caixa" valor={`${valorEsperado.toFixed(2)} €`} destaque />
       </div>
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">Vendas</h2>
-      <div className="mt-2 divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface">
-        <LinhaResumo label="Vendas a Dinheiro" valor={`${valorNumerarioDia.toFixed(2)} €`} />
-        <LinhaResumo label="Vendas MB Way / SEPA" valor={`${totaisPorGrupo['MB Way / SEPA'].toFixed(2)} €`} />
-        <LinhaResumo label="Vendas TPA" valor={`${totaisPorGrupo.TPA.toFixed(2)} €`} />
-      </div>
-
-      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
         Entradas Numerário
       </h2>
       <TabelaVendas linhas={linhasPorGrupo['Numerário']} />

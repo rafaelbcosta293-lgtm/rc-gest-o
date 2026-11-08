@@ -44,7 +44,6 @@ type LinhaEntrada = {
   nome: string
   metodo: string
   descricao: string
-  valor: number
 }
 
 type MovimentoBase = {
@@ -202,7 +201,6 @@ export default async function FechoCaixaPage({
     nome: p.cliente?.nome ?? '—',
     metodo: p.metodo ?? 'Numerário',
     descricao: descricaoPagamento(p),
-    valor: p.valor,
   }))
 
   const saidasHoje: SaidaLista[] = ((saidasHojeData ?? []) as unknown as SaidaLista[]).map((s) => ({
@@ -403,7 +401,6 @@ export default async function FechoCaixaPage({
                 <th className="px-3 py-1.5">Sócio</th>
                 <th className="px-3 py-1.5">Descrição</th>
                 <th className="px-3 py-1.5">Método</th>
-                <th className="px-3 py-1.5 text-right">Valor</th>
               </tr>
             </thead>
             <tbody>
@@ -412,9 +409,6 @@ export default async function FechoCaixaPage({
                   <td className="px-3 py-1.5 font-medium text-foreground">{l.nome}</td>
                   <td className="px-3 py-1.5 text-muted">{l.descricao}</td>
                   <td className="px-3 py-1.5 text-muted">{l.metodo}</td>
-                  <td className="px-3 py-1.5 text-right font-semibold text-foreground">
-                    {l.valor.toFixed(2)} €
-                  </td>
                 </tr>
               ))}
             </tbody>

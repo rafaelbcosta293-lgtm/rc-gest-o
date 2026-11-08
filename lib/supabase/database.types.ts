@@ -9,7 +9,6 @@ export type Estudio = {
   endereco: string | null
   ativo: boolean
   codigo_socio: string
-  fundo_troco_caixa: number
 }
 
 export type FechoCaixa = {
@@ -17,7 +16,7 @@ export type FechoCaixa = {
   estudio_id: number
   data: string
   valor_numerario_dia: number
-  fundo_troco: number
+  saldo_anterior: number
   valor_contado: number
   nota: string | null
   registado_por: string | null

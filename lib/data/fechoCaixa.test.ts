@@ -27,9 +27,9 @@ describe('somarNumerario', () => {
 })
 
 describe('calcularFechoCaixa', () => {
-  it('calcula o valor esperado como fundo de troco + numerário do dia', () => {
+  it('calcula o valor esperado como saldo anterior + numerário do dia', () => {
     const { valorEsperado } = calcularFechoCaixa({
-      fundoTroco: 50,
+      saldoAnterior: 50,
       valorNumerarioDia: 120.5,
       valorContado: 170.5,
     })
@@ -38,7 +38,7 @@ describe('calcularFechoCaixa', () => {
 
   it('diferença é 0 quando o valor contado coincide com o esperado', () => {
     const { diferenca } = calcularFechoCaixa({
-      fundoTroco: 50,
+      saldoAnterior: 50,
       valorNumerarioDia: 120.5,
       valorContado: 170.5,
     })
@@ -47,7 +47,7 @@ describe('calcularFechoCaixa', () => {
 
   it('diferença positiva quando há dinheiro a mais em caixa', () => {
     const { diferenca } = calcularFechoCaixa({
-      fundoTroco: 50,
+      saldoAnterior: 50,
       valorNumerarioDia: 100,
       valorContado: 155,
     })
@@ -56,7 +56,7 @@ describe('calcularFechoCaixa', () => {
 
   it('diferença negativa quando falta dinheiro em caixa', () => {
     const { diferenca } = calcularFechoCaixa({
-      fundoTroco: 50,
+      saldoAnterior: 50,
       valorNumerarioDia: 100,
       valorContado: 140,
     })

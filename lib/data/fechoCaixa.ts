@@ -12,15 +12,15 @@ export function somarNumerario(pagamentos: { valor: number; metodo: string | nul
 }
 
 export function calcularFechoCaixa({
-  fundoTroco,
+  saldoAnterior,
   valorNumerarioDia,
   valorContado,
 }: {
-  fundoTroco: number
+  saldoAnterior: number
   valorNumerarioDia: number
   valorContado: number
 }): { valorEsperado: number; diferenca: number } {
-  const valorEsperado = arredondar(fundoTroco + valorNumerarioDia)
+  const valorEsperado = arredondar(saldoAnterior + valorNumerarioDia)
   return {
     valorEsperado,
     diferenca: arredondar(valorContado - valorEsperado),

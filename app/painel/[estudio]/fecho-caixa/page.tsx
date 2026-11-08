@@ -5,14 +5,14 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import { calcularFechoCaixa, somarNumerario } from '@/lib/data/fechoCaixa'
-import { registarFechoCaixa, atualizarFundoTroco } from './actions'
+import { registarFechoCaixa } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 
 type FechoResumo = {
   id: string
   data: string
   valor_numerario_dia: number
-  fundo_troco: number
+  saldo_anterior: number
   valor_contado: number
   nota: string | null
 }
@@ -102,9 +102,13 @@ export default async function FechoCaixaPage({
   ] = await Promise.all([
     supabase.from('clientes').select('id').eq('estudio_id', estudio.id),
     supabase.from('fechos_caixa').select('*').eq('estudio_id', estudio.id).eq('data', hoje).maybeSingle(),
+    // A consulta já vem ordenada por data decrescente, por isso o
+    // primeiro destes é precisamente o fecho anterior a hoje — reaproveitado
+    // como "saldo anterior" quando ainda não há fecho de hoje, em vez de
+    // repetir a mesma consulta.
     supabase
       .from('fechos_caixa')
-      .select('id, data, valor_numerario_dia, fundo_troco, valor_contado, nota')
+      .select('id, data, valor_numerario_dia, saldo_anterior, valor_contado, nota')
       .eq('estudio_id', estudio.id)
       .lt('data', hoje)
       .order('data', { ascending: false })
@@ -131,27 +135,33 @@ export default async function FechoCaixaPage({
   const valorNumerarioDia = somarNumerario(
     (pagamentosHojeData ?? []).map((p) => ({ valor: Number(p.valor), metodo: p.metodo }))
   )
-  const { valorEsperado } = calcularFechoCaixa({
-    fundoTroco: estudio.fundo_troco_caixa,
-    valorNumerarioDia,
-    valorContado: 0,
-  })
+
+  const recentes: FechoResumo[] = (recentesData ?? []).map((f) => ({
+    ...f,
+    valor_numerario_dia: Number(f.valor_numerario_dia),
+    saldo_anterior: Number(f.saldo_anterior),
+    valor_contado: Number(f.valor_contado),
+  }))
 
   const fechoHoje = fechoHojeData
     ? {
         ...fechoHojeData,
         valor_numerario_dia: Number(fechoHojeData.valor_numerario_dia),
-        fundo_troco: Number(fechoHojeData.fundo_troco),
+        saldo_anterior: Number(fechoHojeData.saldo_anterior),
         valor_contado: Number(fechoHojeData.valor_contado),
       }
     : null
 
-  const recentes: FechoResumo[] = (recentesData ?? []).map((f) => ({
-    ...f,
-    valor_numerario_dia: Number(f.valor_numerario_dia),
-    fundo_troco: Number(f.fundo_troco),
-    valor_contado: Number(f.valor_contado),
-  }))
+  // Antes de o fecho de hoje existir, o saldo anterior é o valor contado
+  // no último fecho registado (normalmente ontem); depois de existir, é
+  // o valor já guardado nesse fecho, que não muda retroativamente.
+  const saldoAnterior = fechoHoje ? fechoHoje.saldo_anterior : recentes[0]?.valor_contado ?? 0
+
+  const { valorEsperado } = calcularFechoCaixa({
+    saldoAnterior,
+    valorNumerarioDia,
+    valorContado: 0,
+  })
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -176,8 +186,8 @@ export default async function FechoCaixaPage({
       <div className="mt-6 rounded-xl border border-border-subtle bg-surface p-5">
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <dt className="text-xs text-muted">Fundo de troco</dt>
-            <dd className="font-semibold text-foreground">{estudio.fundo_troco_caixa.toFixed(2)} €</dd>
+            <dt className="text-xs text-muted">Saldo anterior</dt>
+            <dd className="font-semibold text-foreground">{saldoAnterior.toFixed(2)} €</dd>
           </div>
           <div>
             <dt className="text-xs text-muted">Numerário recebido hoje</dt>
@@ -188,31 +198,6 @@ export default async function FechoCaixaPage({
             <dd className="text-lg font-bold text-foreground">{valorEsperado.toFixed(2)} €</dd>
           </div>
         </dl>
-
-        <details className="mt-3">
-          <summary className="cursor-pointer text-xs text-muted hover:text-foreground">
-            Alterar fundo de troco
-          </summary>
-          <form action={atualizarFundoTroco} className="mt-2 flex items-center gap-2">
-            <input type="hidden" name="estudio_slug" value={slug} />
-            <input type="hidden" name="estudio_id" value={estudio.id} />
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              required
-              name="fundo_troco_caixa"
-              defaultValue={estudio.fundo_troco_caixa}
-              className="w-28 rounded-md border border-border-subtle px-2 py-1.5 text-sm dark:bg-zinc-900"
-            />
-            <SubmitButton
-              pendingText="…"
-              className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.08]"
-            >
-              Guardar
-            </SubmitButton>
-          </form>
-        </details>
       </div>
 
       <div className="mt-6 rounded-xl border border-border-subtle bg-surface p-5">
@@ -226,8 +211,8 @@ export default async function FechoCaixaPage({
               </div>
               <div>
                 <dt className="text-xs text-muted">Diferença</dt>
-                <dd className={`font-semibold ${corDiferenca(fechoHoje.valor_contado - (fechoHoje.fundo_troco + fechoHoje.valor_numerario_dia))}`}>
-                  {labelDiferenca(fechoHoje.valor_contado - (fechoHoje.fundo_troco + fechoHoje.valor_numerario_dia))}
+                <dd className={`font-semibold ${corDiferenca(fechoHoje.valor_contado - valorEsperado)}`}>
+                  {labelDiferenca(fechoHoje.valor_contado - valorEsperado)}
                 </dd>
               </div>
             </dl>
@@ -263,7 +248,7 @@ export default async function FechoCaixaPage({
       )}
       <div className="mt-3 flex flex-col gap-2">
         {recentes.map((f) => {
-          const diferenca = f.valor_contado - (f.fundo_troco + f.valor_numerario_dia)
+          const diferenca = f.valor_contado - (f.saldo_anterior + f.valor_numerario_dia)
           return (
             <div
               key={f.id}

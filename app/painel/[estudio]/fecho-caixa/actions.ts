@@ -5,6 +5,26 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { somarNumerario } from '@/lib/data/fechoCaixa'
 
+// O saldo anterior nunca é introduzido à mão — é sempre o valor
+// contado no fecho mais recente antes de hoje (normalmente ontem;
+// se um dia ficar sem fecho, usa o último que existir, para a
+// contagem nunca perder o fio).
+async function obterSaldoAnterior(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  estudioId: number,
+  hoje: string
+): Promise<number> {
+  const { data } = await supabase
+    .from('fechos_caixa')
+    .select('valor_contado')
+    .eq('estudio_id', estudioId)
+    .lt('data', hoje)
+    .order('data', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return data ? Number(data.valor_contado) : 0
+}
+
 export async function registarFechoCaixa(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
@@ -20,18 +40,6 @@ export async function registarFechoCaixa(formData: FormData) {
   }
 
   const { data: userData } = await supabase.auth.getUser()
-
-  const { data: estudio, error: erroEstudio } = await supabase
-    .from('estudios')
-    .select('fundo_troco_caixa')
-    .eq('id', estudioId)
-    .single()
-
-  if (erroEstudio || !estudio) {
-    redirect(
-      `/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(erroEstudio?.message ?? 'Estúdio não encontrado.')}`
-    )
-  }
 
   const { data: clientes, error: erroClientes } = await supabase
     .from('clientes')
@@ -59,13 +67,14 @@ export async function registarFechoCaixa(formData: FormData) {
   const valorNumerarioDia = somarNumerario(
     (pagamentosHoje ?? []).map((p) => ({ valor: Number(p.valor), metodo: p.metodo }))
   )
+  const saldoAnterior = await obterSaldoAnterior(supabase, estudioId, hoje)
 
   const { error } = await supabase.from('fechos_caixa').upsert(
     {
       estudio_id: estudioId,
       data: hoje,
       valor_numerario_dia: valorNumerarioDia,
-      fundo_troco: estudio.fundo_troco_caixa,
+      saldo_anterior: saldoAnterior,
       valor_contado: valorContado,
       nota,
       registado_por: userData.user?.id ?? null,
@@ -80,28 +89,5 @@ export async function registarFechoCaixa(formData: FormData) {
 
   revalidatePath(`/painel/${estudioSlug}/fecho-caixa`)
   revalidatePath(`/painel/${estudioSlug}/checklist`)
-  redirect(`/painel/${estudioSlug}/fecho-caixa`)
-}
-
-export async function atualizarFundoTroco(formData: FormData) {
-  const estudioSlug = formData.get('estudio_slug') as string
-  const estudioId = Number(formData.get('estudio_id'))
-  const fundoTroco = Number(formData.get('fundo_troco_caixa'))
-  const supabase = await createClient()
-
-  if (!Number.isFinite(fundoTroco) || fundoTroco < 0) {
-    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent('Fundo de troco inválido.')}`)
-  }
-
-  const { error } = await supabase
-    .from('estudios')
-    .update({ fundo_troco_caixa: fundoTroco })
-    .eq('id', estudioId)
-
-  if (error) {
-    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(error.message)}`)
-  }
-
-  revalidatePath(`/painel/${estudioSlug}/fecho-caixa`)
   redirect(`/painel/${estudioSlug}/fecho-caixa`)
 }

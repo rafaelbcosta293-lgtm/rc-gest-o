@@ -4,7 +4,14 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { corTipoEvento } from '@/lib/data/agenda'
-import { atualizarEvento, desmarcarEvento, reativarEvento, apagarEvento, pararSerie } from '../actions'
+import {
+  atualizarEvento,
+  desmarcarEvento,
+  reativarEvento,
+  apagarEvento,
+  pararSerie,
+  atualizarRemarcacao,
+} from '../actions'
 import SubmitButton from '@/components/SubmitButton'
 import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
@@ -128,6 +135,26 @@ export default async function EventoAgendaPage({
         </p>
       )}
 
+      {cancelado && (
+        <form
+          action={atualizarRemarcacao}
+          className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs dark:bg-amber-950/40"
+        >
+          <input type="hidden" name="estudio_slug" value={slug} />
+          <input type="hidden" name="id" value={evento.id} />
+          <input type="hidden" name="foi_remarcado" value={evento.foi_remarcado ? 'nao' : 'sim'} />
+          <span className="text-amber-800 dark:text-amber-300">
+            {evento.foi_remarcado ? 'Esta desmarcação já foi remarcada para outro dia.' : 'Ainda não foi remarcada para outro dia.'}
+          </span>
+          <SubmitButton
+            pendingText="…"
+            className="rounded-full border border-amber-300 px-2.5 py-1 font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950"
+          >
+            {evento.foi_remarcado ? 'Marcar como não remarcada' : 'Marcar como remarcada'}
+          </SubmitButton>
+        </form>
+      )}
+
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {decodeURIComponent(error)}
@@ -171,6 +198,22 @@ export default async function EventoAgendaPage({
                 <label className="flex-1 cursor-pointer rounded-md border border-border-subtle px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold">
                   <input type="radio" name="conta_como_realizado" value="nao" required className="sr-only" />
                   Não
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="text-xs font-semibold text-muted">
+                Esta desmarcação já foi remarcada para outro dia? (obrigatório)
+              </legend>
+              <div className="flex gap-1.5">
+                <label className="flex-1 cursor-pointer rounded-md border border-border-subtle px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold">
+                  <input type="radio" name="foi_remarcado" value="sim" required className="sr-only" />
+                  Sim, já remarcou
+                </label>
+                <label className="flex-1 cursor-pointer rounded-md border border-border-subtle px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold">
+                  <input type="radio" name="foi_remarcado" value="nao" required className="sr-only" />
+                  Ainda não
                 </label>
               </div>
             </fieldset>

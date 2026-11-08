@@ -296,6 +296,7 @@ export async function desmarcarEvento(formData: FormData) {
   const id = formData.get('id') as string
   const motivo = campoOuNull(formData, 'motivo_cancelamento')
   const contarComoRealizado = formData.get('conta_como_realizado') === 'sim'
+  const foiRemarcado = formData.get('foi_remarcado') === 'sim'
   const supabase = await createClient()
 
   const { data: linhaData, error: erroLinha } = await supabase
@@ -309,7 +310,7 @@ export async function desmarcarEvento(formData: FormData) {
 
   const { error } = await supabase
     .from('agenda_eventos')
-    .update({ estado: 'Cancelado', motivo_cancelamento: motivo })
+    .update({ estado: 'Cancelado', motivo_cancelamento: motivo, foi_remarcado: foiRemarcado })
     .eq('id', id)
 
   if (error) {
@@ -325,6 +326,24 @@ export async function desmarcarEvento(formData: FormData) {
   redirect(`/painel/${estudioSlug}/agenda/${id}`)
 }
 
+// Permite corrigir mais tarde se uma desmarcação já foi remarcada —
+// muitas vezes só se sabe dias depois, quando o cliente volta a
+// marcar, e nessa altura já não se está no fluxo de desmarcar.
+export async function atualizarRemarcacao(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const foiRemarcado = formData.get('foi_remarcado') === 'sim'
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('agenda_eventos').update({ foi_remarcado: foiRemarcado }).eq('id', id)
+  if (error) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/agenda`)
+  redirect(`/painel/${estudioSlug}/agenda/${id}`)
+}
+
 export async function reativarEvento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
@@ -332,7 +351,7 @@ export async function reativarEvento(formData: FormData) {
 
   const { error } = await supabase
     .from('agenda_eventos')
-    .update({ estado: 'Agendado', motivo_cancelamento: null })
+    .update({ estado: 'Agendado', motivo_cancelamento: null, foi_remarcado: false })
     .eq('id', id)
 
   if (error) {
@@ -586,6 +605,7 @@ export async function desmarcarEventoRapido(input: {
   grupoId: string | null
   motivo: string | null
   contarComoRealizado: boolean
+  foiRemarcado: boolean
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
@@ -598,7 +618,7 @@ export async function desmarcarEventoRapido(input: {
 
   const query = supabase
     .from('agenda_eventos')
-    .update({ estado: 'Cancelado', motivo_cancelamento: input.motivo })
+    .update({ estado: 'Cancelado', motivo_cancelamento: input.motivo, foi_remarcado: input.foiRemarcado })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
@@ -621,7 +641,9 @@ export async function reativarEventoRapido(input: {
     : await supabase.from('agenda_eventos').select('id, cliente_id, data, pt_id').eq('id', input.id)
   if (erroLinhas) return { error: erroLinhas.message }
 
-  const query = supabase.from('agenda_eventos').update({ estado: 'Agendado', motivo_cancelamento: null })
+  const query = supabase
+    .from('agenda_eventos')
+    .update({ estado: 'Agendado', motivo_cancelamento: null, foi_remarcado: false })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 

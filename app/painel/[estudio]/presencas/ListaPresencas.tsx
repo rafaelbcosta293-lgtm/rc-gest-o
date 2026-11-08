@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { TriangleAlert, CalendarX, UsersRound, type LucideIcon } from 'lucide-react'
+import { TriangleAlert, CalendarX, UsersRound, CalendarOff, Repeat, type LucideIcon } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
 import AnelProgresso from '@/components/AnelProgresso'
 
@@ -15,6 +15,14 @@ export type LinhaPresenca = {
   alvo: number | null
   pct: number | null
   pago: boolean
+}
+
+export type LinhaDesmarcacao = {
+  clienteId: string
+  nome: string
+  total: number
+  remarcadas: number
+  naoRemarcadas: number
 }
 
 function porNomeSimples<T extends { nome: string }>(lista: T[], filtro: string): T[] {
@@ -100,11 +108,13 @@ const ALTURA_LISTA = 'max-h-80 overflow-y-auto'
 
 export default function ListaPresencas({
   linhas,
+  desmarcacoes,
   slug,
   ano,
   mes,
 }: {
   linhas: LinhaPresenca[]
+  desmarcacoes: LinhaDesmarcacao[]
   slug: string
   ano: number
   mes: number
@@ -116,6 +126,7 @@ export default function ListaPresencas({
   // fica destacado e separado do resto em vez de se perder na lista.
   const semTreinoPago = useMemo(() => linhas.filter((l) => l.pago && l.feitos === 0), [linhas])
   const comFaltas = useMemo(() => linhas.filter((l) => l.faltas > 0), [linhas])
+  const totalDesmarcacoes = useMemo(() => desmarcacoes.reduce((soma, d) => soma + d.total, 0), [desmarcacoes])
 
   const { alertaFiltrado, restoFiltrado } = useMemo(() => {
     const filtrados = porNomeSimples(linhas, filtro)
@@ -127,12 +138,21 @@ export default function ListaPresencas({
     }
   }, [linhas, filtro])
 
+  // Quem mais desmarca primeiro — é a leitura que interessa para
+  // perceber "quantas pessoas estão a desmarcar" de um olhar.
+  const desmarcacoesFiltradas = useMemo(() => {
+    return [...porNomeSimples(desmarcacoes, filtro)].sort((a, b) => {
+      if (b.total !== a.total) return b.total - a.total
+      return normalizarTexto(a.nome).localeCompare(normalizarTexto(b.nome))
+    })
+  }, [desmarcacoes, filtro])
+
   const aPesquisar = filtro.trim().length > 0
   const semResultados = alertaFiltrado.length === 0 && restoFiltrado.length === 0
 
   return (
     <>
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <CartaoResumo
           icone={TriangleAlert}
           cor="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
@@ -144,6 +164,18 @@ export default function ListaPresencas({
           cor="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
           label="Com faltas"
           valor={comFaltas.length}
+        />
+        <CartaoResumo
+          icone={CalendarOff}
+          cor="bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300"
+          label="Clientes a desmarcar"
+          valor={desmarcacoes.length}
+        />
+        <CartaoResumo
+          icone={Repeat}
+          cor="bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300"
+          label="Desmarcações este mês"
+          valor={totalDesmarcacoes}
         />
         <CartaoResumo
           icone={UsersRound}
@@ -236,6 +268,52 @@ export default function ListaPresencas({
           </div>
         </>
       )}
+
+      {/* Além das presenças de cada um — quem está a desmarcar treinos
+          este mês, quantas vezes, e se essas sessões já foram ou não
+          remarcadas para outro dia. */}
+      <div className="mt-6">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+          Desmarcações este mês ({desmarcacoesFiltradas.length})
+        </h2>
+        {desmarcacoesFiltradas.length > 0 ? (
+          <div
+            className={`mt-2 flex flex-col overflow-hidden rounded-xl border border-orange-200 dark:border-orange-900 ${ALTURA_LISTA}`}
+          >
+            {desmarcacoesFiltradas.map((d, i) => (
+              <LinhaCliente
+                key={d.clienteId}
+                href={`/painel/${slug}/presencas/${d.clienteId}?ano=${ano}&mes=${mes}`}
+                nome={d.nome}
+                primeira={i === 0}
+                corFundo="bg-orange-50 hover:bg-orange-100/70 dark:bg-orange-950/40 dark:hover:bg-orange-950/70"
+                corBorda="border-t border-orange-200 dark:border-orange-900"
+                pct={null}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-full bg-orange-100 px-1.5 py-0.5 font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                    {d.total} {d.total === 1 ? 'desmarcação' : 'desmarcações'}
+                  </span>
+                  {d.remarcadas > 0 && (
+                    <span className="rounded-full bg-teal-50 px-1.5 py-0.5 font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+                      {d.remarcadas} remarcada{d.remarcadas === 1 ? '' : 's'}
+                    </span>
+                  )}
+                  {d.naoRemarcadas > 0 && (
+                    <span className="rounded-full bg-red-50 px-1.5 py-0.5 font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
+                      {d.naoRemarcadas} não remarcada{d.naoRemarcadas === 1 ? '' : 's'}
+                    </span>
+                  )}
+                </div>
+              </LinhaCliente>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-muted">
+            {aPesquisar ? 'Ninguém com esse nome desmarcou este mês.' : 'Ninguém desmarcou treinos este mês.'}
+          </p>
+        )}
+      </div>
     </>
   )
 }

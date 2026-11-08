@@ -466,6 +466,7 @@ export type EventoAgenda = {
   grupo_id: string | null
   nota: string | null
   motivo_cancelamento: string | null
+  foi_remarcado: boolean
   lembrete_enviado: boolean
   lembrete_enviado_em: string | null
   // Só preenchidos para "Sessão experimental" — a lead ainda não é

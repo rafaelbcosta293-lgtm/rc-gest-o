@@ -191,7 +191,7 @@ export default function AgendaInterativa({
     })
   }
 
-  function desmarcar(contarComoRealizado: boolean) {
+  function desmarcar(contarComoRealizado: boolean, foiRemarcado: boolean) {
     if (!(modal.aberto && modal.modo === 'editar')) return
     const { id, grupo_id } = modal.evento
     iniciarTransicao(async () => {
@@ -201,6 +201,7 @@ export default function AgendaInterativa({
         grupoId: grupo_id,
         motivo: null,
         contarComoRealizado,
+        foiRemarcado,
       })
       if ('error' in resultado) setErro(resultado.error)
       else aposSucesso()
@@ -864,7 +865,7 @@ function EventoModalOverlay({
   slug: string
   onFechar: () => void
   onSubmeter: (formData: FormData, clienteIds: string[]) => void
-  onDesmarcar: (contarComoRealizado: boolean) => void
+  onDesmarcar: (contarComoRealizado: boolean, foiRemarcado: boolean) => void
   onReativar: () => void
   onApagar: () => void
   onPararSerie: () => void
@@ -883,6 +884,7 @@ function EventoModalOverlay({
   // para a ficha do cliente nunca ficar errada por um clique a mais.
   const [aConfirmarDesmarcar, setAConfirmarDesmarcar] = useState(false)
   const [contarComoRealizado, setContarComoRealizado] = useState<boolean | null>(null)
+  const [foiRemarcado, setFoiRemarcado] = useState<boolean | null>(null)
 
   // Quem já está neste treino — para um treino em simultâneo, o grupo
   // tem mais do que uma pessoa; pode-se adicionar ou remover enquanto
@@ -1172,6 +1174,7 @@ function EventoModalOverlay({
             type="button"
             onClick={() => {
               setContarComoRealizado(null)
+              setFoiRemarcado(null)
               setAConfirmarDesmarcar(true)
             }}
             disabled={aPendente}
@@ -1223,13 +1226,48 @@ function EventoModalOverlay({
                 </label>
               </div>
             </fieldset>
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="text-xs font-semibold text-muted">
+                Já foi remarcada para outro dia? (obrigatório)
+              </legend>
+              <div className="flex gap-1.5">
+                <label
+                  className={`flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                    foiRemarcado === true ? 'border-accent bg-accent-soft' : 'border-border-subtle bg-surface'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="foi_remarcado_modal"
+                    className="sr-only"
+                    checked={foiRemarcado === true}
+                    onChange={() => setFoiRemarcado(true)}
+                  />
+                  Sim, já remarcou
+                </label>
+                <label
+                  className={`flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                    foiRemarcado === false ? 'border-accent bg-accent-soft' : 'border-border-subtle bg-surface'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="foi_remarcado_modal"
+                    className="sr-only"
+                    checked={foiRemarcado === false}
+                    onChange={() => setFoiRemarcado(false)}
+                  />
+                  Ainda não
+                </label>
+              </div>
+            </fieldset>
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                disabled={aPendente || contarComoRealizado === null}
+                disabled={aPendente || contarComoRealizado === null || foiRemarcado === null}
                 onClick={() => {
-                  if (contarComoRealizado === null) return
-                  onDesmarcar(contarComoRealizado)
+                  if (contarComoRealizado === null || foiRemarcado === null) return
+                  onDesmarcar(contarComoRealizado, foiRemarcado)
                 }}
                 className="rounded-full bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-50"
               >

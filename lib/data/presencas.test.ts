@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { treinosPrevistos, treinosNoPeriodo, intervaloMes, diasDoMes, offsetPrimeiroDia, fmt, iniciais } from './presencas'
+import {
+  treinosPrevistos,
+  treinosNoPeriodo,
+  intervaloMes,
+  diasDoMes,
+  offsetPrimeiroDia,
+  fmt,
+  iniciais,
+  agruparDesmarcacoesPorCliente,
+} from './presencas'
 
 describe('treinosPrevistos', () => {
   it('devolve null sem frequência semanal definida', () => {
@@ -75,5 +84,29 @@ describe('fmt / iniciais', () => {
 
   it('iniciais com um nome só usa a primeira letra', () => {
     expect(iniciais('Rafael')).toBe('R')
+  })
+})
+
+describe('agruparDesmarcacoesPorCliente', () => {
+  it('conta desmarcações remarcadas e não remarcadas por cliente', () => {
+    const r = agruparDesmarcacoesPorCliente([
+      { cliente_id: 'c1', foi_remarcado: true },
+      { cliente_id: 'c1', foi_remarcado: false },
+      { cliente_id: 'c2', foi_remarcado: false },
+    ])
+    expect(r).toHaveLength(2)
+    const c1 = r.find((l) => l.clienteId === 'c1')!
+    expect(c1).toEqual({ clienteId: 'c1', total: 2, remarcadas: 1, naoRemarcadas: 1 })
+    const c2 = r.find((l) => l.clienteId === 'c2')!
+    expect(c2).toEqual({ clienteId: 'c2', total: 1, remarcadas: 0, naoRemarcadas: 1 })
+  })
+
+  it('ignora eventos sem cliente (reunião/outro)', () => {
+    const r = agruparDesmarcacoesPorCliente([{ cliente_id: null, foi_remarcado: false }])
+    expect(r).toEqual([])
+  })
+
+  it('sem desmarcações devolve lista vazia', () => {
+    expect(agruparDesmarcacoesPorCliente([])).toEqual([])
   })
 })

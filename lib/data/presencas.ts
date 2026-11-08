@@ -65,3 +65,33 @@ export function offsetPrimeiroDia(ano: number, mes: number): number {
   const diaSemana = new Date(ano, mes - 1, 1).getDay()
   return (diaSemana + 6) % 7
 }
+
+export type DesmarcacaoPorCliente = {
+  clienteId: string
+  total: number
+  remarcadas: number
+  naoRemarcadas: number
+}
+
+// Agrupa as ocorrências canceladas da agenda por cliente, para a
+// página de Presenças conseguir mostrar, por pessoa, quantas vezes
+// desmarcou este mês e quantas dessas já foram remarcadas para outro
+// dia — só entram clientes com pelo menos uma desmarcação.
+export function agruparDesmarcacoesPorCliente(
+  eventosCancelados: { cliente_id: string | null; foi_remarcado: boolean }[]
+): DesmarcacaoPorCliente[] {
+  const porCliente = new Map<string, { remarcadas: number; naoRemarcadas: number }>()
+  for (const e of eventosCancelados) {
+    if (!e.cliente_id) continue
+    const atual = porCliente.get(e.cliente_id) ?? { remarcadas: 0, naoRemarcadas: 0 }
+    if (e.foi_remarcado) atual.remarcadas++
+    else atual.naoRemarcadas++
+    porCliente.set(e.cliente_id, atual)
+  }
+  return Array.from(porCliente.entries()).map(([clienteId, { remarcadas, naoRemarcadas }]) => ({
+    clienteId,
+    total: remarcadas + naoRemarcadas,
+    remarcadas,
+    naoRemarcadas,
+  }))
+}

@@ -3,8 +3,8 @@ import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { treinosPrevistos, intervaloMes, MESES } from '@/lib/data/presencas'
-import ListaPresencas, { type LinhaPresenca } from './ListaPresencas'
+import { treinosPrevistos, intervaloMes, MESES, agruparDesmarcacoesPorCliente } from '@/lib/data/presencas'
+import ListaPresencas, { type LinhaPresenca, type LinhaDesmarcacao } from './ListaPresencas'
 
 export default async function PresencasPage({
   params,
@@ -36,11 +36,12 @@ export default async function PresencasPage({
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)
   const hoje = new Date().toISOString().slice(0, 10)
 
-  // Estas duas só precisam dos ids dos clientes, não dos resultados uma
-  // da outra — correm ao mesmo tempo.
+  // Estas três só precisam dos ids dos clientes, não dos resultados umas
+  // das outras — correm todas ao mesmo tempo.
   const [
     { data: presencas, error: erroPresencas },
     { data: pagamentosData, error: erroPagamentos },
+    { data: desmarcacoesData, error: erroDesmarcacoes },
   ] = ids.length
     ? await Promise.all([
         supabase
@@ -53,14 +54,25 @@ export default async function PresencasPage({
         // é o que diz se está pago para hoje, independentemente de qual
         // pagamento a cobre.
         supabase.from('pagamentos').select('cliente_id, valido_ate').in('cliente_id', ids),
+        // Treinos desmarcados este mês — para detetar quem está a
+        // desmarcar e se essas sessões já foram ou não remarcadas.
+        supabase
+          .from('agenda_eventos')
+          .select('cliente_id, foi_remarcado')
+          .in('cliente_id', ids)
+          .eq('tipo', 'Treino')
+          .eq('estado', 'Cancelado')
+          .gte('data', inicio)
+          .lt('data', fimExclusivo),
       ])
     : [
         { data: [], error: null },
         { data: [], error: null },
+        { data: [], error: null },
       ]
 
-  if (erroPresencas || erroPagamentos) {
-    throw new Error((erroPresencas ?? erroPagamentos)!.message)
+  if (erroPresencas || erroPagamentos || erroDesmarcacoes) {
+    throw new Error((erroPresencas ?? erroPagamentos ?? erroDesmarcacoes)!.message)
   }
 
   const statsPorCliente = new Map<string, { feitos: number; faltas: number; avisadas: number }>()
@@ -82,6 +94,10 @@ export default async function PresencasPage({
 
   const mesAnterior = mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 }
   const mesSeguinte = mes === 12 ? { ano: ano + 1, mes: 1 } : { ano, mes: mes + 1 }
+
+  const nomePorCliente = new Map((clientes ?? []).map((c) => [c.id, c.nome]))
+  const linhasDesmarcacao: LinhaDesmarcacao[] = agruparDesmarcacoesPorCliente(desmarcacoesData ?? [])
+    .map((d) => ({ ...d, nome: nomePorCliente.get(d.clienteId) ?? '—' }))
 
   const linhas: LinhaPresenca[] = (clientes ?? []).map((c) => {
     const s = statsPorCliente.get(c.id) ?? { feitos: 0, faltas: 0, avisadas: 0 }
@@ -134,7 +150,7 @@ export default async function PresencasPage({
         </Link>
       </div>
 
-      <ListaPresencas linhas={linhas} slug={slug} ano={ano} mes={mes} />
+      <ListaPresencas linhas={linhas} desmarcacoes={linhasDesmarcacao} slug={slug} ano={ano} mes={mes} />
     </div>
   )
 }

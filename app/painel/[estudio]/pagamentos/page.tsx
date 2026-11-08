@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { fmt, treinosNoPeriodo } from '@/lib/data/presencas'
+import { fmt } from '@/lib/data/presencas'
 import { segurosPorPagar } from '@/lib/data/clientes'
 import ListaPagamentos, { type LinhaPagamentoAtraso, type LinhaSeguro, type LinhaInativo } from './ListaPagamentos'
 import type { EstadoCliente } from '@/lib/supabase/database.types'
@@ -12,7 +12,6 @@ type PagamentoDetalhe = {
   cliente_id: string
   data_pagamento: string
   valido_ate: string
-  plano: { nome: string; sessoes_por_semana: number | null } | null
 }
 
 type ClientePagamento = {
@@ -21,9 +20,6 @@ type ClientePagamento = {
   valido_ate: string | null
   dataPagamento: string | null
   em_dia: boolean
-  tipoMensalidade: string | null
-  realizados: number
-  adquiridos: number | null
   estado: EstadoCliente
 }
 
@@ -46,7 +42,7 @@ export default async function PagamentosPage({
   // por si só, já o reativa).
   const { data, error } = await supabase
     .from('clientes')
-    .select('id, nome, frequencia_semanal, estado')
+    .select('id, nome, estado')
     .eq('estudio_id', estudio.id)
     .order('nome')
 
@@ -69,7 +65,7 @@ export default async function PagamentosPage({
     ? await Promise.all([
         supabase
           .from('pagamentos')
-          .select('cliente_id, data_pagamento, valido_ate, plano:planos(nome, sessoes_por_semana)')
+          .select('cliente_id, data_pagamento, valido_ate')
           .in('cliente_id', idsClientes)
           .order('data_pagamento', { ascending: false }),
         supabase.from('clientes').select('id, inicio_contrato').in('id', idsClientes),
@@ -105,30 +101,6 @@ export default async function PagamentosPage({
     }
   }
 
-  const datasInicio = [...ultimoPagamentoPorCliente.values()].map((p) => p.data_pagamento)
-  const dataMinima = datasInicio.length
-    ? datasInicio.reduce((a, b) => (a < b ? a : b))
-    : hoje
-
-  const { data: presencasData, error: erroPresencasDetalhe } = idsClientes.length
-    ? await supabase
-        .from('presencas')
-        .select('cliente_id, data')
-        .in('cliente_id', idsClientes)
-        .eq('estado', 'Presente')
-        .gte('data', dataMinima)
-    : { data: [], error: null }
-  if (erroPresencasDetalhe) {
-    throw new Error(erroPresencasDetalhe.message)
-  }
-
-  const presencasPorCliente = new Map<string, string[]>()
-  for (const p of presencasData ?? []) {
-    const lista = presencasPorCliente.get(p.cliente_id) ?? []
-    lista.push(p.data)
-    presencasPorCliente.set(p.cliente_id, lista)
-  }
-
   const clientesComResumo: ClientePagamento[] = clientesBase.map((c) => {
     const pagamento = ultimoPagamentoPorCliente.get(c.id)
     if (!pagamento) {
@@ -138,33 +110,15 @@ export default async function PagamentosPage({
         valido_ate: null,
         dataPagamento: null,
         em_dia: false,
-        tipoMensalidade: null,
-        realizados: 0,
-        adquiridos: null,
         estado: c.estado,
       }
     }
-    const fimPeriodo = pagamento.valido_ate < hoje ? pagamento.valido_ate : hoje
-    // O plano pode não ter sessões por semana definidas (nem todos têm
-    // uma frequência fixa) — nesse caso usa-se a frequência semanal da
-    // própria ficha do cliente, em vez de ficar sem nenhuma meta.
-    const adquiridos = treinosNoPeriodo(
-      pagamento.plano?.sessoes_por_semana ?? c.frequencia_semanal,
-      pagamento.data_pagamento,
-      fimPeriodo
-    )
-    const realizados = (presencasPorCliente.get(c.id) ?? []).filter(
-      (d) => d >= pagamento.data_pagamento && d <= fimPeriodo
-    ).length
     return {
       cliente_id: c.id,
       nome: c.nome,
       valido_ate: pagamento.valido_ate,
       dataPagamento: pagamento.data_pagamento,
       em_dia: pagamento.valido_ate >= hoje,
-      tipoMensalidade: pagamento.plano?.nome ?? null,
-      realizados,
-      adquiridos,
       estado: c.estado,
     }
   })
@@ -206,9 +160,6 @@ export default async function PagamentosPage({
           ? `venceu em ${fmt(c.valido_ate)}`
           : 'sem pagamentos'
         : `válido até ${fmt(c.valido_ate)}`,
-    tipoMensalidade: c.tipoMensalidade,
-    realizados: c.realizados,
-    adquiridos: c.adquiridos,
     dataReferencia: c.valido_ate,
     dataPagamento: c.dataPagamento,
   })

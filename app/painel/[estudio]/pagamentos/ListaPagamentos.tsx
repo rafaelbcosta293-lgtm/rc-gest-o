@@ -22,9 +22,6 @@ export type LinhaPagamentoAtraso = {
   nome: string
   variante: 'atrasado' | 'emDia'
   situacaoLabel: string
-  tipoMensalidade: string | null
-  realizados: number
-  adquiridos: number | null
   dataReferencia: string | null
   dataPagamento: string | null
 }
@@ -175,49 +172,43 @@ function CartaoResumo({
   )
 }
 
-function LinhaPagamento({
-  slug,
-  linha,
+// Uma linha por pessoa, nome + aviso, nada mais — o plano e o
+// progresso de treinos já vivem na ficha de pagamentos do próprio
+// cliente (um clique de distância), não precisam de repetir-se aqui.
+function LinhaCompacta({
+  href,
+  nome,
+  aviso,
+  corAviso,
   primeira,
+  corFundo,
+  corBorda,
 }: {
-  slug: string
-  linha: LinhaPagamentoAtraso
+  href: string
+  nome: string
+  aviso: string
+  corAviso: string
   primeira: boolean
+  corFundo: string
+  corBorda: string
 }) {
-  const atrasado = linha.variante === 'atrasado'
   return (
     <Link
-      href={`/painel/${slug}/pagamentos/${linha.clienteId}`}
-      className={`flex flex-col gap-1.5 px-4 py-3.5 text-sm ${
-        atrasado ? 'bg-red-50 hover:bg-red-100/70 dark:bg-red-950/40 dark:hover:bg-red-950/70' : 'bg-surface hover:bg-brand/[.06]'
-      } ${primeira ? '' : atrasado ? 'border-t border-red-200 dark:border-red-900' : 'border-t border-border-subtle'}`}
+      href={href}
+      className={`flex items-center justify-between gap-2 px-3 py-2 text-xs ${corFundo} ${
+        primeira ? '' : corBorda
+      }`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="font-medium text-foreground">{linha.nome}</span>
-        <span
-          className={`text-xs font-semibold ${
-            atrasado ? 'text-red-700 dark:text-red-300' : 'text-teal-700 dark:text-teal-400'
-          }`}
-        >
-          {linha.situacaoLabel}
-        </span>
-      </div>
-      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
-        <span>{linha.tipoMensalidade ?? 'sem plano associado'}</span>
-        {linha.adquiridos != null && (
-          <span>
-            · {linha.realizados} de {linha.adquiridos} treinos
-          </span>
-        )}
-      </div>
+      <span className="truncate font-medium text-foreground">{nome}</span>
+      <span className={`shrink-0 ${corAviso}`}>{aviso}</span>
     </Link>
   )
 }
 
-// Secção recolhida por omissão (Em dia / Inativos) — não é trabalho
-// pendente, só referência, por isso não precisa de estar sempre à
-// vista. Abre sozinha ao pesquisar por um nome, para a pesquisa
-// encontrar sempre toda a gente, esteja onde estiver.
+// Secção recolhida por omissão (Inativos) — não é trabalho pendente,
+// só referência, por isso não precisa de estar sempre à vista. Abre
+// sozinha ao pesquisar por um nome, para a pesquisa encontrar sempre
+// toda a gente, esteja onde estiver.
 function SeccaoColapsavel({
   titulo,
   nota,
@@ -249,6 +240,8 @@ function SeccaoColapsavel({
   )
 }
 
+const ALTURA_LISTA = 'max-h-80 overflow-y-auto'
+
 export default function ListaPagamentos({
   slug,
   atrasados,
@@ -265,7 +258,6 @@ export default function ListaPagamentos({
   const [filtro, setFiltro] = useState('')
   const ordemAtrasados = useOrdem(CAMPOS_ATRASADO_EMDIA)
   const ordemEmDia = useOrdem(CAMPOS_ATRASADO_EMDIA)
-  const [mostrarEmDia, setMostrarEmDia] = useState(false)
   const [mostrarInativos, setMostrarInativos] = useState(false)
 
   const aPesquisar = filtro.trim().length > 0
@@ -343,10 +335,8 @@ export default function ListaPagamentos({
           {aPesquisar ? 'Nenhum cliente com esse nome.' : 'Ainda não há clientes neste estúdio.'}
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Por regularizar — o que precisa mesmo de ação, por isso
-              ocupa mais espaço do que tudo o resto. */}
-          <div className="lg:col-span-2">
+        <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <div>
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-red-600">
                 Por regularizar ({atrasadosFiltrados.length})
@@ -362,9 +352,18 @@ export default function ListaPagamentos({
               )}
             </div>
             {atrasadosFiltrados.length > 0 ? (
-              <div className="mt-2 flex flex-col overflow-hidden rounded-2xl border border-red-200 shadow-card dark:border-red-900">
+              <div className={`mt-2 flex flex-col overflow-hidden rounded-xl border border-red-200 dark:border-red-900 ${ALTURA_LISTA}`}>
                 {atrasadosFiltrados.map((l, i) => (
-                  <LinhaPagamento key={l.clienteId} slug={slug} linha={l} primeira={i === 0} />
+                  <LinhaCompacta
+                    key={l.clienteId}
+                    href={`/painel/${slug}/pagamentos/${l.clienteId}`}
+                    nome={l.nome}
+                    aviso={l.situacaoLabel}
+                    corAviso="text-red-700 dark:text-red-300"
+                    corFundo="bg-red-50 hover:bg-red-100/70 dark:bg-red-950/40 dark:hover:bg-red-950/70"
+                    corBorda="border-t border-red-200 dark:border-red-900"
+                    primeira={i === 0}
+                  />
                 ))}
               </div>
             ) : (
@@ -372,53 +371,70 @@ export default function ListaPagamentos({
             )}
           </div>
 
-          {/* Seguro a renovar — aviso secundário, por isso fica mais
-              compacto: sem controlo de ordenação próprio (ordenado
-              sempre do mais urgente para o menos urgente) e com menos
-              espaço por linha. */}
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-600">
               Seguro a renovar ({segurosFiltrados.length})
             </h2>
             {segurosFiltrados.length > 0 ? (
-              <div className="mt-2 flex flex-col overflow-hidden rounded-xl border border-amber-200 dark:border-amber-900">
+              <div className={`mt-2 flex flex-col overflow-hidden rounded-xl border border-amber-200 dark:border-amber-900 ${ALTURA_LISTA}`}>
                 {segurosFiltrados.map((l, i) => (
-                  <Link
+                  <LinhaCompacta
                     key={`seguro-${l.clienteId}`}
                     href={`/painel/${slug}/pagamentos/${l.clienteId}`}
-                    className={`flex items-center justify-between gap-2 bg-amber-50 px-3 py-2 text-xs hover:bg-amber-100/70 dark:bg-amber-950/40 dark:hover:bg-amber-950/70 ${
-                      i === 0 ? '' : 'border-t border-amber-200 dark:border-amber-900'
-                    }`}
-                  >
-                    <span className="font-medium text-foreground">{l.nome}</span>
-                    <span className="shrink-0 text-amber-700 dark:text-amber-300">{l.emDividaDesdeLabel}</span>
-                  </Link>
+                    nome={l.nome}
+                    aviso={l.emDividaDesdeLabel}
+                    corAviso="text-amber-700 dark:text-amber-300"
+                    corFundo="bg-amber-50 hover:bg-amber-100/70 dark:bg-amber-950/40 dark:hover:bg-amber-950/70"
+                    corBorda="border-t border-amber-200 dark:border-amber-900"
+                    primeira={i === 0}
+                  />
                 ))}
               </div>
             ) : (
               <p className="mt-2 text-sm text-muted">Nenhum seguro a renovar.</p>
             )}
           </div>
+
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                Em dia ({emDiaFiltrados.length})
+              </h2>
+              {emDiaFiltrados.length > 1 && (
+                <SeletorOrdem
+                  campos={CAMPOS_ATRASADO_EMDIA}
+                  campo={ordemEmDia.campo}
+                  direcao={ordemEmDia.direcao}
+                  onCampo={ordemEmDia.mudarCampo}
+                  onDirecao={ordemEmDia.setDirecao}
+                />
+              )}
+            </div>
+            {emDiaFiltrados.length > 0 ? (
+              <div className={`mt-2 flex flex-col overflow-hidden rounded-xl border border-teal-200 dark:border-teal-900 ${ALTURA_LISTA}`}>
+                {emDiaFiltrados.map((l, i) => (
+                  <LinhaCompacta
+                    key={l.clienteId}
+                    href={`/painel/${slug}/pagamentos/${l.clienteId}`}
+                    nome={l.nome}
+                    aviso={l.situacaoLabel}
+                    corAviso="text-teal-700 dark:text-teal-400"
+                    corFundo="bg-surface hover:bg-brand/[.06]"
+                    corBorda="border-t border-border-subtle"
+                    primeira={i === 0}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted">Ninguém em dia.</p>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Em dia / Inativos — não são trabalho pendente, só referência,
-          por isso ficam recolhidos por omissão (abrem sozinhos ao
-          pesquisar por um nome). */}
-      <SeccaoColapsavel
-        titulo="Em dia"
-        nota="já não precisam de ação"
-        total={emDiaFiltrados.length}
-        aberta={mostrarEmDia || aPesquisar}
-        onAbrirFechar={() => setMostrarEmDia((v) => !v)}
-      >
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-teal-200 shadow-card dark:border-teal-900">
-          {emDiaFiltrados.map((l, i) => (
-            <LinhaPagamento key={l.clienteId} slug={slug} linha={l} primeira={i === 0} />
-          ))}
-        </div>
-      </SeccaoColapsavel>
-
+      {/* Inativos: não é trabalho pendente, só referência, por isso
+          fica recolhido por omissão (abre sozinho ao pesquisar por um
+          nome). */}
       <SeccaoColapsavel
         titulo="Inativos"
         nota="não contam para os pendentes nem para os seguros"
@@ -426,18 +442,18 @@ export default function ListaPagamentos({
         aberta={mostrarInativos || aPesquisar}
         onAbrirFechar={() => setMostrarInativos((v) => !v)}
       >
-        <div className="flex max-h-80 flex-col overflow-y-auto overflow-x-hidden rounded-2xl border border-border-subtle">
+        <div className={`flex flex-col overflow-hidden rounded-2xl border border-border-subtle ${ALTURA_LISTA}`}>
           {inativosFiltrados.map((l, i) => (
-            <Link
+            <LinhaCompacta
               key={l.clienteId}
               href={`/painel/${slug}/pagamentos/${l.clienteId}`}
-              className={`flex items-center justify-between gap-3 bg-surface px-4 py-3 text-sm text-muted hover:bg-brand/[.06] ${
-                i === 0 ? '' : 'border-t border-border-subtle'
-              }`}
-            >
-              <span className="font-medium text-foreground">{l.nome}</span>
-              <span className="text-xs">{l.semPagarDesdeLabel}</span>
-            </Link>
+              nome={l.nome}
+              aviso={l.semPagarDesdeLabel}
+              corAviso="text-muted"
+              corFundo="bg-surface hover:bg-brand/[.06]"
+              corBorda="border-t border-border-subtle"
+              primeira={i === 0}
+            />
           ))}
         </div>
       </SeccaoColapsavel>

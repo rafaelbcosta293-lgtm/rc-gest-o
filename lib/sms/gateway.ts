@@ -3,10 +3,9 @@
 // HTTP Basic com o utilizador/password definidos na própria app do
 // telemóvel. Documentação: https://docs.sms-gate.app
 //
-// Cada estúdio tem o seu próprio telemóvel/gateway (mesmo padrão de
-// GOOGLE_CALENDAR_ID_FATIMA/_LEIRIA) — por isso as credenciais vêm de
-// três variáveis por estúdio: SMS_GATEWAY_{URL,USERNAME,PASSWORD}_FATIMA
-// e o equivalente _LEIRIA.
+// Cada estúdio tem o seu próprio telemóvel/gateway — por isso as
+// credenciais vêm de três variáveis por estúdio:
+// SMS_GATEWAY_{URL,USERNAME,PASSWORD}_FATIMA e o equivalente _LEIRIA.
 //
 // Se o telemóvel/instância self-hosted usar uma versão da API que
 // difira neste detalhe, este é o único sítio a ajustar.

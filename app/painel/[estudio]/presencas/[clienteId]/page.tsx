@@ -243,7 +243,7 @@ export default async function PresencasClientePage({
                 {p.estado}
               </span>
               <span className="text-xs text-zinc-500">
-                {p.origem === 'calendario' ? 'Google Calendar' : (p.pt?.nome ?? '—')}
+                {p.origem === 'calendario' ? 'Calendário (histórico)' : (p.pt?.nome ?? '—')}
               </span>
               {p.nota && (
                 <span className="flex-1 truncate text-xs text-muted">

@@ -1,6 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEstudios } from '@/lib/data/estudios'
-import { calendarIdDoEstudio, clienteTemEventoFuturo, textosDeEventosFuturos } from '@/lib/google/calendar'
 import type { ClienteSemTreino } from '@/lib/supabase/database.types'
 
 // Corre uma vez por dia (agendado fora da app — Vercel Cron ou Cron do
@@ -19,19 +18,12 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient()
   const estudios = await getEstudios(admin)
+  const hoje = new Date().toISOString().slice(0, 10)
 
   const semAgendamento: { cliente_id: string }[] = []
   const porEstudio: Record<string, number> = {}
 
   for (const estudio of estudios) {
-    const calendarId = calendarIdDoEstudio(estudio.slug)
-    if (!calendarId) {
-      // Estúdio sem calendário configurado — não tem como verificar,
-      // por isso fica de fora em vez de assumir "sem agendamento" às
-      // cegas (o que inundaria as Pendências com falsos positivos).
-      continue
-    }
-
     const { data: candidatosData, error } = await admin
       .from('v_clientes_sem_treino_recente')
       .select('*')
@@ -48,8 +40,21 @@ export async function GET(request: Request) {
       continue
     }
 
-    const textosEventos = await textosDeEventosFuturos(calendarId)
-    const semEvento = candidatos.filter((c) => !clienteTemEventoFuturo(c.nome, textosEventos))
+    // Quem já tem um treino agendado na agenda interna não entra na
+    // lista, mesmo sem ter treinado recentemente — já está encaminhado.
+    const idsCandidatos = candidatos.map((c) => c.cliente_id)
+    const { data: futurosData, error: erroFuturos } = await admin
+      .from('agenda_eventos')
+      .select('cliente_id')
+      .in('cliente_id', idsCandidatos)
+      .eq('estado', 'Agendado')
+      .gte('data', hoje)
+    if (erroFuturos) {
+      return Response.json({ error: `${estudio.slug}: ${erroFuturos.message}` }, { status: 500 })
+    }
+
+    const comEventoAgendado = new Set((futurosData ?? []).map((e) => e.cliente_id))
+    const semEvento = candidatos.filter((c) => !comEventoAgendado.has(c.cliente_id))
 
     porEstudio[estudio.slug] = semEvento.length
     semAgendamento.push(...semEvento.map((c) => ({ cliente_id: c.cliente_id })))

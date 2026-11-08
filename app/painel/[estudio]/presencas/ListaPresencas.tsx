@@ -63,9 +63,11 @@ function CartaoResumo({
 }
 
 // Mesma formatação da LinhaCompacta de Pagamentos: nome a truncar à
-// esquerda, um único bloco fixo (shrink-0, nunca quebra linha) à
-// direita — aqui com estado + aviso + anel, em vez de só o aviso,
-// mas com a mesma mecânica exata.
+// esquerda, bloco fixo (shrink-0, nunca quebra linha) à direita —
+// aqui com estado + aviso + anel, em vez de só o aviso. O nome tem
+// largura fixa (em vez de ajustar-se ao texto) para a etiqueta de
+// estado começar sempre na mesma posição, linha a linha — para ver
+// a coluna de "Pendente"/"Suspenso" alinhada pela letra P.
 function LinhaCliente({
   href,
   nome,
@@ -88,17 +90,17 @@ function LinhaCliente({
   return (
     <Link
       href={href}
-      className={`flex items-center justify-between gap-2 px-3 py-2 text-xs ${corFundo} ${
-        primeira ? '' : corBorda
-      }`}
+      className={`flex items-center gap-2 px-3 py-2 text-xs ${corFundo} ${primeira ? '' : corBorda}`}
     >
-      <span className="truncate font-medium text-foreground">{nome}</span>
-      <span className="flex shrink-0 items-center gap-1.5">
+      <span className="w-32 shrink-0 truncate font-medium text-foreground">{nome}</span>
+      <span className="w-20 shrink-0">
         {estadoLabel && (
           <span className="rounded-full bg-zinc-200/70 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
             {estadoLabel}
           </span>
         )}
+      </span>
+      <span className="flex flex-1 items-center justify-end gap-1.5">
         {children}
         {pct != null && (
           <AnelProgresso size={28} strokeWidth={3} percent={pct} color={pct >= 100 ? '#1E7145' : '#0E9594'}>

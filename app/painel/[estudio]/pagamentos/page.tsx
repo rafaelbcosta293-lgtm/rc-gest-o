@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt, treinosNoPeriodo } from '@/lib/data/presencas'
 import { segurosPorPagar } from '@/lib/data/clientes'
-import ListaPagamentos, { type LinhaPagamentoAtraso, type LinhaSeguro } from './ListaPagamentos'
+import ListaPagamentos, { type LinhaPagamentoAtraso, type LinhaSeguro, type LinhaInativo } from './ListaPagamentos'
+import type { EstadoCliente } from '@/lib/supabase/database.types'
 
 type PagamentoDetalhe = {
   cliente_id: string
@@ -23,6 +24,7 @@ type ClientePagamento = {
   tipoMensalidade: string | null
   realizados: number
   adquiridos: number | null
+  estado: EstadoCliente
 }
 
 export default async function PagamentosPage({
@@ -44,7 +46,7 @@ export default async function PagamentosPage({
   // por si só, já o reativa).
   const { data, error } = await supabase
     .from('clientes')
-    .select('id, nome, frequencia_semanal')
+    .select('id, nome, frequencia_semanal, estado')
     .eq('estudio_id', estudio.id)
     .order('nome')
 
@@ -139,6 +141,7 @@ export default async function PagamentosPage({
         tipoMensalidade: null,
         realizados: 0,
         adquiridos: null,
+        estado: c.estado,
       }
     }
     const fimPeriodo = pagamento.valido_ate < hoje ? pagamento.valido_ate : hoje
@@ -162,20 +165,30 @@ export default async function PagamentosPage({
       tipoMensalidade: pagamento.plano?.nome ?? null,
       realizados,
       adquiridos,
+      estado: c.estado,
     }
   })
 
+  // Um cliente Inativo está sem pagar há muito tempo e, na prática,
+  // já não vai voltar a pagar nem a treinar — por isso não entra nos
+  // "atrasados" (que devem refletir dívida real, não histórico morto)
+  // nem no "seguro a renovar" (não faz sentido renovar o seguro de
+  // quem não treina). Fica à parte, só para continuar a ser
+  // encontrável se um dia voltar a pagar.
   const emDia = clientesComResumo.filter((c) => c.em_dia)
-  const atrasados = clientesComResumo.filter((c) => !c.em_dia)
+  const atrasados = clientesComResumo.filter((c) => !c.em_dia && c.estado !== 'Inativo')
+  const inativos = clientesComResumo.filter((c) => !c.em_dia && c.estado === 'Inativo')
 
   const inicioContratoPorCliente = new Map(
     (clientesInicioData ?? []).map((c) => [c.id, c.inicio_contrato])
   )
-  const clientesParaSeguro = clientesBase.map((c) => ({
-    id: c.id,
-    nome: c.nome,
-    inicio_contrato: inicioContratoPorCliente.get(c.id) ?? null,
-  }))
+  const clientesParaSeguro = clientesBase
+    .filter((c) => c.estado !== 'Inativo')
+    .map((c) => ({
+      id: c.id,
+      nome: c.nome,
+      inicio_contrato: inicioContratoPorCliente.get(c.id) ?? null,
+    }))
   const segurosARenovar = segurosPorPagar(
     clientesParaSeguro,
     new Date(),
@@ -207,6 +220,11 @@ export default async function PagamentosPage({
     emDividaDesdeLabel: `em dívida desde ${fmt(c.dataRenovacao)}`,
     dataReferencia: c.dataRenovacao,
   }))
+  const linhasInativos: LinhaInativo[] = inativos.map((c) => ({
+    clienteId: c.cliente_id,
+    nome: c.nome,
+    semPagarDesdeLabel: c.valido_ate ? `sem pagar desde ${fmt(c.valido_ate)}` : 'sem pagamentos',
+  }))
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -220,7 +238,7 @@ export default async function PagamentosPage({
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Pagamentos</h1>
       <p className="mt-1 text-sm text-muted">
         {estudio.nome} · {atrasados.length} {atrasados.length === 1 ? 'atrasado' : 'atrasados'} de{' '}
-        {clientesBase.length} clientes
+        {clientesBase.length - inativos.length} clientes
         {segurosARenovar.length > 0 &&
           ` · ${segurosARenovar.length} ${segurosARenovar.length === 1 ? 'seguro' : 'seguros'} a renovar`}
         .
@@ -231,6 +249,7 @@ export default async function PagamentosPage({
         atrasados={linhasAtrasados}
         emDia={linhasEmDia}
         segurosARenovar={linhasSeguros}
+        inativos={linhasInativos}
       />
     </div>
   )

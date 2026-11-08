@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01 } from 'lucide-react'
+import { ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01, ChevronDown, ChevronRight } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
 
 export type LinhaPagamentoAtraso = {
@@ -22,6 +22,12 @@ export type LinhaSeguro = {
   nome: string
   emDividaDesdeLabel: string
   dataReferencia: string
+}
+
+export type LinhaInativo = {
+  clienteId: string
+  nome: string
+  semPagarDesdeLabel: string
 }
 
 type Direcao = 'asc' | 'desc'
@@ -174,16 +180,20 @@ export default function ListaPagamentos({
   atrasados,
   emDia,
   segurosARenovar,
+  inativos,
 }: {
   slug: string
   atrasados: LinhaPagamentoAtraso[]
   emDia: LinhaPagamentoAtraso[]
   segurosARenovar: LinhaSeguro[]
+  inativos: LinhaInativo[]
 }) {
   const [filtro, setFiltro] = useState('')
   const ordemAtrasados = useOrdem(CAMPOS_ATRASADO_EMDIA)
   const ordemSeguros = useOrdem(CAMPOS_SEGURO)
   const ordemEmDia = useOrdem(CAMPOS_ATRASADO_EMDIA)
+  const [mostrarInativos, setMostrarInativos] = useState(false)
+  const [filtroInativos, setFiltroInativos] = useState('')
 
   const { atrasadosFiltrados, emDiaFiltrados, segurosFiltrados } = useMemo(() => {
     const alvo = filtro ? normalizarTexto(filtro) : null
@@ -207,6 +217,12 @@ export default function ListaPagamentos({
     ordemEmDia.campo,
     ordemEmDia.direcao,
   ])
+
+  const inativosFiltrados = useMemo(() => {
+    const alvo = filtroInativos ? normalizarTexto(filtroInativos) : null
+    const filtrados = alvo ? inativos.filter((l) => normalizarTexto(l.nome).includes(alvo)) : inativos
+    return [...filtrados].sort((a, b) => normalizarTexto(a.nome).localeCompare(normalizarTexto(b.nome)))
+  }, [inativos, filtroInativos])
 
   const semResultados =
     atrasadosFiltrados.length === 0 && emDiaFiltrados.length === 0 && segurosFiltrados.length === 0
@@ -315,6 +331,54 @@ export default function ListaPagamentos({
               <p className="mt-2 text-sm text-muted">Ninguém em dia.</p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Inativos: sem pagar há tanto tempo que, na prática, já não vão
+          voltar a pagar — por isso não entram em "Por regularizar" nem
+          em "Seguro a renovar" (não faz sentido renovar o seguro de
+          quem não treina). Ficam escondidos por omissão, só para
+          continuarem encontráveis se um dia voltarem a pagar. */}
+      {inativos.length > 0 && (
+        <div className="mt-8 border-t border-border-subtle pt-4">
+          <button
+            type="button"
+            onClick={() => setMostrarInativos((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted transition-colors hover:text-foreground"
+          >
+            {mostrarInativos ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            Inativos ({inativos.length}) — não contam para os pendentes nem para os seguros
+          </button>
+
+          {mostrarInativos && (
+            <div className="mt-3">
+              <input
+                type="text"
+                value={filtroInativos}
+                onChange={(e) => setFiltroInativos(e.target.value)}
+                placeholder="Procurar por nome…"
+                className="w-full rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
+              />
+              {inativosFiltrados.length === 0 ? (
+                <p className="mt-3 text-sm text-muted">Nenhum inativo com esse nome.</p>
+              ) : (
+                <div className="mt-3 flex max-h-80 flex-col overflow-y-auto overflow-x-hidden rounded-2xl border border-border-subtle">
+                  {inativosFiltrados.map((l, i) => (
+                    <Link
+                      key={l.clienteId}
+                      href={`/painel/${slug}/pagamentos/${l.clienteId}`}
+                      className={`flex items-center justify-between gap-3 bg-surface px-4 py-3 text-sm text-muted hover:bg-brand/[.06] ${
+                        i === 0 ? '' : 'border-t border-border-subtle'
+                      }`}
+                    >
+                      <span className="font-medium text-foreground">{l.nome}</span>
+                      <span className="text-xs">{l.semPagarDesdeLabel}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </>

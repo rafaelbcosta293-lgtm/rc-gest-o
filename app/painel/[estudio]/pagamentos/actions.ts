@@ -33,19 +33,22 @@ export async function criarPagamento(formData: FormData) {
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
 
-  const { error } = await supabase.from('pagamentos').insert({
-    cliente_id: clienteId,
-    plano_id: planoId,
-    valor: Number(valorBruto),
-    metodo,
-    data_pagamento: dataPagamento,
-    valido_ate: validoAte,
-    inclui_inscricao: formData.get('inclui_inscricao') === 'on',
-    inclui_seguro: formData.get('inclui_seguro') === 'on',
-    inclui_reativacao: formData.get('inclui_reativacao') === 'on',
-    nota: campoOuNull(formData, 'nota'),
-    registado_por: userData.user?.id ?? null,
-  })
+  const [{ error }, { data: plano }] = await Promise.all([
+    supabase.from('pagamentos').insert({
+      cliente_id: clienteId,
+      plano_id: planoId,
+      valor: Number(valorBruto),
+      metodo,
+      data_pagamento: dataPagamento,
+      valido_ate: validoAte,
+      inclui_inscricao: formData.get('inclui_inscricao') === 'on',
+      inclui_seguro: formData.get('inclui_seguro') === 'on',
+      inclui_reativacao: formData.get('inclui_reativacao') === 'on',
+      nota: campoOuNull(formData, 'nota'),
+      registado_por: userData.user?.id ?? null,
+    }),
+    supabase.from('planos').select('sessoes_por_semana').eq('id', planoId).maybeSingle(),
+  ])
 
   if (error) {
     redirect(
@@ -56,7 +59,17 @@ export async function criarPagamento(formData: FormData) {
   // Uma mensalidade paga é o sinal mais forte de que o cliente está
   // ativo: reativa sempre, mesmo que o estado tivesse sido alterado à
   // mão antes (essa exceção manual só vale até ao pagamento seguinte).
-  await supabase.from('clientes').update({ estado: 'Ativo', estado_automatico: true }).eq('id', clienteId)
+  // O plano escolhido já diz quantas vezes por semana a pessoa treina —
+  // ajusta sempre a frequência do cliente a esse valor, para nunca ficar
+  // desatualizada quando o cliente muda de pacote.
+  await supabase
+    .from('clientes')
+    .update({
+      estado: 'Ativo',
+      estado_automatico: true,
+      ...(plano?.sessoes_por_semana != null ? { frequencia_semanal: plano.sessoes_por_semana } : {}),
+    })
+    .eq('id', clienteId)
 
   revalidatePath(`/painel/${estudioSlug}/pagamentos`)
   revalidatePath(`/painel/${estudioSlug}/pagamentos/${clienteId}`)

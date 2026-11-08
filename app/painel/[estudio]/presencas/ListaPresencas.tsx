@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { TriangleAlert, CalendarX, UsersRound, type LucideIcon } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
+import AnelProgresso from '@/components/AnelProgresso'
 
 export type LinhaPresenca = {
   id: string
@@ -12,6 +13,7 @@ export type LinhaPresenca = {
   faltas: number
   avisadas: number
   alvo: number | null
+  pct: number | null
   pago: boolean
 }
 
@@ -49,13 +51,16 @@ function CartaoResumo({
 
 // Uma linha por pessoa, nome à esquerda e o que importa à direita —
 // nada de avatares decorativos, para a lista caber mais gente por
-// ecrã e ler-se de uma vez.
+// ecrã e ler-se de uma vez. O anel de progresso fica sempre no fim,
+// como pedido, a indicar visualmente a % de treinos feitos face ao
+// previsto para quem tem frequência semanal definida.
 function LinhaCliente({
   href,
   nome,
   primeira,
   corFundo,
   corBorda,
+  pct,
   children,
 }: {
   href: string
@@ -63,6 +68,7 @@ function LinhaCliente({
   primeira: boolean
   corFundo: string
   corBorda: string
+  pct: number | null
   children: ReactNode
 }) {
   return (
@@ -73,7 +79,19 @@ function LinhaCliente({
       }`}
     >
       <span className="truncate font-medium text-foreground">{nome}</span>
-      {children}
+      <div className="flex shrink-0 items-center gap-2.5">
+        {children}
+        {pct != null && (
+          <AnelProgresso
+            size={28}
+            strokeWidth={3}
+            percent={pct}
+            color={pct >= 100 ? '#1E7145' : '#0E9594'}
+          >
+            <span className="text-[9px] font-semibold text-foreground">{pct}%</span>
+          </AnelProgresso>
+        )}
+      </div>
     </Link>
   )
 }
@@ -165,8 +183,9 @@ export default function ListaPresencas({
                     primeira={i === 0}
                     corFundo="bg-red-50 hover:bg-red-100/70 dark:bg-red-950/40 dark:hover:bg-red-950/70"
                     corBorda="border-t border-red-200 dark:border-red-900"
+                    pct={l.pct}
                   >
-                    <span className="shrink-0 font-medium text-red-700 dark:text-red-300">
+                    <span className="font-medium text-red-700 dark:text-red-300">
                       ainda sem treinos
                     </span>
                   </LinhaCliente>
@@ -191,8 +210,9 @@ export default function ListaPresencas({
                     primeira={i === 0}
                     corFundo="bg-surface hover:bg-brand/[.06]"
                     corBorda="border-t border-border-subtle"
+                    pct={l.pct}
                   >
-                    <div className="flex shrink-0 items-center gap-1.5">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-muted">
                         {l.feitos}{l.alvo != null ? `/${l.alvo}` : ''} treinos
                       </span>

@@ -86,6 +86,7 @@ export default async function PresencasPage({
   const linhas: LinhaPresenca[] = (clientes ?? []).map((c) => {
     const s = statsPorCliente.get(c.id) ?? { feitos: 0, faltas: 0, avisadas: 0 }
     const alvo = treinosPrevistos(c.frequencia_semanal, ano, mes)?.arredondado ?? null
+    const pct = alvo ? Math.min(100, Math.round((s.feitos / alvo) * 100)) : null
     const validade = validadeMaximaPorCliente.get(c.id)
     return {
       id: c.id,
@@ -94,6 +95,7 @@ export default async function PresencasPage({
       faltas: s.faltas,
       avisadas: s.avisadas,
       alvo,
+      pct,
       pago: validade != null && validade >= hoje,
     }
   })

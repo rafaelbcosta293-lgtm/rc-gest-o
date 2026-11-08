@@ -13,14 +13,13 @@ describe('grupoMetodo', () => {
     expect(grupoMetodo('Numerário')).toBe('Numerário')
   })
 
-  it('agrupa MB Way e Transferência em "MB Way / SEPA"', () => {
-    expect(grupoMetodo('MB Way')).toBe('MB Way / SEPA')
-    expect(grupoMetodo('Transferência')).toBe('MB Way / SEPA')
+  it('agrupa MB Way sozinho', () => {
+    expect(grupoMetodo('MB Way')).toBe('MB Way')
   })
 
-  it('agrupa Multibanco e Cartão em TPA', () => {
-    expect(grupoMetodo('Multibanco')).toBe('TPA')
-    expect(grupoMetodo('Cartão')).toBe('TPA')
+  it('agrupa Multibanco e Transferência em "TPA / Transferências"', () => {
+    expect(grupoMetodo('Multibanco')).toBe('TPA / Transferências')
+    expect(grupoMetodo('Transferência')).toBe('TPA / Transferências')
   })
 
   it('trata método desconhecido ou nulo como Numerário', () => {
@@ -65,13 +64,17 @@ describe('somarPorGrupoMetodo', () => {
     ])
     expect(totais).toEqual({
       'Numerário': 30,
-      'MB Way / SEPA': 258.5,
-      TPA: 50,
+      'MB Way': 118.5,
+      'TPA / Transferências': 190,
     })
   })
 
   it('devolve zeros quando não há pagamentos', () => {
-    expect(somarPorGrupoMetodo([])).toEqual({ 'Numerário': 0, 'MB Way / SEPA': 0, TPA: 0 })
+    expect(somarPorGrupoMetodo([])).toEqual({
+      'Numerário': 0,
+      'MB Way': 0,
+      'TPA / Transferências': 0,
+    })
   })
 })
 

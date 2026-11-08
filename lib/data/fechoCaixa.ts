@@ -2,15 +2,15 @@ function arredondar(valor: number): number {
   return Math.round(valor * 100) / 100
 }
 
-export type GrupoMetodo = 'Numerário' | 'MB Way / SEPA' | 'TPA'
+export type GrupoMetodo = 'Numerário' | 'MB Way' | 'TPA / Transferências'
 
 // Agrupa os métodos de pagamento nas 3 categorias que o estúdio já usa
 // no fecho de caixa em papel: Numerário fica à parte (é o único que
-// passa pela gaveta física); MB Way e Transferência (SEPA) vão para o
-// mesmo grupo; Multibanco e Cartão são ambos pagos no terminal (TPA).
+// passa pela gaveta física); MB Way fica sozinho; Multibanco e
+// Transferência vão para o mesmo grupo (TPA / Transferências).
 export function grupoMetodo(metodo: string | null): GrupoMetodo {
-  if (metodo === 'MB Way' || metodo === 'Transferência') return 'MB Way / SEPA'
-  if (metodo === 'Multibanco' || metodo === 'Cartão') return 'TPA'
+  if (metodo === 'MB Way') return 'MB Way'
+  if (metodo === 'Multibanco' || metodo === 'Transferência') return 'TPA / Transferências'
   return 'Numerário'
 }
 
@@ -26,14 +26,14 @@ export function somarNumerario(pagamentos: { valor: number; metodo: string | nul
 export function somarPorGrupoMetodo(
   pagamentos: { valor: number; metodo: string | null }[]
 ): Record<GrupoMetodo, number> {
-  const totais: Record<GrupoMetodo, number> = { 'Numerário': 0, 'MB Way / SEPA': 0, TPA: 0 }
+  const totais: Record<GrupoMetodo, number> = { 'Numerário': 0, 'MB Way': 0, 'TPA / Transferências': 0 }
   for (const p of pagamentos) {
     totais[grupoMetodo(p.metodo)] += p.valor
   }
   return {
     'Numerário': arredondar(totais['Numerário']),
-    'MB Way / SEPA': arredondar(totais['MB Way / SEPA']),
-    TPA: arredondar(totais.TPA),
+    'MB Way': arredondar(totais['MB Way']),
+    'TPA / Transferências': arredondar(totais['TPA / Transferências']),
   }
 }
 

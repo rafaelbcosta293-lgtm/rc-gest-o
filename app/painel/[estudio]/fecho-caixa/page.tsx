@@ -8,6 +8,7 @@ import { fmt } from '@/lib/data/presencas'
 import {
   calcularFechoCaixa,
   descricaoPagamento,
+  grupoMetodo,
   somarNumerario,
   somarPorGrupoMetodo,
   somarSaidas,
@@ -258,17 +259,11 @@ export default async function FechoCaixaPage({
 
   const linhasPorGrupo: Record<GrupoMetodo, LinhaVenda[]> = {
     'Numerário': [],
-    'MB Way / SEPA': [],
-    TPA: [],
+    'MB Way': [],
+    'TPA / Transferências': [],
   }
   for (const p of pagamentosHoje) {
-    const grupo: GrupoMetodo =
-      p.metodo === 'MB Way' || p.metodo === 'Transferência'
-        ? 'MB Way / SEPA'
-        : p.metodo === 'Multibanco' || p.metodo === 'Cartão'
-          ? 'TPA'
-          : 'Numerário'
-    linhasPorGrupo[grupo].push({
+    linhasPorGrupo[grupoMetodo(p.metodo)].push({
       nome: p.cliente?.nome ?? '—',
       descricao: descricaoPagamento(p),
       valor: p.valor,
@@ -325,7 +320,8 @@ export default async function FechoCaixaPage({
     outrosSaidaDia,
     valorContado: 0,
   })
-  const entradasTotal = valorNumerarioDia + totaisPorGrupo['MB Way / SEPA'] + totaisPorGrupo.TPA + outrosEntradaDia
+  const entradasTotal =
+    valorNumerarioDia + totaisPorGrupo['MB Way'] + totaisPorGrupo['TPA / Transferências'] + outrosEntradaDia
   const saidasTotal = saidasCaixaDia + outrosSaidaDia
 
   return (
@@ -365,12 +361,14 @@ export default async function FechoCaixaPage({
       <TabelaVendas linhas={linhasPorGrupo['Numerário']} />
 
       <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Entradas MB Way / SEPA
+        Entradas MB Way
       </h2>
-      <TabelaVendas linhas={linhasPorGrupo['MB Way / SEPA']} />
+      <TabelaVendas linhas={linhasPorGrupo['MB Way']} />
 
-      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Entradas TPA</h2>
-      <TabelaVendas linhas={linhasPorGrupo.TPA} />
+      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        Entradas TPA / Transferências
+      </h2>
+      <TabelaVendas linhas={linhasPorGrupo['TPA / Transferências']} />
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
         Saídas de caixa (sangria ou compras)

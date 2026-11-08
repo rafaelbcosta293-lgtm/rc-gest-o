@@ -230,7 +230,7 @@ function SeccaoColapsavel({
       <button
         type="button"
         onClick={onAbrirFechar}
-        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted transition-colors hover:text-foreground"
+        className="flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted shadow-card transition-colors hover:border-border-strong hover:bg-brand/[.06] hover:text-foreground"
       >
         {aberta ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         {titulo} ({total}) — {nota}

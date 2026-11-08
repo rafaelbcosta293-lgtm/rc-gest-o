@@ -17,11 +17,28 @@ export type FechoCaixa = {
   data: string
   valor_numerario_dia: number
   saldo_anterior: number
+  saidas_caixa_dia: number
   valor_contado: number
   nota: string | null
   registado_por: string | null
   criado_em: string
   atualizado_em: string
+}
+
+export type TipoSaidaCaixa = 'Sangria' | 'Compra'
+
+export type SaidaCaixa = {
+  id: string
+  estudio_id: number
+  data: string
+  tipo: TipoSaidaCaixa
+  valor: number
+  descricao: string | null
+  registado_por: string | null
+  criado_em: string
+  anulado_em: string | null
+  anulado_por: string | null
+  motivo_anulacao: string | null
 }
 
 export type Perfil = {

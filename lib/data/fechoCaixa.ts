@@ -11,16 +11,24 @@ export function somarNumerario(pagamentos: { valor: number; metodo: string | nul
   )
 }
 
+// Sangrias e compras pagas com o dinheiro da gaveta — tudo o que sai
+// da caixa física sem ser pagamento a um cliente.
+export function somarSaidas(saidas: { valor: number }[]): number {
+  return arredondar(saidas.reduce((soma, s) => soma + s.valor, 0))
+}
+
 export function calcularFechoCaixa({
   saldoAnterior,
   valorNumerarioDia,
+  saidasCaixaDia,
   valorContado,
 }: {
   saldoAnterior: number
   valorNumerarioDia: number
+  saidasCaixaDia: number
   valorContado: number
 }): { valorEsperado: number; diferenca: number } {
-  const valorEsperado = arredondar(saldoAnterior + valorNumerarioDia)
+  const valorEsperado = arredondar(saldoAnterior + valorNumerarioDia - saidasCaixaDia)
   return {
     valorEsperado,
     diferenca: arredondar(valorContado - valorEsperado),

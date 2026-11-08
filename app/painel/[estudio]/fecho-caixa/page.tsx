@@ -3,18 +3,34 @@ import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { fmt } from '@/lib/data/presencas'
-import { calcularFechoCaixa, somarNumerario } from '@/lib/data/fechoCaixa'
-import { registarFechoCaixa } from './actions'
+import { calcularFechoCaixa, somarNumerario, somarSaidas } from '@/lib/data/fechoCaixa'
+import { registarFechoCaixa, registarSaidaCaixa, anularSaidaCaixa } from './actions'
 import SubmitButton from '@/components/SubmitButton'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
+import type { TipoSaidaCaixa } from '@/lib/supabase/database.types'
+
+const TIPOS_SAIDA: TipoSaidaCaixa[] = ['Sangria', 'Compra']
 
 type FechoResumo = {
   id: string
   data: string
   valor_numerario_dia: number
   saldo_anterior: number
+  saidas_caixa_dia: number
   valor_contado: number
   nota: string | null
+}
+
+type SaidaHoje = {
+  id: string
+  tipo: TipoSaidaCaixa
+  valor: number
+  descricao: string | null
+  anulado_em: string | null
+  motivo_anulacao: string | null
+  anulado: { nome: string } | null
 }
 
 function corDiferenca(diferenca: number): string {
@@ -90,15 +106,17 @@ export default async function FechoCaixaPage({
   const hoje = new Date().toISOString().slice(0, 10)
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
+  const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
   if (!estudio) {
     notFound()
   }
+  const { ehGestao } = papeisDaSessao(sessao)
 
   const [
     { data: clientes, error: erroClientes },
     { data: fechoHojeData, error: erroFechoHoje },
     { data: recentesData, error: erroRecentes },
+    { data: saidasHojeData, error: erroSaidasHoje },
   ] = await Promise.all([
     supabase.from('clientes').select('id').eq('estudio_id', estudio.id),
     supabase.from('fechos_caixa').select('*').eq('estudio_id', estudio.id).eq('data', hoje).maybeSingle(),
@@ -108,15 +126,23 @@ export default async function FechoCaixaPage({
     // repetir a mesma consulta.
     supabase
       .from('fechos_caixa')
-      .select('id, data, valor_numerario_dia, saldo_anterior, valor_contado, nota')
+      .select('id, data, valor_numerario_dia, saldo_anterior, saidas_caixa_dia, valor_contado, nota')
       .eq('estudio_id', estudio.id)
       .lt('data', hoje)
       .order('data', { ascending: false })
       .limit(6),
+    // Todas as saídas de hoje, incluindo anuladas — para mostrar na
+    // lista riscadas, tal como o histórico de pagamentos.
+    supabase
+      .from('saidas_caixa')
+      .select('id, tipo, valor, descricao, anulado_em, motivo_anulacao, anulado:perfis!anulado_por(nome)')
+      .eq('estudio_id', estudio.id)
+      .eq('data', hoje)
+      .order('criado_em', { ascending: false }),
   ])
 
-  if (erroClientes || erroFechoHoje || erroRecentes) {
-    throw new Error((erroClientes ?? erroFechoHoje ?? erroRecentes)!.message)
+  if (erroClientes || erroFechoHoje || erroRecentes || erroSaidasHoje) {
+    throw new Error((erroClientes ?? erroFechoHoje ?? erroRecentes ?? erroSaidasHoje)!.message)
   }
 
   const idsClientes = (clientes ?? []).map((c) => c.id)
@@ -135,11 +161,17 @@ export default async function FechoCaixaPage({
   const valorNumerarioDia = somarNumerario(
     (pagamentosHojeData ?? []).map((p) => ({ valor: Number(p.valor), metodo: p.metodo }))
   )
+  const saidasHoje = ((saidasHojeData ?? []) as unknown as SaidaHoje[]).map((s) => ({
+    ...s,
+    valor: Number(s.valor),
+  }))
+  const saidasCaixaDia = somarSaidas(saidasHoje.filter((s) => !s.anulado_em))
 
   const recentes: FechoResumo[] = (recentesData ?? []).map((f) => ({
     ...f,
     valor_numerario_dia: Number(f.valor_numerario_dia),
     saldo_anterior: Number(f.saldo_anterior),
+    saidas_caixa_dia: Number(f.saidas_caixa_dia),
     valor_contado: Number(f.valor_contado),
   }))
 
@@ -148,6 +180,7 @@ export default async function FechoCaixaPage({
         ...fechoHojeData,
         valor_numerario_dia: Number(fechoHojeData.valor_numerario_dia),
         saldo_anterior: Number(fechoHojeData.saldo_anterior),
+        saidas_caixa_dia: Number(fechoHojeData.saidas_caixa_dia),
         valor_contado: Number(fechoHojeData.valor_contado),
       }
     : null
@@ -160,6 +193,7 @@ export default async function FechoCaixaPage({
   const { valorEsperado } = calcularFechoCaixa({
     saldoAnterior,
     valorNumerarioDia,
+    saidasCaixaDia,
     valorContado: 0,
   })
 
@@ -193,6 +227,10 @@ export default async function FechoCaixaPage({
             <dt className="text-xs text-muted">Numerário recebido hoje</dt>
             <dd className="font-semibold text-foreground">{valorNumerarioDia.toFixed(2)} €</dd>
           </div>
+          <div>
+            <dt className="text-xs text-muted">Saídas de caixa hoje</dt>
+            <dd className="font-semibold text-foreground">-{saidasCaixaDia.toFixed(2)} €</dd>
+          </div>
           <div className="col-span-2 border-t border-border-subtle pt-3">
             <dt className="text-xs text-muted">Valor esperado em caixa</dt>
             <dd className="text-lg font-bold text-foreground">{valorEsperado.toFixed(2)} €</dd>
@@ -200,7 +238,99 @@ export default async function FechoCaixaPage({
         </dl>
       </div>
 
-      <div className="mt-6 rounded-xl border border-border-subtle bg-surface p-5">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        Saídas de caixa (sangria ou compras)
+      </h2>
+      <form action={registarSaidaCaixa} className="mt-3 flex flex-wrap items-end gap-3">
+        <input type="hidden" name="estudio_slug" value={slug} />
+        <input type="hidden" name="estudio_id" value={estudio.id} />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Tipo</label>
+          <select
+            name="tipo"
+            className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none dark:bg-zinc-900"
+          >
+            {TIPOS_SAIDA.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Valor (€)</label>
+          <input
+            name="valor"
+            type="number"
+            step="0.01"
+            min="0.01"
+            required
+            className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30"
+          />
+        </div>
+        <div className="flex flex-1 basis-40 flex-col gap-1.5">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Descrição</label>
+          <input
+            name="descricao"
+            placeholder="Ex.: material de limpeza"
+            className="w-full rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30"
+          />
+        </div>
+        <SubmitButton
+          pendingText="A guardar…"
+          className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
+        >
+          Registar saída
+        </SubmitButton>
+      </form>
+
+      {saidasHoje.length > 0 && (
+        <div className="mt-3 flex flex-col gap-2">
+          {saidasHoje.map((s) => (
+            <div
+              key={s.id}
+              className={`flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface p-3 text-sm ${s.anulado_em ? 'opacity-50' : ''}`}
+            >
+              <span className={`font-medium text-foreground ${s.anulado_em ? 'line-through' : ''}`}>
+                {s.valor.toFixed(2)}€
+              </span>
+              <span className="text-xs text-zinc-500">{s.tipo}</span>
+              {s.descricao && <span className="text-xs text-zinc-500">{s.descricao}</span>}
+              {s.anulado_em ? (
+                <span className="w-full text-xs font-medium text-red-600">
+                  Anulado{s.anulado ? ` por ${s.anulado.nome}` : ''}
+                  {s.motivo_anulacao ? ` · ${s.motivo_anulacao}` : ''}
+                </span>
+              ) : (
+                ehGestao && (
+                  <ConfirmarAcao
+                    action={anularSaidaCaixa}
+                    confirmacao={`Anular a saída de ${s.valor.toFixed(2)}€ (${s.tipo})? Fica registado quem anulou e porquê — não pode ser desfeito.`}
+                    className="ml-auto flex items-center gap-1.5"
+                  >
+                    <input type="hidden" name="estudio_slug" value={slug} />
+                    <input type="hidden" name="id" value={s.id} />
+                    <input
+                      name="motivo"
+                      placeholder="Motivo da anulação"
+                      className="w-40 rounded-md border border-border-subtle px-2 py-1 text-xs dark:bg-zinc-900"
+                    />
+                    <SubmitButton
+                      pendingText="…"
+                      aria-label="Anular"
+                      className="text-lg text-zinc-400 hover:text-red-600"
+                    >
+                      ×
+                    </SubmitButton>
+                  </ConfirmarAcao>
+                )
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-8 rounded-xl border border-border-subtle bg-surface p-5">
         {fechoHoje ? (
           <>
             <h2 className="font-semibold text-foreground">Fecho de hoje já registado</h2>
@@ -248,7 +378,7 @@ export default async function FechoCaixaPage({
       )}
       <div className="mt-3 flex flex-col gap-2">
         {recentes.map((f) => {
-          const diferenca = f.valor_contado - (f.saldo_anterior + f.valor_numerario_dia)
+          const diferenca = f.valor_contado - (f.saldo_anterior + f.valor_numerario_dia - f.saidas_caixa_dia)
           return (
             <div
               key={f.id}

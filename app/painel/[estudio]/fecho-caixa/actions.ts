@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { calcularFechoCaixa, somarNumerario } from '@/lib/data/fechoCaixa'
+import { calcularFechoCaixa, somarNumerario, somarSaidas } from '@/lib/data/fechoCaixa'
 import { fmt } from '@/lib/data/presencas'
 
 const REGRA_DIFERENCA_FECHO = 'fecho_caixa_diferenca'
@@ -60,23 +60,32 @@ export async function registarFechoCaixa(formData: FormData) {
 
   const idsClientes = (clientes ?? []).map((c) => c.id)
 
-  const { data: pagamentosHoje, error: erroPagamentos } = idsClientes.length
-    ? await supabase
-        .from('pagamentos_ativos')
-        .select('valor, metodo')
-        .in('cliente_id', idsClientes)
-        .eq('data_pagamento', hoje)
-    : { data: [], error: null }
+  const [
+    { data: pagamentosHoje, error: erroPagamentos },
+    { data: saidasHoje, error: erroSaidas },
+  ] = await Promise.all([
+    idsClientes.length
+      ? supabase
+          .from('pagamentos_ativos')
+          .select('valor, metodo')
+          .in('cliente_id', idsClientes)
+          .eq('data_pagamento', hoje)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from('saidas_caixa_ativas').select('valor').eq('estudio_id', estudioId).eq('data', hoje),
+  ])
 
-  if (erroPagamentos) {
-    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(erroPagamentos.message)}`)
+  if (erroPagamentos || erroSaidas) {
+    redirect(
+      `/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent((erroPagamentos ?? erroSaidas)!.message)}`
+    )
   }
 
   const valorNumerarioDia = somarNumerario(
     (pagamentosHoje ?? []).map((p) => ({ valor: Number(p.valor), metodo: p.metodo }))
   )
+  const saidasCaixaDia = somarSaidas((saidasHoje ?? []).map((s) => ({ valor: Number(s.valor) })))
   const saldoAnterior = await obterSaldoAnterior(supabase, estudioId, hoje)
-  const { diferenca } = calcularFechoCaixa({ saldoAnterior, valorNumerarioDia, valorContado })
+  const { diferenca } = calcularFechoCaixa({ saldoAnterior, valorNumerarioDia, saidasCaixaDia, valorContado })
 
   const { error } = await supabase.from('fechos_caixa').upsert(
     {
@@ -84,6 +93,7 @@ export async function registarFechoCaixa(formData: FormData) {
       data: hoje,
       valor_numerario_dia: valorNumerarioDia,
       saldo_anterior: saldoAnterior,
+      saidas_caixa_dia: saidasCaixaDia,
       valor_contado: valorContado,
       nota,
       registado_por: userData.user?.id ?? null,
@@ -138,4 +148,66 @@ async function avisarGestaoSeDiferente(
       'O valor contado na caixa não coincide com o valor esperado (saldo anterior + numerário recebido hoje). ' +
       'Confirma o fecho de caixa deste dia.',
   })
+}
+
+// Sangria ou compra pagas com o dinheiro da gaveta — qualquer
+// PT/funcionário pode registar (mesma regra já decidida para o resto
+// do fecho de caixa), sem gestão.
+export async function registarSaidaCaixa(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const estudioId = Number(formData.get('estudio_id'))
+  const tipo = formData.get('tipo') as string
+  const valor = Number(formData.get('valor'))
+  const descricao = (formData.get('descricao') as string)?.trim() || null
+  const hoje = new Date().toISOString().slice(0, 10)
+  const supabase = await createClient()
+
+  if (!Number.isFinite(valor) || valor <= 0) {
+    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent('Indica o valor da saída.')}`)
+  }
+
+  const { data: userData } = await supabase.auth.getUser()
+
+  const { error } = await supabase.from('saidas_caixa').insert({
+    estudio_id: estudioId,
+    data: hoje,
+    tipo,
+    valor,
+    descricao,
+    registado_por: userData.user?.id ?? null,
+  })
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/fecho-caixa`)
+  redirect(`/painel/${estudioSlug}/fecho-caixa`)
+}
+
+// Nunca apaga a sério — fica a linha, marcada como anulada (quem,
+// quando, porquê), tal como a anulação de pagamentos. Só a gestão
+// consegue (RLS "anular_saidas_caixa", e_gestao()).
+export async function anularSaidaCaixa(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const motivo = (formData.get('motivo') as string)?.trim() || null
+  const supabase = await createClient()
+  const { data: userData } = await supabase.auth.getUser()
+
+  const { error } = await supabase
+    .from('saidas_caixa')
+    .update({
+      anulado_em: new Date().toISOString(),
+      anulado_por: userData.user?.id ?? null,
+      motivo_anulacao: motivo,
+    })
+    .eq('id', id)
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/fecho-caixa`)
+  redirect(`/painel/${estudioSlug}/fecho-caixa`)
 }

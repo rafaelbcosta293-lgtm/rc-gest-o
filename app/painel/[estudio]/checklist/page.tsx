@@ -43,6 +43,7 @@ export default async function ChecklistPage({
     { data: deHoje, error: erroHoje },
     { data: recentes, error: erroRecentes },
     { data: modeloData, error: erroModelo },
+    { data: fechoCaixaHoje, error: erroFechoCaixaHoje },
   ] = await Promise.all([
     supabase
       .from('checklist_registos')
@@ -58,15 +59,17 @@ export default async function ChecklistPage({
       .order('hora', { ascending: false })
       .limit(6),
     supabase.from('checklist_modelo').select('*').eq('ativo', true).order('ordem'),
+    supabase.from('fechos_caixa').select('id').eq('estudio_id', estudio.id).eq('data', hoje).maybeSingle(),
   ])
 
-  if (erroHoje || erroRecentes || erroModelo) {
-    throw new Error((erroHoje ?? erroRecentes ?? erroModelo)!.message)
+  if (erroHoje || erroRecentes || erroModelo || erroFechoCaixaHoje) {
+    throw new Error((erroHoje ?? erroRecentes ?? erroModelo ?? erroFechoCaixaHoje)!.message)
   }
 
   const registosHoje = (deHoje ?? []) as RegistoResumo[]
   const modelo = (modeloData ?? []) as ChecklistModelo[]
   const historico = (recentes ?? []) as RegistoResumo[]
+  const fechoCaixaFeitoHoje = fechoCaixaHoje != null
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -90,7 +93,7 @@ export default async function ChecklistPage({
         </p>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {TIPOS.map((tipo) => {
           const registo = registosHoje.find((r) => r.tipo === tipo)
           return (
@@ -135,6 +138,19 @@ export default async function ChecklistPage({
             </div>
           )
         })}
+
+        <div className="rounded-xl border border-border-subtle bg-surface p-5">
+          <h2 className="font-semibold text-foreground">Fecho de Caixa</h2>
+          <p className="mt-1 text-sm text-muted">
+            {fechoCaixaFeitoHoje ? 'Já registado hoje' : 'Ainda não registado hoje'}
+          </p>
+          <Link
+            href={`/painel/${slug}/fecho-caixa`}
+            className="mt-3 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+          >
+            {fechoCaixaFeitoHoje ? 'Ver fecho' : 'Registar fecho'}
+          </Link>
+        </div>
       </div>
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">

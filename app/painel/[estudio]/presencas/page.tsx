@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { treinosPrevistos, intervaloMes, MESES } from '@/lib/data/presencas'
-import { corInstrutor } from '@/lib/data/constantes'
 import ListaPresencas, { type LinhaPresenca } from './ListaPresencas'
 
 export default async function PresencasPage({
@@ -35,17 +34,33 @@ export default async function PresencasPage({
 
   const ids = (clientes ?? []).map((c) => c.id)
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)
-  const { data: presencas, error: erroPresencas } = ids.length
-    ? await supabase
-        .from('presencas')
-        .select('cliente_id, estado')
-        .in('cliente_id', ids)
-        .gte('data', inicio)
-        .lt('data', fimExclusivo)
-    : { data: [], error: null }
+  const hoje = new Date().toISOString().slice(0, 10)
 
-  if (erroPresencas) {
-    throw new Error(erroPresencas.message)
+  // Estas duas só precisam dos ids dos clientes, não dos resultados uma
+  // da outra — correm ao mesmo tempo.
+  const [
+    { data: presencas, error: erroPresencas },
+    { data: pagamentosData, error: erroPagamentos },
+  ] = ids.length
+    ? await Promise.all([
+        supabase
+          .from('presencas')
+          .select('cliente_id, estado')
+          .in('cliente_id', ids)
+          .gte('data', inicio)
+          .lt('data', fimExclusivo),
+        // Só a validade mais distante de cada cliente interessa aqui —
+        // é o que diz se está pago para hoje, independentemente de qual
+        // pagamento a cobre.
+        supabase.from('pagamentos').select('cliente_id, valido_ate').in('cliente_id', ids),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+      ]
+
+  if (erroPresencas || erroPagamentos) {
+    throw new Error((erroPresencas ?? erroPagamentos)!.message)
   }
 
   const statsPorCliente = new Map<string, { feitos: number; faltas: number; avisadas: number }>()
@@ -57,25 +72,29 @@ export default async function PresencasPage({
     statsPorCliente.set(p.cliente_id, s)
   }
 
+  const validadeMaximaPorCliente = new Map<string, string>()
+  for (const p of pagamentosData ?? []) {
+    const atual = validadeMaximaPorCliente.get(p.cliente_id)
+    if (!atual || p.valido_ate > atual) {
+      validadeMaximaPorCliente.set(p.cliente_id, p.valido_ate)
+    }
+  }
+
   const mesAnterior = mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 }
   const mesSeguinte = mes === 12 ? { ano: ano + 1, mes: 1 } : { ano, mes: mes + 1 }
 
-  const linhas: LinhaPresenca[] = (clientes ?? []).map((c, indice) => {
+  const linhas: LinhaPresenca[] = (clientes ?? []).map((c) => {
     const s = statsPorCliente.get(c.id) ?? { feitos: 0, faltas: 0, avisadas: 0 }
     const alvo = treinosPrevistos(c.frequencia_semanal, ano, mes)?.arredondado ?? null
-    const pct = alvo ? Math.min(100, Math.round((s.feitos / alvo) * 100)) : null
-    const cor = corInstrutor(indice)
+    const validade = validadeMaximaPorCliente.get(c.id)
     return {
       id: c.id,
       nome: c.nome,
-      frequenciaSemanal: c.frequencia_semanal,
       feitos: s.feitos,
       faltas: s.faltas,
       avisadas: s.avisadas,
       alvo,
-      pct,
-      corBg: cor.bg,
-      corTx: cor.tx,
+      pago: validade != null && validade >= hoje,
     }
   })
 

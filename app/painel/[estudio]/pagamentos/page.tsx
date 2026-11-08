@@ -159,7 +159,9 @@ export default async function PagamentosPage({
         ? c.valido_ate
           ? `venceu em ${fmt(c.valido_ate)}`
           : 'sem pagamentos'
-        : `pago em ${fmt(c.dataPagamento)} · válido até ${fmt(c.valido_ate)}`,
+        // "Em dia" já não mostra este texto — a lista passou a ter as
+        // colunas "Pagamento"/"Validade" com as datas em separado.
+        : `válido até ${fmt(c.valido_ate)}`,
     dataReferencia: c.valido_ate,
     dataPagamento: c.dataPagamento,
   })
@@ -168,7 +170,6 @@ export default async function PagamentosPage({
   const linhasSeguros: LinhaSeguro[] = segurosARenovar.map((c) => ({
     clienteId: c.id,
     nome: c.nome,
-    emDividaDesdeLabel: `em dívida desde ${fmt(c.dataRenovacao)}`,
     dataReferencia: c.dataRenovacao,
   }))
   const linhasInativos: LinhaInativo[] = inativos.map((c) => ({

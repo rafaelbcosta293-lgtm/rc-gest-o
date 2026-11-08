@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
+import { fmt } from '@/lib/data/presencas'
 
 export type LinhaPagamentoAtraso = {
   clienteId: string
@@ -29,7 +30,6 @@ export type LinhaPagamentoAtraso = {
 export type LinhaSeguro = {
   clienteId: string
   nome: string
-  emDividaDesdeLabel: string
   dataReferencia: string
 }
 
@@ -172,22 +172,20 @@ function CartaoResumo({
   )
 }
 
-// Uma linha por pessoa, nome + aviso, nada mais — o plano e o
+// Uma linha por pessoa, nome + colunas, nada mais — o plano e o
 // progresso de treinos já vivem na ficha de pagamentos do próprio
 // cliente (um clique de distância), não precisam de repetir-se aqui.
 function LinhaCompacta({
   href,
   nome,
-  aviso,
-  corAviso,
+  colunas,
   primeira,
   corFundo,
   corBorda,
 }: {
   href: string
   nome: string
-  aviso: string
-  corAviso: string
+  colunas: ReactNode
   primeira: boolean
   corFundo: string
   corBorda: string
@@ -200,8 +198,34 @@ function LinhaCompacta({
       }`}
     >
       <span className="truncate font-medium text-foreground">{nome}</span>
-      <span className={`shrink-0 ${corAviso}`}>{aviso}</span>
+      <span className="flex shrink-0 items-center gap-3">{colunas}</span>
     </Link>
+  )
+}
+
+// Uma data, com largura fixa — para ficar alinhada com o título da
+// coluna por cima (ver CabecalhoColunas) em vez de cada linha ter o
+// texto todo repetido ("em dívida desde...", "pago em...").
+function ColunaData({ valor, cor }: { valor: string; cor: string }) {
+  return <span className={`w-20 shrink-0 text-right ${cor}`}>{valor}</span>
+}
+
+// Título da(s) coluna(s) de data, por cima da lista — como um
+// cabeçalho de tabela — para as linhas poderem mostrar só a data,
+// sem repetir "em dívida desde" / "pago em" / "válido até" em cada
+// uma, o que tornava a lista mais difícil de ler.
+function CabecalhoColunas({ titulos }: { titulos: string[] }) {
+  return (
+    <div className="mt-2 flex items-center justify-end gap-3 px-3">
+      {titulos.map((t) => (
+        <span
+          key={t}
+          className="w-20 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wide text-muted"
+        >
+          {t}
+        </span>
+      ))}
+    </div>
   )
 }
 
@@ -358,8 +382,7 @@ export default function ListaPagamentos({
                     key={l.clienteId}
                     href={`/painel/${slug}/pagamentos/${l.clienteId}`}
                     nome={l.nome}
-                    aviso={l.situacaoLabel}
-                    corAviso="text-red-700 dark:text-red-300"
+                    colunas={<span className="text-red-700 dark:text-red-300">{l.situacaoLabel}</span>}
                     corFundo="bg-red-50 hover:bg-red-100/70 dark:bg-red-950/40 dark:hover:bg-red-950/70"
                     corBorda="border-t border-red-200 dark:border-red-900"
                     primeira={i === 0}
@@ -376,20 +399,24 @@ export default function ListaPagamentos({
               Seguro a renovar ({segurosFiltrados.length})
             </h2>
             {segurosFiltrados.length > 0 ? (
-              <div className={`mt-2 flex flex-col overflow-hidden rounded-xl border border-amber-200 dark:border-amber-900 ${ALTURA_LISTA}`}>
-                {segurosFiltrados.map((l, i) => (
-                  <LinhaCompacta
-                    key={`seguro-${l.clienteId}`}
-                    href={`/painel/${slug}/pagamentos/${l.clienteId}`}
-                    nome={l.nome}
-                    aviso={l.emDividaDesdeLabel}
-                    corAviso="text-amber-700 dark:text-amber-300"
-                    corFundo="bg-amber-50 hover:bg-amber-100/70 dark:bg-amber-950/40 dark:hover:bg-amber-950/70"
-                    corBorda="border-t border-amber-200 dark:border-amber-900"
-                    primeira={i === 0}
-                  />
-                ))}
-              </div>
+              <>
+                <CabecalhoColunas titulos={['Em dívida']} />
+                <div className={`mt-1 flex flex-col overflow-hidden rounded-xl border border-amber-200 dark:border-amber-900 ${ALTURA_LISTA}`}>
+                  {segurosFiltrados.map((l, i) => (
+                    <LinhaCompacta
+                      key={`seguro-${l.clienteId}`}
+                      href={`/painel/${slug}/pagamentos/${l.clienteId}`}
+                      nome={l.nome}
+                      colunas={
+                        <ColunaData valor={fmt(l.dataReferencia)} cor="text-amber-700 dark:text-amber-300" />
+                      }
+                      corFundo="bg-amber-50 hover:bg-amber-100/70 dark:bg-amber-950/40 dark:hover:bg-amber-950/70"
+                      corBorda="border-t border-amber-200 dark:border-amber-900"
+                      primeira={i === 0}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
               <p className="mt-2 text-sm text-muted">Nenhum seguro a renovar.</p>
             )}
@@ -411,20 +438,27 @@ export default function ListaPagamentos({
               )}
             </div>
             {emDiaFiltrados.length > 0 ? (
-              <div className={`mt-2 flex flex-col overflow-hidden rounded-xl border border-teal-200 dark:border-teal-900 ${ALTURA_LISTA}`}>
+              <>
+                <CabecalhoColunas titulos={['Pagamento', 'Validade']} />
+                <div className={`mt-1 flex flex-col overflow-hidden rounded-xl border border-teal-200 dark:border-teal-900 ${ALTURA_LISTA}`}>
                 {emDiaFiltrados.map((l, i) => (
                   <LinhaCompacta
                     key={l.clienteId}
                     href={`/painel/${slug}/pagamentos/${l.clienteId}`}
                     nome={l.nome}
-                    aviso={l.situacaoLabel}
-                    corAviso="text-teal-700 dark:text-teal-400"
+                    colunas={
+                      <>
+                        <ColunaData valor={fmt(l.dataPagamento)} cor="text-teal-700 dark:text-teal-400" />
+                        <ColunaData valor={fmt(l.dataReferencia)} cor="text-teal-700 dark:text-teal-400" />
+                      </>
+                    }
                     corFundo="bg-surface hover:bg-brand/[.06]"
                     corBorda="border-t border-border-subtle"
                     primeira={i === 0}
                   />
                 ))}
-              </div>
+                </div>
+              </>
             ) : (
               <p className="mt-2 text-sm text-muted">Ninguém em dia.</p>
             )}
@@ -448,8 +482,7 @@ export default function ListaPagamentos({
               key={l.clienteId}
               href={`/painel/${slug}/pagamentos/${l.clienteId}`}
               nome={l.nome}
-              aviso={l.semPagarDesdeLabel}
-              corAviso="text-muted"
+              colunas={<span className="text-muted">{l.semPagarDesdeLabel}</span>}
               corFundo="bg-surface hover:bg-brand/[.06]"
               corBorda="border-t border-border-subtle"
               primeira={i === 0}

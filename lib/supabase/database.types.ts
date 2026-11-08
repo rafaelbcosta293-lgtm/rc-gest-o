@@ -18,6 +18,8 @@ export type FechoCaixa = {
   valor_numerario_dia: number
   saldo_anterior: number
   saidas_caixa_dia: number
+  outros_entrada_dia: number
+  outros_saida_dia: number
   valor_contado: number
   nota: string | null
   registado_por: string | null
@@ -34,6 +36,23 @@ export type SaidaCaixa = {
   tipo: TipoSaidaCaixa
   valor: number
   descricao: string | null
+  registado_por: string | null
+  criado_em: string
+  anulado_em: string | null
+  anulado_por: string | null
+  motivo_anulacao: string | null
+}
+
+export type TipoMovimentoOutros = 'Entrada' | 'Saída'
+
+export type OutroCaixa = {
+  id: string
+  estudio_id: number
+  data: string
+  tipo: TipoMovimentoOutros
+  documento: string | null
+  descricao: string | null
+  valor: number
   registado_por: string | null
   criado_em: string
   anulado_em: string | null

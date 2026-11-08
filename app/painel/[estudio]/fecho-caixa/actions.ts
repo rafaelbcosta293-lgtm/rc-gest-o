@@ -63,6 +63,7 @@ export async function registarFechoCaixa(formData: FormData) {
   const [
     { data: pagamentosHoje, error: erroPagamentos },
     { data: saidasHoje, error: erroSaidas },
+    { data: outrosHoje, error: erroOutros },
   ] = await Promise.all([
     idsClientes.length
       ? supabase
@@ -72,11 +73,12 @@ export async function registarFechoCaixa(formData: FormData) {
           .eq('data_pagamento', hoje)
       : Promise.resolve({ data: [], error: null }),
     supabase.from('saidas_caixa_ativas').select('valor').eq('estudio_id', estudioId).eq('data', hoje),
+    supabase.from('outros_caixa_ativos').select('tipo, valor').eq('estudio_id', estudioId).eq('data', hoje),
   ])
 
-  if (erroPagamentos || erroSaidas) {
+  if (erroPagamentos || erroSaidas || erroOutros) {
     redirect(
-      `/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent((erroPagamentos ?? erroSaidas)!.message)}`
+      `/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent((erroPagamentos ?? erroSaidas ?? erroOutros)!.message)}`
     )
   }
 
@@ -84,8 +86,21 @@ export async function registarFechoCaixa(formData: FormData) {
     (pagamentosHoje ?? []).map((p) => ({ valor: Number(p.valor), metodo: p.metodo }))
   )
   const saidasCaixaDia = somarSaidas((saidasHoje ?? []).map((s) => ({ valor: Number(s.valor) })))
+  const outrosEntradaDia = somarSaidas(
+    (outrosHoje ?? []).filter((o) => o.tipo === 'Entrada').map((o) => ({ valor: Number(o.valor) }))
+  )
+  const outrosSaidaDia = somarSaidas(
+    (outrosHoje ?? []).filter((o) => o.tipo === 'Saída').map((o) => ({ valor: Number(o.valor) }))
+  )
   const saldoAnterior = await obterSaldoAnterior(supabase, estudioId, hoje)
-  const { diferenca } = calcularFechoCaixa({ saldoAnterior, valorNumerarioDia, saidasCaixaDia, valorContado })
+  const { diferenca } = calcularFechoCaixa({
+    saldoAnterior,
+    valorNumerarioDia,
+    saidasCaixaDia,
+    outrosEntradaDia,
+    outrosSaidaDia,
+    valorContado,
+  })
 
   const { error } = await supabase.from('fechos_caixa').upsert(
     {
@@ -94,6 +109,8 @@ export async function registarFechoCaixa(formData: FormData) {
       valor_numerario_dia: valorNumerarioDia,
       saldo_anterior: saldoAnterior,
       saidas_caixa_dia: saidasCaixaDia,
+      outros_entrada_dia: outrosEntradaDia,
+      outros_saida_dia: outrosSaidaDia,
       valor_contado: valorContado,
       nota,
       registado_por: userData.user?.id ?? null,
@@ -176,6 +193,70 @@ export async function registarSaidaCaixa(formData: FormData) {
     descricao,
     registado_por: userData.user?.id ?? null,
   })
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/fecho-caixa`)
+  redirect(`/painel/${estudioSlug}/fecho-caixa`)
+}
+
+// "Outros" — qualquer entrada ou saída de caixa que não é pagamento de
+// cliente nem sangria/compra (ex.: um documento à parte). Qualquer
+// PT/funcionário pode registar, tal como as saídas normais.
+export async function registarOutroCaixa(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const estudioId = Number(formData.get('estudio_id'))
+  const tipo = formData.get('tipo') as string
+  const valor = Number(formData.get('valor'))
+  const documento = (formData.get('documento') as string)?.trim() || null
+  const descricao = (formData.get('descricao') as string)?.trim() || null
+  const hoje = new Date().toISOString().slice(0, 10)
+  const supabase = await createClient()
+
+  if (!Number.isFinite(valor) || valor <= 0) {
+    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent('Indica o valor.')}`)
+  }
+
+  const { data: userData } = await supabase.auth.getUser()
+
+  const { error } = await supabase.from('outros_caixa').insert({
+    estudio_id: estudioId,
+    data: hoje,
+    tipo,
+    documento,
+    descricao,
+    valor,
+    registado_por: userData.user?.id ?? null,
+  })
+
+  if (error) {
+    redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/fecho-caixa`)
+  redirect(`/painel/${estudioSlug}/fecho-caixa`)
+}
+
+// Nunca apaga a sério — fica a linha, marcada como anulada (quem,
+// quando, porquê). Só a gestão consegue (RLS "anular_outros_caixa",
+// e_gestao()).
+export async function anularOutroCaixa(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const motivo = (formData.get('motivo') as string)?.trim() || null
+  const supabase = await createClient()
+  const { data: userData } = await supabase.auth.getUser()
+
+  const { error } = await supabase
+    .from('outros_caixa')
+    .update({
+      anulado_em: new Date().toISOString(),
+      anulado_por: userData.user?.id ?? null,
+      motivo_anulacao: motivo,
+    })
+    .eq('id', id)
 
   if (error) {
     redirect(`/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent(error.message)}`)

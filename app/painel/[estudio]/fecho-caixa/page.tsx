@@ -9,7 +9,6 @@ import {
   calcularFechoCaixa,
   descricaoPagamento,
   somarNumerario,
-  somarPorGrupoMetodo,
   somarSaidas,
 } from '@/lib/data/fechoCaixa'
 import {
@@ -193,7 +192,6 @@ export default async function FechoCaixaPage({
   }))
 
   const valorNumerarioDia = somarNumerario(pagamentosHoje.map((p) => ({ valor: p.valor, metodo: p.metodo })))
-  const totaisPorGrupo = somarPorGrupoMetodo(pagamentosHoje.map((p) => ({ valor: p.valor, metodo: p.metodo })))
 
   // Uma única tabela de entradas, ordenada por método — em vez de 3
   // tabelas separadas, cada linha já diz o método, por isso chega.
@@ -280,8 +278,6 @@ export default async function FechoCaixaPage({
     outrosSaidaDia,
     valorContado: 0,
   })
-  const entradasTotal =
-    valorNumerarioDia + totaisPorGrupo['MB Way'] + totaisPorGrupo['TPA / Transferências'] + outrosEntradaDia
   const saidasTotal = saidasCaixaDia + outrosSaidaDia
   const diferencaHoje = fechoHoje ? fechoHoje.valor_contado - valorEsperado : null
 
@@ -309,7 +305,7 @@ export default async function FechoCaixaPage({
           principal da página, por isso fica tudo à vista sem caixas à parte. */}
       <div className="mt-6 rounded-xl border border-border-subtle bg-surface py-3">
         <LinhaResumo label="Saldo anterior" valor={`${saldoAnterior.toFixed(2)} €`} />
-        <LinhaResumo label="Entradas" valor={`${entradasTotal.toFixed(2)} €`} />
+        <LinhaResumo label="Entradas" valor={`${valorNumerarioDia.toFixed(2)} €`} />
         <LinhaResumo label="Saídas" valor={`-${saidasTotal.toFixed(2)} €`} />
         <LinhaResumo
           label="Outros (entrada / saída)"

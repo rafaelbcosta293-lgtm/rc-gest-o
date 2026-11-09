@@ -142,7 +142,8 @@ async function processarLembretesDoEstudio(
       .in('tipo', ['Treino', 'Sessão experimental'])
       .eq('estado', 'Agendado')
       .eq('data', diaAlvo)
-      .eq('lembrete_enviado', false),
+      .eq('lembrete_enviado', false)
+      .order('hora_inicio'),
     obterEstadoGateway(admin, estudio.id),
   ])
 

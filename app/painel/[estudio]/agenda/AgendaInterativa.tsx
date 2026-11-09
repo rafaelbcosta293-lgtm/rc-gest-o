@@ -836,10 +836,15 @@ function ColunaDia({
                 {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
               </span>
               <span className="block truncate text-[10px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
-              {numerosSocio && (
-                <span className="block truncate text-[7px] leading-tight opacity-70">{numerosSocio}</span>
-              )}
             </span>
+            {/* Nº de sócio — pequeno e discreto, só para consulta rápida
+                sem abrir o evento, por isso fica à parte, encostado ao
+                canto em vez de ocupar espaço nas linhas do nome. */}
+            {numerosSocio && (
+              <span className="pointer-events-none absolute top-0 right-0.5 truncate text-[8px] leading-tight opacity-70">
+                {numerosSocio}
+              </span>
+            )}
             {/* Pegas de redimensionar, ao estilo Google Calendar — zona de
                 clique bem maior do que a risca visível (que só aparece ao
                 passar o rato), para não ser preciso acertar em poucos

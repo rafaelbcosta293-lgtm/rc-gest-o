@@ -795,7 +795,7 @@ function ColunaDia({
             height: Math.max((previa.fimMin - previa.inicioMin) * pxPorMinuto, 4),
           }}
         >
-          <span className="block truncate text-[10px] font-bold text-brand">
+          <span className="block truncate text-[12px] font-bold text-brand">
             {minutosParaHora(previa.inicioMin)}–{minutosParaHora(previa.fimMin)}
           </span>
         </div>
@@ -823,7 +823,7 @@ function ColunaDia({
             } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''}`}
             style={{
               top: inicioMin * pxPorMinuto,
-              height: Math.max(evento.duracao_min * pxPorMinuto, 18),
+              height: Math.max(evento.duracao_min * pxPorMinuto, 24),
               left: `${(coluna * 100) / colunas}%`,
               width: `${100 / colunas}%`,
               background: cor.bg,
@@ -834,18 +834,20 @@ function ColunaDia({
             {/* Conteúdo num wrapper à parte, só este com overflow-hidden
                 (para o texto truncar) — o botão em si fica sem isso, para
                 as pegas de redimensionar poderem crescer um pouco para
-                fora da borda sem ficarem cortadas. */}
-            <span className="block h-full overflow-hidden px-1 py-0.5">
-              <span className="block truncate text-[10px] font-semibold">
+                fora da borda sem ficarem cortadas. Reserva-se espaço à
+                direita (pr-6) para o nº de sócio nunca ficar por cima do
+                texto truncado. */}
+            <span className="block h-full overflow-hidden px-1.5 py-1 pr-6 leading-snug">
+              <span className="block truncate text-[12px] font-semibold">
                 {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
               </span>
-              <span className="block truncate text-[11px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
+              <span className="block truncate text-[13px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
             </span>
             {/* Nº de sócio — pequeno e discreto, só para consulta rápida
                 sem abrir o evento, por isso fica à parte, encostado ao
                 canto em vez de ocupar espaço nas linhas do nome. */}
             {numerosSocio && (
-              <span className="pointer-events-none absolute top-0 right-0.5 truncate text-[8px] leading-tight opacity-70">
+              <span className="pointer-events-none absolute top-0.5 right-1 truncate text-[10px] leading-tight opacity-80">
                 {numerosSocio}
               </span>
             )}

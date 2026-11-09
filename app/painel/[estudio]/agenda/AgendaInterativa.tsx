@@ -44,25 +44,22 @@ const ROTULO_ACOMPANHADO: Record<number, string> = { 2: 'Dual', 3: 'Trio' }
 function rotuloEvento(grupo: EventoComNomes[], estudioId: number) {
   const primeiro = grupo[0]
   if (primeiro.tipo === 'Sessão experimental') return rotuloTipoEvento(primeiro.tipo, primeiro.titulo)
-  const comCliente = grupo.filter((e) => e.cliente)
-  if (comCliente.length > 0) {
-    const nomes = comCliente.map((e) =>
-      e.cliente!.estudio_id !== estudioId ? `↔ ${e.cliente!.nome}` : e.cliente!.nome
-    )
+  const nomes = grupo
+    .filter((e) => e.cliente)
+    .map((e) => (e.cliente!.estudio_id !== estudioId ? `↔ ${e.cliente!.nome}` : e.cliente!.nome))
+  if (nomes.length > 0) {
     const sufixo = ROTULO_ACOMPANHADO[nomes.length]
-    // Nº de sócio — pequeno e discreto, só para consulta rápida sem
-    // abrir o evento (não faz parte do nome, por isso fica à parte,
-    // mais apagado).
-    const numeros = comCliente.map((e) => e.cliente!.numero_socio).filter((n): n is string => !!n)
-    return (
-      <>
-        {nomes.join(' + ')}
-        {sufixo ? ` (${sufixo})` : ''}
-        {numeros.length > 0 && <span className="text-muted"> · {numeros.join(', ')}</span>}
-      </>
-    )
+    return sufixo ? `(${sufixo}) ${nomes.join(' + ')}` : nomes.join(' + ')
   }
   return primeiro.titulo ?? primeiro.tipo
+}
+
+// Nº de sócio de quem está no treino — pequeno e discreto, numa linha
+// à parte por baixo do nome, só para consulta rápida sem abrir o
+// evento.
+function numerosSocioEvento(grupo: EventoComNomes[]) {
+  const numeros = grupo.map((e) => e.cliente?.numero_socio).filter((n): n is string => !!n)
+  return numeros.length > 0 ? numeros.join(', ') : null
 }
 
 function minutosParaHora(minutos: number) {
@@ -804,6 +801,7 @@ function ColunaDia({
         const inicioMin = minutosDoDia(evento.hora_inicio)
         const emArrasto = arrastandoId === evento.id
         const emSelecionado = selecionadoId === evento.id
+        const numerosSocio = numerosSocioEvento(grupo)
         return (
           <button
             key={evento.id}
@@ -838,6 +836,9 @@ function ColunaDia({
                 {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
               </span>
               <span className="block truncate text-[10px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
+              {numerosSocio && (
+                <span className="block truncate text-[7px] leading-tight opacity-70">{numerosSocio}</span>
+              )}
             </span>
             {/* Pegas de redimensionar, ao estilo Google Calendar — zona de
                 clique bem maior do que a risca visível (que só aparece ao

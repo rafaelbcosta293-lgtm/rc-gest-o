@@ -84,12 +84,13 @@ type EstadoModal =
   // uma pessoa, vários quando é um treino em simultâneo.
   | { aberto: true; modo: 'editar'; evento: EventoComNomes; grupo: EventoComNomes[] }
 
-// Níveis de zoom (pixels por minuto) — a percentagem mostrada ao
-// utilizador é sempre relativa a NIVEIS_ZOOM[ZOOM_OMISSAO] = "100%".
-// O zoom com que a agenda abre é outro nível (ZOOM_INICIAL, 200%) —
-// aproximado o suficiente para ver bem os eventos sem precisar de dar
-// zoom manualmente, pedido pelo dono.
-const NIVEIS_ZOOM = [0.3, 0.45, 0.65, 0.9, 1.3, 1.8, 2.4]
+// Níveis de zoom (pixels por minuto) — cada passo sobe/desce 50
+// pontos percentuais (50%, 100%, 150%, ..., 500%), sempre relativo a
+// NIVEIS_ZOOM[ZOOM_OMISSAO] = "100%". O zoom com que a agenda abre é
+// outro nível (ZOOM_INICIAL, 200%) — aproximado o suficiente para ver
+// bem os eventos sem precisar de dar zoom manualmente, pedido pelo
+// dono.
+const NIVEIS_ZOOM = [0.225, 0.45, 0.675, 0.9, 1.125, 1.35, 1.575, 1.8, 2.025, 2.25]
 const ZOOM_OMISSAO = 1
 const ZOOM_INICIAL = 3
 

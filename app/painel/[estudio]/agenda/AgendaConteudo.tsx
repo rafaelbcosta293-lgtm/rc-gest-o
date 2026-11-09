@@ -32,7 +32,7 @@ function construirQuery(
 }
 
 type EventoComNomes = EventoAgenda & {
-  cliente: { id: string; nome: string; estudio_id: number } | null
+  cliente: { id: string; nome: string; estudio_id: number; numero_socio: string | null } | null
   pt: { id: string; nome: string } | null
 }
 
@@ -45,7 +45,7 @@ async function buscarEventos(
 ) {
   let query = supabase
     .from('agenda_eventos')
-    .select('*, cliente:clientes(id, nome, estudio_id), pt:perfis!pt_id(id, nome)')
+    .select('*, cliente:clientes(id, nome, estudio_id, numero_socio), pt:perfis!pt_id(id, nome)')
     .eq('estudio_id', estudioId)
     .gte('data', inicio)
     .lt('data', fimExclusivo)

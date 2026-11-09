@@ -21,7 +21,7 @@ import {
 import type { EventoAgenda, TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
 
 export type EventoComNomes = EventoAgenda & {
-  cliente: { id: string; nome: string; estudio_id: number } | null
+  cliente: { id: string; nome: string; estudio_id: number; numero_socio: string | null } | null
   pt: { id: string; nome: string } | null
 }
 
@@ -44,12 +44,23 @@ const ROTULO_ACOMPANHADO: Record<number, string> = { 2: 'Dual', 3: 'Trio' }
 function rotuloEvento(grupo: EventoComNomes[], estudioId: number) {
   const primeiro = grupo[0]
   if (primeiro.tipo === 'Sessão experimental') return rotuloTipoEvento(primeiro.tipo, primeiro.titulo)
-  const nomes = grupo
-    .filter((e) => e.cliente)
-    .map((e) => (e.cliente!.estudio_id !== estudioId ? `↔ ${e.cliente!.nome}` : e.cliente!.nome))
-  if (nomes.length > 0) {
+  const comCliente = grupo.filter((e) => e.cliente)
+  if (comCliente.length > 0) {
+    const nomes = comCliente.map((e) =>
+      e.cliente!.estudio_id !== estudioId ? `↔ ${e.cliente!.nome}` : e.cliente!.nome
+    )
     const sufixo = ROTULO_ACOMPANHADO[nomes.length]
-    return sufixo ? `${nomes.join(' + ')} (${sufixo})` : nomes.join(' + ')
+    // Nº de sócio — pequeno e discreto, só para consulta rápida sem
+    // abrir o evento (não faz parte do nome, por isso fica à parte,
+    // mais apagado).
+    const numeros = comCliente.map((e) => e.cliente!.numero_socio).filter((n): n is string => !!n)
+    return (
+      <>
+        {nomes.join(' + ')}
+        {sufixo ? ` (${sufixo})` : ''}
+        {numeros.length > 0 && <span className="text-muted"> · {numeros.join(', ')}</span>}
+      </>
+    )
   }
   return primeiro.titulo ?? primeiro.tipo
 }

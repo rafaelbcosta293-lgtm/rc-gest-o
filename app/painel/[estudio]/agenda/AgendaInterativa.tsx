@@ -17,6 +17,7 @@ import {
   reativarEventoRapido,
   apagarEventoRapido,
   pararSerieRapido,
+  type EscopoApagar,
 } from './actions'
 import type { EventoAgenda, TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
 
@@ -242,16 +243,18 @@ export default function AgendaInterativa({
     })
   }
 
-  function apagar() {
+  function apagar(escopo: EscopoApagar) {
     if (!(modal.aberto && modal.modo === 'editar')) return
-    const aviso =
-      modal.grupo.length > 1
-        ? 'Apagar este treino em simultâneo? Remove todas as pessoas. Não é possível desfazer.'
-        : 'Apagar este evento? Não é possível desfazer.'
-    if (!window.confirm(aviso)) return
-    const { id, grupo_id } = modal.evento
+    const { id, grupo_id, serie_id, data } = modal.evento
     iniciarTransicao(async () => {
-      const resultado = await apagarEventoRapido({ estudioSlug: slug, id, grupoId: grupo_id })
+      const resultado = await apagarEventoRapido({
+        estudioSlug: slug,
+        id,
+        grupoId: grupo_id,
+        serieId: serie_id,
+        data,
+        escopo,
+      })
       if ('error' in resultado) setErro(resultado.error)
       else aposSucesso()
     })
@@ -912,7 +915,7 @@ function EventoModalOverlay({
   onSubmeter: (formData: FormData, clienteIds: string[]) => void
   onDesmarcar: (contarComoRealizado: boolean, foiRemarcado: boolean) => void
   onReativar: () => void
-  onApagar: () => void
+  onApagar: (escopo: EscopoApagar) => void
   onPararSerie: () => void
 }) {
   const editar = modal.modo === 'editar'
@@ -930,6 +933,12 @@ function EventoModalOverlay({
   const [aConfirmarDesmarcar, setAConfirmarDesmarcar] = useState(false)
   const [contarComoRealizado, setContarComoRealizado] = useState<boolean | null>(null)
   const [foiRemarcado, setFoiRemarcado] = useState<boolean | null>(null)
+
+  // Apagar também não é imediato quando o evento é parte de uma série
+  // — pede sempre primeiro qual o âmbito (só este, os seguintes, os
+  // anteriores ou a série toda), nunca ao acaso.
+  const [aConfirmarApagar, setAConfirmarApagar] = useState(false)
+  const [escopoApagar, setEscopoApagar] = useState<EscopoApagar>('um')
 
   // Quem já está neste treino — para um treino em simultâneo, o grupo
   // tem mais do que uma pessoa; pode-se adicionar ou remover enquanto
@@ -1213,7 +1222,18 @@ function EventoModalOverlay({
               {editar && (
                 <button
                   type="button"
-                  onClick={onApagar}
+                  onClick={() => {
+                    if (evento?.serie_id) {
+                      setEscopoApagar('um')
+                      setAConfirmarApagar(true)
+                      return
+                    }
+                    const aviso =
+                      modal.modo === 'editar' && modal.grupo.length > 1
+                        ? 'Apagar este treino em simultâneo? Remove todas as pessoas. Não é possível desfazer.'
+                        : 'Apagar este evento? Não é possível desfazer.'
+                    if (window.confirm(aviso)) onApagar('um')
+                  }}
                   disabled={aPendente}
                   title="Apagar"
                   className="rounded-full p-2 text-muted hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
@@ -1337,6 +1357,74 @@ function EventoModalOverlay({
                 type="button"
                 disabled={aPendente}
                 onClick={() => setAConfirmarDesmarcar(false)}
+                className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Apagar um evento de série repetida pede sempre, primeiro, o
+            âmbito — só esta ocorrência, os seguintes, os anteriores ou
+            toda a série — nunca um clique só a apagar tudo às cegas. */}
+        {editar && aConfirmarApagar && (
+          <div className="mt-3 flex flex-col gap-3 rounded-xl border-2 border-red-300 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
+            <p className="text-sm font-bold text-red-700 dark:text-red-300">
+              Apagar evento — esta é uma série repetida
+            </p>
+            <fieldset className="flex flex-col gap-1.5">
+              {(
+                [
+                  { valor: 'um', label: 'Só este evento' },
+                  { valor: 'seguintes', label: 'Este e os seguintes' },
+                  { valor: 'anteriores', label: 'Este e os anteriores' },
+                  { valor: 'serie', label: 'Toda a série (passados e futuros)' },
+                ] as const
+              ).map((o) => (
+                <label
+                  key={o.valor}
+                  className={`cursor-pointer rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                    escopoApagar === o.valor
+                      ? 'border-red-400 bg-red-100 dark:bg-red-900/40'
+                      : 'border-border-subtle bg-surface'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="escopo_apagar_modal"
+                    className="sr-only"
+                    checked={escopoApagar === o.valor}
+                    onChange={() => setEscopoApagar(o.valor)}
+                  />
+                  {o.label}
+                </label>
+              ))}
+            </fieldset>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={aPendente}
+                onClick={() => {
+                  const avisos: Record<EscopoApagar, string> = {
+                    um:
+                      modal.modo === 'editar' && modal.grupo.length > 1
+                        ? 'Apagar este treino em simultâneo? Remove todas as pessoas. Não é possível desfazer.'
+                        : 'Apagar este evento? Não é possível desfazer.',
+                    seguintes: 'Apagar este evento e todos os seguintes desta série? Não é possível desfazer.',
+                    anteriores: 'Apagar este evento e todos os anteriores desta série? Não é possível desfazer.',
+                    serie: 'Apagar TODOS os eventos desta série, passados e futuros? Não é possível desfazer.',
+                  }
+                  if (window.confirm(avisos[escopoApagar])) onApagar(escopoApagar)
+                }}
+                className="rounded-full bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {aPendente ? 'A apagar…' : 'Confirmar'}
+              </button>
+              <button
+                type="button"
+                disabled={aPendente}
+                onClick={() => setAConfirmarApagar(false)}
                 className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
               >
                 Cancelar

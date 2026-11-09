@@ -14,6 +14,7 @@ import {
 } from '../actions'
 import SubmitButton from '@/components/SubmitButton'
 import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
+import ApagarEventoComEscopo from '@/components/ApagarEventoComEscopo'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import EditarEventoForm from './EditarEventoForm'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
@@ -249,14 +250,22 @@ export default async function EventoAgendaPage({
           </form>
         )}
 
-        <ApagarComConfirmacao
-          action={apagarEvento}
-          confirmacao="Tens a certeza que queres apagar este evento? Esta ação não pode ser desfeita."
-          campos={{ estudio_slug: slug, id: evento.id, data: evento.data }}
-          className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold text-muted hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
-        >
-          Apagar
-        </ApagarComConfirmacao>
+        {evento.serie_id ? (
+          <ApagarEventoComEscopo
+            action={apagarEvento}
+            campos={{ estudio_slug: slug, id: evento.id, data: evento.data, serie_id: evento.serie_id }}
+            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold text-muted hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
+          />
+        ) : (
+          <ApagarComConfirmacao
+            action={apagarEvento}
+            confirmacao="Tens a certeza que queres apagar este evento? Esta ação não pode ser desfeita."
+            campos={{ estudio_slug: slug, id: evento.id, data: evento.data }}
+            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold text-muted hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
+          >
+            Apagar
+          </ApagarComConfirmacao>
+        )}
       </div>
     </div>
   )

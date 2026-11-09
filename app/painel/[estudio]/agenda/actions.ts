@@ -374,14 +374,29 @@ export async function reativarEvento(formData: FormData) {
   redirect(`/painel/${estudioSlug}/agenda/${id}`)
 }
 
+// Âmbito ao apagar um evento de uma série repetida — "um" é só esta
+// ocorrência (o de sempre); os outros três apagam mesmo um intervalo
+// de ocorrências (ao contrário de pararSerie, que só cancela e guarda
+// o histórico), filtrando pelo serie_id partilhado por toda a série.
+export type EscopoApagar = 'um' | 'seguintes' | 'anteriores' | 'serie'
+
 export async function apagarEvento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
   const data = formData.get('data') as string
+  const serieId = campoOuNull(formData, 'serie_id')
+  const escopo = ((formData.get('escopo') as string) || 'um') as EscopoApagar
   const supabase = await createClient()
 
-  // Só a linha desta ocorrência — nunca a série toda.
-  const { error } = await supabase.from('agenda_eventos').delete().eq('id', id)
+  let query = supabase.from('agenda_eventos').delete()
+  if (escopo !== 'um' && serieId) {
+    query = query.eq('serie_id', serieId)
+    if (escopo === 'seguintes') query = query.gte('data', data)
+    else if (escopo === 'anteriores') query = query.lte('data', data)
+  } else {
+    query = query.eq('id', id)
+  }
+  const { error } = await query
 
   if (error) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
@@ -682,11 +697,21 @@ export async function apagarEventoRapido(input: {
   estudioSlug: string
   id: string
   grupoId: string | null
+  serieId: string | null
+  data: string
+  escopo: EscopoApagar
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  const query = supabase.from('agenda_eventos').delete()
-  const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
+  let query = supabase.from('agenda_eventos').delete()
+  if (input.escopo !== 'um' && input.serieId) {
+    query = query.eq('serie_id', input.serieId)
+    if (input.escopo === 'seguintes') query = query.gte('data', input.data)
+    else if (input.escopo === 'anteriores') query = query.lte('data', input.data)
+  } else {
+    query = input.grupoId ? query.eq('grupo_id', input.grupoId) : query.eq('id', input.id)
+  }
+  const { error } = await query
   if (error) return { error: error.message }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)

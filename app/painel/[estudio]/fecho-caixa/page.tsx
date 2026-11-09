@@ -394,7 +394,7 @@ export default async function FechoCaixaPage({
       {linhasEntradas.length === 0 ? (
         <p className="mt-2 text-xs text-zinc-500">Sem entradas hoje.</p>
       ) : (
-        <div className="mt-2 overflow-hidden rounded-lg border border-border-subtle">
+        <div className="mt-2 overflow-x-auto rounded-lg border border-border-subtle">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border-subtle bg-border-subtle/40 text-left uppercase tracking-wide text-muted">
@@ -463,7 +463,7 @@ export default async function FechoCaixaPage({
       </div>
 
       {movimentosHoje.length > 0 && (
-        <div className="mt-2 overflow-hidden rounded-lg border border-border-subtle">
+        <div className="mt-2 overflow-x-auto rounded-lg border border-border-subtle">
           <table className="w-full text-xs">
             <tbody>
               {movimentosHoje.map((m, i) => (
@@ -516,7 +516,7 @@ export default async function FechoCaixaPage({
       {recentes.length === 0 ? (
         <p className="mt-2 text-xs text-zinc-500">Ainda não há fechos de dias anteriores.</p>
       ) : (
-        <div className="mt-2 overflow-hidden rounded-lg border border-border-subtle">
+        <div className="mt-2 overflow-x-auto rounded-lg border border-border-subtle">
           <table className="w-full text-xs">
             <tbody>
               {recentes.map((f, i) => {

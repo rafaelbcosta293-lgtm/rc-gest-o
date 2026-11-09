@@ -36,13 +36,21 @@ const DURACOES_COMUNS = [30, 40, 45, 60, 90, 120]
 // Treinos em simultâneo guardam uma linha por pessoa (grupo_id
 // partilhado) — o rótulo junta os nomes para se ver logo quem treina
 // junto, sem abrir o evento.
+// Nome do plano/pacote para quem treina acompanhado, pelo nº de
+// pessoas no treino em simultâneo — segue a mesma nomenclatura dos
+// planos (ex.: "Express 8 - Dual"/"- Trio").
+const ROTULO_ACOMPANHADO: Record<number, string> = { 2: 'Dual', 3: 'Trio' }
+
 function rotuloEvento(grupo: EventoComNomes[], estudioId: number) {
   const primeiro = grupo[0]
   if (primeiro.tipo === 'Sessão experimental') return rotuloTipoEvento(primeiro.tipo, primeiro.titulo)
   const nomes = grupo
     .filter((e) => e.cliente)
     .map((e) => (e.cliente!.estudio_id !== estudioId ? `↔ ${e.cliente!.nome}` : e.cliente!.nome))
-  if (nomes.length > 0) return nomes.join(' + ')
+  if (nomes.length > 0) {
+    const sufixo = ROTULO_ACOMPANHADO[nomes.length]
+    return sufixo ? `${nomes.join(' + ')} (${sufixo})` : nomes.join(' + ')
+  }
   return primeiro.titulo ?? primeiro.tipo
 }
 

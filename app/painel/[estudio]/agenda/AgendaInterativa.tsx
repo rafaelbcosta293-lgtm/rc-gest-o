@@ -833,10 +833,10 @@ function ColunaDia({
                 as pegas de redimensionar poderem crescer um pouco para
                 fora da borda sem ficarem cortadas. */}
             <span className="block h-full overflow-hidden px-1 py-0.5">
-              <span className="block truncate text-[9px] font-semibold">
+              <span className="block truncate text-[10px] font-semibold">
                 {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
               </span>
-              <span className="block truncate text-[10px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
+              <span className="block truncate text-[11px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
             </span>
             {/* Nº de sócio — pequeno e discreto, só para consulta rápida
                 sem abrir o evento, por isso fica à parte, encostado ao

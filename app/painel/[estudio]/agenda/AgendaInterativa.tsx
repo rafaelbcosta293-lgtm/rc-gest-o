@@ -21,11 +21,12 @@ import {
 import type { EventoAgenda, TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
 
 export type EventoComNomes = EventoAgenda & {
-  cliente: { id: string; nome: string } | null
+  cliente: { id: string; nome: string; estudio_id: number } | null
   pt: { id: string; nome: string } | null
 }
 
 type PtOpcao = { id: string; nome: string }
+type EstudioOpcao = { id: number; nome: string }
 
 const inputCls =
   'w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
@@ -35,10 +36,12 @@ const DURACOES_COMUNS = [30, 40, 45, 60, 90, 120]
 // Treinos em simultâneo guardam uma linha por pessoa (grupo_id
 // partilhado) — o rótulo junta os nomes para se ver logo quem treina
 // junto, sem abrir o evento.
-function rotuloEvento(grupo: EventoComNomes[]) {
+function rotuloEvento(grupo: EventoComNomes[], estudioId: number) {
   const primeiro = grupo[0]
   if (primeiro.tipo === 'Sessão experimental') return rotuloTipoEvento(primeiro.tipo, primeiro.titulo)
-  const nomes = grupo.map((e) => e.cliente?.nome).filter((n): n is string => !!n)
+  const nomes = grupo
+    .filter((e) => e.cliente)
+    .map((e) => (e.cliente!.estudio_id !== estudioId ? `↔ ${e.cliente!.nome}` : e.cliente!.nome))
   if (nomes.length > 0) return nomes.join(' + ')
   return primeiro.titulo ?? primeiro.tipo
 }
@@ -80,6 +83,8 @@ export default function AgendaInterativa({
   dias,
   eventos,
   clientes,
+  outroEstudio,
+  clientesOutroEstudio,
   leads,
   pts,
 }: {
@@ -88,6 +93,8 @@ export default function AgendaInterativa({
   dias: string[]
   eventos: EventoComNomes[]
   clientes: ClienteOpcao[]
+  outroEstudio: EstudioOpcao | null
+  clientesOutroEstudio: ClienteOpcao[]
   leads: LeadOpcao[]
   pts: PtOpcao[]
 }) {
@@ -249,6 +256,7 @@ export default function AgendaInterativa({
     <>
       <GrelhaInterativa
         dias={dias}
+        estudioId={estudioId}
         porDia={porDia}
         onMover={mover}
         onRedimensionar={redimensionar}
@@ -265,6 +273,8 @@ export default function AgendaInterativa({
         <EventoModalOverlay
           modal={modal}
           clientes={clientes}
+          outroEstudio={outroEstudio}
+          clientesOutroEstudio={clientesOutroEstudio}
           leads={leads}
           pts={pts}
           estudioId={estudioId}
@@ -376,6 +386,7 @@ type Arrasto =
 
 function GrelhaInterativa({
   dias,
+  estudioId,
   porDia,
   onMover,
   onRedimensionar,
@@ -386,6 +397,7 @@ function GrelhaInterativa({
   onZoomIndiceChange,
 }: {
   dias: string[]
+  estudioId: number
   porDia: Record<string, EventoComNomes[]>
   onMover: (id: string, dia: string, horaInicio: string) => void
   onRedimensionar: (id: string, horaInicio: string, duracaoMin: number) => void
@@ -686,6 +698,7 @@ function GrelhaInterativa({
             {dias.map((dia) => (
               <ColunaDia
                 key={dia}
+                estudioId={estudioId}
                 eventos={porDia[dia] ?? []}
                 registarRef={registarRef(dia)}
                 onIniciarCriacao={iniciarCriacao(dia)}
@@ -718,6 +731,7 @@ function GrelhaInterativa({
 
 function ColunaDia({
   eventos,
+  estudioId,
   registarRef,
   onIniciarCriacao,
   onIniciarRedimensionamento,
@@ -729,6 +743,7 @@ function ColunaDia({
   pxPorMinuto,
 }: {
   eventos: EventoComNomes[]
+  estudioId: number
   registarRef: (el: HTMLDivElement | null) => void
   onIniciarCriacao: (e: React.MouseEvent) => void
   onIniciarRedimensionamento: (evento: EventoComNomes, pega: 'topo' | 'fundo') => (e: React.MouseEvent) => void
@@ -803,7 +818,7 @@ function ColunaDia({
               <span className="block truncate text-[9px] font-semibold">
                 {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
               </span>
-              <span className="block truncate text-[10px] font-medium">{rotuloEvento(grupo)}</span>
+              <span className="block truncate text-[10px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
             </span>
             {/* Pegas de redimensionar, ao estilo Google Calendar — zona de
                 clique bem maior do que a risca visível (que só aparece ao
@@ -842,6 +857,8 @@ function ColunaDia({
 function EventoModalOverlay({
   modal,
   clientes,
+  outroEstudio,
+  clientesOutroEstudio,
   leads,
   pts,
   estudioId,
@@ -857,6 +874,8 @@ function EventoModalOverlay({
 }: {
   modal: Extract<EstadoModal, { aberto: true }>
   clientes: ClienteOpcao[]
+  outroEstudio: EstudioOpcao | null
+  clientesOutroEstudio: ClienteOpcao[]
   leads: LeadOpcao[]
   pts: PtOpcao[]
   estudioId: number
@@ -892,7 +911,7 @@ function EventoModalOverlay({
   const [participantes, setParticipantes] = useState<ClienteOpcao[]>(() =>
     modal.modo === 'editar'
       ? modal.grupo
-          .map((e) => e.cliente)
+          .map((e) => (e.cliente ? { id: e.cliente.id, nome: e.cliente.nome } : null))
           .filter((c): c is ClienteOpcao => c !== null)
       : []
   )
@@ -901,6 +920,10 @@ function EventoModalOverlay({
   // sempre sozinha (ver aviso "só afeta esta ocorrência" mais abaixo).
   const [repete, setRepete] = useState(false)
   const [limiteModo, setLimiteModo] = useState<'vezes' | 'ate' | 'indefinido'>('vezes')
+
+  // Opção discreta para agendar aqui um cliente do outro estúdio (ver
+  // NovoEventoForm para a explicação completa) — desligada por omissão.
+  const [clienteDeFora, setClienteDeFora] = useState(false)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onFechar}>
@@ -1006,7 +1029,7 @@ function EventoModalOverlay({
                 </div>
               )}
               <ClienteCombobox
-                clientes={clientes}
+                clientes={clienteDeFora ? clientesOutroEstudio : clientes}
                 excluirIds={participantes.map((c) => c.id)}
                 onSelecionar={(c) => setParticipantes((lista) => [...lista, c])}
                 placeholder={
@@ -1015,6 +1038,17 @@ function EventoModalOverlay({
                     : 'Adicionar mais alguém ao mesmo treino…'
                 }
               />
+              {outroEstudio && (
+                <label className="inline-flex w-fit items-center gap-1.5 text-[11px] text-muted">
+                  <input
+                    type="checkbox"
+                    checked={clienteDeFora}
+                    onChange={(e) => setClienteDeFora(e.target.checked)}
+                    className="h-3 w-3"
+                  />
+                  Cliente de {outroEstudio.nome}
+                </label>
+              )}
             </div>
           )}
 

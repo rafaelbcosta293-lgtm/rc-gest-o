@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio, obterOutroEstudioEClientes } from '@/lib/data/estudios'
 import { corTipoEvento } from '@/lib/data/agenda'
 import {
   atualizarEvento,
@@ -19,7 +19,7 @@ import EditarEventoForm from './EditarEventoForm'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda } from '@/lib/supabase/database.types'
 
-type EventoComCliente = EventoAgenda & { cliente: { id: string; nome: string } | null }
+type EventoComCliente = EventoAgenda & { cliente: { id: string; nome: string; estudio_id: number } | null }
 
 const inputCls =
   'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
@@ -42,7 +42,7 @@ export default async function EventoAgendaPage({
 
   const { data: eventoData, error: erroEvento } = await supabase
     .from('agenda_eventos')
-    .select('*, cliente:clientes(id, nome)')
+    .select('*, cliente:clientes(id, nome, estudio_id)')
     .eq('id', id)
     .eq('estudio_id', estudio.id)
     .maybeSingle()
@@ -54,7 +54,7 @@ export default async function EventoAgendaPage({
     notFound()
   }
 
-  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }] =
+  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }, { outroEstudio, clientesOutroEstudio }] =
     await Promise.all([
       getEquipaDoEstudio(supabase, estudio.id),
       supabase
@@ -68,6 +68,7 @@ export default async function EventoAgendaPage({
         .eq('estudio_id', estudio.id)
         .neq('estado', 'Perdida')
         .order('nome'),
+      obterOutroEstudioEClientes(supabase, estudio.id),
     ])
   if (erroClientes) {
     throw new Error(erroClientes.message)
@@ -101,6 +102,14 @@ export default async function EventoAgendaPage({
         {cancelado && (
           <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 dark:bg-red-950 dark:text-red-300">
             Cancelado
+          </span>
+        )}
+        {evento.cliente && evento.cliente.estudio_id !== estudio.id && outroEstudio && (
+          <span
+            className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-300"
+            title={`${evento.cliente.nome} é cliente de ${outroEstudio.nome} — a presença conta para lá, não para ${estudio.nome}`}
+          >
+            Cliente de {outroEstudio.nome}
           </span>
         )}
       </div>
@@ -167,6 +176,8 @@ export default async function EventoAgendaPage({
         evento={evento}
         pts={pts}
         clientes={clientes}
+        outroEstudio={outroEstudio}
+        clientesOutroEstudio={clientesOutroEstudio}
         leads={leads}
         action={atualizarEvento}
       />

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio, obterOutroEstudioEClientes } from '@/lib/data/estudios'
 import { criarEvento } from '../actions'
 import NovoEventoForm from './NovoEventoForm'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
@@ -25,7 +25,7 @@ export default async function NovoEventoPage({
     notFound()
   }
 
-  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }] =
+  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }, { outroEstudio, clientesOutroEstudio }] =
     await Promise.all([
       getEquipaDoEstudio(supabase, estudio.id),
       supabase
@@ -39,6 +39,7 @@ export default async function NovoEventoPage({
         .eq('estudio_id', estudio.id)
         .neq('estado', 'Perdida')
         .order('nome'),
+      obterOutroEstudioEClientes(supabase, estudio.id),
     ])
   if (erroClientes) {
     throw new Error(erroClientes.message)
@@ -73,6 +74,8 @@ export default async function NovoEventoPage({
         dataInicial={dataInicial}
         pts={pts}
         clientes={clientes}
+        outroEstudio={outroEstudio}
+        clientesOutroEstudio={clientesOutroEstudio}
         leads={leads}
         action={criarEvento}
       />

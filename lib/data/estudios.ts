@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { Estudio, Perfil } from '@/lib/supabase/database.types'
 
 export async function getEstudios(supabase: SupabaseClient): Promise<Estudio[]> {
@@ -52,4 +53,43 @@ export async function getEquipaDoEstudio(
     .filter((p): p is Pick<Perfil, 'id' | 'nome'> => p !== null)
 
   return pessoas.sort((a, b) => a.nome.localeCompare(b.nome))
+}
+
+export type ClienteOutroEstudio = { id: string; nome: string }
+
+// Para a Agenda conseguir agendar um cliente de Fátima num evento de
+// Leiria (ou vice-versa) sem misturar o resto dos dados dos dois
+// estúdios: quem só tem acesso a um dos dois (ex.: conta "RC Leiria")
+// não consegue, por RLS, ler a lista de clientes do outro — por isso
+// usa-se aqui o cliente de administração (ignora RLS) só para esta
+// lista de nomes a escolher, nunca para mais nada. Só faz sentido
+// havendo exatamente dois estúdios ativos; com mais do que isso não há
+// um "outro" óbvio, por isso a opção fica simplesmente escondida.
+export async function obterOutroEstudioEClientes(
+  supabase: SupabaseClient,
+  estudioAtualId: number
+): Promise<{ outroEstudio: Pick<Estudio, 'id' | 'nome'> | null; clientesOutroEstudio: ClienteOutroEstudio[] }> {
+  const estudios = await getEstudios(supabase)
+  if (estudios.length !== 2) {
+    return { outroEstudio: null, clientesOutroEstudio: [] }
+  }
+  const outro = estudios.find((e) => e.id !== estudioAtualId)
+  if (!outro) {
+    return { outroEstudio: null, clientesOutroEstudio: [] }
+  }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('clientes')
+    .select('id, nome')
+    .eq('estudio_id', outro.id)
+    .order('nome')
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return {
+    outroEstudio: { id: outro.id, nome: outro.nome },
+    clientesOutroEstudio: (data ?? []) as ClienteOutroEstudio[],
+  }
 }

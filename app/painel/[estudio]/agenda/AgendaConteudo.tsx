@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, Plus } from 'lucide-react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
-import { getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getEquipaDoEstudio, obterOutroEstudioEClientes } from '@/lib/data/estudios'
 import { fmt, MESES, DIAS_SEMANA, diasDoMes, offsetPrimeiroDia } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { corTipoEvento } from '@/lib/data/agenda'
@@ -32,7 +32,7 @@ function construirQuery(
 }
 
 type EventoComNomes = EventoAgenda & {
-  cliente: { id: string; nome: string } | null
+  cliente: { id: string; nome: string; estudio_id: number } | null
   pt: { id: string; nome: string } | null
 }
 
@@ -45,7 +45,7 @@ async function buscarEventos(
 ) {
   let query = supabase
     .from('agenda_eventos')
-    .select('*, cliente:clientes(id, nome), pt:perfis!pt_id(id, nome)')
+    .select('*, cliente:clientes(id, nome, estudio_id), pt:perfis!pt_id(id, nome)')
     .eq('estudio_id', estudioId)
     .gte('data', inicio)
     .lt('data', fimExclusivo)
@@ -149,7 +149,7 @@ export default async function AgendaConteudo({
 
   const supabase = await createClient()
 
-  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }] =
+  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }, { outroEstudio, clientesOutroEstudio }] =
     await Promise.all([
       getEquipaDoEstudio(supabase, estudio.id),
       supabase
@@ -163,6 +163,7 @@ export default async function AgendaConteudo({
         .eq('estudio_id', estudio.id)
         .neq('estado', 'Perdida')
         .order('nome'),
+      obterOutroEstudioEClientes(supabase, estudio.id),
     ])
   if (erroClientes) {
     throw new Error(erroClientes.message)
@@ -306,6 +307,8 @@ export default async function AgendaConteudo({
           dias={vista === 'dia' ? [dataSel] : diasSemana}
           eventos={eventos}
           clientes={clientes}
+          outroEstudio={outroEstudio}
+          clientesOutroEstudio={clientesOutroEstudio}
           leads={leads}
           pts={pts}
         />

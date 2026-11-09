@@ -17,6 +17,8 @@ export default function NovoEventoForm({
   dataInicial,
   pts,
   clientes,
+  outroEstudio,
+  clientesOutroEstudio,
   leads,
   action,
 }: {
@@ -25,6 +27,8 @@ export default function NovoEventoForm({
   dataInicial: string
   pts: { id: string; nome: string }[]
   clientes: { id: string; nome: string }[]
+  outroEstudio: { id: number; nome: string } | null
+  clientesOutroEstudio: { id: string; nome: string }[]
   leads: LeadOpcao[]
   action: (formData: FormData) => void
 }) {
@@ -32,6 +36,13 @@ export default function NovoEventoForm({
   const [tipo, setTipo] = useState<TipoEventoAgenda>('Treino')
   const [repete, setRepete] = useState(false)
   const [limiteModo, setLimiteModo] = useState<'vezes' | 'ate' | 'indefinido'>('vezes')
+  // Discreto e desligado por omissão — só para o caso (raro) de agendar
+  // aqui um cliente que é do outro estúdio (ex.: um cliente de Fátima a
+  // treinar em Leiria). O evento continua a pertencer a este estúdio;
+  // só a lista de nomes a pesquisar muda. A presença conta sempre para
+  // o estúdio do próprio cliente, nunca para este, por isso não há
+  // cruzamento de dados.
+  const [clienteDeFora, setClienteDeFora] = useState(false)
   const experimental = tipo === 'Sessão experimental'
 
   return (
@@ -66,7 +77,21 @@ export default function NovoEventoForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted">Cliente (opcional)</label>
-            <ClienteCombobox clientes={clientes} placeholder="— Reunião / outro (sem cliente) —" />
+            <ClienteCombobox
+              clientes={clienteDeFora ? clientesOutroEstudio : clientes}
+              placeholder="— Reunião / outro (sem cliente) —"
+            />
+            {outroEstudio && (
+              <label className="inline-flex w-fit items-center gap-1.5 text-[11px] text-muted">
+                <input
+                  type="checkbox"
+                  checked={clienteDeFora}
+                  onChange={(e) => setClienteDeFora(e.target.checked)}
+                  className="h-3 w-3"
+                />
+                Cliente de {outroEstudio.nome}
+              </label>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted">Instrutor (opcional)</label>

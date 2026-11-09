@@ -8,7 +8,7 @@ import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSes
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 import type { EventoAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
 
-type EventoComCliente = EventoAgenda & { cliente: { id: string; nome: string } | null }
+type EventoComCliente = EventoAgenda & { cliente: { id: string; nome: string; estudio_id: number } | null }
 
 const inputCls =
   'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
@@ -19,6 +19,8 @@ export default function EditarEventoForm({
   evento,
   pts,
   clientes,
+  outroEstudio,
+  clientesOutroEstudio,
   leads,
   action,
 }: {
@@ -27,11 +29,18 @@ export default function EditarEventoForm({
   evento: EventoComCliente
   pts: { id: string; nome: string }[]
   clientes: { id: string; nome: string }[]
+  outroEstudio: { id: number; nome: string } | null
+  clientesOutroEstudio: { id: string; nome: string }[]
   leads: LeadOpcao[]
   action: (formData: FormData) => void
 }) {
   const { marcarSujo } = useAvisoSairSemGuardar()
   const [tipo, setTipo] = useState<TipoEventoAgenda>(evento.tipo)
+  // Já começa ligado se o cliente deste evento for mesmo do outro
+  // estúdio (ver NovoEventoForm para a explicação completa da opção).
+  const [clienteDeFora, setClienteDeFora] = useState(
+    !!evento.cliente && evento.cliente.estudio_id !== estudioId
+  )
   const experimental = tipo === 'Sessão experimental'
 
   return (
@@ -74,10 +83,21 @@ export default function EditarEventoForm({
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted">Cliente (opcional)</label>
             <ClienteCombobox
-              clientes={clientes}
+              clientes={clienteDeFora ? clientesOutroEstudio : clientes}
               defaultValue={evento.cliente}
               placeholder="— Reunião / outro (sem cliente) —"
             />
+            {outroEstudio && (
+              <label className="inline-flex w-fit items-center gap-1.5 text-[11px] text-muted">
+                <input
+                  type="checkbox"
+                  checked={clienteDeFora}
+                  onChange={(e) => setClienteDeFora(e.target.checked)}
+                  className="h-3 w-3"
+                />
+                Cliente de {outroEstudio.nome}
+              </label>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted">Instrutor (opcional)</label>

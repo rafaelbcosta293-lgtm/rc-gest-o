@@ -99,6 +99,42 @@ async function reconciliarPresencasDoEvento(
   return null
 }
 
+type EventoParaLimparVisita = { lead_id: string | null; data: string; hora_inicio: string }
+
+// Ao apagar um evento de "Sessão experimental" ligado a uma lead, essa
+// lead não pode continuar a mostrar uma visita agendada para um evento
+// que já não existe. Só limpa quando a data/hora batem mesmo com o que
+// está guardado na lead — nunca mexe se a visita entretanto já foi
+// remarcada para outro evento (nessa altura já não bate certo).
+async function limparVisitaLeadsApagadas(
+  supabase: SupabaseClient,
+  eventos: EventoParaLimparVisita[]
+): Promise<string | null> {
+  const leadIds = [...new Set(eventos.map((e) => e.lead_id).filter((id): id is string => !!id))]
+  if (leadIds.length === 0) return null
+
+  const { data: leadsData, error: erroLeads } = await supabase
+    .from('leads')
+    .select('id, visita_data, visita_hora')
+    .in('id', leadIds)
+  if (erroLeads) return erroLeads.message
+
+  for (const evento of eventos) {
+    if (!evento.lead_id) continue
+    const lead = leadsData?.find((l) => l.id === evento.lead_id)
+    if (!lead || !lead.visita_data) continue
+    const horaBate = lead.visita_hora?.slice(0, 5) === evento.hora_inicio.slice(0, 5)
+    if (lead.visita_data !== evento.data || !horaBate) continue
+
+    const { error } = await supabase
+      .from('leads')
+      .update({ visita_data: null, visita_hora: null, visita_marcada_em: null })
+      .eq('id', evento.lead_id)
+    if (error) return error.message
+  }
+  return null
+}
+
 export async function criarEvento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
@@ -388,15 +424,28 @@ export async function apagarEvento(formData: FormData) {
   const escopo = ((formData.get('escopo') as string) || 'um') as EscopoApagar
   const supabase = await createClient()
 
-  let query = supabase.from('agenda_eventos').delete()
+  let selecao = supabase.from('agenda_eventos').select('id, lead_id, data, hora_inicio')
   if (escopo !== 'um' && serieId) {
-    query = query.eq('serie_id', serieId)
-    if (escopo === 'seguintes') query = query.gte('data', data)
-    else if (escopo === 'anteriores') query = query.lte('data', data)
+    selecao = selecao.eq('serie_id', serieId)
+    if (escopo === 'seguintes') selecao = selecao.gte('data', data)
+    else if (escopo === 'anteriores') selecao = selecao.lte('data', data)
   } else {
-    query = query.eq('id', id)
+    selecao = selecao.eq('id', id)
   }
-  const { error } = await query
+  const { data: eventosParaApagar, error: erroLer } = await selecao
+  if (erroLer) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroLer.message)}`)
+  }
+
+  const erroLimpar = await limparVisitaLeadsApagadas(supabase, eventosParaApagar ?? [])
+  if (erroLimpar) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroLimpar)}`)
+  }
+
+  const { error } = await supabase
+    .from('agenda_eventos')
+    .delete()
+    .in('id', (eventosParaApagar ?? []).map((e) => e.id))
 
   if (error) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
@@ -703,15 +752,24 @@ export async function apagarEventoRapido(input: {
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
-  let query = supabase.from('agenda_eventos').delete()
+  let selecao = supabase.from('agenda_eventos').select('id, lead_id, data, hora_inicio')
   if (input.escopo !== 'um' && input.serieId) {
-    query = query.eq('serie_id', input.serieId)
-    if (input.escopo === 'seguintes') query = query.gte('data', input.data)
-    else if (input.escopo === 'anteriores') query = query.lte('data', input.data)
+    selecao = selecao.eq('serie_id', input.serieId)
+    if (input.escopo === 'seguintes') selecao = selecao.gte('data', input.data)
+    else if (input.escopo === 'anteriores') selecao = selecao.lte('data', input.data)
   } else {
-    query = input.grupoId ? query.eq('grupo_id', input.grupoId) : query.eq('id', input.id)
+    selecao = input.grupoId ? selecao.eq('grupo_id', input.grupoId) : selecao.eq('id', input.id)
   }
-  const { error } = await query
+  const { data: eventosParaApagar, error: erroLer } = await selecao
+  if (erroLer) return { error: erroLer.message }
+
+  const erroLimpar = await limparVisitaLeadsApagadas(supabase, eventosParaApagar ?? [])
+  if (erroLimpar) return { error: erroLimpar }
+
+  const { error } = await supabase
+    .from('agenda_eventos')
+    .delete()
+    .in('id', (eventosParaApagar ?? []).map((e) => e.id))
   if (error) return { error: error.message }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)

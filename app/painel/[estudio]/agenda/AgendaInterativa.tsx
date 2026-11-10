@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { X, Trash2, Ban, RotateCcw, Minus, Plus, HelpCircle } from 'lucide-react'
+import { X, Trash2, Ban, RotateCcw, Minus, Plus, HelpCircle, Info } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
@@ -888,17 +888,22 @@ function ColunaDia({
                 direito) nunca ficar por cima do texto truncado. */}
             <span className="block h-full overflow-hidden px-1.5 py-1 pr-6 leading-snug">
               <span className="block truncate text-[13px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
-              <span className="block truncate text-[12px] font-semibold">
+              <span className="block truncate text-[12px] font-normal">
                 {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
               </span>
             </span>
-            {/* Nº de sócio — pequeno e discreto, só para consulta rápida
-                sem abrir o evento, por isso fica à parte, encostado ao
-                canto inferior direito em vez de ocupar espaço nas
-                linhas do nome/hora. */}
+            {/* Nº de sócio — nunca como texto (ficava a sobrepor-se ao
+                nome/hora em colunas estreitas, com vários eventos ao
+                mesmo tempo) — uma bolinha de informação, sempre do
+                mesmo tamanho, que nunca colide com mais nada; passa o
+                rato por cima para ver o número (title = tooltip
+                nativa do browser). */}
             {numerosSocio && (
-              <span className="pointer-events-none absolute right-1 bottom-0.5 truncate text-[10px] leading-tight opacity-80">
-                {numerosSocio}
+              <span
+                title={`Nº de sócio: ${numerosSocio}`}
+                className="absolute right-1 bottom-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-black/70 text-white"
+              >
+                <Info className="h-2.5 w-2.5" strokeWidth={2.5} />
               </span>
             )}
             {/* Pegas de redimensionar, ao estilo Google Calendar — zona de

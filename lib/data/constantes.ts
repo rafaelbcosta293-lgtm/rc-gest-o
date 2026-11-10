@@ -128,8 +128,10 @@ export const TIPOS_CONTACTO = ['Telefone', 'WhatsApp', 'Email', 'Presencial', 'M
 // uma origem que não esteja na lista.
 export const ORIGENS_LEAD = ['Meta Ads', 'Google Forms', 'Website', 'Instagram', 'Indicação', 'Walk-in', 'Outra'] as const
 
-// Objetivos que uma lead pode indicar ao agendar uma sessão experimental
-// — até 3 à escolha (ver CamposSessaoExperimental.tsx).
+// Objetivos que uma lead pode indicar — até MAX_OBJETIVOS_LEAD à
+// escolha, tanto ao agendar uma sessão experimental
+// (CamposSessaoExperimental.tsx) como na ficha da lead (LeadForm.tsx).
+export const MAX_OBJETIVOS_LEAD = 3
 export const OBJETIVOS_LEAD = [
   'Perda de peso',
   'Hipertrofia',

@@ -2,15 +2,13 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { criarLeadRapida } from '@/app/painel/[estudio]/leads/actions'
-import { ORIGENS_LEAD, OBJETIVOS_LEAD } from '@/lib/data/constantes'
+import { ORIGENS_LEAD, OBJETIVOS_LEAD, MAX_OBJETIVOS_LEAD } from '@/lib/data/constantes'
 import type { EstadoLead } from '@/lib/supabase/database.types'
 
 export type LeadOpcao = { id: string; nome: string; telefone: string | null }
 
 const inputCls =
   'w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
-
-const MAX_OBJETIVOS = 3
 
 // Campos de "Sessão experimental": nome da pessoa — com sugestões a
 // partir das leads do estúdio, escolher uma pré-preenche o telemóvel —
@@ -61,7 +59,7 @@ export default function CamposSessaoExperimental({
   function alternarObjetivo(o: string) {
     setObjetivos((lista) => {
       if (lista.includes(o)) return lista.filter((x) => x !== o)
-      if (lista.length >= MAX_OBJETIVOS) return lista
+      if (lista.length >= MAX_OBJETIVOS_LEAD) return lista
       return [...lista, o]
     })
   }
@@ -241,12 +239,12 @@ export default function CamposSessaoExperimental({
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted">
-              Objetivo (até {MAX_OBJETIVOS}) — {objetivos.length}/{MAX_OBJETIVOS}
+              Objetivo (até {MAX_OBJETIVOS_LEAD}) — {objetivos.length}/{MAX_OBJETIVOS_LEAD}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {OBJETIVOS_LEAD.map((o) => {
                 const selecionado = objetivos.includes(o)
-                const desativado = !selecionado && objetivos.length >= MAX_OBJETIVOS
+                const desativado = !selecionado && objetivos.length >= MAX_OBJETIVOS_LEAD
                 return (
                   <label
                     key={o}

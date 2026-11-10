@@ -1,6 +1,7 @@
 'use client'
 
-import { ESTADOS_LEAD } from '@/lib/data/constantes'
+import { useState } from 'react'
+import { ESTADOS_LEAD, ORIGENS_LEAD, OBJETIVOS_LEAD, MAX_OBJETIVOS_LEAD } from '@/lib/data/constantes'
 import type { Lead, Perfil, TemperaturaLead } from '@/lib/supabase/database.types'
 import SubmitButton from '@/components/SubmitButton'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
@@ -11,6 +12,8 @@ const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
 const ESTADOS_EDITAVEIS = Object.keys(ESTADOS_LEAD).filter((k) => k !== 'Ganha')
 const TEMPERATURAS: TemperaturaLead[] = ['Fria', 'Morna', 'Quente']
+const ORIGENS_CONHECIDAS: readonly string[] = ORIGENS_LEAD
+const OBJETIVOS_CONHECIDOS: readonly string[] = OBJETIVOS_LEAD
 
 export default function LeadForm({
   estudioSlug,
@@ -28,6 +31,36 @@ export default function LeadForm({
   error?: string
 }) {
   const { marcarSujo } = useAvisoSairSemGuardar()
+
+  // Origem conhecida fica logo escolhida; uma guardada à mão (ou vinda
+  // de antes desta lista existir) cai em "Outra", com o texto original
+  // preservado no campo ao lado — nunca se perde o que já lá estava.
+  const origemConhecida = !!lead?.origem && ORIGENS_CONHECIDAS.includes(lead.origem)
+  const [origem, setOrigem] = useState(lead?.origem ? (origemConhecida ? lead.origem : 'Outra') : '')
+  const [origemOutra, setOrigemOutra] = useState(lead?.origem && !origemConhecida ? lead.origem : '')
+
+  // Objetivo guarda-se como texto só com os nomes separados por vírgula
+  // — os que baterem certo com a lista ficam marcados; o resto (texto
+  // livre de antes desta lista existir) fica no campo "Outro", também
+  // nunca se perde.
+  const objetivosGuardados = (lead?.objetivo ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+  const [objetivos, setObjetivos] = useState<string[]>(
+    objetivosGuardados.filter((o) => OBJETIVOS_CONHECIDOS.includes(o))
+  )
+  const [objetivoOutro, setObjetivoOutro] = useState(
+    objetivosGuardados.filter((o) => !OBJETIVOS_CONHECIDOS.includes(o)).join(', ')
+  )
+
+  function alternarObjetivo(o: string) {
+    setObjetivos((lista) => {
+      if (lista.includes(o)) return lista.filter((x) => x !== o)
+      if (lista.length >= MAX_OBJETIVOS_LEAD) return lista
+      return [...lista, o]
+    })
+  }
 
   return (
     <form action={action} onChange={marcarSujo} className="mt-6 flex flex-col gap-4">
@@ -85,13 +118,28 @@ export default function LeadForm({
           <label htmlFor="origem" className={labelCls}>
             Origem
           </label>
-          <input
+          <select
             id="origem"
-            name="origem"
-            defaultValue={lead?.origem ?? ''}
-            placeholder="ex.: Instagram, indicação"
+            value={origem}
+            onChange={(e) => setOrigem(e.target.value)}
             className={inputCls}
-          />
+          >
+            <option value="">—</option>
+            {ORIGENS_LEAD.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+          {origem === 'Outra' && (
+            <input
+              value={origemOutra}
+              onChange={(e) => setOrigemOutra(e.target.value)}
+              placeholder="Qual?"
+              className={`${inputCls} mt-1`}
+            />
+          )}
+          <input type="hidden" name="origem" value={origem === 'Outra' ? origemOutra : origem} />
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -151,15 +199,45 @@ export default function LeadForm({
           </label>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="objetivo" className={labelCls}>
-            Objetivo
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <label className={labelCls}>
+            Objetivo (até {MAX_OBJETIVOS_LEAD}) — {objetivos.length}/{MAX_OBJETIVOS_LEAD}
           </label>
+          <div className="flex flex-wrap gap-1.5">
+            {OBJETIVOS_LEAD.map((o) => {
+              const selecionado = objetivos.includes(o)
+              const desativado = !selecionado && objetivos.length >= MAX_OBJETIVOS_LEAD
+              return (
+                <label
+                  key={o}
+                  className={`cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                    selecionado
+                      ? 'border-black/30 bg-black/10 dark:border-white/40 dark:bg-white/10'
+                      : 'border-border-subtle'
+                  } ${desativado ? 'cursor-not-allowed opacity-50' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selecionado}
+                    disabled={desativado}
+                    onChange={() => alternarObjetivo(o)}
+                    className="sr-only"
+                  />
+                  {o}
+                </label>
+              )
+            })}
+          </div>
           <input
-            id="objetivo"
+            value={objetivoOutro}
+            onChange={(e) => setObjetivoOutro(e.target.value)}
+            placeholder="Outro (opcional)"
+            className={`${inputCls} mt-1`}
+          />
+          <input
+            type="hidden"
             name="objetivo"
-            defaultValue={lead?.objetivo ?? ''}
-            className={inputCls}
+            value={[...objetivos, objetivoOutro.trim()].filter(Boolean).join(', ')}
           />
         </div>
 

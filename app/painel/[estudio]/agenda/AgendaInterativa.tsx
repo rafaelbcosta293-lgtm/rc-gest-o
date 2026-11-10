@@ -818,17 +818,20 @@ function ColunaDia({
             }
             onMouseDown={onIniciarMovimento(evento)}
             onContextMenu={onAbrirContexto(evento)}
-            className={`group absolute rounded border text-left leading-tight transition-opacity select-none ${
+            className={`group absolute rounded-md text-left leading-tight shadow-sm transition-opacity select-none ${
               emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
             } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''}`}
             style={{
+              // Pequeno espaço (calc) entre blocos vizinhos — horizontal
+              // (colunas lado a lado) e vertical (altura 2px mais curta
+              // do que o espaço disponível) — para nunca ficarem
+              // encostados uns aos outros, ao estilo Google Calendar.
               top: inicioMin * pxPorMinuto,
-              height: Math.max(evento.duracao_min * pxPorMinuto, 24),
-              left: `${(coluna * 100) / colunas}%`,
-              width: `${100 / colunas}%`,
-              background: cor.bg,
-              color: cor.tx,
-              borderColor: cor.tx,
+              height: Math.max(evento.duracao_min * pxPorMinuto, 24) - 2,
+              left: `calc(${(coluna * 100) / colunas}% + 1px)`,
+              width: `calc(${100 / colunas}% - 2px)`,
+              background: cor.tx,
+              color: '#fff',
             }}
           >
             {/* Conteúdo num wrapper à parte, só este com overflow-hidden

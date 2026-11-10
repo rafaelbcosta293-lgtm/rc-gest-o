@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { somarDias } from './horarios'
 import { getEstudios } from './estudios'
-import { primeiroNome } from './clientes'
+import { primeiroNomeExibicao } from './clientes'
 import { obterEstadoGateway, registarFalhaGateway, registarSucessoGateway } from './smsGateway'
 import { enviarSms } from '@/lib/sms/gateway'
 import type { Estudio } from '@/lib/supabase/database.types'
@@ -11,7 +11,7 @@ export const TEMPLATE_LEMBRETE_OMISSAO =
   'Olá {nome}! Lembramos que o teu treino é {dia_semana}, dia {dia_mes}, às {hora}. Contamos contigo! Com os melhores cumprimentos, Equipa RC Private Fitness Studio'
 
 export const VARIAVEIS_TEMPLATE_LEMBRETE = [
-  { variavel: '{nome}', descricao: 'Nome do cliente' },
+  { variavel: '{nome}', descricao: 'Nome do cliente (usa o nome preferido, se existir)' },
   { variavel: '{dia_semana}', descricao: 'Dia da semana por extenso (ex: terça-feira)' },
   { variavel: '{dia_mes}', descricao: 'Dia do mês (ex: 10)' },
   { variavel: '{hora}', descricao: 'Hora de início do treino (ex: 10:00)' },
@@ -35,12 +35,12 @@ export function nomeDiaSemana(dataISO: string): string {
 
 export function preencherTemplateLembrete(
   template: string,
-  dados: { nome: string; data: string; horaInicio: string }
+  dados: { nome: string; data: string; horaInicio: string; nomePreferido?: string | null }
 ): string {
   const diaMes = Number(dados.data.slice(8, 10))
   const hora = dados.horaInicio.slice(0, 5)
   return template
-    .replaceAll('{nome}', primeiroNome(dados.nome))
+    .replaceAll('{nome}', primeiroNomeExibicao(dados.nome, dados.nomePreferido))
     .replaceAll('{dia_semana}', nomeDiaSemana(dados.data))
     .replaceAll('{dia_mes}', String(diaMes))
     .replaceAll('{hora}', hora)
@@ -87,17 +87,22 @@ type EventoParaLembrete = {
   hora_inicio: string
   titulo: string | null
   telefone: string | null
-  cliente: { nome: string; telefone: string | null } | null
+  cliente: { nome: string; telefone: string | null; nome_preferido: string | null } | null
 }
 
 // Um Treino tem cliente (nome/telefone vêm da ficha); uma Sessão
 // experimental não — a pessoa ainda não é cliente, por isso o nome e o
 // telemóvel ficam guardados diretamente no próprio evento, preenchidos
-// ao agendar (ver CamposSessaoExperimental).
-function destinoLembrete(evento: EventoParaLembrete): { nome: string; telefone: string | null } | null {
-  if (evento.cliente) return { nome: evento.cliente.nome, telefone: evento.cliente.telefone }
+// ao agendar (ver CamposSessaoExperimental). Só um cliente pode ter
+// nome preferido — uma lead ainda não tem ficha onde o guardar.
+function destinoLembrete(
+  evento: EventoParaLembrete
+): { nome: string; telefone: string | null; nomePreferido: string | null } | null {
+  if (evento.cliente) {
+    return { nome: evento.cliente.nome, telefone: evento.cliente.telefone, nomePreferido: evento.cliente.nome_preferido }
+  }
   if (evento.tipo === 'Sessão experimental' && evento.titulo) {
-    return { nome: evento.titulo, telefone: evento.telefone }
+    return { nome: evento.titulo, telefone: evento.telefone, nomePreferido: null }
   }
   return null
 }
@@ -137,7 +142,7 @@ async function processarLembretesDoEstudio(
   const [{ data: eventosData, error: erroEventos }, estadoInicial] = await Promise.all([
     admin
       .from('agenda_eventos')
-      .select('id, tipo, data, hora_inicio, titulo, telefone, cliente:clientes(nome, telefone)')
+      .select('id, tipo, data, hora_inicio, titulo, telefone, cliente:clientes(nome, telefone, nome_preferido)')
       .eq('estudio_id', estudio.id)
       .in('tipo', ['Treino', 'Sessão experimental'])
       .eq('estado', 'Agendado')
@@ -152,8 +157,13 @@ async function processarLembretesDoEstudio(
   let estado = estadoInicial
   const pendentes = ((eventosData ?? []) as unknown as EventoParaLembrete[])
     .map((evento) => ({ evento, destino: destinoLembrete(evento) }))
-    .filter((x): x is { evento: EventoParaLembrete; destino: { nome: string; telefone: string | null } } =>
-      x.destino !== null
+    .filter(
+      (
+        x
+      ): x is {
+        evento: EventoParaLembrete
+        destino: { nome: string; telefone: string | null; nomePreferido: string | null }
+      } => x.destino !== null
     )
 
   let enviados = 0
@@ -165,6 +175,7 @@ async function processarLembretesDoEstudio(
       nome: destino.nome,
       data: evento.data,
       horaInicio: evento.hora_inicio,
+      nomePreferido: destino.nomePreferido,
     })
     const resultado = await enviarSms(estudio.slug, destino.telefone ?? '', texto)
 

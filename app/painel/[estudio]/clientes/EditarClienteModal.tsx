@@ -10,6 +10,7 @@ import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 export type ClienteEdicao = {
   id: string
   nome: string
+  nomePreferido: string | null
   numeroSocio: string | null
   telefone: string | null
   email: string | null
@@ -52,6 +53,7 @@ export default function EditarClienteModal({
 
   function aoSubmeter(formData: FormData) {
     const nome = (formData.get('nome') as string).trim()
+    const nomePreferido = (formData.get('nome_preferido') as string)?.trim() || null
     const numeroSocio = (formData.get('numero_socio') as string)?.trim() || null
     const telefone = (formData.get('telefone') as string)?.trim() || null
     const email = (formData.get('email') as string)?.trim() || null
@@ -67,6 +69,7 @@ export default function EditarClienteModal({
         estudioSlug: slug,
         id: cliente.id,
         nome,
+        nomePreferido,
         numeroSocio,
         telefone,
         email,
@@ -122,6 +125,19 @@ export default function EditarClienteModal({
                 Nome
               </label>
               <input id="nome" name="nome" required defaultValue={cliente.nome} className={inputCls} />
+            </div>
+
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <label htmlFor="nome_preferido" className={labelCls}>
+                Nome preferido
+              </label>
+              <input
+                id="nome_preferido"
+                name="nome_preferido"
+                defaultValue={cliente.nomePreferido ?? ''}
+                placeholder="ex.: prefere ser chamado de Pedro"
+                className={inputCls}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">

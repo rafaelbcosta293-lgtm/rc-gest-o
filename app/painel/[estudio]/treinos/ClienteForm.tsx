@@ -56,6 +56,19 @@ export default function ClienteForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
+          <label htmlFor="nome_preferido" className={labelCls}>
+            Nome preferido
+          </label>
+          <input
+            id="nome_preferido"
+            name="nome_preferido"
+            defaultValue={cliente?.nome_preferido ?? ''}
+            placeholder="ex.: Rui Pedro Catarino prefere ser chamado de Pedro"
+            className={inputCls}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="telefone" className={labelCls}>
             Telefone
           </label>

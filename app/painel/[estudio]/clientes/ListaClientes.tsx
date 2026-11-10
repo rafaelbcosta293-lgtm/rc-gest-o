@@ -11,6 +11,7 @@ export type LinhaCliente = {
   id: string
   numeroSocio: string | null
   nome: string
+  nomePreferido: string | null
   telefone: string | null
   email: string | null
   nascimento: string | null
@@ -82,6 +83,7 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
                     setEditando({
                       id: l.id,
                       nome: l.nome,
+                      nomePreferido: l.nomePreferido,
                       numeroSocio: l.numeroSocio,
                       telefone: l.telefone,
                       email: l.email,

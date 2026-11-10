@@ -7,6 +7,7 @@ import { X, Trash2, Ban, RotateCcw, Minus, Plus, HelpCircle } from 'lucide-react
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { corTipoEvento, rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
+import { nomeCurto } from '@/lib/data/clientes'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import {
   criarEventoRapido,
@@ -22,7 +23,13 @@ import {
 import type { EventoAgenda, TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
 
 export type EventoComNomes = EventoAgenda & {
-  cliente: { id: string; nome: string; estudio_id: number; numero_socio: string | null } | null
+  cliente: {
+    id: string
+    nome: string
+    nome_preferido: string | null
+    estudio_id: number
+    numero_socio: string | null
+  } | null
   pt: { id: string; nome: string } | null
 }
 
@@ -45,9 +52,15 @@ const ROTULO_ACOMPANHADO: Record<number, string> = { 2: 'Dual', 3: 'Trio' }
 function rotuloEvento(grupo: EventoComNomes[], estudioId: number) {
   const primeiro = grupo[0]
   if (primeiro.tipo === 'Sessão experimental') return rotuloTipoEvento(primeiro.tipo, primeiro.titulo)
+  // Só primeiro + último nome — menos ruído visual do que o nome
+  // completo; o nome preferido do cliente (quando existe) sobrepõe-se
+  // ao primeiro nome (ver lib/data/clientes.ts: nomeCurto).
   const nomes = grupo
     .filter((e) => e.cliente)
-    .map((e) => (e.cliente!.estudio_id !== estudioId ? `↔ ${e.cliente!.nome}` : e.cliente!.nome))
+    .map((e) => {
+      const curto = nomeCurto(e.cliente!.nome, e.cliente!.nome_preferido)
+      return e.cliente!.estudio_id !== estudioId ? `↔ ${curto}` : curto
+    })
   if (nomes.length > 0) {
     const sufixo = ROTULO_ACOMPANHADO[nomes.length]
     return sufixo ? `(${sufixo}) ${nomes.join(' + ')}` : nomes.join(' + ')

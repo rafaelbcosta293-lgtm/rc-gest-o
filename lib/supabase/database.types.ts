@@ -78,6 +78,7 @@ export type Cliente = {
   estudio_id: number
   numero_socio: string | null
   nome: string
+  nome_preferido: string | null
   telefone: string | null
   email: string | null
   morada: string | null

@@ -4,6 +4,25 @@ export function primeiroNome(nomeCompleto: string): string {
   return nomeCompleto.trim().split(/\s+/)[0] ?? nomeCompleto.trim()
 }
 
+// Nome a usar em mensagens e na Agenda — o nome preferido (quando a
+// ficha do cliente tem um guardado, ex.: "Rui Pedro Catarino" que
+// prefere ser tratado por "Pedro") sobrepõe-se sempre ao primeiro nome
+// do nome completo.
+export function primeiroNomeExibicao(nomeCompleto: string, nomePreferido?: string | null): string {
+  return nomePreferido?.trim() || primeiroNome(nomeCompleto)
+}
+
+// Primeiro + último nome — usado na Agenda para identificar o cliente
+// sem mostrar o nome completo todo (menos ruído visual nos
+// agendamentos). O nome preferido substitui o primeiro nome quando
+// existe; nomes de uma só palavra ficam como estão.
+export function nomeCurto(nomeCompleto: string, nomePreferido?: string | null): string {
+  const partes = nomeCompleto.trim().split(/\s+/)
+  const primeiro = primeiroNomeExibicao(nomeCompleto, nomePreferido)
+  const ultimo = partes[partes.length - 1]
+  return partes.length > 1 && ultimo !== primeiro ? `${primeiro} ${ultimo}` : primeiro
+}
+
 // Meses entre o início de contrato e hoje (ou até à saída, se já não é
 // cliente). Arredondado por baixo — "3 meses" só depois de passarem 3
 // meses completos.

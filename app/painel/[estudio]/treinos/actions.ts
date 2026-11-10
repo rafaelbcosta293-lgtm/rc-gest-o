@@ -13,6 +13,7 @@ function campoOuNull(formData: FormData, nome: string) {
 function camposComuns(formData: FormData) {
   return {
     nome: formData.get('nome') as string,
+    nome_preferido: campoOuNull(formData, 'nome_preferido'),
     telefone: campoOuNull(formData, 'telefone'),
     email: campoOuNull(formData, 'email'),
     objetivo: campoOuNull(formData, 'objetivo'),

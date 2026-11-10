@@ -1,4 +1,4 @@
-import { primeiroNome } from './clientes'
+import { primeiroNomeExibicao } from './clientes'
 
 export function proximoAniversario(nascimentoISO: string, hoje: Date): { data: Date; dias: number } {
   const nasc = new Date(`${nascimentoISO}T00:00:00`)
@@ -24,9 +24,14 @@ export function idadeEm(nascimentoISO: string, naData: Date): number {
 // Género desconhecido usa "estimado" (convenção, não é perfeito, mas
 // evita deixar a frase incompleta para quem ainda não tem o campo
 // preenchido na ficha).
-export function preencherMensagem(template: string, nome: string, genero?: 'Masculino' | 'Feminino' | null) {
+export function preencherMensagem(
+  template: string,
+  nome: string,
+  genero?: 'Masculino' | 'Feminino' | null,
+  nomePreferido?: string | null
+) {
   const estimado = genero === 'Feminino' ? 'estimada' : 'estimado'
-  return template.replaceAll('{nome}', primeiroNome(nome)).replaceAll('{estimado}', estimado)
+  return template.replaceAll('{nome}', primeiroNomeExibicao(nome, nomePreferido)).replaceAll('{estimado}', estimado)
 }
 
 export function fmtDiaMes(data: Date) {

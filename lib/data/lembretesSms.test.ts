@@ -46,6 +46,16 @@ describe('preencherTemplateLembrete', () => {
     })
     expect(texto).toBe('Olá José!')
   })
+
+  it('nome preferido sobrepõe-se ao primeiro nome', () => {
+    const texto = preencherTemplateLembrete('Olá {nome}!', {
+      nome: 'Rui Pedro Catarino',
+      data: '2026-11-03',
+      horaInicio: '10:00:00',
+      nomePreferido: 'Pedro',
+    })
+    expect(texto).toBe('Olá Pedro!')
+  })
 })
 
 describe('proximoDiaAlvoLembrete', () => {

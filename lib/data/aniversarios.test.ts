@@ -22,4 +22,8 @@ describe('preencherMensagem', () => {
     expect(preencherMensagem('{estimado} cliente', 'Ana', null)).toBe('estimado cliente')
     expect(preencherMensagem('{estimado} cliente', 'Ana')).toBe('estimado cliente')
   })
+
+  it('nome preferido sobrepõe-se ao primeiro nome', () => {
+    expect(preencherMensagem('Olá {nome}!', 'Rui Pedro Catarino', null, 'Pedro')).toBe('Olá Pedro!')
+  })
 })

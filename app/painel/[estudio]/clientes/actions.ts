@@ -13,6 +13,7 @@ export async function atualizarClienteRapido(input: {
   estudioSlug: string
   id: string
   nome: string
+  nomePreferido: string | null
   numeroSocio: string | null
   telefone: string | null
   email: string | null
@@ -46,6 +47,7 @@ export async function atualizarClienteRapido(input: {
     .from('clientes')
     .update({
       nome,
+      nome_preferido: input.nomePreferido,
       numero_socio: input.numeroSocio,
       telefone: input.telefone,
       email: input.email,

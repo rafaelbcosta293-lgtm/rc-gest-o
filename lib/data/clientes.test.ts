@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { mesesAtivo, dataRenovacaoSeguroEmDivida, segurosPorPagar, primeiroNome } from './clientes'
+import {
+  mesesAtivo,
+  dataRenovacaoSeguroEmDivida,
+  segurosPorPagar,
+  primeiroNome,
+  primeiroNomeExibicao,
+  nomeCurto,
+} from './clientes'
 
 describe('primeiroNome', () => {
   it('devolve só a primeira palavra de um nome composto', () => {
@@ -12,6 +19,38 @@ describe('primeiroNome', () => {
 
   it('ignora espaços a mais', () => {
     expect(primeiroNome('  Rosa   Maria Oliveira  ')).toBe('Rosa')
+  })
+})
+
+describe('primeiroNomeExibicao', () => {
+  it('sem nome preferido, devolve o primeiro nome', () => {
+    expect(primeiroNomeExibicao('Rui Pedro Catarino', null)).toBe('Rui')
+  })
+
+  it('com nome preferido, sobrepõe-se ao primeiro nome', () => {
+    expect(primeiroNomeExibicao('Rui Pedro Catarino', 'Pedro')).toBe('Pedro')
+  })
+
+  it('nome preferido em branco conta como ausente', () => {
+    expect(primeiroNomeExibicao('Rui Pedro Catarino', '  ')).toBe('Rui')
+  })
+})
+
+describe('nomeCurto', () => {
+  it('nome composto sem preferido: primeiro + último nome', () => {
+    expect(nomeCurto('José Manuel Antunes Alves de Freitas', null)).toBe('José Freitas')
+  })
+
+  it('nome preferido substitui o primeiro nome, mantém o último', () => {
+    expect(nomeCurto('Rui Pedro Catarino', 'Pedro')).toBe('Pedro Catarino')
+  })
+
+  it('nome de uma só palavra fica como está', () => {
+    expect(nomeCurto('Ana', null)).toBe('Ana')
+  })
+
+  it('nome de duas palavras não duplica quando preferido == último', () => {
+    expect(nomeCurto('Ana Sofia', 'Sofia')).toBe('Sofia')
   })
 })
 

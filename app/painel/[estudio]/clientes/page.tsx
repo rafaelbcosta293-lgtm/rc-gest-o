@@ -15,6 +15,7 @@ type ClienteLista = {
   id: string
   numero_socio: string | null
   nome: string
+  nome_preferido: string | null
   telefone: string | null
   email: string | null
   estado: EstadoCliente
@@ -108,7 +109,7 @@ export default async function ClientesPage({
   let query = supabase
     .from('clientes')
     .select(
-      'id, numero_socio, nome, telefone, email, estado, genero, alerta, nascimento, inicio_contrato, saiu_em, frequencia_semanal'
+      'id, numero_socio, nome, nome_preferido, telefone, email, estado, genero, alerta, nascimento, inicio_contrato, saiu_em, frequencia_semanal'
     )
     .eq('estudio_id', estudio.id)
 
@@ -201,6 +202,7 @@ export default async function ClientesPage({
       id: c.id,
       numeroSocio: c.numero_socio,
       nome: c.nome,
+      nomePreferido: c.nome_preferido,
       telefone: c.telefone,
       email: c.email,
       nascimento: c.nascimento,

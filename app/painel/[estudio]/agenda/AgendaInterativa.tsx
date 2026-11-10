@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { X, Trash2, Ban, RotateCcw, Minus, Plus, HelpCircle } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
-import { corTipoEvento, rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
+import { rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
 import { nomeCurto } from '@/lib/data/clientes'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import {
@@ -107,6 +107,16 @@ type EstadoModal =
 const NIVEIS_ZOOM = [0.225, 0.45, 0.675, 0.9, 1.125, 1.35, 1.575, 1.8, 2.025, 2.25]
 const ZOOM_OMISSAO = 1
 const ZOOM_INICIAL = 4
+
+// Paleta pedida para os blocos de evento da grelha (dia/semana): fundo
+// bege suave, borda esquerda a ouro fosco (identidade da marca) e
+// texto em carvão — em vez da cor sólida por tipo de evento. Essa cor
+// por tipo continua a usar-se noutros sítios (pontos da vista de Mês,
+// ficha do evento), onde o objetivo é distinguir tipos, não aqui, onde
+// o objetivo é um aspeto leve e uniforme.
+const EVENTO_FUNDO = '#EFECE6'
+const EVENTO_BORDA = '#C5A059'
+const EVENTO_TEXTO = '#1A1A1A'
 
 export default function AgendaInterativa({
   slug,
@@ -817,7 +827,6 @@ function ColunaDia({
         </div>
       )}
       {disporEventosDoDia(eventos).map(({ evento, grupo, coluna, colunas }) => {
-        const cor = corTipoEvento(evento.tipo)
         const inicioMin = minutosDoDia(evento.hora_inicio)
         const emArrasto = arrastandoId === evento.id
         const emSelecionado = selecionadoId === evento.id
@@ -846,8 +855,9 @@ function ColunaDia({
               height: Math.max(evento.duracao_min * pxPorMinuto, 24) - 2,
               left: `calc(${(coluna * 100) / colunas}% + 1px)`,
               width: `calc(${100 / colunas}% - 2px)`,
-              background: cor.tx,
-              color: '#fff',
+              background: EVENTO_FUNDO,
+              color: EVENTO_TEXTO,
+              borderLeft: `4px solid ${EVENTO_BORDA}`,
             }}
           >
             {/* Conteúdo num wrapper à parte, só este com overflow-hidden

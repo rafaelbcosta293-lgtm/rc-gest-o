@@ -838,19 +838,20 @@ function ColunaDia({
                 (para o texto truncar) — o botão em si fica sem isso, para
                 as pegas de redimensionar poderem crescer um pouco para
                 fora da borda sem ficarem cortadas. Reserva-se espaço à
-                direita (pr-6) para o nº de sócio nunca ficar por cima do
-                texto truncado. */}
+                direita (pr-6) para o nº de sócio (canto inferior
+                direito) nunca ficar por cima do texto truncado. */}
             <span className="block h-full overflow-hidden px-1.5 py-1 pr-6 leading-snug">
+              <span className="block truncate text-[13px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
               <span className="block truncate text-[12px] font-semibold">
                 {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
               </span>
-              <span className="block truncate text-[13px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
             </span>
             {/* Nº de sócio — pequeno e discreto, só para consulta rápida
                 sem abrir o evento, por isso fica à parte, encostado ao
-                canto em vez de ocupar espaço nas linhas do nome. */}
+                canto inferior direito em vez de ocupar espaço nas
+                linhas do nome/hora. */}
             {numerosSocio && (
-              <span className="pointer-events-none absolute top-0.5 right-1 truncate text-[10px] leading-tight opacity-80">
+              <span className="pointer-events-none absolute right-1 bottom-0.5 truncate text-[10px] leading-tight opacity-80">
                 {numerosSocio}
               </span>
             )}

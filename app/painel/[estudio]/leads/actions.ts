@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
+import { normalizarTelefoneSms } from '@/lib/sms/gateway'
+import type { EstadoLead } from '@/lib/supabase/database.types'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -63,18 +65,53 @@ export async function criarLead(formData: FormData) {
 // redirect) a partir do agendamento de uma Sessão experimental, quando
 // a pessoa ainda não está nas leads: cria a lead sem sair do
 // agendamento, para o nome já aparecer logo a seguir nas sugestões
-// (ver CamposSessaoExperimental).
+// (ver CamposSessaoExperimental). Nome, telefone, origem, estado e
+// objetivo (1 a 3) são todos obrigatórios aqui — é a única informação
+// que fica desta pessoa até ao primeiro contacto.
 export async function criarLeadRapida(input: {
   estudioSlug: string
   estudioId: number
   nome: string
-  telefone: string | null
+  telefone: string
+  origem: string
+  estado: EstadoLead
+  objetivos: string[]
 }): Promise<{ ok: true; lead: { id: string; nome: string; telefone: string | null } } | { error: string }> {
+  const nome = input.nome.trim()
+  if (!nome) return { error: 'O nome é obrigatório.' }
+
+  // Um nº português pode entrar só com os 9 dígitos (fica com +351 à
+  // frente); qualquer outro país tem de vir já com o indicativo (+34,
+  // +44, ...), para nunca ficar ambíguo a quem vai enviar o SMS.
+  const telefone = normalizarTelefoneSms(input.telefone)
+  if (!telefone) {
+    return {
+      error:
+        'Número de telemóvel inválido. Usa 9XXXXXXXX para um nº português, ou +indicativo e o número completo para outro país (ex.: +34...).',
+    }
+  }
+
+  const origem = input.origem.trim()
+  if (!origem) return { error: 'A origem é obrigatória.' }
+
+  if (!input.estado) return { error: 'O estado é obrigatório.' }
+
+  const objetivos = input.objetivos.map((o) => o.trim()).filter(Boolean)
+  if (objetivos.length === 0) return { error: 'Escolhe pelo menos um objetivo.' }
+  if (objetivos.length > 3) return { error: 'Escolhe no máximo 3 objetivos.' }
+
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('leads')
-    .insert({ estudio_id: input.estudioId, nome: input.nome, telefone: input.telefone })
+    .insert({
+      estudio_id: input.estudioId,
+      nome,
+      telefone,
+      origem,
+      estado: input.estado,
+      objetivo: objetivos.join(', '),
+    })
     .select('id, nome, telefone')
     .single()
 

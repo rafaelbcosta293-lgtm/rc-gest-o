@@ -122,6 +122,28 @@ export const ESTADOS_LEAD = {
 
 export const TIPOS_CONTACTO = ['Telefone', 'WhatsApp', 'Email', 'Presencial', 'Mensagem redes'] as const
 
+// Origens conhecidas de uma lead — as 3 automáticas (que já chegam por
+// webhook, ver CORES_ORIGEM em LeadsKanban.tsx) mais as manuais mais
+// comuns num estúdio deste tipo. "Outra" deixa sempre escrever à mão
+// uma origem que não esteja na lista.
+export const ORIGENS_LEAD = ['Meta Ads', 'Google Forms', 'Website', 'Instagram', 'Indicação', 'Walk-in', 'Outra'] as const
+
+// Objetivos que uma lead pode indicar ao agendar uma sessão experimental
+// — até 3 à escolha (ver CamposSessaoExperimental.tsx).
+export const OBJETIVOS_LEAD = [
+  'Perda de peso',
+  'Hipertrofia',
+  'Tonificação',
+  'Bem estar',
+  'Alívio de Dores',
+  'Reabilitação',
+  'Correção Postural e Mobilidade',
+  'Alto Rendimento',
+  'Gestão de Stress / Disciplina',
+  'Pré ou Pós-Parto',
+  'Envelhecimento Ativo',
+] as const
+
 // Uma cor por instrutor (por ordem alfabética, atribuída pela posição na
 // lista) — para se identificar quem trabalha quando só de olhar para a
 // grelha de horários, sem ter de ler cada nome.

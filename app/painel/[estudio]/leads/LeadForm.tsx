@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ESTADOS_LEAD, ORIGENS_LEAD, OBJETIVOS_LEAD, MAX_OBJETIVOS_LEAD } from '@/lib/data/constantes'
+import { ESTADOS_LEAD, ORIGENS_LEAD, OBJETIVOS_LEAD } from '@/lib/data/constantes'
 import type { Lead, Perfil, TemperaturaLead } from '@/lib/supabase/database.types'
 import SubmitButton from '@/components/SubmitButton'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
@@ -39,20 +39,12 @@ export default function LeadForm({
   const [origem, setOrigem] = useState(lead?.origem ? (origemConhecida ? lead.origem : 'Outra') : '')
   const [origemOutra, setOrigemOutra] = useState(lead?.origem && !origemConhecida ? lead.origem : '')
 
-  // Objetivo guarda-se como texto só com os nomes separados por vírgula
-  // — os que baterem certo com a lista ficam marcados; o resto (texto
-  // livre de antes desta lista existir) fica no campo "Outro", também
-  // nunca se perde.
-  const objetivosGuardados = (lead?.objetivo ?? '')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean)
-  const [objetivos, setObjetivos] = useState<string[]>(
-    objetivosGuardados.filter((o) => OBJETIVOS_CONHECIDOS.includes(o))
-  )
-  const [objetivoOutro, setObjetivoOutro] = useState(
-    objetivosGuardados.filter((o) => !OBJETIVOS_CONHECIDOS.includes(o)).join(', ')
-  )
+  // Mesma lógica da origem — um objetivo conhecido fica logo escolhido;
+  // texto livre (de antes desta lista existir) cai em "Outro", com o
+  // texto original preservado no campo ao lado.
+  const objetivoConhecido = !!lead?.objetivo && OBJETIVOS_CONHECIDOS.includes(lead.objetivo)
+  const [objetivo, setObjetivo] = useState(lead?.objetivo ? (objetivoConhecido ? lead.objetivo : 'Outro') : '')
+  const [objetivoOutro, setObjetivoOutro] = useState(lead?.objetivo && !objetivoConhecido ? lead.objetivo : '')
 
   return (
     <form action={action} onChange={marcarSujo} className="mt-6 flex flex-col gap-4">
@@ -193,36 +185,30 @@ export default function LeadForm({
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="objetivo" className={labelCls}>
-            Objetivo (até {MAX_OBJETIVOS_LEAD})
+            Objetivo
           </label>
           <select
             id="objetivo"
-            multiple
-            value={objetivos}
-            onChange={(e) => {
-              const selecionados = Array.from(e.target.selectedOptions, (o) => o.value)
-              if (selecionados.length <= MAX_OBJETIVOS_LEAD) setObjetivos(selecionados)
-            }}
-            size={6}
-            className={`${inputCls} h-auto`}
+            value={objetivo}
+            onChange={(e) => setObjetivo(e.target.value)}
+            className={inputCls}
           >
+            <option value="">—</option>
             {OBJETIVOS_LEAD.map((o) => (
               <option key={o} value={o}>
                 {o}
               </option>
             ))}
           </select>
-          <input
-            value={objetivoOutro}
-            onChange={(e) => setObjetivoOutro(e.target.value)}
-            placeholder="Outro (opcional)"
-            className={inputCls}
-          />
-          <input
-            type="hidden"
-            name="objetivo"
-            value={[...objetivos, objetivoOutro.trim()].filter(Boolean).join(', ')}
-          />
+          {objetivo === 'Outro' && (
+            <input
+              value={objetivoOutro}
+              onChange={(e) => setObjetivoOutro(e.target.value)}
+              placeholder="Qual?"
+              className={`${inputCls} mt-1`}
+            />
+          )}
+          <input type="hidden" name="objetivo" value={objetivo === 'Outro' ? objetivoOutro : objetivo} />
         </div>
 
         <div className="flex flex-col gap-1.5">

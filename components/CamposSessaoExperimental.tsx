@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { criarLeadRapida } from '@/app/painel/[estudio]/leads/actions'
-import { ORIGENS_LEAD, OBJETIVOS_LEAD, MAX_OBJETIVOS_LEAD } from '@/lib/data/constantes'
+import { ORIGENS_LEAD, OBJETIVOS_LEAD } from '@/lib/data/constantes'
 import type { EstadoLead } from '@/lib/supabase/database.types'
 
 export type LeadOpcao = { id: string; nome: string; telefone: string | null }
@@ -49,20 +49,13 @@ export default function CamposSessaoExperimental({
   const [aCriarLead, setACriarLead] = useState(false)
 
   // Só usados ao criar uma lead nova aqui mesmo (nunca ao escolher uma
-  // já existente) — origem, estado e objetivo (até 3) ficam a fazer
-  // falta para a lead não nascer sem esta informação mínima.
+  // já existente) — origem, estado e objetivo ficam a fazer falta para
+  // a lead não nascer sem esta informação mínima.
   const [origem, setOrigem] = useState<string>('')
   const [origemOutra, setOrigemOutra] = useState('')
   const [estadoLead, setEstadoLead] = useState<EstadoLead>('Experimental agendada')
-  const [objetivos, setObjetivos] = useState<string[]>([])
-
-  function alternarObjetivo(o: string) {
-    setObjetivos((lista) => {
-      if (lista.includes(o)) return lista.filter((x) => x !== o)
-      if (lista.length >= MAX_OBJETIVOS_LEAD) return lista
-      return [...lista, o]
-    })
-  }
+  const [objetivo, setObjetivo] = useState('')
+  const [objetivoOutro, setObjetivoOutro] = useState('')
 
   useEffect(() => {
     function aoClicarFora(e: MouseEvent) {
@@ -88,8 +81,9 @@ export default function CamposSessaoExperimental({
       setErroCriar('Escolhe a origem.')
       return
     }
-    if (objetivos.length === 0) {
-      setErroCriar('Escolhe pelo menos um objetivo (até 3).')
+    const objetivoFinal = objetivo === 'Outro' ? objetivoOutro.trim() : objetivo
+    if (!objetivoFinal) {
+      setErroCriar('Escolhe o objetivo.')
       return
     }
 
@@ -101,7 +95,7 @@ export default function CamposSessaoExperimental({
         telefone: telefone.trim(),
         origem: origemFinal,
         estado: estadoLead,
-        objetivos,
+        objetivo: objetivoFinal,
       })
       if ('error' in resultado) {
         setErroCriar(resultado.error)
@@ -238,34 +232,29 @@ export default function CamposSessaoExperimental({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-muted">
-              Objetivo (até {MAX_OBJETIVOS_LEAD}) — {objetivos.length}/{MAX_OBJETIVOS_LEAD}
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {OBJETIVOS_LEAD.map((o) => {
-                const selecionado = objetivos.includes(o)
-                const desativado = !selecionado && objetivos.length >= MAX_OBJETIVOS_LEAD
-                return (
-                  <label
-                    key={o}
-                    className={`cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                      selecionado
-                        ? 'border-brand bg-brand/20 text-foreground'
-                        : 'border-border-subtle bg-surface text-muted'
-                    } ${desativado ? 'cursor-not-allowed opacity-50' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selecionado}
-                      disabled={desativado}
-                      onChange={() => alternarObjetivo(o)}
-                      className="sr-only"
-                    />
-                    {o}
-                  </label>
-                )
-              })}
-            </div>
+            <label className="text-xs font-semibold text-muted">Objetivo</label>
+            <select
+              value={objetivo}
+              onChange={(e) => setObjetivo(e.target.value)}
+              required
+              className={inputCls}
+            >
+              <option value="">— Escolhe —</option>
+              {OBJETIVOS_LEAD.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+            {objetivo === 'Outro' && (
+              <input
+                value={objetivoOutro}
+                onChange={(e) => setObjetivoOutro(e.target.value)}
+                placeholder="Qual?"
+                required
+                className={`${inputCls} mt-1`}
+              />
+            )}
           </div>
 
           {erroCriar && <p className="text-xs text-red-600 dark:text-red-400">{erroCriar}</p>}

@@ -75,7 +75,7 @@ export async function criarLeadRapida(input: {
   telefone: string
   origem: string
   estado: EstadoLead
-  objetivos: string[]
+  objetivo: string
 }): Promise<{ ok: true; lead: { id: string; nome: string; telefone: string | null } } | { error: string }> {
   const nome = input.nome.trim()
   if (!nome) return { error: 'O nome é obrigatório.' }
@@ -96,9 +96,8 @@ export async function criarLeadRapida(input: {
 
   if (!input.estado) return { error: 'O estado é obrigatório.' }
 
-  const objetivos = input.objetivos.map((o) => o.trim()).filter(Boolean)
-  if (objetivos.length === 0) return { error: 'Escolhe pelo menos um objetivo.' }
-  if (objetivos.length > 3) return { error: 'Escolhe no máximo 3 objetivos.' }
+  const objetivo = input.objetivo.trim()
+  if (!objetivo) return { error: 'O objetivo é obrigatório.' }
 
   const supabase = await createClient()
 
@@ -110,7 +109,7 @@ export async function criarLeadRapida(input: {
       telefone,
       origem,
       estado: input.estado,
-      objetivo: objetivos.join(', '),
+      objetivo,
     })
     .select('id, nome, telefone')
     .single()

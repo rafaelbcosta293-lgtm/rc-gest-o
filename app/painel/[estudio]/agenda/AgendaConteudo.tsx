@@ -223,11 +223,13 @@ export default async function AgendaConteudo({
 
   return (
     <div>
-      {/* Cabeçalho compactado numa única linha (título+voltar+Evento),
-          para a grelha da agenda começar mais perto do topo — pedido
-          do dono para ver uma janela maior da agenda de uma vez. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
+      {/* Cabeçalho todo numa única linha (quebra só se não couber) —
+          voltar, título, vistas, navegação de período, filtro de
+          instrutor e o botão de criar, lado a lado, para a grelha da
+          agenda começar o mais perto possível do topo (pedido do
+          dono, repetido — cada vez mais compacto). */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-2">
           {mostrarVoltar && (
             <Link
               href={`/painel/${slug}`}
@@ -236,28 +238,11 @@ export default async function AgendaConteudo({
               <ArrowLeft className="h-4 w-4" /> Voltar
             </Link>
           )}
-          <h1 className="truncate text-xl font-bold tracking-tight text-foreground">
+          <h1 className="truncate text-base font-bold tracking-tight text-foreground">
             Agenda <span className="font-normal text-muted">· {estudio.nome}</span>
           </h1>
         </div>
-        <Link
-          href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-        >
-          <Plus className="h-4 w-4" /> Evento
-        </Link>
-      </div>
 
-      {error && (
-        <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {decodeURIComponent(error)}
-        </p>
-      )}
-
-      {/* Vistas, navegação de período e filtro de instrutor, tudo numa
-          única linha (quebra só se não couber) — antes eram 3 linhas
-          separadas. */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
         <div className="flex shrink-0 gap-1.5 rounded-full bg-border-subtle p-1">
           {VISTAS.map((v) => (
             <Link
@@ -312,7 +297,20 @@ export default async function AgendaConteudo({
             ))}
           </div>
         )}
+
+        <Link
+          href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
+          className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+        >
+          <Plus className="h-4 w-4" /> Evento
+        </Link>
       </div>
+
+      {error && (
+        <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          {decodeURIComponent(error)}
+        </p>
+      )}
 
       {(vista === 'dia' || vista === 'semana') && (
         <AgendaInterativa

@@ -8,6 +8,7 @@ import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
 import { nomeCurto } from '@/lib/data/clientes'
+import { PALETA } from '@/lib/data/constantes'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import {
   criarEventoRapido,
@@ -727,7 +728,7 @@ function GrelhaInterativa({
         <div
           onMouseMove={aoMoverRatoEmRepouso}
           onScroll={aoRolarGrelha}
-          className="h-[calc(100vh-280px)] min-h-[360px] overflow-y-auto rounded-b-xl border border-border-subtle"
+          className="h-[calc(100vh-230px)] min-h-[360px] overflow-y-auto rounded-b-xl border border-border-subtle"
         >
           <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: alturaGrade }}>
             <div className="relative text-[10px] text-muted">
@@ -800,6 +801,13 @@ function ColunaDia({
   previa: { inicioMin: number; fimMin: number } | null
   pxPorMinuto: number
 }) {
+  // Para desvanecer eventos já terminados — não precisa de precisão ao
+  // segundo, por isso atualiza-se devagar.
+  const [agora, setAgora] = useState(() => Date.now())
+  useEffect(() => {
+    const intervalo = setInterval(() => setAgora(Date.now()), 60_000)
+    return () => clearInterval(intervalo)
+  }, [])
   return (
     <div
       ref={registarRef}
@@ -831,6 +839,11 @@ function ColunaDia({
         const emArrasto = arrastandoId === evento.id
         const emSelecionado = selecionadoId === evento.id
         const numerosSocio = numerosSocioEvento(grupo)
+        const cancelado = evento.estado === 'Cancelado'
+        // "Terminado" só desvanece o aspeto — nunca line-through, que
+        // fica só para "Cancelado" (um já aconteceu, o outro não).
+        const terminado =
+          !cancelado && new Date(`${evento.data}T${horaFim(evento.hora_inicio, evento.duracao_min)}`).getTime() < agora
         return (
           <button
             key={evento.id}
@@ -845,7 +858,9 @@ function ColunaDia({
             onContextMenu={onAbrirContexto(evento)}
             className={`group absolute rounded-md text-left leading-tight shadow-sm transition-opacity select-none ${
               emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
-            } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${evento.estado === 'Cancelado' ? 'opacity-50 line-through' : ''}`}
+            } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${
+              cancelado ? 'opacity-50 line-through' : terminado ? 'opacity-55' : ''
+            }`}
             style={{
               // Pequeno espaço (calc) entre blocos vizinhos — horizontal
               // (colunas lado a lado) e vertical (altura 2px mais curta
@@ -857,7 +872,12 @@ function ColunaDia({
               width: `calc(${100 / colunas}% - 2px)`,
               background: EVENTO_FUNDO,
               color: EVENTO_TEXTO,
-              borderLeft: `4px solid ${EVENTO_BORDA}`,
+              // Linha fina à volta de toda a caixa, para se ver sempre o
+              // evento delimitado (mesmo encostado a outro) — a borda
+              // esquerda, mais grossa, por cima, é o destaque de
+              // identidade (ouro) ou de aviso (vermelho, desmarcado).
+              border: '1px solid #000',
+              borderLeft: `4px solid ${cancelado ? PALETA.vermelho.tx : EVENTO_BORDA}`,
             }}
           >
             {/* Conteúdo num wrapper à parte, só este com overflow-hidden

@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { podeAcederAdmin } from '@/lib/data/acessos'
 import { obterEstadosBanner } from '@/lib/data/smsGateway'
+import { listarContactosAgendados } from '@/lib/data/contactosAgendados'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
+import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import AdminNav from './AdminNav'
 
 // Administração é só para o dono da app — verificado por email antes de
@@ -13,7 +15,11 @@ import AdminNav from './AdminNav'
 // camada opcional, esta é obrigatória).
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const [sessao, estadosBanner] = await Promise.all([getSessaoAtual(), obterEstadosBanner(supabase)])
+  const [sessao, estadosBanner, contactosAgendados] = await Promise.all([
+    getSessaoAtual(),
+    obterEstadosBanner(supabase),
+    listarContactosAgendados(supabase),
+  ])
 
   if (!podeAcederAdmin(sessao.email)) {
     redirect('/painel?erro=sem-acesso')
@@ -27,6 +33,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           em app/painel/[estudio]/layout.tsx. */}
       <div className="sticky top-0 z-10 flex flex-col">
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} />
+        <AlertaContactosAgendados contactosIniciais={contactosAgendados} />
         <header className="shadow-deep flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-3 backdrop-blur-xl">
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-9 w-auto" priority />

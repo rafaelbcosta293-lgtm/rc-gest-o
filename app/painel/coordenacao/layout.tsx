@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { podeAcederCoordenacao } from '@/lib/data/acessos'
 import { obterEstadosBanner } from '@/lib/data/smsGateway'
+import { listarContactosAgendados } from '@/lib/data/contactosAgendados'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
+import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import CoordenacaoNav from './CoordenacaoNav'
 
 // Coordenação é só para o dono e para a conta geral do negócio —
@@ -13,7 +15,11 @@ import CoordenacaoNav from './CoordenacaoNav'
 // área (essa é uma segunda camada opcional, esta é obrigatória).
 export default async function CoordenacaoLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const [sessao, estadosBanner] = await Promise.all([getSessaoAtual(), obterEstadosBanner(supabase)])
+  const [sessao, estadosBanner, contactosAgendados] = await Promise.all([
+    getSessaoAtual(),
+    obterEstadosBanner(supabase),
+    listarContactosAgendados(supabase),
+  ])
 
   if (!podeAcederCoordenacao(sessao.email)) {
     redirect('/painel?erro=sem-acesso')
@@ -25,6 +31,7 @@ export default async function CoordenacaoLayout({ children }: { children: React.
           em app/painel/[estudio]/layout.tsx. */}
       <div className="sticky top-0 z-10 flex flex-col">
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} />
+        <AlertaContactosAgendados contactosIniciais={contactosAgendados} />
         <header className="dark tema-proprio shadow-deep flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl">
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />

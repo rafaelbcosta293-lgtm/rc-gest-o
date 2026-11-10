@@ -7,7 +7,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
 import { obterEstadosBanner } from '@/lib/data/smsGateway'
+import { listarContactosAgendados } from '@/lib/data/contactosAgendados'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
+import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import BarraAjustavel from '@/components/BarraAjustavel'
 import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPhone, NavLinkBloqueado } from './NavLink'
 
@@ -20,7 +22,11 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   const { estudio: slug } = await params
 
   const supabase = await createClient()
-  const [sessao, estadosBanner] = await Promise.all([getSessaoAtual(), obterEstadosBanner(supabase)])
+  const [sessao, estadosBanner, contactosAgendados] = await Promise.all([
+    getSessaoAtual(),
+    obterEstadosBanner(supabase),
+    listarContactosAgendados(supabase),
+  ])
 
   // O acesso a cada estúdio é por email, não por "papel" — só quem está
   // na lista de lib/data/acessos.ts entra aqui, independentemente do que
@@ -46,6 +52,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           lugar; só uma, com ambas dentro, as mantém empilhadas). */}
       <div className="sticky top-0 z-10 flex flex-col">
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} apenasEstudio={slug} />
+        <AlertaContactosAgendados contactosIniciais={contactosAgendados} apenasEstudio={slug} />
 
         {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
             estúdio — os módulos ficam na barra de separadores do fundo,

@@ -218,6 +218,7 @@ export type Lead = {
   responsavel_id: string | null
   entrada: string
   proximo_contacto: string | null
+  proximo_contacto_hora: string | null
   visita_data: string | null
   visita_hora: string | null
   visita_marcada_em: string | null

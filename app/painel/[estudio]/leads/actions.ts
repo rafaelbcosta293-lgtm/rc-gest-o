@@ -35,6 +35,7 @@ function camposComuns(formData: FormData) {
     disponibilidade: campoOuNull(formData, 'disponibilidade'),
     responsavel_id: campoOuNull(formData, 'responsavel_id'),
     proximo_contacto: campoOuNull(formData, 'proximo_contacto'),
+    proximo_contacto_hora: campoOuNull(formData, 'proximo_contacto_hora'),
     valor_potencial: numeroOuNull(formData, 'valor_potencial'),
     nota: campoOuNull(formData, 'nota'),
   }
@@ -156,6 +157,25 @@ export async function atualizarLead(formData: FormData) {
 }
 
 export type ResultadoAcaoRapida = { ok: true } | { error: string }
+
+// Chamado a partir do alerta global de "contacto agendado pela lead"
+// (ver components/AlertaContactosAgendados.tsx) quando o contacto é
+// feito — limpa a hora pedida (e a data de "próximo contacto" que ia
+// com ela) para o alerta desaparecer sozinho, sem ter de abrir a ficha.
+export async function marcarContactoFeito(input: { estudioSlug: string; id: string }): Promise<ResultadoAcaoRapida> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('leads')
+    .update({ proximo_contacto: null, proximo_contacto_hora: null })
+    .eq('id', input.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/leads`)
+  revalidatePath(`/painel/${input.estudioSlug}/leads/${input.id}`)
+  return { ok: true }
+}
 
 // Usado pelo Kanban de arrastar-e-largar. Nunca aceita o estado "Ganha" —
 // essa etapa exige sempre criar o cliente (converterEmCliente), por isso

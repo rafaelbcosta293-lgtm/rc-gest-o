@@ -270,6 +270,19 @@ export default function LeadForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
+          <label htmlFor="proximo_contacto_hora" className={labelCls}>
+            Hora pedida pela lead
+          </label>
+          <input
+            id="proximo_contacto_hora"
+            name="proximo_contacto_hora"
+            type="time"
+            defaultValue={lead?.proximo_contacto_hora ?? ''}
+            className={inputCls}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="valor_potencial" className={labelCls}>
             Valor potencial (€)
           </label>

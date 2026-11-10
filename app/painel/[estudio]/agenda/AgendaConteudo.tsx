@@ -217,87 +217,95 @@ export default async function AgendaConteudo({
 
   return (
     <div>
-      {mostrarVoltar && (
-        <Link
-          href={`/painel/${slug}`}
-          className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> Voltar
-        </Link>
-      )}
-
-      <div className={`${mostrarVoltar ? 'mt-3' : ''} flex flex-wrap items-end justify-between gap-3`}>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda</h1>
-          <p className="mt-1 text-sm text-muted">{estudio.nome} · treinos, avaliações e reuniões</p>
+      {/* Cabeçalho compactado numa única linha (título+voltar+Evento),
+          para a grelha da agenda começar mais perto do topo — pedido
+          do dono para ver uma janela maior da agenda de uma vez. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          {mostrarVoltar && (
+            <Link
+              href={`/painel/${slug}`}
+              className="inline-flex shrink-0 items-center gap-1 text-sm text-muted hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" /> Voltar
+            </Link>
+          )}
+          <h1 className="truncate text-xl font-bold tracking-tight text-foreground">
+            Agenda <span className="font-normal text-muted">· {estudio.nome}</span>
+          </h1>
         </div>
         <Link
           href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
-          className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
         >
           <Plus className="h-4 w-4" /> Evento
         </Link>
       </div>
 
       {error && (
-        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {decodeURIComponent(error)}
         </p>
       )}
 
-      <div className="mt-6 flex flex-wrap gap-1.5 rounded-full bg-border-subtle p-1">
-        {VISTAS.map((v) => (
-          <Link
-            key={v}
-            href={`${basePath}${construirQuery({ pt: ptFiltro }, { vista: v })}`}
-            className={`flex-1 rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-all ${
-              vista === v ? 'bg-surface text-foreground shadow-pop' : 'text-muted hover:text-foreground'
-            }`}
-          >
-            {LABEL_VISTA[v]}
-          </Link>
-        ))}
-      </div>
-
-      {pts.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-          <span className="font-semibold">Instrutor:</span>
-          <Link
-            href={`${basePath}${construirQuery({ vista }, { pt: undefined })}`}
-            className={`rounded-full border px-2.5 py-1 font-medium ${
-              !ptFiltro ? 'border-brand bg-brand text-black' : 'border-border-subtle text-muted'
-            }`}
-          >
-            Todos
-          </Link>
-          {pts.map((p) => (
+      {/* Vistas, navegação de período e filtro de instrutor, tudo numa
+          única linha (quebra só se não couber) — antes eram 3 linhas
+          separadas. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 gap-1.5 rounded-full bg-border-subtle p-1">
+          {VISTAS.map((v) => (
             <Link
-              key={p.id}
-              href={`${basePath}${construirQuery({ vista }, { pt: p.id })}`}
-              className={`rounded-full border px-2.5 py-1 font-medium ${
-                ptFiltro === p.id ? 'border-brand bg-brand text-black' : 'border-border-subtle text-muted'
+              key={v}
+              href={`${basePath}${construirQuery({ pt: ptFiltro }, { vista: v })}`}
+              className={`rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-all ${
+                vista === v ? 'bg-surface text-foreground shadow-pop' : 'text-muted hover:text-foreground'
               }`}
             >
-              {p.nome}
+              {LABEL_VISTA[v]}
             </Link>
           ))}
         </div>
-      )}
 
-      <div className="mt-4 flex items-center justify-center gap-3">
-        <Link
-          href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: anterior })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
-        >
-          ←
-        </Link>
-        <span className="text-sm font-semibold text-foreground">{tituloPeriodo}</span>
-        <Link
-          href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: seguinte })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
-        >
-          →
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: anterior })}`}
+            className="rounded-md border border-border-subtle px-2.5 py-1 text-sm"
+          >
+            ←
+          </Link>
+          <span className="text-sm font-semibold whitespace-nowrap text-foreground">{tituloPeriodo}</span>
+          <Link
+            href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: seguinte })}`}
+            className="rounded-md border border-border-subtle px-2.5 py-1 text-sm"
+          >
+            →
+          </Link>
+        </div>
+
+        {pts.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+            <span className="font-semibold">Instrutor:</span>
+            <Link
+              href={`${basePath}${construirQuery({ vista }, { pt: undefined })}`}
+              className={`rounded-full border px-2.5 py-1 font-medium ${
+                !ptFiltro ? 'border-brand bg-brand text-black' : 'border-border-subtle text-muted'
+              }`}
+            >
+              Todos
+            </Link>
+            {pts.map((p) => (
+              <Link
+                key={p.id}
+                href={`${basePath}${construirQuery({ vista }, { pt: p.id })}`}
+                className={`rounded-full border px-2.5 py-1 font-medium ${
+                  ptFiltro === p.id ? 'border-brand bg-brand text-black' : 'border-border-subtle text-muted'
+                }`}
+              >
+                {p.nome}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {(vista === 'dia' || vista === 'semana') && (

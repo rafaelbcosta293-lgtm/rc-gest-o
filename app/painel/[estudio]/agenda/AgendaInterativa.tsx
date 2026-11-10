@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { X, Trash2, Ban, RotateCcw, Minus, Plus } from 'lucide-react'
+import { X, Trash2, Ban, RotateCcw, Minus, Plus, HelpCircle } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { corTipoEvento, rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
@@ -88,12 +88,12 @@ type EstadoModal =
 // Níveis de zoom (pixels por minuto) — cada passo sobe/desce 50
 // pontos percentuais (50%, 100%, 150%, ..., 500%), sempre relativo a
 // NIVEIS_ZOOM[ZOOM_OMISSAO] = "100%". O zoom com que a agenda abre é
-// outro nível (ZOOM_INICIAL, 200%) — aproximado o suficiente para ver
+// outro nível (ZOOM_INICIAL, 250%) — aproximado o suficiente para ver
 // bem os eventos sem precisar de dar zoom manualmente, pedido pelo
 // dono.
 const NIVEIS_ZOOM = [0.225, 0.45, 0.675, 0.9, 1.125, 1.35, 1.575, 1.8, 2.025, 2.25]
 const ZOOM_OMISSAO = 1
-const ZOOM_INICIAL = 3
+const ZOOM_INICIAL = 4
 
 export default function AgendaInterativa({
   slug,
@@ -650,19 +650,22 @@ function GrelhaInterativa({
 
   return (
     <div
-      className="mt-4 overflow-x-auto"
+      className="mt-2 overflow-x-auto"
       onMouseLeave={() => {
         if (!arrastoRef.current) setCursor(null)
       }}
       onScroll={aoRolarGrelha}
     >
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted">
-          A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para
-          criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o
-          mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo;
-          botão direito num evento para o editar; Esc cancela um arrasto a meio.
-        </p>
+      <div className="mb-1.5 flex items-center justify-end gap-2">
+        {/* Instruções de uso — texto igual ao de antes, só que agora
+            num ícone com dica ao passar o rato, em vez de um parágrafo
+            sempre visível, para a grelha começar mais perto do topo. */}
+        <span
+          title="A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio."
+          className="flex h-6 w-6 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </span>
         <div className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-pop">
           <button
             type="button"

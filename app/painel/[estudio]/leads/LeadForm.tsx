@@ -54,14 +54,6 @@ export default function LeadForm({
     objetivosGuardados.filter((o) => !OBJETIVOS_CONHECIDOS.includes(o)).join(', ')
   )
 
-  function alternarObjetivo(o: string) {
-    setObjetivos((lista) => {
-      if (lista.includes(o)) return lista.filter((x) => x !== o)
-      if (lista.length >= MAX_OBJETIVOS_LEAD) return lista
-      return [...lista, o]
-    })
-  }
-
   return (
     <form action={action} onChange={marcarSujo} className="mt-6 flex flex-col gap-4">
       <input type="hidden" name="estudio_slug" value={estudioSlug} />
@@ -199,40 +191,32 @@ export default function LeadForm({
           </label>
         </div>
 
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <label className={labelCls}>
-            Objetivo (até {MAX_OBJETIVOS_LEAD}) — {objetivos.length}/{MAX_OBJETIVOS_LEAD}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="objetivo" className={labelCls}>
+            Objetivo (até {MAX_OBJETIVOS_LEAD})
           </label>
-          <div className="flex flex-wrap gap-1.5">
-            {OBJETIVOS_LEAD.map((o) => {
-              const selecionado = objetivos.includes(o)
-              const desativado = !selecionado && objetivos.length >= MAX_OBJETIVOS_LEAD
-              return (
-                <label
-                  key={o}
-                  className={`cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                    selecionado
-                      ? 'border-black/30 bg-black/10 dark:border-white/40 dark:bg-white/10'
-                      : 'border-border-subtle'
-                  } ${desativado ? 'cursor-not-allowed opacity-50' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selecionado}
-                    disabled={desativado}
-                    onChange={() => alternarObjetivo(o)}
-                    className="sr-only"
-                  />
-                  {o}
-                </label>
-              )
-            })}
-          </div>
+          <select
+            id="objetivo"
+            multiple
+            value={objetivos}
+            onChange={(e) => {
+              const selecionados = Array.from(e.target.selectedOptions, (o) => o.value)
+              if (selecionados.length <= MAX_OBJETIVOS_LEAD) setObjetivos(selecionados)
+            }}
+            size={6}
+            className={`${inputCls} h-auto`}
+          >
+            {OBJETIVOS_LEAD.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
           <input
             value={objetivoOutro}
             onChange={(e) => setObjetivoOutro(e.target.value)}
             placeholder="Outro (opcional)"
-            className={`${inputCls} mt-1`}
+            className={inputCls}
           />
           <input
             type="hidden"

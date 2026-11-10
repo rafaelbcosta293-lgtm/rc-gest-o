@@ -135,6 +135,28 @@ async function limparVisitaLeadsApagadas(
   return null
 }
 
+// Depois de mover/redimensionar um evento (arrastar na grelha), relê a(s)
+// linha(s) já atualizada(s) — por isso já com o dia/hora novos — e, se
+// for uma Sessão experimental ligada a uma lead, atualiza a visita
+// guardada nela para continuar a bater certo com o evento.
+async function sincronizarVisitasLeadsAposMover(
+  supabase: SupabaseClient,
+  filtro: { grupoId: string | null; id: string }
+): Promise<string | null> {
+  const query = supabase.from('agenda_eventos').select('lead_id, data, hora_inicio')
+  const { data: linhas, error } = filtro.grupoId
+    ? await query.eq('grupo_id', filtro.grupoId)
+    : await query.eq('id', filtro.id)
+  if (error) return error.message
+
+  for (const linha of linhas ?? []) {
+    if (!linha.lead_id) continue
+    const erro = await sincronizarVisitaLead(supabase, linha.lead_id, linha.data, linha.hora_inicio)
+    if (erro) return erro
+  }
+  return null
+}
+
 export async function criarEvento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
@@ -290,6 +312,16 @@ export async function atualizarEvento(formData: FormData) {
 
   if (error) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  // Mudar o dia/hora de uma Sessão experimental tem de se refletir logo
+  // na lead associada — senão ela fica a mostrar uma visita para um
+  // dia/hora que já não é o do evento (ver sincronizarVisitaLead).
+  if (tipo === 'Sessão experimental') {
+    const erroLead = await sincronizarVisitaLead(supabase, leadId, data, horaInicio)
+    if (erroLead) {
+      redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroLead)}`)
+    }
   }
 
   revalidatePath(`/painel/${estudioSlug}/agenda`)
@@ -559,8 +591,14 @@ export async function atualizarEventoRapido(
   // partilhado) — comparadas com a lista de pessoas pedida agora, para
   // saber quem sai (apagar), quem fica (atualizar) e quem entra (criar).
   const { data: atuaisData, error: erroAtuais } = input.grupoId
-    ? await supabase.from('agenda_eventos').select('id, cliente_id').eq('grupo_id', input.grupoId)
-    : await supabase.from('agenda_eventos').select('id, cliente_id').eq('id', input.id)
+    ? await supabase
+        .from('agenda_eventos')
+        .select('id, cliente_id, lead_id, data, hora_inicio')
+        .eq('grupo_id', input.grupoId)
+    : await supabase
+        .from('agenda_eventos')
+        .select('id, cliente_id, lead_id, data, hora_inicio')
+        .eq('id', input.id)
   if (erroAtuais) return { error: erroAtuais.message }
   const atuais = atuaisData ?? []
 
@@ -586,6 +624,9 @@ export async function atualizarEventoRapido(
   }
 
   if (paraApagar.length > 0) {
+    const erroLimpar = await limparVisitaLeadsApagadas(supabase, paraApagar)
+    if (erroLimpar) return { error: erroLimpar }
+
     const { error } = await supabase
       .from('agenda_eventos')
       .delete()
@@ -599,6 +640,15 @@ export async function atualizarEventoRapido(
       .update(camposPartilhados)
       .in('id', paraManter.map((a) => a.id))
     if (error) return { error: error.message }
+
+    // O dia/hora deste treino pode ter mudado — numa Sessão
+    // experimental isso tem de se refletir logo na lead associada,
+    // senão ela fica a apontar para um horário que já não é o do
+    // evento (ver sincronizarVisitaLead).
+    if (input.tipo === 'Sessão experimental') {
+      const erroLead = await sincronizarVisitaLead(supabase, input.leadId, input.data, input.horaInicio)
+      if (erroLead) return { error: erroLead }
+    }
   }
 
   if (paraCriar.length > 0) {
@@ -635,6 +685,9 @@ export async function moverEventoRapido(input: {
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
+  const erroLead = await sincronizarVisitasLeadsAposMover(supabase, { grupoId: input.grupoId, id: input.id })
+  if (erroLead) return { error: erroLead }
+
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   return { ok: true }
 }
@@ -658,6 +711,9 @@ export async function redimensionarEventoRapido(input: {
   })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
+
+  const erroLead = await sincronizarVisitasLeadsAposMover(supabase, { grupoId: input.grupoId, id: input.id })
+  if (erroLead) return { error: erroLead }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   return { ok: true }

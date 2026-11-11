@@ -8,7 +8,7 @@ import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
 import { nomeCurto } from '@/lib/data/clientes'
-import { PALETA } from '@/lib/data/constantes'
+import { PALETA, ALERTAS } from '@/lib/data/constantes'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import {
   criarEventoRapido,
@@ -79,12 +79,34 @@ function numerosSocioEvento(grupo: EventoComNomes[]) {
   return numeros.length > 0 ? numeros.join(', ') : null
 }
 
-// Algo a assinalar em pelo menos um dos clientes deste evento — estado
-// que não é Ativo (mensalidade em atraso, suspenso, inativo) ou um
-// alerta (lesão, doença, limitação, prova a chegar). Só avisa que há
-// algo a verificar — os detalhes ficam na ficha do cliente.
-function temAvisoEvento(grupo: EventoComNomes[]) {
-  return grupo.some((e) => e.cliente && (e.cliente.estado !== 'Ativo' || e.cliente.alerta !== 'Nenhum'))
+// Pendente/Suspenso/Inativo só acontecem por falta de pagamento em dia
+// (ver lib/data/estadoClientes.ts) — por isso o motivo mostrado no
+// aviso é já "mensalidade", não o nome técnico do estado.
+const MOTIVO_ESTADO: Record<string, string> = {
+  Pendente: 'mensalidade em atraso',
+  Suspenso: 'mensalidade suspensa',
+  Inativo: 'mensalidade inativa',
+}
+
+// Texto do aviso (triângulo vermelho) — uma linha por cliente deste
+// evento com algo a verificar, já com o motivo específico (mensalidade
+// e/ou o alerta da ficha), para se perceber sem sair da agenda. null
+// quando não há nada a assinalar.
+function avisosEvento(grupo: EventoComNomes[]): string | null {
+  const linhas = grupo
+    .map((e) => {
+      if (!e.cliente) return null
+      const motivos: string[] = []
+      if (e.cliente.estado !== 'Ativo') {
+        motivos.push(MOTIVO_ESTADO[e.cliente.estado] ?? e.cliente.estado)
+      }
+      const alertaInfo = ALERTAS[e.cliente.alerta as keyof typeof ALERTAS]
+      if (e.cliente.alerta !== 'Nenhum' && alertaInfo) motivos.push(alertaInfo.label)
+      if (motivos.length === 0) return null
+      return `${nomeCurto(e.cliente.nome, e.cliente.nome_preferido)}: ${motivos.join(', ')}`
+    })
+    .filter((l): l is string => !!l)
+  return linhas.length > 0 ? linhas.join('\n') : null
 }
 
 function minutosParaHora(minutos: number) {
@@ -849,7 +871,7 @@ function ColunaDia({
         const emArrasto = arrastandoId === evento.id
         const emSelecionado = selecionadoId === evento.id
         const numerosSocio = numerosSocioEvento(grupo)
-        const aviso = temAvisoEvento(grupo)
+        const avisos = avisosEvento(grupo)
         const cancelado = evento.estado === 'Cancelado'
         // "Terminado" só desvanece o aspeto — nunca line-through, que
         // fica só para "Cancelado" (um já aconteceu, o outro não).
@@ -920,11 +942,8 @@ function ColunaDia({
                 não ativa, suspenso/inativo, ou um alerta (lesão, doença,
                 limitação, prova a chegar). Só avisa que há algo; os
                 detalhes ficam na ficha do cliente. */}
-            {aviso && (
-              <span
-                title="Este cliente tem algo a verificar (estado ou alerta) — ver ficha"
-                className="absolute top-1 right-1"
-              >
+            {avisos && (
+              <span title={avisos} className="absolute top-1 right-1">
                 <TriangleAlert className="h-3 w-3 text-red-600" strokeWidth={2.5} />
               </span>
             )}
@@ -1175,7 +1194,9 @@ function EventoModalOverlay({
             ))}
           </select>
 
-          {!experimental && (
+          {/* Só faz sentido para Reunião/Outro — Treino e Avaliação têm
+              sempre um cliente (o combobox acima), não um título livre. */}
+          {(tipo === 'Reunião' || tipo === 'Outro') && (
             <input
               name="titulo"
               defaultValue={evento?.titulo ?? ''}

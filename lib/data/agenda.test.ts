@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { gerarOcorrencias, gerarExtensaoSerie, corTipoEvento } from './agenda'
+import { describe, expect, it, vi } from 'vitest'
+import { gerarOcorrencias, gerarExtensaoSerie, corTipoEvento, eventoJaTerminou } from './agenda'
 
 describe('gerarOcorrencias', () => {
   it('sem repetição devolve só a data inicial', () => {
@@ -72,5 +72,25 @@ describe('corTipoEvento', () => {
       (['Treino', 'Avaliação', 'Reunião', 'Outro'] as const).map((t) => corTipoEvento(t).tx)
     )
     expect(cores.size).toBe(4)
+  })
+})
+
+describe('eventoJaTerminou', () => {
+  it('ainda não terminou quando o fim está no futuro', () => {
+    vi.setSystemTime(new Date('2026-11-11T10:00:00'))
+    expect(eventoJaTerminou('2026-11-11', '10:30', 40)).toBe(false)
+    vi.useRealTimers()
+  })
+
+  it('já terminou quando o fim já passou', () => {
+    vi.setSystemTime(new Date('2026-11-11T10:00:00'))
+    expect(eventoJaTerminou('2026-11-11', '09:00', 40)).toBe(true)
+    vi.useRealTimers()
+  })
+
+  it('data no futuro nunca conta como terminada', () => {
+    vi.setSystemTime(new Date('2026-11-11T23:00:00'))
+    expect(eventoJaTerminou('2026-11-12', '06:50', 40)).toBe(false)
+    vi.useRealTimers()
   })
 })

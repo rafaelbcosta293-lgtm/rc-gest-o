@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { eventoJaTerminou } from '@/lib/data/agenda'
 import type { EventoAgenda } from '@/lib/supabase/database.types'
 
 // Quando um treino agendado na agenda interna termina sem ter sido
@@ -25,8 +26,7 @@ export async function GET(request: Request) {
   }
 
   const admin = createAdminClient()
-  const agora = new Date()
-  const desde = new Date(agora.getTime() - DIAS_PARA_TRAS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const desde = new Date(Date.now() - DIAS_PARA_TRAS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   const { data: eventosData, error: erroEventos } = await admin
     .from('agenda_eventos')
@@ -44,9 +44,7 @@ export async function GET(request: Request) {
   let concluidos = 0
 
   for (const evento of eventos) {
-    const fim = new Date(`${evento.data}T${evento.hora_inicio.slice(0, 5)}:00`)
-    fim.setMinutes(fim.getMinutes() + evento.duracao_min)
-    if (fim.getTime() > agora.getTime()) continue // ainda não terminou
+    if (!eventoJaTerminou(evento.data, evento.hora_inicio, evento.duracao_min)) continue // ainda não terminou
 
     const { data: existente, error: erroExistente } = await admin
       .from('presencas')

@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
-import { gerarOcorrencias, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
+import { gerarOcorrencias, eventoJaTerminou, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
 import type { TipoEventoAgenda } from '@/lib/supabase/database.types'
 
 function campoOuNull(formData: FormData, nome: string) {
@@ -593,11 +593,11 @@ export async function atualizarEventoRapido(
   const { data: atuaisData, error: erroAtuais } = input.grupoId
     ? await supabase
         .from('agenda_eventos')
-        .select('id, cliente_id, lead_id, data, hora_inicio')
+        .select('id, cliente_id, lead_id, data, hora_inicio, estado')
         .eq('grupo_id', input.grupoId)
     : await supabase
         .from('agenda_eventos')
-        .select('id, cliente_id, lead_id, data, hora_inicio')
+        .select('id, cliente_id, lead_id, data, hora_inicio, estado')
         .eq('id', input.id)
   if (erroAtuais) return { error: erroAtuais.message }
   const atuais = atuaisData ?? []
@@ -610,6 +610,12 @@ export async function atualizarEventoRapido(
   const totalFinal = paraManter.length + paraCriar.length
   const novoGrupoId = totalFinal > 1 ? (input.grupoId ?? randomUUID()) : null
 
+  // Ver eventoJaTerminou — repõe "Agendado" se o evento já estava
+  // "Concluído" e a nova data/hora ainda não chegou ao fim.
+  const reabrir =
+    atuais.some((a) => a.estado === 'Concluído') &&
+    !eventoJaTerminou(input.data, input.horaInicio, input.duracaoMin)
+
   const camposPartilhados = {
     tipo: input.tipo,
     pt_id: input.ptId,
@@ -621,6 +627,7 @@ export async function atualizarEventoRapido(
     duracao_min: input.duracaoMin,
     grupo_id: novoGrupoId,
     nota: input.nota,
+    ...(reabrir ? { estado: 'Agendado' as const } : {}),
   }
 
   if (paraApagar.length > 0) {
@@ -676,12 +683,28 @@ export async function moverEventoRapido(input: {
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
+  const selectQuery = supabase.from('agenda_eventos').select('estado, duracao_min')
+  const { data: atuais, error: erroAtuais } = input.grupoId
+    ? await selectQuery.eq('grupo_id', input.grupoId)
+    : await selectQuery.eq('id', input.id)
+  if (erroAtuais) return { error: erroAtuais.message }
+
+  // Ver eventoJaTerminou — repõe "Agendado" se o evento já estava
+  // "Concluído" e o novo dia/hora ainda não chegou ao fim.
+  const reabrir =
+    (atuais ?? []).some((e) => e.estado === 'Concluído') &&
+    !eventoJaTerminou(input.data, input.horaInicio, (atuais ?? [])[0]?.duracao_min ?? 0)
+
   // Mover para outro dia/hora invalida um lembrete já enviado (ficou a
   // falar do dia errado) — repõe-se para o cron voltar a avisar na
   // véspera do novo dia. Ver o mesmo cuidado em atualizarEvento.
-  const query = supabase
-    .from('agenda_eventos')
-    .update({ data: input.data, hora_inicio: input.horaInicio, lembrete_enviado: false, lembrete_enviado_em: null })
+  const query = supabase.from('agenda_eventos').update({
+    data: input.data,
+    hora_inicio: input.horaInicio,
+    lembrete_enviado: false,
+    lembrete_enviado_em: null,
+    ...(reabrir ? { estado: 'Agendado' as const } : {}),
+  })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
@@ -701,6 +724,19 @@ export async function redimensionarEventoRapido(input: {
 }): Promise<ResultadoAcaoRapida> {
   const supabase = await createClient()
 
+  const selectQuery = supabase.from('agenda_eventos').select('estado, data')
+  const { data: atuais, error: erroAtuais } = input.grupoId
+    ? await selectQuery.eq('grupo_id', input.grupoId)
+    : await selectQuery.eq('id', input.id)
+  if (erroAtuais) return { error: erroAtuais.message }
+
+  // Ver eventoJaTerminou — repõe "Agendado" se o evento já estava
+  // "Concluído" e o novo fim (mesma data, hora/duração novas) ainda não
+  // chegou.
+  const reabrir =
+    (atuais ?? []).some((e) => e.estado === 'Concluído') &&
+    !eventoJaTerminou((atuais ?? [])[0]?.data ?? '', input.horaInicio, input.duracaoMin)
+
   // Mesmo cuidado que em moverEventoRapido: mudar a hora de início
   // invalida um lembrete já enviado (ficou a dizer uma hora errada).
   const query = supabase.from('agenda_eventos').update({
@@ -708,6 +744,7 @@ export async function redimensionarEventoRapido(input: {
     duracao_min: input.duracaoMin,
     lembrete_enviado: false,
     lembrete_enviado_em: null,
+    ...(reabrir ? { estado: 'Agendado' as const } : {}),
   })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }

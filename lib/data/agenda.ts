@@ -100,3 +100,15 @@ export function gerarExtensaoSerie(
   }
   return datas
 }
+
+// Usada pelo cron de presenças (app/api/cron/presencas-agenda) para
+// decidir quando um evento passa a "Concluído", e pelas ações de
+// mover/redimensionar/editar (app/painel/[estudio]/agenda/actions.ts)
+// para repor "Agendado" sempre que um evento já concluído é levado
+// para uma data/hora cujo fim ainda não chegou — senão fica preso em
+// "Concluído" com uma data no futuro.
+export function eventoJaTerminou(data: string, horaInicio: string, duracaoMin: number): boolean {
+  const fim = new Date(`${data}T${horaInicio.slice(0, 5)}:00`)
+  fim.setMinutes(fim.getMinutes() + duracaoMin)
+  return fim.getTime() <= Date.now()
+}

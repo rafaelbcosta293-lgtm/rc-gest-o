@@ -8,7 +8,13 @@ import { desbloquearAdmin } from '../actions'
 import PortaSenha from '@/components/PortaSenha'
 import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
-import { listarProdutos, listarMetodosPagamento, type ProdutoZsgo, type MetodoPagamentoZsgo } from '@/lib/zsgo'
+import {
+  listarProdutos,
+  listarMetodosPagamento,
+  listarSeries,
+  type ProdutoZsgo,
+  type MetodoPagamentoZsgo,
+} from '@/lib/zsgo'
 import { totalRascunho, type EstadoPedidoFatura, type RascunhoFatura } from '@/lib/data/faturas'
 import FaturaEditor from './FaturaEditor'
 import {
@@ -105,6 +111,16 @@ export default async function AdminFaturasPage({
     }
   }
 
+  // Só para mostrar qual série vai ser usada — se o ZS Go não responder,
+  // mostra-se a frase sem nomear a série, não vale a pena rebentar a
+  // página só por isto.
+  let series: string[] = []
+  try {
+    series = await listarSeries()
+  } catch {
+    // sem série a mostrar, a página continua a funcionar
+  }
+
   const qsEstudio = sp.estudio ? `&estudio=${sp.estudio}` : ''
 
   return (
@@ -115,7 +131,8 @@ export default async function AdminFaturasPage({
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Faturas</h1>
       <p className="mt-1 text-sm text-muted">
         Pedidos feitos pela equipa no registo do pagamento. Nada é emitido sem validares aqui — revê e
-        corrige o rascunho, depois emite no ZS Go (série API-20262) ou rejeita.
+        corrige o rascunho, depois emite no ZS Go
+        {series.length > 0 ? ` (série ${series.join(', ')})` : ''} ou rejeita.
       </p>
 
       <div className="mt-5 flex flex-wrap gap-2">

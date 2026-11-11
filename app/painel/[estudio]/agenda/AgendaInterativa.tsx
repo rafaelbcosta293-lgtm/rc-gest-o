@@ -380,6 +380,11 @@ const HORAS_GRADE = Array.from(
 )
 const DURACAO_MIN_MINIMA = 5
 
+// A grelha abre sempre a mostrar a partir desta hora (em vez do topo,
+// meia-noite) — ninguém treina de madrugada, por isso não faz sentido
+// começar a ver aí por omissão.
+const HORA_INICIAL_VISIVEL = 6
+
 type EventoPosicionado = { evento: EventoComNomes; grupo: EventoComNomes[]; coluna: number; colunas: number }
 
 // Um treino em simultâneo tem uma linha por pessoa — todas com o mesmo
@@ -491,6 +496,16 @@ function GrelhaInterativa({
 
   const colRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const arrastoRef = useRef<Arrasto | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  // Ao abrir (ou mudar de dia/semana), a grelha começa logo a partir
+  // das HORA_INICIAL_VISIVEL — nunca à meia-noite, onde não há nada.
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = HORA_INICIAL_VISIVEL * 60 * pxPorMinuto
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dias.join(',')])
 
   const [previa, setPrevia] = useState<{ dia: string; inicioMin: number; fimMin: number } | null>(null)
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
@@ -706,33 +721,33 @@ function GrelhaInterativa({
 
   return (
     <div
-      className="mt-2 overflow-x-auto"
+      className="mt-1 overflow-x-auto"
       onMouseLeave={() => {
         if (!arrastoRef.current) setCursor(null)
       }}
       onScroll={aoRolarGrelha}
     >
-      <div className="mb-1.5 flex items-center justify-end gap-2">
+      <div className="mb-1 flex items-center justify-end gap-1.5">
         {/* Instruções de uso — texto igual ao de antes, só que agora
             num ícone com dica ao passar o rato, em vez de um parágrafo
             sempre visível, para a grelha começar mais perto do topo. */}
         <span
           title="A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio."
-          className="flex h-6 w-6 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground"
+          className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground"
         >
-          <HelpCircle className="h-4 w-4" />
+          <HelpCircle className="h-3.5 w-3.5" />
         </span>
-        <div className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-pop">
+        <div className="flex shrink-0 items-center gap-0.5 rounded-full border border-border-subtle bg-surface px-0.5 py-0.5 shadow-pop">
           <button
             type="button"
             onClick={() => onZoomIndiceChange(Math.max(0, zoomIndice - 1))}
             disabled={zoomIndice === 0}
             title="Diminuir zoom"
-            className="flex h-6 w-6 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
+            className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
           >
-            <Minus className="h-3.5 w-3.5" />
+            <Minus className="h-3 w-3" />
           </button>
-          <span className="w-9 text-center text-[11px] font-semibold text-muted">
+          <span className="w-8 text-center text-[10px] font-semibold text-muted">
             {Math.round((pxPorMinuto / NIVEIS_ZOOM[ZOOM_OMISSAO]) * 100)}%
           </span>
           <button
@@ -740,9 +755,9 @@ function GrelhaInterativa({
             onClick={() => onZoomIndiceChange(Math.min(NIVEIS_ZOOM.length - 1, zoomIndice + 1))}
             disabled={zoomIndice === NIVEIS_ZOOM.length - 1}
             title="Aumentar zoom"
-            className="flex h-6 w-6 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
+            className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3 w-3" />
           </button>
         </div>
       </div>
@@ -750,17 +765,20 @@ function GrelhaInterativa({
         <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}` }}>
           <div />
           {dias.map((d, i) => (
-            <div key={d} className="rounded-t-lg bg-brand/[.05] p-1 text-center text-xs font-semibold text-foreground">
+            <div
+              key={d}
+              className="whitespace-nowrap rounded-t-lg bg-brand/[.05] px-1 py-1 text-center text-[11px] font-semibold text-foreground"
+            >
               {dias.length > 1 ? DIAS_SEMANA[i] : DIAS_SEMANA[(new Date(`${d}T00:00:00`).getDay() + 6) % 7]}
-              <br />
-              <span className="font-normal text-muted">{fmt(d)}</span>
+              <span className="ml-1 font-normal text-muted">{fmt(d)}</span>
             </div>
           ))}
         </div>
         <div
+          ref={scrollRef}
           onMouseMove={aoMoverRatoEmRepouso}
           onScroll={aoRolarGrelha}
-          className="h-[calc(100vh-230px)] min-h-[360px] overflow-y-auto rounded-b-xl border border-border-subtle"
+          className="h-[calc(100vh-200px)] min-h-[360px] overflow-y-auto rounded-b-xl border border-border-subtle"
         >
           <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: alturaGrade }}>
             <div className="relative text-[10px] text-muted">

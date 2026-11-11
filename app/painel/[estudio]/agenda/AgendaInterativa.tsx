@@ -119,11 +119,6 @@ const EVENTO_FUNDO = '#EFECE6'
 const EVENTO_BORDA = '#C5A059'
 const EVENTO_TEXTO = '#1A1A1A'
 
-// Eventos ao mesmo tempo ficam em cascata, ao estilo Google Calendar —
-// cada um desloca-se isto a mais para a direita do anterior, em vez de
-// a largura ser dividida entre todos (ver render de cada evento).
-const CASCATA_OFFSET_PX = 18
-
 export default function AgendaInterativa({
   slug,
   estudioId,
@@ -376,9 +371,8 @@ function representantesDoDia(eventosDia: EventoComNomes[]): { evento: EventoComN
 }
 
 // Dispõe os eventos do dia numa grelha contínua: eventos que se
-// sobrepõem no tempo recebem uma coluna cada (coluna/colunas), usada
-// no render para os desenhar em cascata (como no Google Calendar) em
-// vez de todos empilhados exatamente uns sobre os outros.
+// sobrepõem no tempo ficam lado a lado (como no Google Calendar), em
+// vez de empilhados uns sobre os outros.
 function disporEventosDoDia(eventosDia: EventoComNomes[]): EventoPosicionado[] {
   const ordenados = [...representantesDoDia(eventosDia)].sort(
     (a, b) => minutosDoDia(a.evento.hora_inicio) - minutosDoDia(b.evento.hora_inicio)
@@ -868,20 +862,14 @@ function ColunaDia({
               cancelado ? 'opacity-50 line-through' : terminado ? 'opacity-55' : ''
             }`}
             style={{
-              // Eventos ao mesmo tempo ficam em cascata (como o Google
-              // Calendar) em vez de divididos em colunas estreitas: cada
-              // um desloca-se CASCATA_OFFSET_PX para a direita do
-              // anterior, sem encolher — o de trás fica só com uma tira
-              // à esquerda visível (o suficiente para se perceber que
-              // há mais um), nunca muda a disposição da informação lá
-              // dentro. zIndex garante que quem está selecionado (ou a
-              // ser arrastado) vem sempre para a frente, mesmo que
-              // esteja "por baixo" de outro na ordem normal.
+              // Pequeno espaço (calc) entre blocos vizinhos — horizontal
+              // (colunas lado a lado) e vertical (altura 2px mais curta
+              // do que o espaço disponível) — para nunca ficarem
+              // encostados uns aos outros, ao estilo Google Calendar.
               top: inicioMin * pxPorMinuto,
               height: Math.max(evento.duracao_min * pxPorMinuto, 24) - 2,
-              left: coluna * CASCATA_OFFSET_PX + 1,
-              width: `calc(100% - ${(colunas - 1) * CASCATA_OFFSET_PX + 2}px)`,
-              zIndex: emSelecionado || emArrasto ? 50 : coluna + 1,
+              left: `calc(${(coluna * 100) / colunas}% + 1px)`,
+              width: `calc(${100 / colunas}% - 2px)`,
               background: EVENTO_FUNDO,
               color: EVENTO_TEXTO,
               // Linha fina à volta de toda a caixa, para se ver sempre o

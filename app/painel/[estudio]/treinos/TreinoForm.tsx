@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { BLOCOS, BLOCO_COR, CORREU } from '@/lib/data/constantes'
 import type { BlocoTipo } from '@/lib/data/constantes'
 import type { CatalogoExercicios, ItemCatalogo } from '@/lib/data/catalogo'
@@ -52,37 +53,42 @@ export type TreinoInicial = {
 
 type EstadoLinha = 'a guardar' | 'guardado' | 'erro'
 
-const ROTULO_ESTADO: Record<EstadoLinha, string> = {
-  'a guardar': 'a guardar…',
-  guardado: 'guardado ✓',
-  erro: 'não guardou — tenta outra vez',
+// Só um pontinho (ver GRID_COLUNAS/render) em vez de uma linha de texto
+// por exercício — "guardado ✓" repetido exercício a exercício era mais
+// ruído visual do que informação, numa página já cheia de linhas.
+const COR_ESTADO: Record<EstadoLinha, string> = {
+  'a guardar': '#A1A1AA',
+  guardado: '#16A34A',
+  erro: '#DC2626',
+}
+const TITULO_ESTADO: Record<EstadoLinha, string> = {
+  'a guardar': 'A guardar…',
+  guardado: 'Guardado',
+  erro: 'Não guardou — tenta outra vez',
 }
 
-// Legenda por cima de cada campo — sem isto, depois de preenchido já não
-// dá para saber se "12" é séries, reps ou carga (o placeholder desaparece
-// assim que se escreve).
-function CampoLinha({
-  label,
+// Uma linha por exercício, tudo lado a lado (bloco, exercício, séries,
+// reps, carga, descanso, nota) em vez de empilhado por baixo do nome —
+// a legenda de cada coluna aparece uma só vez, no cabeçalho da grelha,
+// em vez de repetida exercício a exercício.
+const GRID_COLUNAS = '92px minmax(160px,1.4fr) 56px 56px 64px 72px minmax(120px,1fr) 28px'
+const CABECALHOS_GRID = ['Bloco', 'Exercício', 'Séries', 'Reps', 'Carga', 'Descanso', 'Nota', '']
+
+function CampoGrid({
   value,
   onChange,
   className = '',
 }: {
-  label: string
   value: string
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   className?: string
 }) {
   return (
-    <div className={`flex flex-col gap-0.5 ${className}`}>
-      <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">
-        {label}
-      </span>
-      <input
-        value={value}
-        onChange={onChange}
-        className="rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
-      />
-    </div>
+    <input
+      value={value}
+      onChange={onChange}
+      className={`w-full min-w-0 rounded-md border border-border-subtle bg-transparent px-2 py-1.5 text-xs outline-none focus:border-brand/60 dark:bg-zinc-900 ${className}`}
+    />
   )
 }
 
@@ -247,90 +253,82 @@ export default function TreinoForm({
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Plano</h2>
           <span className="text-[11px] text-zinc-400">guarda-se sozinho, exercício a exercício</span>
         </div>
-        <div className="mt-2 flex flex-col gap-2">
-          {exercicios.map((linha, indice) => {
-            const estado = estados[linha.key]
-            return (
-              <div
-                key={linha.key}
-                className="rounded-lg border border-border-subtle p-3"
+
+        {/* Uma grelha só, com o cabeçalho das colunas uma única vez —
+            cada exercício ocupa uma linha (bloco, exercício, séries,
+            reps, carga, descanso, nota lado a lado), em vez de um
+            cartão alto por exercício com os campos empilhados por
+            baixo do nome. overflow-x-auto + min-w garantem que as
+            colunas nunca ficam espremidas num ecrã estreito — desliza
+            em vez de encolher a ponto de ficar ilegível. */}
+        <div className="mt-2 overflow-x-auto rounded-lg border border-border-subtle">
+          <div className="grid min-w-[700px] gap-x-2 gap-y-1.5 p-2" style={{ gridTemplateColumns: GRID_COLUNAS }}>
+            {CABECALHOS_GRID.map((h, i) => (
+              <span
+                key={i}
+                className="border-b border-border-subtle pb-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-400"
               >
-                <div className="flex items-center gap-2">
+                {h}
+              </span>
+            ))}
+
+            {exercicios.map((linha, indice) => {
+              const estado = estados[linha.key]
+              return (
+                <Fragment key={linha.key}>
                   <select
                     value={linha.bloco}
                     onChange={(e) => aoMudarBloco(linha, indice, e.target.value as BlocoTipo)}
-                    style={{ color: BLOCO_COR[linha.bloco] }}
-                    className="w-[110px] shrink-0 rounded-md border border-border-subtle px-2 py-1.5 text-xs font-semibold dark:bg-zinc-900"
+                    style={{ color: BLOCO_COR[linha.bloco], borderLeftColor: BLOCO_COR[linha.bloco], borderLeftWidth: 3 }}
+                    className="min-w-0 rounded-md border border-border-subtle px-1.5 py-1.5 text-xs font-semibold dark:bg-zinc-900"
                   >
                     {BLOCOS.map((b) => (
-                      <option key={b} value={b}>
+                      <option key={b} value={b} style={{ color: BLOCO_COR[b] }}>
                         {b}
                       </option>
                     ))}
                   </select>
+
                   <button
                     type="button"
                     onClick={() => setSeletorPara(linha.key)}
-                    className={`flex-1 rounded-md border px-3 py-1.5 text-left text-sm ${
+                    title={estado ? TITULO_ESTADO[estado] : undefined}
+                    className={`relative min-w-0 rounded-md border px-2 py-1.5 text-left text-xs ${
                       linha.exercicio_nome
-                        ? 'border-border-subtle'
-                        : 'border-dashed border-border-strong text-zinc-500'
+                        ? 'border-border-subtle font-medium'
+                        : 'border-dashed border-border-strong text-zinc-500 italic'
                     }`}
                   >
-                    {linha.exercicio_nome || 'Escolher exercício…'}
+                    <span className="block truncate pr-3">{linha.exercicio_nome || '+ Escolher exercício…'}</span>
+                    {/* Estado a guardar — um pontinho discreto no canto,
+                        não uma linha de texto à parte por exercício. */}
+                    {estado && (
+                      <span
+                        title={TITULO_ESTADO[estado]}
+                        className="absolute top-1/2 right-1.5 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
+                        style={{ background: COR_ESTADO[estado] }}
+                      />
+                    )}
                   </button>
+
+                  <CampoGrid value={linha.series} onChange={aoMudarCampo(linha, indice, 'series')} />
+                  <CampoGrid value={linha.reps} onChange={aoMudarCampo(linha, indice, 'reps')} />
+                  <CampoGrid value={linha.carga} onChange={aoMudarCampo(linha, indice, 'carga')} />
+                  <CampoGrid value={linha.descanso} onChange={aoMudarCampo(linha, indice, 'descanso')} />
+                  <CampoGrid value={linha.nota} onChange={aoMudarCampo(linha, indice, 'nota')} />
+
                   <button
                     type="button"
                     onClick={() => removerLinha(linha)}
-                    className="shrink-0 rounded-md px-2 text-lg text-zinc-400 hover:text-red-600"
                     aria-label="Remover linha"
+                    className="flex items-center justify-center rounded-md text-zinc-400 hover:text-red-600"
                   >
-                    ×
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <CampoLinha
-                    label="Séries"
-                    value={linha.series}
-                    onChange={aoMudarCampo(linha, indice, 'series')}
-                    className="w-20 min-w-0 flex-1"
-                  />
-                  <CampoLinha
-                    label="Reps"
-                    value={linha.reps}
-                    onChange={aoMudarCampo(linha, indice, 'reps')}
-                    className="w-20 min-w-0 flex-1"
-                  />
-                  <CampoLinha
-                    label="Carga"
-                    value={linha.carga}
-                    onChange={aoMudarCampo(linha, indice, 'carga')}
-                    className="w-20 min-w-0 flex-1"
-                  />
-                  <CampoLinha
-                    label="Descanso"
-                    value={linha.descanso}
-                    onChange={aoMudarCampo(linha, indice, 'descanso')}
-                    className="w-20 min-w-0 flex-1"
-                  />
-                  <CampoLinha
-                    label="Nota"
-                    value={linha.nota}
-                    onChange={aoMudarCampo(linha, indice, 'nota')}
-                    className="min-w-[120px] flex-[2]"
-                  />
-                </div>
-                {estado && (
-                  <p
-                    className={`mt-1.5 text-[11px] ${estado === 'erro' ? 'text-red-600' : 'text-zinc-400'}`}
-                  >
-                    {ROTULO_ESTADO[estado]}
-                  </p>
-                )}
-              </div>
-            )
-          })}
+                </Fragment>
+              )
+            })}
+          </div>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2">

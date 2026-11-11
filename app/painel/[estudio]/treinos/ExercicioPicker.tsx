@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { X } from 'lucide-react'
 import type { CatalogoExercicios, ItemCatalogo } from '@/lib/data/catalogo'
 import { criarExercicioRapido } from './actions'
 
@@ -21,7 +22,6 @@ export default function ExercicioPicker({
 }) {
   const [catId, setCatId] = useState<string | null>(null)
   const [q, setQ] = useState('')
-  const [novoNome, setNovoNome] = useState('')
   const [erroNovo, setErroNovo] = useState<string | null>(null)
   const [aGuardar, iniciarGuardar] = useTransition()
 
@@ -30,15 +30,12 @@ export default function ExercicioPicker({
   const jaExiste = (nome: string) =>
     catalogo.todos.some((e) => e.nome.toLowerCase() === nome.trim().toLowerCase())
 
+  // A pesquisa serve também para criar — não há um segundo campo "nome
+  // do exercício novo" à parte: o que se escreveu para procurar passa a
+  // ser o nome, se não existir já nenhum exercício igual.
   const adicionarNovo = () => {
-    const nome = novoNome.trim()
-    if (!nome) return
-    const existente = catalogo.todos.find((e) => e.nome.toLowerCase() === nome.toLowerCase())
-    if (existente) {
-      escolher(existente)
-      fechar()
-      return
-    }
+    const nome = q.trim()
+    if (!nome || jaExiste(nome)) return
     setErroNovo(null)
     iniciarGuardar(async () => {
       const resultado = await criarExercicioRapido(nome, catId)
@@ -48,22 +45,20 @@ export default function ExercicioPicker({
       }
       criado(resultado.exercicio, catId)
       escolher(resultado.exercicio)
-      setNovoNome('')
+      setQ('')
       fechar()
     })
   }
 
-  const lista: ItemCatalogo[] = q.trim()
+  const emPesquisa = q.trim() !== ''
+  const lista: ItemCatalogo[] = emPesquisa
     ? catalogo.todos.filter((e) => e.nome.toLowerCase().includes(q.toLowerCase()))
     : catId
       ? (catalogo.porCategoria[catId] ?? [])
       : []
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
-      onClick={fechar}
-    >
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={fechar}>
       <div
         className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-zinc-50 p-4 dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
@@ -73,47 +68,25 @@ export default function ExercicioPicker({
           <button
             type="button"
             onClick={fechar}
-            className="text-2xl leading-none text-zinc-500"
+            className="rounded-full p-1 text-zinc-500 hover:bg-black/[.06] dark:hover:bg-white/[.08]"
             aria-label="Fechar"
           >
-            ×
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         <input
           autoFocus
           value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Pesquisar em todos os exercícios…"
+          onChange={(e) => {
+            setQ(e.target.value)
+            setErroNovo(null)
+          }}
+          placeholder="Pesquisar, ou escrever o nome de um exercício novo…"
           className="mt-4 w-full rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-800"
         />
 
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-dashed border-teal-400 bg-teal-50 p-2.5 dark:bg-teal-950">
-          <input
-            value={novoNome}
-            onChange={(e) => {
-              setNovoNome(e.target.value)
-              setErroNovo(null)
-            }}
-            placeholder="Não está na lista? Escreve o nome do exercício novo…"
-            className="min-w-[180px] flex-1 rounded-md border border-border-subtle bg-white px-2.5 py-1.5 text-sm dark:bg-zinc-900"
-          />
-          <button
-            type="button"
-            disabled={!novoNome.trim() || aGuardar}
-            onClick={adicionarNovo}
-            className="shrink-0 rounded-md bg-teal-700 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
-          >
-            {aGuardar
-              ? 'A adicionar…'
-              : jaExiste(novoNome)
-                ? 'Escolher'
-                : '+ Adicionar à lista'}
-          </button>
-        </div>
-        {erroNovo && <p className="mt-1 text-xs text-red-600">{erroNovo}</p>}
-
-        {!q.trim() && (
+        {!emPesquisa && (
           <>
             {maisUsados.length > 0 && (
               <>
@@ -184,10 +157,8 @@ export default function ExercicioPicker({
 
         <div className="mt-4 flex flex-col gap-1">
           {lista.length === 0 && (
-            <p className="py-6 text-center text-sm text-zinc-500">
-              {q.trim()
-                ? 'Nenhum exercício com esse nome.'
-                : 'Escolhe uma categoria acima ou pesquisa pelo nome.'}
+            <p className="py-4 text-center text-sm text-zinc-500">
+              {emPesquisa ? 'Nenhum exercício com esse nome.' : 'Escolhe uma categoria acima ou pesquisa pelo nome.'}
             </p>
           )}
           {lista.map((e) => (
@@ -203,6 +174,22 @@ export default function ExercicioPicker({
               {e.nome}
             </button>
           ))}
+
+          {/* Só aparece quando faz sentido: a pesquisar e sem já existir
+              um exercício exatamente com este nome — em vez de uma
+              caixa "criar novo" sempre visível, mesmo a navegar por
+              categoria. */}
+          {emPesquisa && !jaExiste(q) && (
+            <button
+              type="button"
+              disabled={aGuardar}
+              onClick={adicionarNovo}
+              className="rounded-md border border-dashed border-teal-400 bg-teal-50 px-3 py-2.5 text-left text-sm font-medium text-teal-800 hover:bg-teal-100 disabled:opacity-50 dark:border-teal-700 dark:bg-teal-950 dark:text-teal-200"
+            >
+              {aGuardar ? 'A adicionar…' : `+ Criar "${q.trim()}"`}
+            </button>
+          )}
+          {erroNovo && <p className="text-xs text-red-600">{erroNovo}</p>}
         </div>
       </div>
     </div>

@@ -155,3 +155,26 @@ export async function apagarLinhaExercicio(id: string): Promise<{ ok: true } | {
   if (error) return { error: error.message }
   return { ok: true }
 }
+
+// Apaga o treino todo (não só uma linha de exercício) — restrito a
+// gestão pela RLS (apagar_sessoes). Os exercícios da sessão vão atrás
+// (FK em cascade); uma presença ligada a este treino fica sem o
+// sessao_id em vez de ser apagada (o cliente esteve mesmo presente).
+export async function apagarSessao(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const clienteId = formData.get('cliente_id') as string
+  const id = formData.get('id') as string
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('sessoes').delete().eq('id', id)
+
+  if (error) {
+    redirect(
+      `/painel/${estudioSlug}/treinos/${clienteId}?error=${encodeURIComponent('Não foi possível eliminar o treino.')}`
+    )
+  }
+
+  revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)
+  redirect(`/painel/${estudioSlug}/treinos/${clienteId}`)
+}

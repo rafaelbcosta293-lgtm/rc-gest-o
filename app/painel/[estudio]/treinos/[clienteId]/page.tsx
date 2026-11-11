@@ -2,9 +2,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ALERTAS, CORREU } from '@/lib/data/constantes'
-import { iniciarTreino } from './treino/actions'
+import { iniciarTreino, apagarSessao } from './treino/actions'
 import SubmitButton from '@/components/SubmitButton'
+import ApagarSessaoForm from './ApagarSessaoForm'
 
 function fmt(iso: string | null) {
   if (!iso) return '—'
@@ -35,7 +37,7 @@ export default async function FichaClientePage({
   // precisa do clienteId do URL), por isso correm em paralelo em vez
   // de à vez — a página fica pronta no tempo da mais lenta, não na
   // soma de todas.
-  const [estudio, { data: cliente }, { data: sessoesData }] = await Promise.all([
+  const [estudio, { data: cliente }, { data: sessoesData }, sessaoAtual] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
     supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle(),
     supabase
@@ -43,7 +45,9 @@ export default async function FichaClientePage({
       .select('id, data, foco, correu, nota_proxima, pt:perfis!pt_id(nome), sessao_exercicios(count)')
       .eq('cliente_id', clienteId)
       .order('data', { ascending: false }),
+    getSessaoAtual(),
   ])
+  const { ehGestao } = papeisDaSessao(sessaoAtual)
 
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
@@ -144,41 +148,55 @@ export default async function FichaClientePage({
             : { bg: '#F2F5FA', tx: '#6B7688' }
           const numExercicios = s.sessao_exercicios?.[0]?.count ?? 0
           return (
-            <Link
+            <div
               key={s.id}
-              href={`/painel/${slug}/treinos/${clienteId}/treino/${s.id}`}
-              className="flex gap-4 rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-black/30"
+              className="flex items-stretch gap-2 rounded-xl border border-border-subtle bg-surface transition-colors hover:border-black/30"
             >
-              <div className="min-w-[70px] pt-0.5 text-xs text-zinc-500">
-                {fmt(s.data)}
-              </div>
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-sm text-foreground">
-                    {s.foco || 'Treino'}
-                  </strong>
-                  {s.correu && (
-                    <span
-                      className="rounded-full px-2 py-0.5 text-xs font-medium"
-                      style={{ background: cc.bg, color: cc.tx }}
-                    >
-                      {s.correu}
-                    </span>
-                  )}
-                  <span className="text-xs text-zinc-500">{s.pt?.nome ?? '—'}</span>
+              <Link
+                href={`/painel/${slug}/treinos/${clienteId}/treino/${s.id}`}
+                className="flex flex-1 gap-4 p-4"
+              >
+                <div className="min-w-[70px] pt-0.5 text-xs text-zinc-500">
+                  {fmt(s.data)}
                 </div>
-                {s.nota_proxima && (
-                  <p className="mt-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                    ⚑ {s.nota_proxima}
-                  </p>
-                )}
-                {numExercicios > 0 && (
-                  <p className="mt-1 text-xs text-zinc-500">
-                    {numExercicios} exercícios
-                  </p>
-                )}
-              </div>
-            </Link>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-sm text-foreground">
+                      {s.foco || 'Treino'}
+                    </strong>
+                    {s.correu && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-xs font-medium"
+                        style={{ background: cc.bg, color: cc.tx }}
+                      >
+                        {s.correu}
+                      </span>
+                    )}
+                    <span className="text-xs text-zinc-500">{s.pt?.nome ?? '—'}</span>
+                  </div>
+                  {s.nota_proxima && (
+                    <p className="mt-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                      ⚑ {s.nota_proxima}
+                    </p>
+                  )}
+                  {numExercicios > 0 && (
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {numExercicios} exercícios
+                    </p>
+                  )}
+                </div>
+              </Link>
+              {ehGestao && (
+                <div className="flex items-center pr-3">
+                  <ApagarSessaoForm
+                    action={apagarSessao}
+                    sessaoId={s.id}
+                    estudioSlug={slug}
+                    clienteId={clienteId}
+                  />
+                </div>
+              )}
+            </div>
           )
         })}
       </div>

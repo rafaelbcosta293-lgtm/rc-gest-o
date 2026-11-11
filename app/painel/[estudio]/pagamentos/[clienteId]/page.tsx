@@ -34,7 +34,7 @@ export default async function PagamentosClientePage({
     { data: planosData },
   ] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
-    supabase.from('clientes').select('id, nome, estudio_id').eq('id', clienteId).maybeSingle(),
+    supabase.from('clientes').select('id, nome, estudio_id, nif').eq('id', clienteId).maybeSingle(),
     supabase
       .from('pagamentos')
       .select('*, plano:planos(nome), registado:perfis!registado_por(nome), anulado:perfis!anulado_por(nome)')
@@ -97,6 +97,7 @@ export default async function PagamentosClientePage({
         clienteId={clienteId}
         planos={planos}
         action={criarPagamento}
+        clienteNif={cliente.nif}
       />
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">

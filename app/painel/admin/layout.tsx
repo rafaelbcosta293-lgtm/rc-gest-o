@@ -15,10 +15,14 @@ import AdminNav from './AdminNav'
 // camada opcional, esta é obrigatória).
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const [sessao, estadosBanner, contactosAgendados] = await Promise.all([
+  const [sessao, estadosBanner, contactosAgendados, { count: pendentesFaturas }] = await Promise.all([
     getSessaoAtual(),
     obterEstadosBanner(supabase),
     listarContactosAgendados(supabase),
+    supabase
+      .from('pedidos_fatura')
+      .select('id', { count: 'exact', head: true })
+      .in('estado', ['pendente', 'erro', 'a_emitir']),
   ])
 
   if (!podeAcederAdmin(sessao.email)) {
@@ -38,7 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-9 w-auto" priority />
           </Link>
-          <AdminNav />
+          <AdminNav pendentesFaturas={pendentesFaturas ?? 0} />
         </header>
       </div>
       <div className="flex-1">{children}</div>

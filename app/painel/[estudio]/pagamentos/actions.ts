@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { criarPedidoFatura } from '@/lib/data/pedidosFatura'
+import { normalizarNif, nifValido } from '@/lib/data/faturas'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -30,10 +32,20 @@ export async function criarPagamento(formData: FormData) {
     )
   }
 
+  const pedirFatura = formData.get('pedir_fatura') === 'on'
+  const nif = normalizarNif(campoOuNull(formData, 'nif'))
+  if (pedirFatura && nif && !nifValido(nif)) {
+    redirect(
+      `/painel/${estudioSlug}/pagamentos/${clienteId}?error=${encodeURIComponent(
+        `O NIF ${nif} não é válido — corrige-o ou deixa em branco (consumidor final).`
+      )}`
+    )
+  }
+
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
 
-  const [{ error }, { data: plano }] = await Promise.all([
+  const [{ data: inserido, error }, { data: plano }] = await Promise.all([
     supabase.from('pagamentos').insert({
       cliente_id: clienteId,
       plano_id: planoId,
@@ -46,7 +58,7 @@ export async function criarPagamento(formData: FormData) {
       inclui_reativacao: formData.get('inclui_reativacao') === 'on',
       nota: campoOuNull(formData, 'nota'),
       registado_por: userData.user?.id ?? null,
-    }),
+    }).select('id').single(),
     supabase.from('planos').select('sessoes_por_semana').eq('id', planoId).maybeSingle(),
   ])
 
@@ -71,10 +83,30 @@ export async function criarPagamento(formData: FormData) {
     })
     .eq('id', clienteId)
 
+  // "Pedir fatura": só cria um pedido pendente para a Administração
+  // validar — nunca emite nada daqui. O NIF indicado fica na ficha.
+  let erroFatura: string | null = null
+  if (pedirFatura && inserido?.id) {
+    if (nif) await supabase.from('clientes').update({ nif }).eq('id', clienteId)
+    erroFatura = await criarPedidoFatura(supabase, {
+      pagamentoId: inserido.id,
+      pedidoPor: userData.user?.id ?? null,
+      nota: campoOuNull(formData, 'nota_fatura'),
+    })
+  }
+
   revalidatePath(`/painel/${estudioSlug}/pagamentos`)
   revalidatePath(`/painel/${estudioSlug}/pagamentos/${clienteId}`)
   revalidatePath(`/painel/${estudioSlug}/clientes`)
   revalidatePath(`/painel/${estudioSlug}/clientes/${clienteId}`)
+  revalidatePath('/painel/admin', 'layout')
+  if (erroFatura) {
+    redirect(
+      `/painel/${estudioSlug}/pagamentos/${clienteId}?error=${encodeURIComponent(
+        `Pagamento registado, mas o pedido de fatura falhou: ${erroFatura}`
+      )}`
+    )
+  }
   redirect(`/painel/${estudioSlug}/pagamentos/${clienteId}`)
 }
 

@@ -25,17 +25,20 @@ export default function PagamentoForm({
   planos,
   action,
   error,
+  clienteNif = null,
 }: {
   estudioSlug: string
   clienteId: string
   planos: Plano[]
   action: (formData: FormData) => void
   error?: string
+  clienteNif?: string | null
 }) {
   const hoje = new Date().toISOString().slice(0, 10)
   const [planoId, setPlanoId] = useState('')
   const [valor, setValor] = useState('')
   const [validoAte, setValidoAte] = useState(fimDoMes(hoje))
+  const [pedirFatura, setPedirFatura] = useState(false)
   const { marcarSujo } = useAvisoSairSemGuardar()
 
   const escolherPlano = (id: string) => {
@@ -141,6 +144,39 @@ export default function PagamentoForm({
       <div className="flex flex-col gap-1.5">
         <label className={labelCls}>Nota</label>
         <textarea name="nota" rows={2} className={inputCls} />
+      </div>
+
+      {/* Pedir fatura: não emite nada — só avisa a Administração, que
+          revê o rascunho pré-preenchido e decide se a fatura sai. */}
+      <div className="rounded-lg border border-border-subtle p-3">
+        <label className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            name="pedir_fatura"
+            checked={pedirFatura}
+            onChange={(e) => setPedirFatura(e.target.checked)}
+          />
+          Pedir fatura à Administração
+        </label>
+        {pedirFatura && (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className={labelCls}>NIF do cliente</label>
+              <input
+                name="nif"
+                inputMode="numeric"
+                maxLength={11}
+                defaultValue={clienteNif ?? ''}
+                placeholder="Em branco = consumidor final"
+                className={inputCls}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={labelCls}>Nota para a Administração</label>
+              <input name="nota_fatura" placeholder="Opcional" className={inputCls} />
+            </div>
+          </div>
+        )}
       </div>
 
       <SubmitButton

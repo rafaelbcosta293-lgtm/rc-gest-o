@@ -15,6 +15,7 @@ import {
   History,
   KeyRound,
   MessageSquare,
+  CreditCard,
 } from 'lucide-react'
 import PillNavLink from '@/components/PillNavLink'
 import BarraAjustavel from '@/components/BarraAjustavel'
@@ -34,6 +35,7 @@ const PASTAS = [
   { href: '/painel/admin/relatorio', label: 'Relatório', icone: FileText, filtravel: true },
   { href: '/painel/admin/financeiro', label: 'Financeiro', icone: Wallet, filtravel: true },
   { href: '/painel/admin/pagamentos', label: 'Pagamentos', icone: Receipt, filtravel: true },
+  { href: '/painel/admin/faturas', label: 'Faturas', icone: CreditCard, filtravel: true },
   { href: '/painel/admin/simulador', label: 'Simulador', icone: Calculator, filtravel: false },
   { href: '/painel/admin/servicos', label: 'Serviços', icone: Package, filtravel: false },
   { href: '/painel/admin/lembretes-sms', label: 'Lembretes SMS', icone: MessageSquare, filtravel: false },
@@ -46,7 +48,9 @@ const ESTUDIOS = [
   { slug: 'leiria', nome: 'Leiria' },
 ]
 
-export default function AdminNav() {
+// pendentesFaturas: pedidos de fatura por validar — aparece no nome da
+// pasta ("Faturas (3)") como aviso de que há faturas à espera.
+export default function AdminNav({ pendentesFaturas = 0 }: { pendentesFaturas?: number }) {
   // O submenu já não usa :hover em CSS puro (group-hover) — a barra tem
   // overflow-x-auto para caber em ecrãs estreitos, e isso obriga o
   // browser a cortar também o eixo vertical (regra do CSS: um eixo que
@@ -73,6 +77,8 @@ export default function AdminNav() {
   }
 
   const pastaAberta = PASTAS.find((p) => p.href === aberto)
+  const rotulo = (p: (typeof PASTAS)[number]) =>
+    p.href === '/painel/admin/faturas' && pendentesFaturas > 0 ? `${p.label} (${pendentesFaturas})` : p.label
 
   return (
     <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
@@ -84,10 +90,10 @@ export default function AdminNav() {
             onMouseEnter={(e) => abrir(p.href, e.currentTarget)}
             onMouseLeave={agendarFechar}
           >
-            <PillNavLink href={p.href} label={p.label} icone={p.icone} exato={p.exato} />
+            <PillNavLink href={p.href} label={rotulo(p)} icone={p.icone} exato={p.exato} />
           </div>
         ) : (
-          <PillNavLink key={p.href} href={p.href} label={p.label} icone={p.icone} exato={p.exato} />
+          <PillNavLink key={p.href} href={p.href} label={rotulo(p)} icone={p.icone} exato={p.exato} />
         )
       )}
 

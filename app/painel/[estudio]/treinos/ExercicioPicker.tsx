@@ -21,6 +21,7 @@ export default function ExercicioPicker({
   maisUsados?: ItemCatalogo[]
 }) {
   const [catId, setCatId] = useState<string | null>(null)
+  const [grupo, setGrupo] = useState<'A' | 'B'>('A')
   const [q, setQ] = useState('')
   const [erroNovo, setErroNovo] = useState<string | null>(null)
   const [aGuardar, iniciarGuardar] = useTransition()
@@ -93,7 +94,7 @@ export default function ExercicioPicker({
                 <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                   Mais usados com este cliente
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                   {maisUsados.map((e) => (
                     <button
                       key={e.id}
@@ -102,7 +103,7 @@ export default function ExercicioPicker({
                         escolher(e)
                         fechar()
                       }}
-                      className="rounded-md border border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-800 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-200"
+                      className="truncate rounded-md border border-teal-300 bg-teal-50 px-2.5 py-1.5 text-left text-xs font-medium text-teal-800 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-200"
                     >
                       {e.nome}
                     </button>
@@ -110,39 +111,35 @@ export default function ExercicioPicker({
                 </div>
               </>
             )}
-            <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Grupos musculares
+
+            <div className="mt-4 flex items-center gap-1.5 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
+              {(['A', 'B'] as const).map((parte) => (
+                <button
+                  key={parte}
+                  type="button"
+                  onClick={() => {
+                    setGrupo(parte)
+                    setCatId(null)
+                  }}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors ${
+                    grupo === parte
+                      ? 'bg-white text-foreground shadow-sm dark:bg-zinc-900'
+                      : 'text-zinc-500'
+                  }`}
+                >
+                  {parte === 'A' ? 'Grupos musculares' : 'Tipo de treino'}
+                </button>
+              ))}
             </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
               {catalogo.categorias
-                .filter((c) => c.parte === 'A')
+                .filter((c) => c.parte === grupo)
                 .map((c) => (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => setCatId(catId === c.id ? null : c.id)}
-                    className={`rounded-md border px-3 py-1.5 text-xs ${
-                      catId === c.id
-                        ? 'border-brand bg-brand text-black'
-                        : 'border-border-subtle bg-white dark:bg-zinc-800'
-                    }`}
-                  >
-                    {c.nome}
-                  </button>
-                ))}
-            </div>
-            <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Tipo de treino
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {catalogo.categorias
-                .filter((c) => c.parte === 'B')
-                .map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setCatId(catId === c.id ? null : c.id)}
-                    className={`rounded-md border px-3 py-1.5 text-xs ${
+                    className={`truncate rounded-md border px-2.5 py-1.5 text-left text-xs ${
                       catId === c.id
                         ? 'border-brand bg-brand text-black'
                         : 'border-border-subtle bg-white dark:bg-zinc-800'

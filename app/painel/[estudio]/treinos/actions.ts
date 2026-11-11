@@ -133,3 +133,43 @@ export async function criarExercicioRapido(
 
   return { exercicio }
 }
+
+export async function editarExercicioRapido(
+  id: string,
+  novoNome: string
+): Promise<ResultadoExercicioRapido> {
+  const nomeLimpo = novoNome.trim()
+  if (!nomeLimpo) {
+    return { error: 'Escreve o nome do exercício.' }
+  }
+
+  const supabase = await createClient()
+  const { data: exercicio, error } = await supabase
+    .from('exercicios')
+    .update({ nome: nomeLimpo })
+    .eq('id', id)
+    .select('id, nome')
+    .single()
+
+  if (error || !exercicio) {
+    return { error: 'Não foi possível editar o exercício.' }
+  }
+
+  return { exercicio }
+}
+
+// Eliminação por "ativo = false" (nunca apaga a linha) — o histórico de
+// treinos já registado guarda o nome do exercício à parte
+// (sessao_exercicios.exercicio_nome), por isso não é afetado.
+export async function eliminarExercicioRapido(
+  id: string
+): Promise<{ error: string } | { ok: true }> {
+  const supabase = await createClient()
+  const { error } = await supabase.from('exercicios').update({ ativo: false }).eq('id', id)
+
+  if (error) {
+    return { error: 'Não foi possível eliminar o exercício.' }
+  }
+
+  return { ok: true }
+}

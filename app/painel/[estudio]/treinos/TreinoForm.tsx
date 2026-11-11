@@ -249,6 +249,39 @@ export default function TreinoForm({
     }))
   }
 
+  const aoEditarExercicio = (item: ItemCatalogo) => {
+    setCatalogo((atual) => ({
+      ...atual,
+      todos: atual.todos
+        .map((e) => (e.id === item.id ? item : e))
+        .sort((a, b) => a.nome.localeCompare(b.nome)),
+      porCategoria: Object.fromEntries(
+        Object.entries(atual.porCategoria).map(([catId, itens]) => [
+          catId,
+          itens
+            .map((e) => (e.id === item.id ? item : e))
+            .sort((a, b) => a.nome.localeCompare(b.nome)),
+        ])
+      ),
+    }))
+    setExercicios((linhas) =>
+      linhas.map((l) => (l.exercicio_id === item.id ? { ...l, exercicio_nome: item.nome } : l))
+    )
+  }
+
+  const aoEliminarExercicio = (id: string) => {
+    setCatalogo((atual) => ({
+      ...atual,
+      todos: atual.todos.filter((e) => e.id !== id),
+      porCategoria: Object.fromEntries(
+        Object.entries(atual.porCategoria).map(([catId, itens]) => [
+          catId,
+          itens.filter((e) => e.id !== id),
+        ])
+      ),
+    }))
+  }
+
   const inputCls =
     'rounded-md border border-border-subtle px-2.5 py-1.5 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
   const labelCompactoCls = 'text-[11px] font-semibold uppercase tracking-wide text-zinc-500'
@@ -394,6 +427,8 @@ export default function TreinoForm({
         catalogo={catalogo}
         maisUsados={maisUsados}
         criado={aoCriarExercicio}
+        editado={aoEditarExercicio}
+        eliminado={aoEliminarExercicio}
         escolher={(item) => {
           escolherExercicio(item)
           setSeletorPara(null)

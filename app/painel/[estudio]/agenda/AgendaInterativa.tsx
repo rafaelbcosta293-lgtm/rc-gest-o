@@ -1018,7 +1018,7 @@ function EventoModalOverlay({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onFechar}>
       <div
-        className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-5 shadow-pop"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border-subtle bg-surface p-5 shadow-pop"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -1320,15 +1320,15 @@ function EventoModalOverlay({
         )}
 
         {editar && aConfirmarDesmarcar && (
-          <div className="mt-3 flex flex-col gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
-            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Desmarcar este evento</p>
-            <fieldset className="flex flex-col gap-1.5">
-              <legend className="text-xs font-semibold text-muted">
+          <div className="mt-3 flex flex-col gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-300">Desmarcar este evento</p>
+            <fieldset className="flex flex-col gap-1">
+              <legend className="text-[11px] font-semibold text-muted">
                 O treino foi realizado, mesmo assim? (obrigatório)
               </legend>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 <label
-                  className={`flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-colors ${
                     contarComoRealizado === true
                       ? 'border-accent bg-accent-soft'
                       : 'border-border-subtle bg-surface'
@@ -1344,7 +1344,7 @@ function EventoModalOverlay({
                   Sim, conta como realizado
                 </label>
                 <label
-                  className={`flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-colors ${
                     contarComoRealizado === false
                       ? 'border-accent bg-accent-soft'
                       : 'border-border-subtle bg-surface'
@@ -1361,13 +1361,13 @@ function EventoModalOverlay({
                 </label>
               </div>
             </fieldset>
-            <fieldset className="flex flex-col gap-1.5">
-              <legend className="text-xs font-semibold text-muted">
+            <fieldset className="flex flex-col gap-1">
+              <legend className="text-[11px] font-semibold text-muted">
                 Já foi remarcada para outro dia? (obrigatório)
               </legend>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 <label
-                  className={`flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-colors ${
                     foiRemarcado === true ? 'border-accent bg-accent-soft' : 'border-border-subtle bg-surface'
                   }`}
                 >
@@ -1381,7 +1381,7 @@ function EventoModalOverlay({
                   Sim, já remarcou
                 </label>
                 <label
-                  className={`flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-colors ${
                     foiRemarcado === false ? 'border-accent bg-accent-soft' : 'border-border-subtle bg-surface'
                   }`}
                 >
@@ -1404,7 +1404,7 @@ function EventoModalOverlay({
                   if (contarComoRealizado === null || foiRemarcado === null) return
                   onDesmarcar(contarComoRealizado, foiRemarcado)
                 }}
-                className="rounded-full bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-50"
+                className="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-50"
               >
                 {aPendente ? 'A desmarcar…' : 'Confirmar'}
               </button>
@@ -1412,7 +1412,7 @@ function EventoModalOverlay({
                 type="button"
                 disabled={aPendente}
                 onClick={() => setAConfirmarDesmarcar(false)}
-                className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+                className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
               >
                 Cancelar
               </button>
@@ -1424,11 +1424,11 @@ function EventoModalOverlay({
             âmbito — só esta ocorrência, os seguintes, os anteriores ou
             toda a série — nunca um clique só a apagar tudo às cegas. */}
         {editar && aConfirmarApagar && (
-          <div className="mt-3 flex flex-col gap-3 rounded-xl border-2 border-red-300 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
-            <p className="text-sm font-bold text-red-700 dark:text-red-300">
+          <div className="mt-3 flex flex-col gap-2 rounded-xl border-2 border-red-300 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/40">
+            <p className="text-xs font-bold text-red-700 dark:text-red-300">
               Apagar evento — esta é uma série repetida
             </p>
-            <fieldset className="flex flex-col gap-1.5">
+            <fieldset className="flex flex-col gap-1">
               {(
                 [
                   { valor: 'um', label: 'Só este evento' },
@@ -1439,7 +1439,7 @@ function EventoModalOverlay({
               ).map((o) => (
                 <label
                   key={o.valor}
-                  className={`cursor-pointer rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`cursor-pointer rounded-md border px-2 py-1.5 text-xs font-medium transition-colors ${
                     escopoApagar === o.valor
                       ? 'border-red-400 bg-red-100 dark:bg-red-900/40'
                       : 'border-border-subtle bg-surface'
@@ -1472,7 +1472,7 @@ function EventoModalOverlay({
                   }
                   if (window.confirm(avisos[escopoApagar])) onApagar(escopoApagar)
                 }}
-                className="rounded-full bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
               >
                 {aPendente ? 'A apagar…' : 'Confirmar'}
               </button>
@@ -1480,7 +1480,7 @@ function EventoModalOverlay({
                 type="button"
                 disabled={aPendente}
                 onClick={() => setAConfirmarApagar(false)}
-                className="rounded-full border border-border-subtle px-4 py-2 text-sm font-semibold hover:bg-foreground/[.06]"
+                className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
               >
                 Cancelar
               </button>

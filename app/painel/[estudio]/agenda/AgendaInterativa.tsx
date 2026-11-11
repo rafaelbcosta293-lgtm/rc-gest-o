@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { X, Trash2, Ban, RotateCcw, Minus, Plus, HelpCircle } from 'lucide-react'
+import { X, Trash2, Ban, RotateCcw, Minus, Plus, HelpCircle, TriangleAlert } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
@@ -30,6 +30,8 @@ export type EventoComNomes = EventoAgenda & {
     nome_preferido: string | null
     estudio_id: number
     numero_socio: string | null
+    estado: string
+    alerta: string
   } | null
   pt: { id: string; nome: string } | null
 }
@@ -75,6 +77,14 @@ function rotuloEvento(grupo: EventoComNomes[], estudioId: number) {
 function numerosSocioEvento(grupo: EventoComNomes[]) {
   const numeros = grupo.map((e) => e.cliente?.numero_socio).filter((n): n is string => !!n)
   return numeros.length > 0 ? numeros.join(', ') : null
+}
+
+// Algo a assinalar em pelo menos um dos clientes deste evento — estado
+// que não é Ativo (mensalidade em atraso, suspenso, inativo) ou um
+// alerta (lesão, doença, limitação, prova a chegar). Só avisa que há
+// algo a verificar — os detalhes ficam na ficha do cliente.
+function temAvisoEvento(grupo: EventoComNomes[]) {
+  return grupo.some((e) => e.cliente && (e.cliente.estado !== 'Ativo' || e.cliente.alerta !== 'Nenhum'))
 }
 
 function minutosParaHora(minutos: number) {
@@ -839,6 +849,7 @@ function ColunaDia({
         const emArrasto = arrastandoId === evento.id
         const emSelecionado = selecionadoId === evento.id
         const numerosSocio = numerosSocioEvento(grupo)
+        const aviso = temAvisoEvento(grupo)
         const cancelado = evento.estado === 'Cancelado'
         // "Terminado" só desvanece o aspeto — nunca line-through, que
         // fica só para "Cancelado" (um já aconteceu, o outro não).
@@ -903,6 +914,19 @@ function ColunaDia({
                 title={`Nº de sócio: ${numerosSocio}`}
                 className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-current opacity-40"
               />
+            )}
+            {/* Aviso discreto (canto superior direito) quando algum dos
+                clientes deste evento tem algo a verificar — mensalidade
+                não ativa, suspenso/inativo, ou um alerta (lesão, doença,
+                limitação, prova a chegar). Só avisa que há algo; os
+                detalhes ficam na ficha do cliente. */}
+            {aviso && (
+              <span
+                title="Este cliente tem algo a verificar (estado ou alerta) — ver ficha"
+                className="absolute top-1 right-1"
+              >
+                <TriangleAlert className="h-3 w-3 text-red-600" strokeWidth={2.5} />
+              </span>
             )}
             {/* Pegas de redimensionar, ao estilo Google Calendar — zona de
                 clique bem maior do que a risca visível (que só aparece ao

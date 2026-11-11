@@ -12,8 +12,10 @@ import AgendaConteudo from './agenda/AgendaConteudo'
 import type { AlertaRegistado } from '@/lib/supabase/database.types'
 
 // Cartão compacto e clicável para a linha de resumo do início do
-// estúdio — número grande para leitura rápida, cada um leva à pasta
-// onde se vê o pormenor (não há breakdown aqui propositadamente).
+// estúdio — tudo numa só linha (ícone + valor + legenda), para a
+// agenda por baixo começar o mais cedo possível no ecrã; "extra" (ex.:
+// "de 60", nomes dos aniversariantes) não desaparece, só passa a dica
+// ao passar o rato em vez de ocupar uma linha própria.
 function CartaoResumo({
   href,
   icone: Icone,
@@ -34,23 +36,23 @@ function CartaoResumo({
   return (
     <Link
       href={href}
-      className={`relative flex flex-col gap-2 rounded-2xl border bg-surface p-3.5 shadow-card transition-colors hover:border-border-strong hover:bg-brand/[.04] ${
+      title={extra}
+      className={`relative flex items-center gap-2 rounded-xl border bg-surface px-2.5 py-2 shadow-card transition-colors hover:border-border-strong hover:bg-brand/[.04] ${
         aviso ? 'border-red-200 dark:border-red-900' : 'border-border-subtle'
       }`}
     >
       {aviso && (
-        <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-red-500" aria-hidden />
+        <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
       )}
       <span
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
         style={{ background: cor.bg, color: cor.tx }}
       >
-        <Icone className="h-4 w-4" strokeWidth={2.25} />
+        <Icone className="h-3.5 w-3.5" strokeWidth={2.25} />
       </span>
-      <div>
-        <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</p>
-        <p className="mt-1 font-mono text-xl font-bold leading-none tabular-nums text-foreground">{valor}</p>
-        {extra && <p className="mt-1 truncate text-[11px] text-muted">{extra}</p>}
+      <div className="min-w-0 leading-tight">
+        <p className="font-mono text-sm font-bold tabular-nums text-foreground">{valor}</p>
+        <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-muted">{label}</p>
       </div>
     </Link>
   )
@@ -162,8 +164,9 @@ export default async function EstudioPage({
 
       {/* Resumo do dia inteiro numa só linha (computador) — cada caixa é
           só o essencial para uma leitura rápida; para mais pormenor
-          abre-se a pasta correspondente. */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          abre-se a pasta correspondente. Compacto de propósito, para a
+          agenda por baixo começar o mais cedo possível no ecrã. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <CartaoResumo
           href={`/painel/${slug}/clientes`}
           icone={UsersRound}
@@ -217,7 +220,7 @@ export default async function EstudioPage({
         />
       </div>
 
-      <div className="mt-8">
+      <div className="mt-3">
         <AgendaConteudo estudio={estudio} searchParams={sp} basePath={`/painel/${slug}`} mostrarVoltar={false} />
       </div>
     </div>

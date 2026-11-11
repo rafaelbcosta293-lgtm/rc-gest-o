@@ -70,9 +70,27 @@ const TITULO_ESTADO: Record<EstadoLinha, string> = {
 // Uma linha por exercício, tudo lado a lado (bloco, exercício, séries,
 // reps, carga, descanso, nota) em vez de empilhado por baixo do nome —
 // a legenda de cada coluna aparece uma só vez, no cabeçalho da grelha,
-// em vez de repetida exercício a exercício.
+// em vez de repetida exercício a exercício. gap-x/gap-y ficam a 0: o
+// espaço entre colunas/linhas vem do padding de cada CelulaGrid, não
+// de um gap da grelha — assim a risca de cada linha (border-b) fica
+// contínua de ponta a ponta, sem um "buraco" transparente a cortá-la.
 const GRID_COLUNAS = '92px minmax(160px,1.4fr) 56px 56px 64px 72px minmax(120px,1fr) 28px'
 const CABECALHOS_GRID = ['Bloco', 'Exercício', 'Séries', 'Reps', 'Carga', 'Descanso', 'Nota', '']
+
+// Uma célula da grelha: só esta tem a risca horizontal (border-b) e o
+// respiro entre colunas (padding) — o controlo lá dentro (select,
+// input, botão) preenche-a toda, sem bordas próprias, só com um fundo
+// preenchido (estilo Apple: caixa de texto cheia, não emoldurada).
+function CelulaGrid({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`flex min-w-0 items-center border-b border-border-subtle/70 px-1 py-1 ${className}`}>
+      {children}
+    </div>
+  )
+}
+
+const campoPreenchidoCls =
+  'w-full min-w-0 rounded-md bg-zinc-100 px-2 py-1.5 text-xs outline-none focus:bg-white focus:ring-2 focus:ring-brand/50 dark:bg-zinc-800 dark:focus:bg-zinc-900'
 
 function CampoGrid({
   value,
@@ -83,13 +101,7 @@ function CampoGrid({
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   className?: string
 }) {
-  return (
-    <input
-      value={value}
-      onChange={onChange}
-      className={`w-full min-w-0 rounded-md border border-border-subtle bg-transparent px-2 py-1.5 text-xs outline-none focus:border-brand/60 dark:bg-zinc-900 ${className}`}
-    />
-  )
+  return <input value={value} onChange={onChange} className={`${campoPreenchidoCls} ${className}`} />
 }
 
 type ValoresSugeridos = { series: string; reps: string; carga: string; descanso: string }
@@ -261,12 +273,12 @@ export default function TreinoForm({
             baixo do nome. overflow-x-auto + min-w garantem que as
             colunas nunca ficam espremidas num ecrã estreito — desliza
             em vez de encolher a ponto de ficar ilegível. */}
-        <div className="mt-2 overflow-x-auto rounded-lg border border-border-subtle">
-          <div className="grid min-w-[700px] gap-x-2 gap-y-1.5 p-2" style={{ gridTemplateColumns: GRID_COLUNAS }}>
+        <div className="mt-2 overflow-x-auto overflow-y-hidden rounded-2xl border border-border-subtle bg-surface shadow-card">
+          <div className="grid min-w-[700px]" style={{ gridTemplateColumns: GRID_COLUNAS }}>
             {CABECALHOS_GRID.map((h, i) => (
               <span
                 key={i}
-                className="border-b border-border-subtle pb-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-400"
+                className="border-b-2 border-border-strong bg-zinc-50 px-1 py-2 text-[10px] font-bold tracking-wide text-zinc-500 uppercase dark:bg-white/[.03]"
               >
                 {h}
               </span>
@@ -276,55 +288,72 @@ export default function TreinoForm({
               const estado = estados[linha.key]
               return (
                 <Fragment key={linha.key}>
-                  <select
-                    value={linha.bloco}
-                    onChange={(e) => aoMudarBloco(linha, indice, e.target.value as BlocoTipo)}
-                    style={{ color: BLOCO_COR[linha.bloco], borderLeftColor: BLOCO_COR[linha.bloco], borderLeftWidth: 3 }}
-                    className="min-w-0 rounded-md border border-border-subtle px-1.5 py-1.5 text-xs font-semibold dark:bg-zinc-900"
-                  >
-                    {BLOCOS.map((b) => (
-                      <option key={b} value={b} style={{ color: BLOCO_COR[b] }}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
+                  <CelulaGrid>
+                    <select
+                      value={linha.bloco}
+                      onChange={(e) => aoMudarBloco(linha, indice, e.target.value as BlocoTipo)}
+                      style={{ color: BLOCO_COR[linha.bloco], boxShadow: `inset 3px 0 0 0 ${BLOCO_COR[linha.bloco]}` }}
+                      className="w-full min-w-0 rounded-md bg-zinc-100 px-1.5 py-1.5 text-xs font-bold dark:bg-zinc-800"
+                    >
+                      {BLOCOS.map((b) => (
+                        <option key={b} value={b} style={{ color: BLOCO_COR[b] }}>
+                          {b}
+                        </option>
+                      ))}
+                    </select>
+                  </CelulaGrid>
 
-                  <button
-                    type="button"
-                    onClick={() => setSeletorPara(linha.key)}
-                    title={estado ? TITULO_ESTADO[estado] : undefined}
-                    className={`relative min-w-0 rounded-md border px-2 py-1.5 text-left text-xs ${
-                      linha.exercicio_nome
-                        ? 'border-border-subtle font-medium'
-                        : 'border-dashed border-border-strong text-zinc-500 italic'
-                    }`}
-                  >
-                    <span className="block truncate pr-3">{linha.exercicio_nome || '+ Escolher exercício…'}</span>
-                    {/* Estado a guardar — um pontinho discreto no canto,
-                        não uma linha de texto à parte por exercício. */}
-                    {estado && (
-                      <span
-                        title={TITULO_ESTADO[estado]}
-                        className="absolute top-1/2 right-1.5 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
-                        style={{ background: COR_ESTADO[estado] }}
-                      />
-                    )}
-                  </button>
+                  <CelulaGrid>
+                    <button
+                      type="button"
+                      onClick={() => setSeletorPara(linha.key)}
+                      title={estado ? TITULO_ESTADO[estado] : undefined}
+                      className={`relative w-full min-w-0 rounded-md px-2 py-1.5 text-left text-xs ${
+                        linha.exercicio_nome
+                          ? 'bg-zinc-100 font-semibold text-foreground dark:bg-zinc-800'
+                          : 'bg-amber-50 text-amber-700 italic dark:bg-amber-950/40 dark:text-amber-300'
+                      }`}
+                    >
+                      <span className="block truncate pr-3">{linha.exercicio_nome || '+ Escolher exercício…'}</span>
+                      {/* Estado a guardar — um pontinho discreto no
+                          canto, não uma linha de texto à parte por
+                          exercício. */}
+                      {estado && (
+                        <span
+                          title={TITULO_ESTADO[estado]}
+                          className="absolute top-1/2 right-1.5 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
+                          style={{ background: COR_ESTADO[estado] }}
+                        />
+                      )}
+                    </button>
+                  </CelulaGrid>
 
-                  <CampoGrid value={linha.series} onChange={aoMudarCampo(linha, indice, 'series')} />
-                  <CampoGrid value={linha.reps} onChange={aoMudarCampo(linha, indice, 'reps')} />
-                  <CampoGrid value={linha.carga} onChange={aoMudarCampo(linha, indice, 'carga')} />
-                  <CampoGrid value={linha.descanso} onChange={aoMudarCampo(linha, indice, 'descanso')} />
-                  <CampoGrid value={linha.nota} onChange={aoMudarCampo(linha, indice, 'nota')} />
+                  <CelulaGrid>
+                    <CampoGrid value={linha.series} onChange={aoMudarCampo(linha, indice, 'series')} />
+                  </CelulaGrid>
+                  <CelulaGrid>
+                    <CampoGrid value={linha.reps} onChange={aoMudarCampo(linha, indice, 'reps')} />
+                  </CelulaGrid>
+                  <CelulaGrid>
+                    <CampoGrid value={linha.carga} onChange={aoMudarCampo(linha, indice, 'carga')} />
+                  </CelulaGrid>
+                  <CelulaGrid>
+                    <CampoGrid value={linha.descanso} onChange={aoMudarCampo(linha, indice, 'descanso')} />
+                  </CelulaGrid>
+                  <CelulaGrid>
+                    <CampoGrid value={linha.nota} onChange={aoMudarCampo(linha, indice, 'nota')} />
+                  </CelulaGrid>
 
-                  <button
-                    type="button"
-                    onClick={() => removerLinha(linha)}
-                    aria-label="Remover linha"
-                    className="flex items-center justify-center rounded-md text-zinc-400 hover:text-red-600"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <CelulaGrid className="justify-center">
+                    <button
+                      type="button"
+                      onClick={() => removerLinha(linha)}
+                      aria-label="Remover linha"
+                      className="flex items-center justify-center rounded-md p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </CelulaGrid>
                 </Fragment>
               )
             })}

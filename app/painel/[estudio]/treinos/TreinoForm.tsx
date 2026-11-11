@@ -406,84 +406,76 @@ export default function TreinoForm({
         <input type="hidden" name="cliente_id" value={clienteId} />
         <input type="hidden" name="id" value={sessaoId} />
 
-        {/* Dados do treino + fecho, mais compactos (legendas pequenas em
-            maiúsculas, em vez de rótulos de tamanho normal) — pedido do
-            dono depois de gostar da grelha do plano mais acima. */}
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="flex flex-col gap-1">
-              <label className={labelCompactoCls}>Data</label>
-              <input
-                type="date"
-                name="data"
-                value={data}
-                onChange={(e) => setData(e.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className={labelCompactoCls}>PT</label>
-              <select
-                name="pt_id"
-                value={pt}
-                onChange={(e) => setPt(e.target.value)}
-                className={inputCls}
-              >
-                {pts.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className={labelCompactoCls}>Foco do treino</label>
-              <input
-                name="foco"
-                value={foco}
-                onChange={(e) => setFoco(e.target.value)}
-                placeholder="ex.: Superior · empurrar"
-                className={inputCls}
-              />
-            </div>
+        {/* Os 5 campos numa só linha (em ecrãs largos) — pedido do dono
+            depois de gostar da grelha do plano mais acima; deixou de
+            fazer sentido um cabeçalho "Fecho do treino" à parte só
+            para "Como correu"/"Tipo de nota" quando já estão lado a
+            lado com Data/PT/Foco. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="flex flex-col gap-1">
+            <label className={labelCompactoCls}>Data</label>
+            <input
+              type="date"
+              name="data"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              className={inputCls}
+            />
           </div>
-
-          <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Fecho do treino
-            </h2>
-            <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1">
-                <label className={labelCompactoCls}>Como correu</label>
-                <select
-                  name="correu"
-                  value={correu ?? 'Bem'}
-                  onChange={(e) => setCorreu(e.target.value)}
-                  className={inputCls}
-                >
-                  {Object.keys(CORREU).map((k) => (
-                    <option key={k} value={k}>
-                      {k}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className={labelCompactoCls}>Tipo de nota</label>
-                <select
-                  name="tipo_nota"
-                  value={tipoNota ?? 'Normal'}
-                  onChange={(e) => setTipoNota(e.target.value)}
-                  className={inputCls}
-                >
-                  {['Normal', 'Ajuste', 'Excelente', 'Lesão', 'Doença', 'Prova/Evento'].map((k) => (
-                    <option key={k} value={k}>
-                      {k}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCompactoCls}>PT</label>
+            <select
+              name="pt_id"
+              value={pt}
+              onChange={(e) => setPt(e.target.value)}
+              className={inputCls}
+            >
+              {pts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCompactoCls}>Foco do treino</label>
+            <input
+              name="foco"
+              value={foco}
+              onChange={(e) => setFoco(e.target.value)}
+              placeholder="ex.: Superior · empurrar"
+              className={inputCls}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCompactoCls}>Como correu</label>
+            <select
+              name="correu"
+              value={correu ?? 'Bem'}
+              onChange={(e) => setCorreu(e.target.value)}
+              className={inputCls}
+            >
+              {Object.keys(CORREU).map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCompactoCls}>Tipo de nota</label>
+            <select
+              name="tipo_nota"
+              value={tipoNota ?? 'Normal'}
+              onChange={(e) => setTipoNota(e.target.value)}
+              className={inputCls}
+            >
+              {['Normal', 'Ajuste', 'Excelente', 'Lesão', 'Doença', 'Prova/Evento'].map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

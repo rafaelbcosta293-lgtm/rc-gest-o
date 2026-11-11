@@ -294,7 +294,7 @@ export default function TreinoForm({
                       value={linha.bloco}
                       onChange={(e) => aoMudarBloco(linha, indice, e.target.value as BlocoTipo)}
                       style={{ color: BLOCO_COR[linha.bloco], boxShadow: `inset 3px 0 0 0 ${BLOCO_COR[linha.bloco]}` }}
-                      className="w-full min-w-0 rounded-md bg-zinc-100 px-1.5 py-1.5 text-center text-xs font-bold dark:bg-zinc-800"
+                      className="w-full min-w-0 rounded-md bg-zinc-100 px-1.5 py-1.5 text-center text-xs font-medium dark:bg-zinc-800"
                     >
                       {BLOCOS.map((b) => (
                         <option key={b} value={b} style={{ color: BLOCO_COR[b] }}>
@@ -311,7 +311,7 @@ export default function TreinoForm({
                       title={estado ? TITULO_ESTADO[estado] : undefined}
                       className={`relative w-full min-w-0 rounded-md px-2 py-1.5 text-left text-xs ${
                         linha.exercicio_nome
-                          ? 'bg-zinc-100 font-semibold text-foreground dark:bg-zinc-800'
+                          ? 'bg-zinc-100 text-foreground dark:bg-zinc-800'
                           : 'bg-amber-50 text-amber-700 italic dark:bg-amber-950/40 dark:text-amber-300'
                       }`}
                     >

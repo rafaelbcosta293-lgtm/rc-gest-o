@@ -250,7 +250,8 @@ export default function TreinoForm({
   }
 
   const inputCls =
-    'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
+    'rounded-md border border-border-subtle px-2.5 py-1.5 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
+  const labelCompactoCls = 'text-[11px] font-semibold uppercase tracking-wide text-zinc-500'
 
   return (
     <div className="mt-6 flex flex-col gap-6">
@@ -278,7 +279,7 @@ export default function TreinoForm({
             {CABECALHOS_GRID.map((h, i) => (
               <span
                 key={i}
-                className="border-b-2 border-border-strong bg-zinc-50 px-1 py-2 text-[10px] font-bold tracking-wide text-zinc-500 uppercase dark:bg-white/[.03]"
+                className="border-b-2 border-border-strong bg-zinc-50 px-1 py-2 text-center text-[10px] font-bold tracking-wide text-zinc-500 uppercase dark:bg-white/[.03]"
               >
                 {h}
               </span>
@@ -293,7 +294,7 @@ export default function TreinoForm({
                       value={linha.bloco}
                       onChange={(e) => aoMudarBloco(linha, indice, e.target.value as BlocoTipo)}
                       style={{ color: BLOCO_COR[linha.bloco], boxShadow: `inset 3px 0 0 0 ${BLOCO_COR[linha.bloco]}` }}
-                      className="w-full min-w-0 rounded-md bg-zinc-100 px-1.5 py-1.5 text-xs font-bold dark:bg-zinc-800"
+                      className="w-full min-w-0 rounded-md bg-zinc-100 px-1.5 py-1.5 text-center text-xs font-bold dark:bg-zinc-800"
                     >
                       {BLOCOS.map((b) => (
                         <option key={b} value={b} style={{ color: BLOCO_COR[b] }}>
@@ -329,16 +330,28 @@ export default function TreinoForm({
                   </CelulaGrid>
 
                   <CelulaGrid>
-                    <CampoGrid value={linha.series} onChange={aoMudarCampo(linha, indice, 'series')} />
+                    <CampoGrid
+                      value={linha.series}
+                      onChange={aoMudarCampo(linha, indice, 'series')}
+                      className="text-center"
+                    />
                   </CelulaGrid>
                   <CelulaGrid>
-                    <CampoGrid value={linha.reps} onChange={aoMudarCampo(linha, indice, 'reps')} />
+                    <CampoGrid value={linha.reps} onChange={aoMudarCampo(linha, indice, 'reps')} className="text-center" />
                   </CelulaGrid>
                   <CelulaGrid>
-                    <CampoGrid value={linha.carga} onChange={aoMudarCampo(linha, indice, 'carga')} />
+                    <CampoGrid
+                      value={linha.carga}
+                      onChange={aoMudarCampo(linha, indice, 'carga')}
+                      className="text-center"
+                    />
                   </CelulaGrid>
                   <CelulaGrid>
-                    <CampoGrid value={linha.descanso} onChange={aoMudarCampo(linha, indice, 'descanso')} />
+                    <CampoGrid
+                      value={linha.descanso}
+                      onChange={aoMudarCampo(linha, indice, 'descanso')}
+                      className="text-center"
+                    />
                   </CelulaGrid>
                   <CelulaGrid>
                     <CampoGrid value={linha.nota} onChange={aoMudarCampo(linha, indice, 'nota')} />
@@ -393,84 +406,83 @@ export default function TreinoForm({
         <input type="hidden" name="cliente_id" value={clienteId} />
         <input type="hidden" name="id" value={sessaoId} />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Data</label>
-            <input
-              type="date"
-              name="data"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className={inputCls}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">PT</label>
-            <select
-              name="pt_id"
-              value={pt}
-              onChange={(e) => setPt(e.target.value)}
-              className={inputCls}
-            >
-              {pts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Foco do treino
-            </label>
-            <input
-              name="foco"
-              value={foco}
-              onChange={(e) => setFoco(e.target.value)}
-              placeholder="ex.: Superior · empurrar"
-              className={inputCls}
-            />
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Fecho do treino
-          </h2>
-          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Como correu
-              </label>
+        {/* Dados do treino + fecho, mais compactos (legendas pequenas em
+            maiúsculas, em vez de rótulos de tamanho normal) — pedido do
+            dono depois de gostar da grelha do plano mais acima. */}
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="flex flex-col gap-1">
+              <label className={labelCompactoCls}>Data</label>
+              <input
+                type="date"
+                name="data"
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCompactoCls}>PT</label>
               <select
-                name="correu"
-                value={correu ?? 'Bem'}
-                onChange={(e) => setCorreu(e.target.value)}
+                name="pt_id"
+                value={pt}
+                onChange={(e) => setPt(e.target.value)}
                 className={inputCls}
               >
-                {Object.keys(CORREU).map((k) => (
-                  <option key={k} value={k}>
-                    {k}
+                {pts.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
                   </option>
                 ))}
               </select>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Tipo de nota
-              </label>
-              <select
-                name="tipo_nota"
-                value={tipoNota ?? 'Normal'}
-                onChange={(e) => setTipoNota(e.target.value)}
+            <div className="flex flex-col gap-1">
+              <label className={labelCompactoCls}>Foco do treino</label>
+              <input
+                name="foco"
+                value={foco}
+                onChange={(e) => setFoco(e.target.value)}
+                placeholder="ex.: Superior · empurrar"
                 className={inputCls}
-              >
-                {['Normal', 'Ajuste', 'Excelente', 'Lesão', 'Doença', 'Prova/Evento'].map((k) => (
-                  <option key={k} value={k}>
-                    {k}
-                  </option>
-                ))}
-              </select>
+              />
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              Fecho do treino
+            </h2>
+            <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <label className={labelCompactoCls}>Como correu</label>
+                <select
+                  name="correu"
+                  value={correu ?? 'Bem'}
+                  onChange={(e) => setCorreu(e.target.value)}
+                  className={inputCls}
+                >
+                  {Object.keys(CORREU).map((k) => (
+                    <option key={k} value={k}>
+                      {k}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCompactoCls}>Tipo de nota</label>
+                <select
+                  name="tipo_nota"
+                  value={tipoNota ?? 'Normal'}
+                  onChange={(e) => setTipoNota(e.target.value)}
+                  className={inputCls}
+                >
+                  {['Normal', 'Ajuste', 'Excelente', 'Lesão', 'Doença', 'Prova/Evento'].map((k) => (
+                    <option key={k} value={k}>
+                      {k}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>

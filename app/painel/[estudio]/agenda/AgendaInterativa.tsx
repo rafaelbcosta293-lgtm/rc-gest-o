@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { X, Trash2, Ban, RotateCcw, Minus, Plus, HelpCircle, Info } from 'lucide-react'
+import { X, Trash2, Ban, RotateCcw, Minus, Plus, HelpCircle } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, TIPOS_EVENTO_AGENDA, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
@@ -894,17 +894,15 @@ function ColunaDia({
             </span>
             {/* Nº de sócio — nunca como texto (ficava a sobrepor-se ao
                 nome/hora em colunas estreitas, com vários eventos ao
-                mesmo tempo) — uma bolinha de informação, sempre do
+                mesmo tempo) — só uma bolinha discreta, sempre do
                 mesmo tamanho, que nunca colide com mais nada; passa o
                 rato por cima para ver o número (title = tooltip
                 nativa do browser). */}
             {numerosSocio && (
               <span
                 title={`Nº de sócio: ${numerosSocio}`}
-                className="absolute right-1 bottom-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-black/70 text-white"
-              >
-                <Info className="h-2.5 w-2.5" strokeWidth={2.5} />
-              </span>
+                className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-current opacity-40"
+              />
             )}
             {/* Pegas de redimensionar, ao estilo Google Calendar — zona de
                 clique bem maior do que a risca visível (que só aparece ao

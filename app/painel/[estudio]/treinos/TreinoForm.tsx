@@ -492,7 +492,6 @@ export default function TreinoForm({
             rows={4}
             value={notaProxima}
             onChange={(e) => setNotaProxima(e.target.value)}
-            placeholder="Veio doente e parou a meio · Recorde no agachamento, subir carga · Prova daqui a 3 semanas, aliviar volume…"
             className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm dark:bg-zinc-900"
           />
         </div>

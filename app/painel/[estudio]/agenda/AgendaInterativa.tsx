@@ -795,6 +795,7 @@ function GrelhaInterativa({
             {dias.map((dia) => (
               <ColunaDia
                 key={dia}
+                dia={dia}
                 estudioId={estudioId}
                 eventos={porDia[dia] ?? []}
                 registarRef={registarRef(dia)}
@@ -827,6 +828,7 @@ function GrelhaInterativa({
 }
 
 function ColunaDia({
+  dia,
   eventos,
   estudioId,
   registarRef,
@@ -839,6 +841,7 @@ function ColunaDia({
   previa,
   pxPorMinuto,
 }: {
+  dia: string
   eventos: EventoComNomes[]
   estudioId: number
   registarRef: (el: HTMLDivElement | null) => void
@@ -851,13 +854,16 @@ function ColunaDia({
   previa: { inicioMin: number; fimMin: number } | null
   pxPorMinuto: number
 }) {
-  // Para desvanecer eventos já terminados — não precisa de precisão ao
-  // segundo, por isso atualiza-se devagar.
+  // Também usada para a linha da hora atual (só na coluna de hoje) —
+  // por isso atualiza-se ao minuto, não só devagar.
   const [agora, setAgora] = useState(() => Date.now())
   useEffect(() => {
     const intervalo = setInterval(() => setAgora(Date.now()), 60_000)
     return () => clearInterval(intervalo)
   }, [])
+  const dataAgora = new Date(agora)
+  const ehHoje = dia === dataAgora.toISOString().slice(0, 10)
+  const minutoAgora = dataAgora.getHours() * 60 + dataAgora.getMinutes()
   return (
     <div
       ref={registarRef}
@@ -995,6 +1001,18 @@ function ColunaDia({
           </button>
         )
       })}
+      {/* Linha da hora atual, ao estilo Google Calendar — só na coluna
+          de hoje, por cima dos eventos, a acompanhar "agora" (atualiza
+          ao minuto, tal como o desvanecer de eventos terminados acima). */}
+      {ehHoje && (
+        <div
+          className="pointer-events-none absolute inset-x-0 z-10 flex -translate-y-1/2 items-center"
+          style={{ top: minutoAgora * pxPorMinuto }}
+        >
+          <span className="-ml-1 h-2 w-2 shrink-0 rounded-full bg-red-600" />
+          <span className="h-px flex-1 bg-red-600" />
+        </div>
+      )}
     </div>
   )
 }

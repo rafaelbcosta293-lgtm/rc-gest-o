@@ -94,6 +94,21 @@ export default function ClienteForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
+          <label htmlFor="nif" className={labelCls}>
+            NIF
+          </label>
+          <input
+            id="nif"
+            name="nif"
+            inputMode="numeric"
+            maxLength={11}
+            defaultValue={cliente?.nif ?? ''}
+            placeholder="Em branco = consumidor final"
+            className={inputCls}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="objetivo" className={labelCls}>
             Objetivo
           </label>

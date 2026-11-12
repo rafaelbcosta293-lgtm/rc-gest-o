@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { normalizarNif, nifValido } from '@/lib/data/faturas'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -16,6 +17,7 @@ function camposComuns(formData: FormData) {
     nome_preferido: campoOuNull(formData, 'nome_preferido'),
     telefone: campoOuNull(formData, 'telefone'),
     email: campoOuNull(formData, 'email'),
+    nif: normalizarNif(campoOuNull(formData, 'nif')),
     objetivo: campoOuNull(formData, 'objetivo'),
     frequencia_semanal: formData.get('frequencia_semanal')
       ? Number(formData.get('frequencia_semanal'))
@@ -34,6 +36,12 @@ function camposComuns(formData: FormData) {
 export async function criarCliente(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
+  const nif = normalizarNif(campoOuNull(formData, 'nif'))
+  if (nif && !nifValido(nif)) {
+    redirect(
+      `/painel/${estudioSlug}/treinos/novo?error=${encodeURIComponent(`O NIF ${nif} não é válido.`)}`
+    )
+  }
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -59,6 +67,12 @@ export async function atualizarCliente(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const voltarParam = formData.get('voltar') as string
   const voltar = MODULOS_ORIGEM.includes(voltarParam) ? voltarParam : 'treinos'
+  const nif = normalizarNif(campoOuNull(formData, 'nif'))
+  if (nif && !nifValido(nif)) {
+    redirect(
+      `/painel/${estudioSlug}/treinos/${id}/editar?voltar=${voltar}&error=${encodeURIComponent(`O NIF ${nif} não é válido.`)}`
+    )
+  }
   const supabase = await createClient()
   const novoEstado = (formData.get('estado') as string) || 'Ativo'
 

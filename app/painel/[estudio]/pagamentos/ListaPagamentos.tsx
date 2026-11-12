@@ -55,9 +55,31 @@ const CAMPO_NOME = <T extends { nome: string }>(): CampoOrdem<T> => ({
   omissao: 'asc',
 })
 
-const CAMPOS_ATRASADO_EMDIA: CampoOrdem<LinhaPagamentoAtraso>[] = [
-  { valor: 'validade', label: 'Válido até', obter: (l) => l.dataReferencia, omissao: 'desc' },
-  { valor: 'pagamento', label: 'Data de pagamento', obter: (l) => l.dataPagamento, omissao: 'desc' },
+const CAMPO_VALIDADE: CampoOrdem<LinhaPagamentoAtraso> = {
+  valor: 'validade',
+  label: 'Válido até',
+  obter: (l) => l.dataReferencia,
+  omissao: 'desc',
+}
+const CAMPO_PAGAMENTO: CampoOrdem<LinhaPagamentoAtraso> = {
+  valor: 'pagamento',
+  label: 'Data de pagamento',
+  obter: (l) => l.dataPagamento,
+  omissao: 'desc',
+}
+
+// "Por regularizar" ordena por omissão por quem está mais atrasado
+// (válido até); "Em dia" por omissão pelo pagamento mais recente — faz
+// mais sentido para cada lista, por isso cada uma tem o seu campo
+// inicial, só a trocar a ordem das mesmas opções.
+const CAMPOS_ATRASADOS: CampoOrdem<LinhaPagamentoAtraso>[] = [
+  CAMPO_VALIDADE,
+  CAMPO_PAGAMENTO,
+  CAMPO_NOME<LinhaPagamentoAtraso>(),
+]
+const CAMPOS_EM_DIA: CampoOrdem<LinhaPagamentoAtraso>[] = [
+  CAMPO_PAGAMENTO,
+  CAMPO_VALIDADE,
   CAMPO_NOME<LinhaPagamentoAtraso>(),
 ]
 
@@ -280,8 +302,8 @@ export default function ListaPagamentos({
   inativos: LinhaInativo[]
 }) {
   const [filtro, setFiltro] = useState('')
-  const ordemAtrasados = useOrdem(CAMPOS_ATRASADO_EMDIA)
-  const ordemEmDia = useOrdem(CAMPOS_ATRASADO_EMDIA)
+  const ordemAtrasados = useOrdem(CAMPOS_ATRASADOS)
+  const ordemEmDia = useOrdem(CAMPOS_EM_DIA)
   const [mostrarInativos, setMostrarInativos] = useState(false)
 
   const aPesquisar = filtro.trim().length > 0
@@ -367,7 +389,7 @@ export default function ListaPagamentos({
               </h2>
               {atrasadosFiltrados.length > 1 && (
                 <SeletorOrdem
-                  campos={CAMPOS_ATRASADO_EMDIA}
+                  campos={CAMPOS_ATRASADOS}
                   campo={ordemAtrasados.campo}
                   direcao={ordemAtrasados.direcao}
                   onCampo={ordemAtrasados.mudarCampo}
@@ -429,7 +451,7 @@ export default function ListaPagamentos({
               </h2>
               {emDiaFiltrados.length > 1 && (
                 <SeletorOrdem
-                  campos={CAMPOS_ATRASADO_EMDIA}
+                  campos={CAMPOS_EM_DIA}
                   campo={ordemEmDia.campo}
                   direcao={ordemEmDia.direcao}
                   onCampo={ordemEmDia.mudarCampo}

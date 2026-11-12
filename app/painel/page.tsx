@@ -37,7 +37,15 @@ export default async function PainelPage({
   }
 
   const email = userData.user.email ?? null
-  const estudiosVisiveis = estudios.filter((e) => podeAcederEstudio(email, e.slug))
+  // Além das contas fixas (podeAcederEstudio), uma conta pessoal
+  // já aprovada em Equipa ("Dar acesso") também vê o seu estúdio aqui —
+  // ver podeAcederEstudioAprovado em lib/data/acessos.ts.
+  const { data: acessosAprovados } = await supabase
+    .from('perfis_estudios')
+    .select('estudio_id')
+    .eq('perfil_id', userData.user.id)
+  const idsAprovados = new Set((acessosAprovados ?? []).map((a) => a.estudio_id))
+  const estudiosVisiveis = estudios.filter((e) => podeAcederEstudio(email, e.slug) || idsAprovados.has(e.id))
   const temCoordenacao = podeAcederCoordenacao(email)
   const temAdmin = podeAcederAdmin(email)
 

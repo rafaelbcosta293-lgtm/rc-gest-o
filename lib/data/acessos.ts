@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 // Contas fixas do negócio: cada uma tem um alcance fixo na app, decidido
 // pelo email de login — independente do "papel" da ficha em "perfis"
 // (que continua a decidir o que cada conta pode FAZER dentro do que já
@@ -34,6 +36,26 @@ export function slugEstudioDoEmailPartilhado(email: string | null): string | nul
     if (e === emailEstudio) return slug
   }
   return null
+}
+
+// Além das contas fixas (podeAcederEstudio), uma conta pessoal
+// registada em /registo também entra num estúdio depois de o dono a
+// aprovar em Equipa ("Dar acesso") — isso grava uma linha em
+// perfis_estudios. Sem essa aprovação, a conta fica "por aprovar": vê
+// a app mas nenhum estúdio, mesmo com a ficha já criada.
+export async function podeAcederEstudioAprovado(
+  supabase: SupabaseClient,
+  userId: string | null,
+  estudioId: number
+): Promise<boolean> {
+  if (!userId) return false
+  const { data } = await supabase
+    .from('perfis_estudios')
+    .select('estudio_id')
+    .eq('perfil_id', userId)
+    .eq('estudio_id', estudioId)
+    .maybeSingle()
+  return !!data
 }
 
 export function podeAcederCoordenacao(email: string | null): boolean {

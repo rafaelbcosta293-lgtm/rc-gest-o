@@ -5,7 +5,8 @@ import { ArrowLeftRight, Search } from 'lucide-react'
 import { MODULOS } from '@/lib/data/constantes'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
-import { podeAcederEstudio } from '@/lib/data/acessos'
+import { podeAcederEstudio, podeAcederEstudioAprovado } from '@/lib/data/acessos'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { obterEstadosBanner } from '@/lib/data/smsGateway'
 import { listarContactosAgendados } from '@/lib/data/contactosAgendados'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
@@ -22,16 +23,20 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   const { estudio: slug } = await params
 
   const supabase = await createClient()
-  const [sessao, estadosBanner, contactosAgendados] = await Promise.all([
+  const [sessao, estadosBanner, contactosAgendados, estudio] = await Promise.all([
     getSessaoAtual(),
     obterEstadosBanner(supabase),
     listarContactosAgendados(supabase),
+    getEstudioPorSlug(supabase, slug),
   ])
 
-  // O acesso a cada estúdio é por email, não por "papel" — só quem está
-  // na lista de lib/data/acessos.ts entra aqui, independentemente do que
-  // a ficha em "perfis" diz.
-  if (!podeAcederEstudio(sessao.email, slug)) {
+  // Entra-se num estúdio de duas formas: a conta partilhada fixa desse
+  // estúdio (lib/data/acessos.ts), ou uma conta pessoal registada em
+  // /registo e já aprovada pelo dono em Equipa ("Dar acesso" — grava em
+  // perfis_estudios). O "papel" da ficha em "perfis" nunca decide isto
+  // por si só, só o que a conta pode FAZER depois de já ter entrado.
+  const aprovado = estudio ? await podeAcederEstudioAprovado(supabase, sessao.userId, estudio.id) : false
+  if (!podeAcederEstudio(sessao.email, slug) && !aprovado) {
     redirect('/painel?erro=sem-acesso')
   }
 

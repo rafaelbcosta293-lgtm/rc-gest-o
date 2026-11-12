@@ -40,11 +40,15 @@ export default function FaturaEditor({
 }) {
   const [linhas, setLinhas] = useState<LinhaRascunho[]>(rascunho.linhas)
   const [nif, setNif] = useState(rascunho.cliente.nif ?? '')
+  // Marcado de origem quando o pedido já chegou sem NIF (cliente não quis
+  // dar). Também se pode marcar aqui, mesmo que já haja um NIF escrito —
+  // a fatura sai sempre a consumidor final enquanto estiver marcado.
+  const [semNif, setSemNif] = useState(!rascunho.cliente.nif)
   const [tipoDoc, setTipoDoc] = useState(rascunho.documento.tipo)
 
   const total = arredondar(linhas.reduce((s, l) => s + (l.quantidade || 0) * (l.preco_com_iva || 0), 0))
   const diferenca = arredondar(total - valorPago)
-  const nifLimpo = nif.replace(/\D/g, '')
+  const nifLimpo = semNif ? '' : nif.replace(/\D/g, '')
   const nifInvalido = nifLimpo !== '' && !nifValido(nifLimpo)
 
   function mudar(i: number, campo: keyof LinhaRascunho, valor: string) {
@@ -75,16 +79,25 @@ export default function FaturaEditor({
           <input name="cliente_nome" defaultValue={rascunho.cliente.nome} required className={inputCls} />
         </div>
         <div className="flex flex-col gap-1 sm:col-span-3">
-          <label className={labelCls}>NIF {nifLimpo === '' && <span className="normal-case">(vazio = consumidor final)</span>}</label>
+          <label className={labelCls}>NIF {semNif && <span className="normal-case">(consumidor final)</span>}</label>
           <input
             name="cliente_nif"
-            value={nif}
+            value={semNif ? '' : nif}
             onChange={(e) => setNif(e.target.value)}
+            disabled={semNif}
             inputMode="numeric"
             maxLength={11}
-            className={`${inputCls} ${nifInvalido ? 'border-red-500' : ''}`}
+            className={`${inputCls} ${nifInvalido ? 'border-red-500' : ''} ${semNif ? 'opacity-50' : ''}`}
           />
           {nifInvalido && <span className="text-xs text-red-500">NIF inválido.</span>}
+          <label className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={semNif}
+              onChange={(e) => setSemNif(e.target.checked)}
+            />
+            Sem NIF — o cliente não quis dar (fatura a consumidor final, só até 1000 €)
+          </label>
         </div>
         <div className="flex flex-col gap-1 sm:col-span-3">
           <label className={labelCls}>Morada</label>

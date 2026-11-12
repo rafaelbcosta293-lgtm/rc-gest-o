@@ -6,7 +6,7 @@ import type { Plano } from '@/lib/supabase/database.types'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 const inputCls =
-  'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-md bg-zinc-100 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-brand/50 dark:bg-zinc-800 dark:focus:bg-zinc-900'
 const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
 const METODOS = ['Numerário', 'Multibanco', 'MB Way', 'Transferência']
@@ -38,7 +38,11 @@ export default function PagamentoForm({
   const [planoId, setPlanoId] = useState('')
   const [valor, setValor] = useState('')
   const [validoAte, setValidoAte] = useState(fimDoMes(hoje))
-  const [pedirFatura, setPedirFatura] = useState(false)
+  // A maior parte dos pagamentos pede fatura — vem já marcado, para não
+  // ser preciso clicar sempre; mesmo assim, ao guardar confirma-se
+  // sempre (abaixo), para nunca sair um pedido sem o instrutor dar por
+  // isso conscientemente.
+  const [pedirFatura, setPedirFatura] = useState(true)
   const { marcarSujo } = useAvisoSairSemGuardar()
 
   const escolherPlano = (id: string) => {
@@ -47,8 +51,19 @@ export default function PagamentoForm({
     if (plano) setValor(String(plano.valor))
   }
 
+  // Pergunta sempre, mesmo com a checkbox já marcada — a resposta é que
+  // decide o que realmente se envia, não a checkbox (que é só para não
+  // ter de se escrever o NIF/nota de propósito antes de confirmar).
+  function aoGuardar(formData: FormData) {
+    const querFatura = window.confirm(
+      'Pedir fatura à Administração para este pagamento?\n\n"OK" pede a fatura (o normal) · "Cancelar" regista o pagamento sem pedir fatura.'
+    )
+    formData.set('pedir_fatura', querFatura ? 'on' : '')
+    return action(formData)
+  }
+
   return (
-    <form action={action} onChange={marcarSujo} className="mt-4 flex flex-col gap-4">
+    <form action={aoGuardar} onChange={marcarSujo} className="mt-4 flex flex-col gap-4">
       <input type="hidden" name="estudio_slug" value={estudioSlug} />
       <input type="hidden" name="cliente_id" value={clienteId} />
 

@@ -192,8 +192,10 @@ async function PainelHorariosEstudio({
         </Link>
       </div>
       <p className="mt-2 text-xs text-zinc-500">
-        Clica num horário para marcar quem trabalha nesse bloco — podes escolher mais do que uma
-        pessoa. A equipa vê esta escala em &quot;Horários&quot;, só para consulta.
+        Escolhe um instrutor em &quot;Pintar com&quot; e arrasta pelos blocos para marcar vários de
+        uma vez (ex.: a semana toda de manhã). Sem ninguém escolhido, clica num bloco para
+        escolher um ou vários instrutores à mão. A equipa vê esta escala em
+        &quot;Horários&quot;, só para consulta.
       </p>
       <div className="mt-4">
         <GrelhaHorarios

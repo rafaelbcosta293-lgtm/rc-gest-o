@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useState, useTransition } from 'react'
+import { Fragment, useEffect, useState, useTransition } from 'react'
 import { BLOCOS_HORARIO, DIAS_SEMANA, chaveSlot } from '@/lib/data/horarios'
 import { fmt } from '@/lib/data/presencas'
 import type { Perfil } from '@/lib/supabase/database.types'
@@ -136,15 +136,43 @@ function GrelhaEditavel({
   const [aGuardar, iniciarGuardar] = useTransition()
   const ptsPorId = new Map(pts.map((p) => [p.id, p.nome]))
 
-  const alternarPt = (chave: string, ptId: string) => {
+  // Modo "pintar": com um instrutor escolhido aqui, arrastar o rato por
+  // cima de vários blocos marca-os todos de uma vez (o primeiro bloco
+  // tocado decide se a passagem adiciona ou remove esse instrutor,
+  // tal como arrastar um marcador — ou apagá-lo — por cima de texto).
+  // Sem ninguém escolhido, cada bloco continua a abrir a lista
+  // completa para escolhas precisas (vários instrutores no mesmo
+  // bloco), exatamente como antes.
+  const [ptAtivoId, setPtAtivoId] = useState<string | null>(null)
+  const [arrastando, setArrastando] = useState<{ adicionar: boolean } | null>(null)
+
+  const aplicarPt = (chave: string, ptId: string, adicionar: boolean) => {
     setAtribuicoes((atual) => {
       const lista = atual[chave] ?? []
-      const nova = lista.includes(ptId) ? lista.filter((id) => id !== ptId) : [...lista, ptId]
+      const jaTem = lista.includes(ptId)
+      if (adicionar === jaTem) return atual
+      const nova = adicionar ? [...lista, ptId] : lista.filter((id) => id !== ptId)
       return { ...atual, [chave]: nova }
     })
     setAlterado(true)
     setEstadoGuardar('idle')
   }
+
+  const alternarPt = (chave: string, ptId: string) => {
+    const lista = atribuicoes[chave] ?? []
+    aplicarPt(chave, ptId, !lista.includes(ptId))
+  }
+
+  // Termina sempre o arrasto ao soltar o rato, mesmo que seja fora de
+  // um bloco (ex.: o cursor saiu da grelha antes de soltar).
+  useEffect(() => {
+    if (!arrastando) return
+    function soltar() {
+      setArrastando(null)
+    }
+    window.addEventListener('mouseup', soltar)
+    return () => window.removeEventListener('mouseup', soltar)
+  }, [arrastando])
 
   const guardarAlteracoes = () => {
     const atribuicoesParaEnviar: AtribuicaoSlot[] = Object.entries(atribuicoes)
@@ -168,9 +196,39 @@ function GrelhaEditavel({
 
   return (
     <div>
+      {pts.length > 0 && (
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-medium text-zinc-500">Pintar com:</span>
+          {pts.map((p) => {
+            const ativo = ptAtivoId === p.id
+            const cor = corDoPt(corPorPt, p.id)
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  setPtAtivoId((atual) => (atual === p.id ? null : p.id))
+                  setAbertaChave(null)
+                }}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
+                  ativo ? 'ring-2 ring-offset-1' : 'opacity-70 hover:opacity-100'
+                }`}
+                style={{ background: cor.bg, color: cor.tx, ...(ativo ? { boxShadow: `0 0 0 2px ${cor.tx}` } : {}) }}
+              >
+                {p.nome}
+              </button>
+            )
+          })}
+          {ptAtivoId && (
+            <span className="text-[11px] text-zinc-500">
+              — arrasta pelos blocos para marcar/desmarcar vários de uma vez
+            </span>
+          )}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <div
-          className="grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-border-subtle bg-black/10 text-[10px] dark:bg-white/10"
+          className={`grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-border-subtle bg-black/10 text-[10px] dark:bg-white/10 ${ptAtivoId ? 'select-none' : ''}`}
           style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}
         >
           <Cabecalho dias={dias} />
@@ -182,7 +240,7 @@ function GrelhaEditavel({
               {dias.map((dia) => {
                 const chave = chaveSlot(dia, bloco.hora, bloco.minuto)
                 const ptIdsAtuais = atribuicoes[chave] ?? []
-                const aberta = abertaChave === chave
+                const aberta = abertaChave === chave && !ptAtivoId
 
                 if (aberta) {
                   return (
@@ -211,12 +269,32 @@ function GrelhaEditavel({
                   )
                 }
 
+                const ptAtivoNesteSlot = ptAtivoId ? ptIdsAtuais.includes(ptAtivoId) : false
+
                 return (
                   <button
                     key={dia}
                     type="button"
-                    onClick={() => setAbertaChave(chave)}
-                    className="flex min-h-[1.25rem] flex-col justify-center gap-px bg-surface p-0.5 text-[9px] leading-tight hover:bg-foreground/[.05]"
+                    onMouseDown={
+                      ptAtivoId
+                        ? (e) => {
+                            e.preventDefault()
+                            const adicionar = !ptAtivoNesteSlot
+                            aplicarPt(chave, ptAtivoId, adicionar)
+                            setArrastando({ adicionar })
+                          }
+                        : undefined
+                    }
+                    onMouseEnter={
+                      ptAtivoId && arrastando ? () => aplicarPt(chave, ptAtivoId, arrastando.adicionar) : undefined
+                    }
+                    onClick={ptAtivoId ? undefined : () => setAbertaChave(chave)}
+                    className={`flex min-h-[1.25rem] flex-col justify-center gap-px p-0.5 text-[9px] leading-tight ${
+                      ptAtivoId
+                        ? `cursor-pointer ${ptAtivoNesteSlot ? '' : 'bg-surface hover:bg-foreground/[.05]'}`
+                        : 'bg-surface hover:bg-foreground/[.05]'
+                    }`}
+                    style={ptAtivoId && ptAtivoNesteSlot ? { background: corDoPt(corPorPt, ptAtivoId).bg } : undefined}
                   >
                     {ptIdsAtuais.length === 0 ? (
                       <span className="text-center text-zinc-300 dark:text-zinc-700">+</span>

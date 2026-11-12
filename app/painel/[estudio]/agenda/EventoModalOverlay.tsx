@@ -35,6 +35,7 @@ export default function EventoModalOverlay({
   onReativar,
   onApagar,
   onPararSerie,
+  somenteLeitura,
 }: {
   modal: Extract<EstadoModal, { aberto: true }>
   clientes: ClienteOpcao[]
@@ -52,6 +53,7 @@ export default function EventoModalOverlay({
   onReativar: () => void
   onApagar: (escopo: EscopoApagar) => void
   onPararSerie: () => void
+  somenteLeitura: boolean
 }) {
   const editar = modal.modo === 'editar'
   const evento = modal.modo === 'editar' ? modal.evento : null
@@ -102,7 +104,9 @@ export default function EventoModalOverlay({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground">{editar ? 'Editar evento' : 'Novo evento'}</h2>
+          <h2 className="text-lg font-bold text-foreground">
+            {editar ? (somenteLeitura ? 'Ver evento' : 'Editar evento') : 'Novo evento'}
+          </h2>
           <button
             type="button"
             onClick={onFechar}
@@ -115,15 +119,23 @@ export default function EventoModalOverlay({
         {evento?.serie_id && (
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-brand/[.06] px-3 py-2">
             <p className="text-xs text-muted">Parte de uma série repetida — isto só afeta esta ocorrência.</p>
-            <button
-              type="button"
-              onClick={onPararSerie}
-              disabled={aPendente}
-              className="shrink-0 rounded-full border border-border-strong px-2.5 py-1 text-xs font-bold hover:bg-foreground/[.08] disabled:opacity-60"
-            >
-              Parar repetição
-            </button>
+            {!somenteLeitura && (
+              <button
+                type="button"
+                onClick={onPararSerie}
+                disabled={aPendente}
+                className="shrink-0 rounded-full border border-border-strong px-2.5 py-1 text-xs font-bold hover:bg-foreground/[.08] disabled:opacity-60"
+              >
+                Parar repetição
+              </button>
+            )}
           </div>
+        )}
+
+        {somenteLeitura && (
+          <p className="mt-2 rounded-md bg-brand/[.06] px-3 py-2 text-xs text-muted">
+            A tua conta só pode ver a Agenda — pede a um responsável para fazer alterações.
+          </p>
         )}
 
         {participantes.length > 1 && (
@@ -149,6 +161,7 @@ export default function EventoModalOverlay({
           }}
           className="mt-3 flex flex-col gap-3"
         >
+          <fieldset disabled={somenteLeitura} className="contents">
           <div className="grid grid-cols-5 gap-1 rounded-full bg-border-subtle p-1">
             {TIPOS_EVENTO_AGENDA.map((t) => (
               <label key={t} className="relative">
@@ -380,13 +393,14 @@ export default function EventoModalOverlay({
               )}
             </div>
           </div>
+          </fieldset>
         </form>
 
         {/* Desmarcar ganha uma caixa à parte, bem visível — não é um
             ícone perdido ao lado de apagar/reativar — e nunca desmarca
             de imediato: pede sempre, primeiro, se o treino foi
             realizado mesmo assim ou não (sem valor por omissão). */}
-        {editar && evento?.estado !== 'Cancelado' && !aConfirmarDesmarcar && (
+        {editar && evento?.estado !== 'Cancelado' && !aConfirmarDesmarcar && !somenteLeitura && (
           <button
             type="button"
             onClick={() => {

@@ -160,6 +160,7 @@ export default function AgendaInterativa({
   clientesOutroEstudio,
   leads,
   pts,
+  somenteLeitura,
 }: {
   slug: string
   estudioId: number
@@ -170,6 +171,7 @@ export default function AgendaInterativa({
   clientesOutroEstudio: ClienteOpcao[]
   leads: LeadOpcao[]
   pts: PtOpcao[]
+  somenteLeitura: boolean
 }) {
   const router = useRouter()
   const [modal, setModal] = useState<EstadoModal>({ aberto: false })
@@ -342,6 +344,7 @@ export default function AgendaInterativa({
         pxPorMinuto={pxPorMinuto}
         zoomIndice={zoomIndice}
         onZoomIndiceChange={setZoomIndice}
+        somenteLeitura={somenteLeitura}
       />
 
       {modal.aberto && (
@@ -362,6 +365,7 @@ export default function AgendaInterativa({
           onReativar={reativar}
           onApagar={apagar}
           onPararSerie={pararSerie}
+          somenteLeitura={somenteLeitura}
         />
       )}
     </>
@@ -475,6 +479,7 @@ function GrelhaInterativa({
   pxPorMinuto,
   zoomIndice,
   onZoomIndiceChange,
+  somenteLeitura,
 }: {
   dias: string[]
   estudioId: number
@@ -486,6 +491,7 @@ function GrelhaInterativa({
   pxPorMinuto: number
   zoomIndice: number
   onZoomIndiceChange: (indice: number) => void
+  somenteLeitura: boolean
 }) {
   // Um só dia (vista Dia) ocupa a largura toda; a semana continua a
   // precisar de largura mínima para as 7 colunas não ficarem espremidas.
@@ -731,7 +737,11 @@ function GrelhaInterativa({
             num ícone com dica ao passar o rato, em vez de um parágrafo
             sempre visível, para a grelha começar mais perto do topo. */}
         <span
-          title="A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio."
+          title={
+            somenteLeitura
+              ? 'A tua conta só pode ver a Agenda — botão direito num evento para ver os detalhes.'
+              : 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio.'
+          }
           className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground"
         >
           <HelpCircle className="h-3.5 w-3.5" />
@@ -806,6 +816,7 @@ function GrelhaInterativa({
                 selecionadoId={selecionadoId}
                 previa={previa?.dia === dia ? previa : null}
                 pxPorMinuto={pxPorMinuto}
+                somenteLeitura={somenteLeitura}
               />
             ))}
           </div>
@@ -839,6 +850,7 @@ function ColunaDia({
   selecionadoId,
   previa,
   pxPorMinuto,
+  somenteLeitura,
 }: {
   dia: string
   eventos: EventoComNomes[]
@@ -852,6 +864,7 @@ function ColunaDia({
   selecionadoId: string | null
   previa: { inicioMin: number; fimMin: number } | null
   pxPorMinuto: number
+  somenteLeitura: boolean
 }) {
   // Também usada para a linha da hora atual (só na coluna de hoje) —
   // por isso atualiza-se ao minuto, não só devagar.
@@ -866,8 +879,8 @@ function ColunaDia({
   return (
     <div
       ref={registarRef}
-      onMouseDown={onIniciarCriacao}
-      className="relative cursor-crosshair border-l border-border-subtle bg-surface transition-colors select-none"
+      onMouseDown={somenteLeitura ? undefined : onIniciarCriacao}
+      className={`relative border-l border-border-subtle bg-surface transition-colors select-none ${somenteLeitura ? '' : 'cursor-crosshair'}`}
     >
       {HORAS_GRADE.map((h) => (
         <div
@@ -906,14 +919,16 @@ function ColunaDia({
             type="button"
             draggable={false}
             title={
-              emSelecionado
-                ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar'
-                : 'Arrasta para mover · clica uma vez para poder encurtar/alongar · botão direito para editar'
+              somenteLeitura
+                ? 'Botão direito para ver — a tua conta só pode ver a Agenda'
+                : emSelecionado
+                  ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar'
+                  : 'Arrasta para mover · clica uma vez para poder encurtar/alongar · botão direito para editar'
             }
-            onMouseDown={onIniciarMovimento(evento)}
+            onMouseDown={somenteLeitura ? undefined : onIniciarMovimento(evento)}
             onContextMenu={onAbrirContexto(evento)}
             className={`group absolute rounded-md text-left leading-tight shadow-sm transition-opacity select-none ${
-              emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
+              somenteLeitura ? 'cursor-pointer' : emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
             } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${
               cancelado ? 'opacity-50 line-through' : terminado ? 'opacity-55' : ''
             }`}
@@ -982,17 +997,21 @@ function ColunaDia({
                 clique passa à coluna por baixo e cria o evento novo em vez
                 de redimensionar este. */}
             <span
-              onMouseDown={emSelecionado ? onIniciarRedimensionamento(evento, 'topo') : undefined}
+              onMouseDown={
+                emSelecionado && !somenteLeitura ? onIniciarRedimensionamento(evento, 'topo') : undefined
+              }
               className={`absolute inset-x-0 -top-1.5 flex h-3.5 items-start justify-center ${
-                emSelecionado ? 'cursor-ns-resize' : 'pointer-events-none'
+                emSelecionado && !somenteLeitura ? 'cursor-ns-resize' : 'pointer-events-none'
               }`}
             >
               <span className="mt-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />
             </span>
             <span
-              onMouseDown={emSelecionado ? onIniciarRedimensionamento(evento, 'fundo') : undefined}
+              onMouseDown={
+                emSelecionado && !somenteLeitura ? onIniciarRedimensionamento(evento, 'fundo') : undefined
+              }
               className={`absolute inset-x-0 -bottom-1.5 flex h-3.5 items-end justify-center ${
-                emSelecionado ? 'cursor-ns-resize' : 'pointer-events-none'
+                emSelecionado && !somenteLeitura ? 'cursor-ns-resize' : 'pointer-events-none'
               }`}
             >
               <span className="mb-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />

@@ -5,7 +5,7 @@ import { ArrowLeftRight, Search } from 'lucide-react'
 import { MODULOS } from '@/lib/data/constantes'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
-import { podeAcederEstudio, podeAcederEstudioAprovado } from '@/lib/data/acessos'
+import { ehContaFixa, podeAcederEstudio, podeAcederEstudioAprovado } from '@/lib/data/acessos'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { obterEstadosBanner } from '@/lib/data/smsGateway'
 import { listarContactosAgendados } from '@/lib/data/contactosAgendados'
@@ -18,6 +18,13 @@ import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPhone, NavLinkBloquead
 // pílula própria — passam a aparecer só dentro do submenu de Clientes
 // (ver NavLinkClientesComSubmenu). No telemóvel continuam como estavam.
 const SUBPASTAS_CLIENTES = new Set(['treinos', 'avaliacoes'])
+
+// Conta pessoal (instrutor registado em /registo, fora das 4 contas
+// fixas do negócio — ver ehContaFixa): só vê estes 3 módulos, Treinos
+// completo e Agenda/Horários só para ver (a escrita é bloqueada nas
+// próprias ações, ver app/painel/[estudio]/agenda/actions.ts). Tudo o
+// resto fica de fora, mesmo do menu.
+const MODULOS_CONTA_INDIVIDUAL = new Set(['treinos', 'agenda', 'horarios'])
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
@@ -41,13 +48,23 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   }
 
   const { ehAdmin, ehGestao } = papeisDaSessao(sessao)
+  const contaIndividual = !ehContaFixa(sessao.email)
 
-  const podeAceder = (m: (typeof MODULOS)[number]) =>
-    m.pronto && (!m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao))
-  const tituloBloqueado = (m: (typeof MODULOS)[number]) =>
-    !m.pronto
-      ? `${m.nome} — brevemente`
-      : `${m.nome} — só para ${m.restrito === 'admin' ? 'administradores' : 'gestão'}`
+  const podeAceder = (m: (typeof MODULOS)[number]) => {
+    if (!m.pronto) return false
+    if (contaIndividual) return MODULOS_CONTA_INDIVIDUAL.has(m.id)
+    return !m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao)
+  }
+  const tituloBloqueado = (m: (typeof MODULOS)[number]) => {
+    if (!m.pronto) return `${m.nome} — brevemente`
+    if (contaIndividual) return `${m.nome} — sem acesso para esta conta`
+    return `${m.nome} — só para ${m.restrito === 'admin' ? 'administradores' : 'gestão'}`
+  }
+  // Treinos (e Avaliações, que fica bloqueado) ganham pílula própria em
+  // vez de ficarem escondidos dentro do submenu de Clientes — senão uma
+  // conta individual, sem acesso a Clientes, nem via teria como chegar
+  // a Treinos no computador/tablet.
+  const subpastasClientesParaFiltrar = contaIndividual ? new Set<string>() : SUBPASTAS_CLIENTES
 
   return (
     <div className="flex min-h-full flex-col">
@@ -63,14 +80,16 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             estúdio — os módulos ficam na barra de separadores do fundo,
             sempre ao alcance do polegar, ao estilo iOS. */}
         <div className="shadow-deep flex items-center justify-end gap-1 border-b border-border-subtle bg-background/90 px-4 py-2 backdrop-blur-xl md:hidden">
-          <Link
-            href={`/painel/${slug}/pesquisa`}
-            title="Pesquisar"
-            aria-label="Pesquisar"
-            className="flex items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
-          >
-            <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </Link>
+          {!contaIndividual && (
+            <Link
+              href={`/painel/${slug}/pesquisa`}
+              title="Pesquisar"
+              aria-label="Pesquisar"
+              className="flex items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+            >
+              <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </Link>
+          )}
           <Link
             href="/painel"
             title="Mudar estúdio"
@@ -92,8 +111,8 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
           <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
-            {MODULOS.filter((m) => !SUBPASTAS_CLIENTES.has(m.id)).map((m) =>
-              m.id === 'clientes' ? (
+            {MODULOS.filter((m) => !subpastasClientesParaFiltrar.has(m.id)).map((m) =>
+              m.id === 'clientes' && !contaIndividual ? (
                 <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />
               ) : podeAceder(m) ? (
                 <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} />
@@ -102,14 +121,16 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
               )
             )}
           </BarraAjustavel>
-          <Link
-            href={`/painel/${slug}/pesquisa`}
-            title="Pesquisar"
-            aria-label="Pesquisar"
-            className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
-          >
-            <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </Link>
+          {!contaIndividual && (
+            <Link
+              href={`/painel/${slug}/pesquisa`}
+              title="Pesquisar"
+              aria-label="Pesquisar"
+              className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted hover:bg-brand/[.07] hover:text-foreground"
+            >
+              <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </Link>
+          )}
           <Link
             href="/painel"
             title="Mudar estúdio"

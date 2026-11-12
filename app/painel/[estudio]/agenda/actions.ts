@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
+import { ehContaFixa } from '@/lib/data/acessos'
 import { gerarOcorrencias, eventoJaTerminou, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
 import type { TipoEventoAgenda } from '@/lib/supabase/database.types'
 
@@ -13,6 +14,17 @@ function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
   if (typeof v !== 'string' || v.trim() === '') return null
   return v.trim()
+}
+
+// Uma conta pessoal (registada por um instrutor em /registo, fora das
+// 4 contas fixas do negócio) só pode VER a Agenda — todas as ações que
+// escrevem chamam isto primeiro, nunca confiando só em a UI escondido
+// os botões (um pedido direto à ação continuaria a escrever sem isto).
+const MENSAGEM_AGENDA_SO_LEITURA = 'A tua conta só pode ver a Agenda — pede a um responsável para fazer esta alteração.'
+
+async function bloquearEscritaNaAgenda(): Promise<string | null> {
+  const sessao = await getSessaoAtual()
+  return ehContaFixa(sessao.email) ? null : MENSAGEM_AGENDA_SO_LEITURA
 }
 
 type LinhaParaReconciliar = { id: string; cliente_id: string | null; data: string; pt_id: string | null }
@@ -175,6 +187,11 @@ export async function criarEvento(formData: FormData) {
   const repeteAte = campoOuNull(formData, 'repete_ate')
   const repeteVezes = campoOuNull(formData, 'repete_vezes')
 
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) {
+    redirect(`/painel/${estudioSlug}/agenda/novo?error=${encodeURIComponent(bloqueio)}`)
+  }
+
   if (!data || !horaInicio) {
     redirect(
       `/painel/${estudioSlug}/agenda/novo?error=${encodeURIComponent('Data e hora são obrigatórias.')}`
@@ -273,6 +290,11 @@ export async function atualizarEvento(formData: FormData) {
   const nota = campoOuNull(formData, 'nota')
   const supabase = await createClient()
 
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(bloqueio)}`)
+  }
+
   // Se o dia ou a hora mudarem depois de o lembrete já ter sido
   // enviado, esse SMS ficou a falar de um treino que já não existe
   // (ou já foi enviado para a data errada) — sem repor isto a app
@@ -339,6 +361,11 @@ export async function pararSerie(formData: FormData) {
   const serieId = formData.get('serie_id') as string
   const supabase = await createClient()
 
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(bloqueio)}`)
+  }
+
   const { error: erroSerie } = await supabase.from('agenda_series').update({ ativa: false }).eq('id', serieId)
   if (erroSerie) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroSerie.message)}`)
@@ -366,6 +393,11 @@ export async function desmarcarEvento(formData: FormData) {
   const contarComoRealizado = formData.get('conta_como_realizado') === 'sim'
   const foiRemarcado = formData.get('foi_remarcado') === 'sim'
   const supabase = await createClient()
+
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(bloqueio)}`)
+  }
 
   const { data: linhaData, error: erroLinha } = await supabase
     .from('agenda_eventos')
@@ -403,6 +435,11 @@ export async function atualizarRemarcacao(formData: FormData) {
   const foiRemarcado = formData.get('foi_remarcado') === 'sim'
   const supabase = await createClient()
 
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(bloqueio)}`)
+  }
+
   const { error } = await supabase.from('agenda_eventos').update({ foi_remarcado: foiRemarcado }).eq('id', id)
   if (error) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
@@ -416,6 +453,11 @@ export async function reativarEvento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
   const supabase = await createClient()
+
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(bloqueio)}`)
+  }
 
   const { error } = await supabase
     .from('agenda_eventos')
@@ -455,6 +497,11 @@ export async function apagarEvento(formData: FormData) {
   const serieId = campoOuNull(formData, 'serie_id')
   const escopo = ((formData.get('escopo') as string) || 'um') as EscopoApagar
   const supabase = await createClient()
+
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(bloqueio)}`)
+  }
 
   let selecao = supabase.from('agenda_eventos').select('id, lead_id, data, hora_inicio')
   if (escopo !== 'um' && serieId) {
@@ -516,6 +563,9 @@ type CamposEvento = {
 export async function criarEventoRapido(
   input: CamposEvento & { estudioId: number; repeticao: Repeticao; limite: LimiteRepeticao }
 ): Promise<ResultadoAcaoRapida> {
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) return { error: bloqueio }
+
   const sessao = await getSessaoAtual()
   const supabase = await createClient()
 
@@ -585,6 +635,9 @@ export async function criarEventoRapido(
 export async function atualizarEventoRapido(
   input: CamposEvento & { id: string; grupoId: string | null; estudioId: number }
 ): Promise<ResultadoAcaoRapida> {
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) return { error: bloqueio }
+
   const supabase = await createClient()
 
   // Linhas que hoje compõem este treino (só esta, ou todo o grupo
@@ -681,6 +734,9 @@ export async function moverEventoRapido(input: {
   data: string
   horaInicio: string
 }): Promise<ResultadoAcaoRapida> {
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) return { error: bloqueio }
+
   const supabase = await createClient()
 
   const selectQuery = supabase.from('agenda_eventos').select('estado, duracao_min')
@@ -722,6 +778,9 @@ export async function redimensionarEventoRapido(input: {
   horaInicio: string
   duracaoMin: number
 }): Promise<ResultadoAcaoRapida> {
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) return { error: bloqueio }
+
   const supabase = await createClient()
 
   const selectQuery = supabase.from('agenda_eventos').select('estado, data')
@@ -764,6 +823,9 @@ export async function desmarcarEventoRapido(input: {
   contarComoRealizado: boolean
   foiRemarcado: boolean
 }): Promise<ResultadoAcaoRapida> {
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) return { error: bloqueio }
+
   const supabase = await createClient()
 
   // Linhas afetadas (uma ou o grupo todo) antes de mudar o estado, para
@@ -791,6 +853,9 @@ export async function reativarEventoRapido(input: {
   id: string
   grupoId: string | null
 }): Promise<ResultadoAcaoRapida> {
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) return { error: bloqueio }
+
   const supabase = await createClient()
 
   const { data: linhasData, error: erroLinhas } = input.grupoId
@@ -817,6 +882,9 @@ export async function pararSerieRapido(input: {
   estudioSlug: string
   serieId: string
 }): Promise<ResultadoAcaoRapida> {
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) return { error: bloqueio }
+
   const supabase = await createClient()
 
   const { error: erroSerie } = await supabase.from('agenda_series').update({ ativa: false }).eq('id', input.serieId)
@@ -843,6 +911,9 @@ export async function apagarEventoRapido(input: {
   data: string
   escopo: EscopoApagar
 }): Promise<ResultadoAcaoRapida> {
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) return { error: bloqueio }
+
   const supabase = await createClient()
 
   let selecao = supabase.from('agenda_eventos').select('id, lead_id, data, hora_inicio')

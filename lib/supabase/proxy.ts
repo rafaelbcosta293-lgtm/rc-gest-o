@@ -1,7 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { slugEstudioDoEmailPartilhado } from '@/lib/data/acessos'
+import { ehContaFixa, slugEstudioDoEmailPartilhado } from '@/lib/data/acessos'
 import { NOME_COOKIE, chaveAtivoDispositivo } from '@/lib/data/dispositivo'
+
+// Uma conta pessoal (instrutor registado em /registo, fora das 4
+// contas fixas do negócio) só pode ver estes 3 módulos dentro de um
+// estúdio — qualquer outro caminho redireciona para Treinos. Feito no
+// middleware (não só a esconder o link no menu, ver layout.tsx) para
+// um pedido direto a outro URL nunca passar.
+const MODULOS_CONTA_INDIVIDUAL = ['treinos', 'agenda', 'horarios']
 
 // Páginas que qualquer visitante pode ver sem ter sessão iniciada.
 // Tudo o resto (ex.: /painel) exige login.
@@ -107,6 +114,18 @@ export async function updateSession(request: NextRequest) {
         }
         return redirectResponse
       }
+    }
+  }
+
+  // Ver MODULOS_CONTA_INDIVIDUAL acima — "admin"/"coordenacao" não são
+  // slugs de estúdio (são as suas próprias áreas, já geridas à parte),
+  // por isso ficam de fora desta verificação.
+  if (session && !isPublicPath(request.nextUrl.pathname) && !ehContaFixa(session.user.email ?? null)) {
+    const match = request.nextUrl.pathname.match(/^\/painel\/([^/]+)\/([^/]+)/)
+    if (match && match[1] !== 'admin' && match[1] !== 'coordenacao' && !MODULOS_CONTA_INDIVIDUAL.includes(match[2])) {
+      const url = request.nextUrl.clone()
+      url.pathname = `/painel/${match[1]}/treinos`
+      return NextResponse.redirect(url)
     }
   }
 

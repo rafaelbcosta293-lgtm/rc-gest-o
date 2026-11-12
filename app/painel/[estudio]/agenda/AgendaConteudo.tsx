@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { ArrowLeft, CalendarOff, Plus } from 'lucide-react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { getSessaoAtual } from '@/lib/data/sessao'
+import { ehContaFixa } from '@/lib/data/acessos'
 import { getEquipaDoEstudio, obterOutroEstudioEClientes } from '@/lib/data/estudios'
 import { fmt, MESES, DIAS_SEMANA, diasDoMes, offsetPrimeiroDia } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
@@ -201,23 +203,36 @@ export default async function AgendaConteudo({
     tituloPeriodo = `${MESES[mes - 1]} ${ano}`
   }
 
-  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }, { outroEstudio, clientesOutroEstudio }, eventos] =
-    await Promise.all([
-      getEquipaDoEstudio(supabase, estudio.id),
-      supabase
-        .from('clientes')
-        .select('id, nome')
-        .eq('estudio_id', estudio.id)
-        .order('nome'),
-      supabase
-        .from('leads')
-        .select('id, nome, telefone')
-        .eq('estudio_id', estudio.id)
-        .neq('estado', 'Perdida')
-        .order('nome'),
-      obterOutroEstudioEClientes(supabase, estudio.id),
-      buscarEventos(supabase, estudio.id, inicio, fimExclusivo, ptFiltro),
-    ])
+  const [
+    pts,
+    { data: clientesData, error: erroClientes },
+    { data: leadsData, error: erroLeads },
+    { outroEstudio, clientesOutroEstudio },
+    eventos,
+    sessao,
+  ] = await Promise.all([
+    getEquipaDoEstudio(supabase, estudio.id),
+    supabase
+      .from('clientes')
+      .select('id, nome')
+      .eq('estudio_id', estudio.id)
+      .order('nome'),
+    supabase
+      .from('leads')
+      .select('id, nome, telefone')
+      .eq('estudio_id', estudio.id)
+      .neq('estado', 'Perdida')
+      .order('nome'),
+    obterOutroEstudioEClientes(supabase, estudio.id),
+    buscarEventos(supabase, estudio.id, inicio, fimExclusivo, ptFiltro),
+    getSessaoAtual(),
+  ])
+  // Conta pessoal (fora das 4 contas fixas do negócio — ver ehContaFixa)
+  // só pode VER a Agenda: sem botão de criar, sem arrastar para criar/
+  // mover/redimensionar (ver AgendaInterativa.tsx) — a escrita já fica
+  // bloqueada nas próprias ações (actions.ts), isto é só para a UI
+  // deixar de sugerir algo que ia ser recusado.
+  const somenteLeitura = !ehContaFixa(sessao.email)
   if (erroClientes) {
     throw new Error(erroClientes.message)
   }
@@ -306,12 +321,14 @@ export default async function AgendaConteudo({
           </div>
         )}
 
-        <Link
-          href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
-          className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-        >
-          <Plus className="h-4 w-4" /> Evento
-        </Link>
+        {!somenteLeitura && (
+          <Link
+            href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
+            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+          >
+            <Plus className="h-4 w-4" /> Evento
+          </Link>
+        )}
       </div>
 
       {feriadosPeriodo.length > 0 && (
@@ -342,6 +359,7 @@ export default async function AgendaConteudo({
           clientesOutroEstudio={clientesOutroEstudio}
           leads={leads}
           pts={pts}
+          somenteLeitura={somenteLeitura}
         />
       )}
       {vista === 'mes' && (

@@ -58,6 +58,20 @@ export async function podeAcederEstudioAprovado(
   return !!data
 }
 
+// true só para as 4 contas fixas do negócio (dono, geral, Fátima,
+// Leiria) — qualquer outra conta é uma conta pessoal (registada por um
+// instrutor em /registo), sempre restrita a Treinos (completo) +
+// Agenda/Horários (só ver), nunca a mais nenhum módulo — ver MODULOS
+// em lib/data/constantes.ts e app/painel/[estudio]/layout.tsx. Esta
+// restrição é independente do "papel" da ficha em "perfis": o
+// instrutor existe só para ficar associado a tarefas (ex.: o PT de um
+// treino), não para gerir o estúdio.
+export function ehContaFixa(email: string | null): boolean {
+  const e = normalizado(email)
+  if (!e) return false
+  return e === EMAIL_DONO || e === EMAIL_GERAL || Object.values(EMAIL_POR_ESTUDIO).includes(e)
+}
+
 export function podeAcederCoordenacao(email: string | null): boolean {
   const e = normalizado(email)
   return e === EMAIL_DONO || e === EMAIL_GERAL

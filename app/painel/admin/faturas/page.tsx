@@ -173,7 +173,7 @@ export default async function AdminFaturasPage({
         </div>
       )}
 
-      <div className="mt-6 flex flex-col gap-4">
+      <div className="mt-6 flex flex-col gap-3">
         {pedidos.map((p) => {
           const r = p.rascunho
           const valorPago = Number(p.pagamento?.valor ?? 0)
@@ -198,7 +198,7 @@ export default async function AdminFaturasPage({
 
           if (separador.chave !== 'pendentes') {
             return (
-              <div key={p.id} id={`pedido-${p.id}`} className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+              <div key={p.id} id={`pedido-${p.id}`} className="rounded-2xl border border-border-subtle bg-surface p-3 shadow-card">
                 {cabecalho}
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
                   <span className="font-mono">{fmtEuro(totalRascunho(r))}</span>
@@ -229,7 +229,7 @@ export default async function AdminFaturasPage({
           }
 
           return (
-            <div key={p.id} id={`pedido-${p.id}`} className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+            <div key={p.id} id={`pedido-${p.id}`} className="rounded-2xl border border-border-subtle bg-surface p-3 shadow-card">
               {cabecalho}
               {p.nota_pedido && <p className="mt-1 text-xs text-amber-300">Nota da equipa: {p.nota_pedido}</p>}
               {p.pagamento?.anulado_em && (
@@ -253,7 +253,7 @@ export default async function AdminFaturasPage({
                 </div>
               ) : (
                 <>
-                  <div className="mt-4">
+                  <div className="mt-3">
                     <FaturaEditor
                       id={p.id}
                       rascunho={r}
@@ -267,13 +267,13 @@ export default async function AdminFaturasPage({
                   <ConfirmarAcao
                     action={rejeitarPedidoFatura}
                     confirmacao={`Rejeitar o pedido de fatura de ${r.cliente.nome}? Não é emitida nenhuma fatura.`}
-                    className="mt-3 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-3"
+                    className="mt-2 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-2"
                   >
                     <input type="hidden" name="id" value={p.id} />
                     <input
                       name="motivo"
                       placeholder="Motivo (opcional, a equipa vê)"
-                      className="w-64 rounded-md border border-border-subtle px-2.5 py-1.5 text-xs dark:bg-zinc-900"
+                      className="w-64 rounded-md border border-border-subtle px-2 py-1 text-xs dark:bg-zinc-900"
                     />
                     <SubmitButton
                       pendingText="…"

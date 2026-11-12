@@ -15,7 +15,7 @@ import {
 import type { ProdutoZsgo, MetodoPagamentoZsgo } from '@/lib/zsgo'
 
 const inputCls =
-  'w-full rounded-md border border-border-subtle bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-white/30 dark:bg-zinc-900'
+  'w-full rounded-md border border-border-subtle bg-transparent px-2 py-1 text-sm outline-none focus:border-white/30 dark:bg-zinc-900'
 const labelCls = 'text-[11px] font-semibold uppercase tracking-wider text-muted'
 
 const fmtEuro = (n: number) =>
@@ -69,16 +69,16 @@ export default function FaturaEditor({
   }
 
   return (
-    <form className="flex flex-col gap-5">
+    <form className="flex flex-col gap-3">
       <input type="hidden" name="id" value={id} />
 
       {/* Cliente */}
-      <fieldset className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-        <div className="flex flex-col gap-1 sm:col-span-3">
+      <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-6">
+        <div className="flex flex-col gap-0.5 sm:col-span-3">
           <label className={labelCls}>Nome na fatura</label>
           <input name="cliente_nome" defaultValue={rascunho.cliente.nome} required className={inputCls} />
         </div>
-        <div className="flex flex-col gap-1 sm:col-span-3">
+        <div className="flex flex-col gap-0.5 sm:col-span-3">
           <label className={labelCls}>NIF {semNif && <span className="normal-case">(consumidor final)</span>}</label>
           <input
             name="cliente_nif"
@@ -90,7 +90,7 @@ export default function FaturaEditor({
             className={`${inputCls} ${nifInvalido ? 'border-red-500' : ''} ${semNif ? 'opacity-50' : ''}`}
           />
           {nifInvalido && <span className="text-xs text-red-500">NIF inválido.</span>}
-          <label className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+          <label className="flex items-center gap-1.5 text-xs text-muted">
             <input
               type="checkbox"
               checked={semNif}
@@ -99,27 +99,27 @@ export default function FaturaEditor({
             Sem NIF — o cliente não quis dar (fatura a consumidor final, só até 1000 €)
           </label>
         </div>
-        <div className="flex flex-col gap-1 sm:col-span-3">
+        <div className="flex flex-col gap-0.5 sm:col-span-3">
           <label className={labelCls}>Morada</label>
           <input name="cliente_morada" defaultValue={rascunho.cliente.morada ?? ''} className={inputCls} />
         </div>
-        <div className="flex flex-col gap-1 sm:col-span-1">
+        <div className="flex flex-col gap-0.5 sm:col-span-1">
           <label className={labelCls}>Cód. postal</label>
           <input name="cliente_codigo_postal" defaultValue={rascunho.cliente.codigo_postal ?? ''} className={inputCls} />
         </div>
-        <div className="flex flex-col gap-1 sm:col-span-2">
+        <div className="flex flex-col gap-0.5 sm:col-span-2">
           <label className={labelCls}>Cidade</label>
           <input name="cliente_cidade" defaultValue={rascunho.cliente.cidade ?? ''} className={inputCls} />
         </div>
-        <div className="flex flex-col gap-1 sm:col-span-3">
+        <div className="flex flex-col gap-0.5 sm:col-span-3">
           <label className={labelCls}>Email</label>
           <input name="cliente_email" type="email" defaultValue={rascunho.cliente.email ?? ''} className={inputCls} />
         </div>
       </fieldset>
 
       {/* Documento */}
-      <fieldset className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-        <div className="flex flex-col gap-1 sm:col-span-2">
+      <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-6">
+        <div className="flex flex-col gap-0.5 sm:col-span-2">
           <label className={labelCls}>Documento</label>
           <select
             name="documento_tipo"
@@ -131,11 +131,11 @@ export default function FaturaEditor({
             <option value="FA">Fatura</option>
           </select>
         </div>
-        <div className="flex flex-col gap-1 sm:col-span-2">
+        <div className="flex flex-col gap-0.5 sm:col-span-2">
           <label className={labelCls}>Data</label>
           <input name="documento_data" type="date" defaultValue={rascunho.documento.data} className={inputCls} />
         </div>
-        <div className="flex flex-col gap-1 sm:col-span-2">
+        <div className="flex flex-col gap-0.5 sm:col-span-2">
           <label className={labelCls}>
             Pagamento {rascunho.documento.metodo ? `(na app: ${rascunho.documento.metodo})` : ''}
           </label>
@@ -162,14 +162,14 @@ export default function FaturaEditor({
             />
           )}
         </div>
-        <div className="flex flex-col gap-1 sm:col-span-6">
+        <div className="flex flex-col gap-0.5 sm:col-span-6">
           <label className={labelCls}>Observações na fatura</label>
           <input name="documento_notas" defaultValue={rascunho.documento.notas ?? ''} className={inputCls} />
         </div>
       </fieldset>
 
       {/* Linhas */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         <div className="hidden grid-cols-12 gap-2 sm:grid">
           <span className={`${labelCls} col-span-2`}>Tipo</span>
           <span className={`${labelCls} col-span-3`}>Artigo ZS Go</span>
@@ -179,7 +179,7 @@ export default function FaturaEditor({
           <span className={`${labelCls} col-span-1`}>IVA %</span>
         </div>
         {linhas.map((l, i) => (
-          <div key={i} className="grid grid-cols-2 gap-2 rounded-lg border border-border-subtle p-2 sm:grid-cols-12 sm:border-0 sm:p-0">
+          <div key={i} className="grid grid-cols-2 gap-1.5 rounded-lg border border-border-subtle p-1.5 sm:grid-cols-12 sm:border-0 sm:p-0">
             <select
               name="linha_tipo"
               value={l.tipo}
@@ -278,8 +278,8 @@ export default function FaturaEditor({
       </div>
 
       {/* Totais */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-3 text-sm">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
           <span>
             Total da fatura: <strong className="font-mono">{fmtEuro(total)}</strong>
           </span>

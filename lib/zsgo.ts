@@ -28,6 +28,34 @@ function chave(): string {
   return k
 }
 
+// Nome em português de cada grupo de permissões do ZS Go, pelo prefixo
+// do "scope" que a API devolve nos erros 403 (ex.: "price_lines:read").
+// Usado só para tornar o erro "Insufficient scope" compreensível —
+// não controla nenhum acesso, isso é sempre decidido pelo próprio ZS Go.
+const NOMES_PERMISSAO_ZSGO: Record<string, string> = {
+  sales: 'Documentos de Venda',
+  clients: 'Clientes',
+  products: 'Produtos',
+  payment_methods: 'Métodos de Pagamento',
+  document_types: 'Tipos de Documento',
+  series: 'Séries',
+  price_lines: 'Linhas de Preço',
+  countries: 'Países',
+  exemption_reasons: 'Motivos de Isenção',
+  tax_exemption_reasons: 'Motivos de Isenção',
+  warehouses: 'Armazéns',
+  families: 'Famílias',
+  units: 'Unidades',
+}
+
+function explicarScopeZsgo(scope: string): string {
+  const recurso = scope.split(':')[0]
+  const nome = NOMES_PERMISSAO_ZSGO[recurso]
+  return nome
+    ? ` Falta a permissão "${nome}" (${scope}) a esta chave de API — adiciona-a no ZS Go em Definições > API Keys, ou cria uma chave nova com essa permissão.`
+    : ` Falta a permissão "${scope}" a esta chave de API — confirma no ZS Go em Definições > API Keys.`
+}
+
 // Junta as mensagens de erro do ZS Go numa frase legível. O formato
 // documentado é { data, meta, errors }, onde "errors" pode ser texto,
 // lista ou objeto { campo: [mensagens] }.
@@ -50,7 +78,9 @@ export function mensagemErroZsgo(corpo: unknown, status: number): string {
   } else if (typeof corpo === 'string') {
     partes.push(corpo.slice(0, 300))
   }
-  const texto = partes.join(' · ')
+  let texto = partes.join(' · ')
+  const scope = texto.match(/insufficient scope\.?\s*required:\s*([\w:,\s]+)/i)?.[1]?.trim()
+  if (scope) texto += explicarScopeZsgo(scope)
   return texto ? `ZS Go (${status}): ${texto}` : `ZS Go respondeu com erro ${status}.`
 }
 
@@ -111,8 +141,14 @@ function lista(resp: unknown): Json[] {
   return []
 }
 
-function primeiro(resp: unknown): Json | null {
-  return lista(resp)[0] ?? null
+// Para respostas de criação de UM recurso (POST /clients, POST
+// /sales) — nunca passar por lista()/primeiro(): o próprio recurso
+// criado pode ter um campo "items" (ex.: as linhas de uma venda), que
+// lista() interpretaria por engano como uma coleção paginada e devolveria
+// só a primeira linha em vez do documento todo.
+function objetoCriado(resp: unknown): Json | null {
+  const d = (resp as Json)?.data
+  return d && typeof d === 'object' && !Array.isArray(d) ? (d as Json) : null
 }
 
 function str(...vals: unknown[]): string | null {
@@ -164,10 +200,30 @@ export async function listarMetodosPagamento(): Promise<MetodoPagamentoZsgo[]> {
     .filter((m) => m.id)
 }
 
-async function primeiraLinhaDePreco(): Promise<number> {
-  const resp = await pedido('GET', '/price-lines')
-  const l = primeiro(resp)
-  return num(l?.id, l?.code, l?.price_line) ?? 1
+// A linha de preço é obrigatória para criar um cliente no ZS Go, mas
+// lê-la (GET /price-lines) exige a permissão "Linhas de Preço" — fora
+// do pacote "Faturação" da chave em uso. Em vez de a ler, vem de uma
+// variável de ambiente fixa (o valor não muda de cliente para
+// cliente).
+function linhaDePrecoPadrao(): number {
+  const v = process.env.ZSGO_PRICE_LINE_ID
+  const n = v ? Number(v) : NaN
+  if (!Number.isFinite(n)) {
+    throw new ErroZsgo('A variável ZSGO_PRICE_LINE_ID não está configurada (ou não é um número) no Vercel.', null)
+  }
+  return n
+}
+
+// Nomes das séries de documentos ativas nesta conta do ZS Go (ex.:
+// ["API-20262"] em produção, ["API-RCG4"] no sandbox) — só para
+// mostrar à Administração qual série vai ser usada ao emitir; não
+// enviamos nenhuma série nos pedidos, o ZS Go escolhe-a sozinho pela
+// chave de API.
+export async function listarSeries(): Promise<string[]> {
+  const resp = await pedido<unknown>('GET', '/series')
+  if (typeof resp === 'string') return [resp]
+  const d = (resp as Json | null)?.data
+  return Array.isArray(d) ? d.filter((x): x is string => typeof x === 'string') : []
 }
 
 type ClienteFatura = {
@@ -192,7 +248,7 @@ export async function procurarClientePorNif(nif: string): Promise<string | null>
 }
 
 export async function criarCliente(c: ClienteFatura): Promise<string> {
-  const priceLine = await primeiraLinhaDePreco()
+  const priceLine = linhaDePrecoPadrao()
   const resp = await pedido('POST', '/clients', {
     identity: { name: c.nome, tax_id: c.nif },
     address: {
@@ -204,7 +260,7 @@ export async function criarCliente(c: ClienteFatura): Promise<string> {
     billing: { price_line: priceLine },
     settings: { email: c.email, print_type: 1 },
   })
-  const criado = primeiro(resp)
+  const criado = objetoCriado(resp)
   const codigo = str(g(criado, 'identity', 'code'), criado?.code, criado?.id)
   if (!codigo) {
     throw new ErroZsgo('O ZS Go criou o cliente mas não devolveu o código.', null, resp)
@@ -256,17 +312,20 @@ export async function emitirDocumentoVenda(v: {
     },
     { timeoutMs: 45000 }
   )
-  const doc = primeiro(resp)
+  const doc = objetoCriado(resp)
   const meta = (resp as Json)?.meta as Json | undefined
+  // Nº legível tal como aparece no ZS Go: "FR API-RCG3/1" (tipo + série
+  // + "/" + número sequencial), quando a resposta trouxer os três.
+  const serieDoc = str(g(doc, 'document', 'series'))
+  const numeroDoc = str(g(doc, 'document', 'number'))
+  const tipoDoc = str(g(doc, 'document', 'type'), v.tipo)
+  const numero =
+    serieDoc && numeroDoc
+      ? `${tipoDoc ? `${tipoDoc} ` : ''}${serieDoc}/${numeroDoc}`
+      : str(doc?.number, doc?.document_number, doc?.full_number, numeroDoc, doc?.name)
   return {
     id: str(doc?.id, g(doc, 'document', 'id')),
-    numero: str(
-      doc?.number,
-      doc?.document_number,
-      doc?.full_number,
-      g(doc, 'document', 'number'),
-      doc?.name
-    ),
+    numero,
     pdfUrl: str(doc?.pdf_url, meta?.pdf_url, g(doc, 'document', 'pdf_url')),
     atcud: str(doc?.atcud, meta?.at_code),
     avisos: [meta?.warning, meta?.email_warning, meta?.integration_warning].filter(

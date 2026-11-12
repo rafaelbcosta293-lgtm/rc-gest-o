@@ -81,6 +81,7 @@ export type Cliente = {
   nome_preferido: string | null
   telefone: string | null
   email: string | null
+  nif: string | null
   morada: string | null
   codigo_postal: string | null
   cidade: string | null

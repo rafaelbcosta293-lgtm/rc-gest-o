@@ -200,6 +200,7 @@ export default async function FichaCompletaClientePage({
       <div className="mt-3 flex flex-col gap-1 text-sm text-muted">
         {c.telefone && <p>📞 {c.telefone}</p>}
         {c.email && <p>✉️ {c.email}</p>}
+        {c.nif && <p>🆔 NIF {c.nif}</p>}
         {c.notas && <p className="mt-1 italic">“{c.notas}”</p>}
       </div>
 

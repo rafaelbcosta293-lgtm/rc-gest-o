@@ -3,6 +3,11 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import {
+  chaveAtivoDispositivo,
+  autorizarEsteComputador,
+  removerAutorizacaoEsteComputador,
+} from '@/lib/data/dispositivo'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -44,6 +49,45 @@ export async function guardarSenha(formData: FormData) {
     redirect(`/painel/admin/servicos?error=${encodeURIComponent(error.message)}`)
   }
 
+  revalidatePath('/painel/admin/servicos')
+  redirect('/painel/admin/servicos')
+}
+
+// Liga/desliga a restrição por computador da conta partilhada de um
+// estúdio (ver lib/data/dispositivo.ts). Autoriza sempre primeiro todos
+// os computadores desse estúdio antes de ativar, para não ficarem
+// presos fora da própria conta.
+export async function alternarRestricaoDispositivo(formData: FormData) {
+  const estudio = formData.get('estudio') as string
+  const ativo = formData.get('ativo') === 'on'
+  const chave = chaveAtivoDispositivo(estudio)
+  if (!chave) redirect('/painel/admin/servicos')
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('config')
+    .upsert({ chave, valor: ativo ? 'sim' : null }, { onConflict: 'chave' })
+
+  if (error) {
+    redirect(`/painel/admin/servicos?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath('/painel/admin/servicos')
+  redirect('/painel/admin/servicos')
+}
+
+// Autoriza/remove a autorização do computador onde se está a clicar
+// (cookie local a este browser, nunca guardado no servidor).
+export async function autorizarEsteComputadorAction(formData: FormData) {
+  const estudio = formData.get('estudio') as string
+  await autorizarEsteComputador(estudio)
+  revalidatePath('/painel/admin/servicos')
+  redirect('/painel/admin/servicos')
+}
+
+export async function removerAutorizacaoEsteComputadorAction(formData: FormData) {
+  const estudio = formData.get('estudio') as string
+  await removerAutorizacaoEsteComputador(estudio)
   revalidatePath('/painel/admin/servicos')
   redirect('/painel/admin/servicos')
 }

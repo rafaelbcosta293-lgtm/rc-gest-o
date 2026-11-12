@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { slugEstudioDoEmailPartilhado } from '@/lib/data/acessos'
+import { NOME_COOKIE, chaveAtivoDispositivo } from '@/lib/data/dispositivo'
 
 // Páginas que qualquer visitante pode ver sem ter sessão iniciada.
 // Tudo o resto (ex.: /painel) exige login.
@@ -75,6 +77,37 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Contas partilhadas dos estúdios: se o computador deixar de estar
+  // autorizado depois de a sessão já ter sido aberta (ou a restrição
+  // for ativada só depois do login), corta aqui também — não chega
+  // bloquear no login, ver lib/data/dispositivo.ts.
+  if (session && !isPublicPath(request.nextUrl.pathname)) {
+    const slugPartilhado = slugEstudioDoEmailPartilhado(session.user.email ?? null)
+    const chaveAtivo = slugPartilhado ? chaveAtivoDispositivo(slugPartilhado) : undefined
+    if (slugPartilhado && chaveAtivo) {
+      const { data } = await supabase.from('config').select('valor').eq('chave', chaveAtivo).maybeSingle()
+      const autorizado = request.cookies.get(NOME_COOKIE[slugPartilhado])?.value === '1'
+      if (data?.valor && !autorizado) {
+        await supabase.auth.signOut()
+        const url = request.nextUrl.clone()
+        url.pathname = '/login'
+        url.searchParams.set(
+          'error',
+          'Este computador não está autorizado para a conta deste estúdio. Pede ao dono para o autorizar em Administração → Serviços/Produtos.'
+        )
+        // signOut() só limpa as cookies de sessão em supabaseResponse (via
+        // o setAll acima) — como aqui se devolve um redirect novo, é
+        // preciso copiar essas cookies para ele, senão a sessão ficava
+        // por fechar no browser.
+        const redirectResponse = NextResponse.redirect(url)
+        for (const cookie of supabaseResponse.cookies.getAll()) {
+          redirectResponse.cookies.set(cookie)
+        }
+        return redirectResponse
+      }
+    }
   }
 
   return supabaseResponse

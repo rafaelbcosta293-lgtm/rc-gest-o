@@ -22,6 +22,20 @@ export function podeAcederEstudio(email: string | null, slug: string): boolean {
   return e === EMAIL_POR_ESTUDIO[slug]
 }
 
+// Devolve o estúdio dono da conta partilhada com este email (ou null
+// para a conta do dono/geral, ou qualquer outro email) — usado para
+// restringir o login dessas contas a computadores autorizados (ver
+// lib/data/dispositivo.ts). Nunca devolve um estúdio para EMAIL_DONO/
+// EMAIL_GERAL: essas contas nunca ficam restritas a um computador.
+export function slugEstudioDoEmailPartilhado(email: string | null): string | null {
+  const e = normalizado(email)
+  if (!e) return null
+  for (const [slug, emailEstudio] of Object.entries(EMAIL_POR_ESTUDIO)) {
+    if (e === emailEstudio) return slug
+  }
+  return null
+}
+
 export function podeAcederCoordenacao(email: string | null): boolean {
   const e = normalizado(email)
   return e === EMAIL_DONO || e === EMAIL_GERAL

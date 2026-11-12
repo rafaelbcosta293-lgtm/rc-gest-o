@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { traduzErroSupabase } from '@/lib/supabase/auth-errors'
 import { getSessaoAtual } from '@/lib/data/sessao'
-import { podeAcederAdmin } from '@/lib/data/acessos'
+import { podeAcederAdmin, slugEstudioDoEmailPartilhado } from '@/lib/data/acessos'
+import { loginBloqueadoPorDispositivo } from '@/lib/data/dispositivo'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -17,6 +18,19 @@ export async function login(formData: FormData) {
 
   if (error) {
     redirect(`/login?error=${encodeURIComponent(traduzErroSupabase(error.message))}`)
+  }
+
+  // Contas partilhadas dos estúdios (Fátima/Leiria): se o dono já
+  // ativou a restrição por computador e este não está autorizado,
+  // desfaz o login imediatamente — ver lib/data/dispositivo.ts.
+  const slugPartilhado = slugEstudioDoEmailPartilhado(email)
+  if (slugPartilhado && (await loginBloqueadoPorDispositivo(supabase, slugPartilhado))) {
+    await supabase.auth.signOut()
+    redirect(
+      `/login?error=${encodeURIComponent(
+        'Este computador não está autorizado para a conta deste estúdio. Pede ao dono para o autorizar em Administração → Serviços/Produtos.'
+      )}`
+    )
   }
 
   revalidatePath('/', 'layout')

@@ -1,7 +1,15 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { areaTemPassword, areaDesbloqueada, chaveConfigSenha } from '@/lib/data/gate'
-import { criarPlano, guardarConfig, guardarSenha } from './actions'
+import { ESTUDIOS_COM_CONTA_PARTILHADA, chaveAtivoDispositivo, dispositivoAutorizado } from '@/lib/data/dispositivo'
+import {
+  criarPlano,
+  guardarConfig,
+  guardarSenha,
+  alternarRestricaoDispositivo,
+  autorizarEsteComputadorAction,
+  removerAutorizacaoEsteComputadorAction,
+} from './actions'
 import { desbloquearAdmin } from '../actions'
 import PortaSenha from '@/components/PortaSenha'
 import SubmitButton from '@/components/SubmitButton'
@@ -12,6 +20,8 @@ import type { ConfigLinha, Plano } from '@/lib/supabase/database.types'
 const inputCls =
   'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
 
+const NOME_ESTUDIO: Record<string, string> = { fatima: 'Fátima', leiria: 'Leiria' }
+
 // Estas chaves de "config" têm forms dedicados (write-only, nunca
 // mostram o valor atual) — não devem aparecer na lista genérica de
 // "Definições do negócio". As de aniversário editam-se em Clientes →
@@ -21,6 +31,7 @@ const CHAVES_ESCONDIDAS = [
   'msg_aniversario_ex',
   chaveConfigSenha('admin'),
   chaveConfigSenha('coordenacao'),
+  ...ESTUDIOS_COM_CONTA_PARTILHADA.map((s) => chaveAtivoDispositivo(s)!),
 ]
 
 // A chave em si (ex.: "desmarcacoes_acumuladas_limite") não é um nome
@@ -121,8 +132,15 @@ export default async function ServicosPage({
   }
 
   const planos = (planosData ?? []) as Plano[]
-  const config = ((configData ?? []) as ConfigLinha[]).filter(
-    (c) => !CHAVES_ESCONDIDAS.includes(c.chave)
+  const configTodo = (configData ?? []) as ConfigLinha[]
+  const config = configTodo.filter((c) => !CHAVES_ESCONDIDAS.includes(c.chave))
+
+  const dispositivos = await Promise.all(
+    ESTUDIOS_COM_CONTA_PARTILHADA.map(async (slug) => ({
+      slug,
+      ativo: !!configTodo.find((c) => c.chave === chaveAtivoDispositivo(slug))?.valor,
+      autorizado: await dispositivoAutorizado(slug),
+    }))
   )
 
   return (
@@ -221,6 +239,47 @@ export default async function ServicosPage({
             </SubmitButton>
           </div>
         </form>
+      </div>
+
+      <TituloSeccao cor="vermelho">Computadores autorizados (contas de Fátima/Leiria)</TituloSeccao>
+      <p className="mt-2 text-xs text-zinc-500">
+        Restringe a conta partilhada de cada estúdio a computadores já autorizados aqui — para a
+        password do estúdio não servir para entrar fora dele (ex.: em casa). Autoriza primeiro
+        todos os computadores desse estúdio antes de ativar a restrição, para a equipa não ficar
+        de repente sem conseguir entrar.
+      </p>
+      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {dispositivos.map(({ slug, ativo, autorizado }) => (
+          <div key={slug} className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface p-3">
+            <span className="text-xs font-medium text-zinc-500">{NOME_ESTUDIO[slug]}</span>
+            <p className="text-xs text-zinc-500">
+              Restrição: <strong>{ativo ? 'ativa' : 'desativada'}</strong> · Este computador:{' '}
+              <strong>{autorizado ? 'autorizado' : 'não autorizado'}</strong>
+            </p>
+            <form action={autorizado ? removerAutorizacaoEsteComputadorAction : autorizarEsteComputadorAction}>
+              <input type="hidden" name="estudio" value={slug} />
+              <SubmitButton
+                pendingText="…"
+                className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
+              >
+                {autorizado ? 'Remover autorização deste computador' : 'Autorizar este computador'}
+              </SubmitButton>
+            </form>
+            <form action={alternarRestricaoDispositivo} className="flex items-center gap-2">
+              <input type="hidden" name="estudio" value={slug} />
+              <label className="flex flex-1 items-center gap-1.5 text-xs text-zinc-500">
+                <input type="checkbox" name="ativo" defaultChecked={ativo} />
+                Exigir computador autorizado para esta conta
+              </label>
+              <SubmitButton
+                pendingText="…"
+                className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
+              >
+                Guardar
+              </SubmitButton>
+            </form>
+          </div>
+        ))}
       </div>
 
       {(() => {

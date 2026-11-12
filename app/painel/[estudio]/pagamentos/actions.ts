@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { criarPedidoFatura } from '@/lib/data/pedidosFatura'
 import { normalizarNif, nifValido } from '@/lib/data/faturas'
+import { calcularTransicaoAutomatica } from '@/lib/data/estadoClientes'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -177,7 +178,7 @@ export async function anularPagamento(formData: FormData) {
 
   const { data: cliente } = await supabase
     .from('clientes')
-    .select('nome, estudio_id')
+    .select('nome, estudio_id, estado, estado_automatico')
     .eq('id', clienteId)
     .maybeSingle()
 
@@ -196,6 +197,36 @@ export async function anularPagamento(formData: FormData) {
     )
   }
 
+  // Anular um pagamento pode deixar o cliente sem nenhuma mensalidade
+  // em dia (ex.: foi o único pagamento, ou o mais recente) — sem isto,
+  // o cliente ficava "Ativo" até ao cron da noite recalcular, e
+  // aparecia entretanto como pagamento em dia (ex.: em Presenças).
+  // Reaproveita-se a mesma regra do cron (calcularTransicaoAutomatica):
+  // nunca mexe em quem está Suspenso/Inativo nem em quem teve o estado
+  // alterado à mão, e nunca reativa — só pode andar para trás.
+  if (cliente?.estado_automatico) {
+    const { data: ultimoAtivo } = await supabase
+      .from('pagamentos_ativos')
+      .select('valido_ate')
+      .eq('cliente_id', clienteId)
+      .order('valido_ate', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const novoEstado = calcularTransicaoAutomatica(
+      {
+        id: clienteId,
+        estado: cliente.estado,
+        estadoAutomatico: cliente.estado_automatico,
+        validoAte: ultimoAtivo?.valido_ate ?? null,
+      },
+      new Date().toISOString().slice(0, 10)
+    )
+    if (novoEstado) {
+      await supabase.from('clientes').update({ estado: novoEstado }).eq('id', clienteId)
+    }
+  }
+
   if (cliente) {
     await supabase.from('alerts').insert({
       estudio_id: cliente.estudio_id,
@@ -211,5 +242,9 @@ export async function anularPagamento(formData: FormData) {
 
   revalidatePath(`/painel/${estudioSlug}/pagamentos`)
   revalidatePath(`/painel/${estudioSlug}/pagamentos/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/clientes`)
+  revalidatePath(`/painel/${estudioSlug}/clientes/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/presencas`)
+  revalidatePath('/painel/admin', 'layout')
   redirect(`/painel/${estudioSlug}/pagamentos/${clienteId}`)
 }

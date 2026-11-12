@@ -17,6 +17,7 @@ import {
 } from '@/lib/zsgo'
 import { totalRascunho, type EstadoPedidoFatura, type RascunhoFatura } from '@/lib/data/faturas'
 import FaturaEditor from './FaturaEditor'
+import SincronizarNifs from './SincronizarNifs'
 import {
   guardarRascunhoFatura,
   emitirPedidoFatura,
@@ -134,6 +135,8 @@ export default async function AdminFaturasPage({
         corrige o rascunho, depois emite no ZS Go
         {series.length > 0 ? ` (série ${series.join(', ')})` : ''} ou rejeita.
       </p>
+
+      <SincronizarNifs />
 
       <div className="mt-5 flex flex-wrap gap-2">
         {SEPARADORES.map((s) => (

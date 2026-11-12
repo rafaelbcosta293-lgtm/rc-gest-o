@@ -235,6 +235,28 @@ type ClienteFatura = {
   email: string | null
 }
 
+export type ClienteListadoZsgo = { codigo: string; nome: string; nif: string | null }
+
+// Lista todos os clientes já guardados no ZS Go (ex.: de faturas
+// emitidas antes desta app existir) — usada para preencher o NIF de
+// clientes nossos que ainda não o têm, por nome (ver
+// app/painel/admin/faturas/actions.ts: sincronizarNifsZsgo).
+export async function listarClientesZsgo(): Promise<ClienteListadoZsgo[]> {
+  const out: ClienteListadoZsgo[] = []
+  for (let page = 1; page <= 50; page++) {
+    const resp = await pedido('GET', `/clients?per_page=100&page=${page}`)
+    for (const c of lista(resp)) {
+      const codigo = str(g(c, 'identity', 'code'), c.code, c.id)
+      const nome = str(g(c, 'identity', 'name'), c.name)
+      if (!codigo || !nome) continue
+      out.push({ codigo, nome, nif: str(g(c, 'identity', 'tax_id'), c.tax_id, c.nif) })
+    }
+    const pageCount = num(g(resp, 'meta', 'page_count')) ?? 1
+    if (page >= pageCount) break
+  }
+  return out
+}
+
 // Procura um cliente no ZS Go pelo NIF. Devolve o código ou null.
 export async function procurarClientePorNif(nif: string): Promise<string | null> {
   const resp = await pedido('GET', `/clients?search=${encodeURIComponent(nif)}&per_page=50`)

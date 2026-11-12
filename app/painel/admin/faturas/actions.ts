@@ -12,6 +12,7 @@ import {
   chaveProduto,
   chaveMetodo,
   normalizarNif,
+  nifValido,
   type RascunhoFatura,
 } from '@/lib/data/faturas'
 import {
@@ -19,7 +20,10 @@ import {
   procurarClientePorNif,
   criarCliente,
   emitirDocumentoVenda,
+  listarClientesZsgo,
+  type ClienteListadoZsgo,
 } from '@/lib/zsgo'
+import { normalizarTexto } from '@/lib/texto'
 
 const PAGINA = '/painel/admin/faturas'
 
@@ -232,4 +236,89 @@ export async function desbloquearPedidoFatura(formData: FormData) {
     .eq('estado', 'a_emitir')
   revalidatePath(PAGINA)
   voltar(id, {})
+}
+
+export type ResultadoSincronizacaoNif = {
+  atualizados: { nome: string; nif: string }[]
+  ambiguosZsgo: string[]
+  ambiguosApp: string[]
+  semNifNoZsgo: number
+  semCorrespondencia: number
+}
+
+const chaveNome = (nome: string) => normalizarTexto(nome).trim().replace(/\s+/g, ' ')
+
+// Preenche o NIF de clientes nossos que ainda não o têm, a partir dos
+// clientes já guardados no ZS Go (ex.: de faturas emitidas antes desta
+// app existir) — por nome, já que é a única coisa em comum entre os
+// dois lados para quem nunca teve uma fatura pedida por aqui. Só
+// atualiza quando o nome é inequívoco dos dois lados (nunca um só
+// nome com mais do que uma pessoa, de nenhum dos lados) e o NIF
+// encontrado é válido — tudo o resto fica listado para se rever à
+// mão, nunca a adivinhar.
+export async function sincronizarNifsZsgo(): Promise<ResultadoSincronizacaoNif | { error: string }> {
+  await exigirAdmin()
+  const supabase = await createClient()
+
+  const { data: clientesData, error: erroClientes } = await supabase
+    .from('clientes')
+    .select('id, nome, nif')
+  if (erroClientes) return { error: erroClientes.message }
+  const semNif = (clientesData ?? []).filter((c) => !c.nif) as { id: string; nome: string; nif: string | null }[]
+
+  let doZsgo: ClienteListadoZsgo[]
+  try {
+    doZsgo = await listarClientesZsgo()
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Erro desconhecido ao ler clientes do ZS Go.' }
+  }
+
+  const porNomeZsgo = new Map<string, ClienteListadoZsgo[]>()
+  for (const c of doZsgo) {
+    const k = chaveNome(c.nome)
+    porNomeZsgo.set(k, [...(porNomeZsgo.get(k) ?? []), c])
+  }
+  const porNomeApp = new Map<string, { id: string; nome: string }[]>()
+  for (const c of semNif) {
+    const k = chaveNome(c.nome)
+    porNomeApp.set(k, [...(porNomeApp.get(k) ?? []), c])
+  }
+
+  const atualizados: { nome: string; nif: string }[] = []
+  const ambiguosZsgo = new Set<string>()
+  const ambiguosApp = new Set<string>()
+  let semNifNoZsgo = 0
+  let semCorrespondencia = 0
+
+  for (const [k, nossos] of porNomeApp) {
+    const correspondentes = porNomeZsgo.get(k)
+    if (!correspondentes) {
+      semCorrespondencia += nossos.length
+      continue
+    }
+    if (nossos.length > 1) {
+      ambiguosApp.add(nossos[0].nome)
+      continue
+    }
+    if (correspondentes.length > 1) {
+      ambiguosZsgo.add(correspondentes[0].nome)
+      continue
+    }
+    const nif = normalizarNif(correspondentes[0].nif)
+    if (!nif || !nifValido(nif)) {
+      semNifNoZsgo++
+      continue
+    }
+    const { error } = await supabase.from('clientes').update({ nif }).eq('id', nossos[0].id)
+    if (!error) atualizados.push({ nome: nossos[0].nome, nif })
+  }
+
+  revalidatePath(PAGINA)
+  return {
+    atualizados,
+    ambiguosZsgo: [...ambiguosZsgo],
+    ambiguosApp: [...ambiguosApp],
+    semNifNoZsgo,
+    semCorrespondencia,
+  }
 }

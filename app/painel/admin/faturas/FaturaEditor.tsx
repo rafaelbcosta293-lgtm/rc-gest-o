@@ -72,7 +72,9 @@ export default function FaturaEditor({
     <form className="flex flex-col gap-3">
       <input type="hidden" name="id" value={id} />
 
-      {/* Cliente */}
+      {/* Cliente — só o essencial à vista; o resto fica atrás do "+"
+          (pedido do dono: um quadradinho com nome, contribuinte e
+          serviço, sem ocupar o ecrã todo). */}
       <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-6">
         <div className="flex flex-col gap-0.5 sm:col-span-3">
           <label className={labelCls}>Nome na fatura</label>
@@ -99,74 +101,86 @@ export default function FaturaEditor({
             Sem NIF — o cliente não quis dar (fatura a consumidor final, só até 1000 €)
           </label>
         </div>
-        <div className="flex flex-col gap-0.5 sm:col-span-3">
-          <label className={labelCls}>Morada</label>
-          <input name="cliente_morada" defaultValue={rascunho.cliente.morada ?? ''} className={inputCls} />
-        </div>
-        <div className="flex flex-col gap-0.5 sm:col-span-1">
-          <label className={labelCls}>Cód. postal</label>
-          <input name="cliente_codigo_postal" defaultValue={rascunho.cliente.codigo_postal ?? ''} className={inputCls} />
-        </div>
-        <div className="flex flex-col gap-0.5 sm:col-span-2">
-          <label className={labelCls}>Cidade</label>
-          <input name="cliente_cidade" defaultValue={rascunho.cliente.cidade ?? ''} className={inputCls} />
-        </div>
-        <div className="flex flex-col gap-0.5 sm:col-span-3">
-          <label className={labelCls}>Email</label>
-          <input name="cliente_email" type="email" defaultValue={rascunho.cliente.email ?? ''} className={inputCls} />
-        </div>
       </fieldset>
 
-      {/* Documento */}
-      <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-6">
-        <div className="flex flex-col gap-0.5 sm:col-span-2">
-          <label className={labelCls}>Documento</label>
-          <select
-            name="documento_tipo"
-            value={tipoDoc}
-            onChange={(e) => setTipoDoc(e.target.value === 'FA' ? 'FA' : 'FR')}
-            className={inputCls}
-          >
-            <option value="FR">Fatura-Recibo (já pago)</option>
-            <option value="FA">Fatura</option>
-          </select>
+      <details className="group rounded-lg border border-border-subtle">
+        <summary className="flex cursor-pointer list-none items-center gap-1 px-2 py-1.5 text-xs font-semibold text-muted select-none hover:text-foreground">
+          <Plus className="h-3.5 w-3.5 transition-transform group-open:rotate-45" />
+          Mais detalhes — morada, documento, método de pagamento
+        </summary>
+        <div className="flex flex-col gap-2 border-t border-border-subtle p-2">
+          {/* Cliente — morada */}
+          <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-6">
+            <div className="flex flex-col gap-0.5 sm:col-span-3">
+              <label className={labelCls}>Morada</label>
+              <input name="cliente_morada" defaultValue={rascunho.cliente.morada ?? ''} className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-1">
+              <label className={labelCls}>Cód. postal</label>
+              <input name="cliente_codigo_postal" defaultValue={rascunho.cliente.codigo_postal ?? ''} className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className={labelCls}>Cidade</label>
+              <input name="cliente_cidade" defaultValue={rascunho.cliente.cidade ?? ''} className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-3">
+              <label className={labelCls}>Email</label>
+              <input name="cliente_email" type="email" defaultValue={rascunho.cliente.email ?? ''} className={inputCls} />
+            </div>
+          </fieldset>
+
+          {/* Documento */}
+          <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-6">
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className={labelCls}>Documento</label>
+              <select
+                name="documento_tipo"
+                value={tipoDoc}
+                onChange={(e) => setTipoDoc(e.target.value === 'FA' ? 'FA' : 'FR')}
+                className={inputCls}
+              >
+                <option value="FR">Fatura-Recibo (já pago)</option>
+                <option value="FA">Fatura</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className={labelCls}>Data</label>
+              <input name="documento_data" type="date" defaultValue={rascunho.documento.data} className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className={labelCls}>
+                Pagamento {rascunho.documento.metodo ? `(na app: ${rascunho.documento.metodo})` : ''}
+              </label>
+              <input type="hidden" name="documento_metodo" value={rascunho.documento.metodo ?? ''} />
+              {metodos ? (
+                <select
+                  name="documento_zsgo_metodo_id"
+                  defaultValue={rascunho.documento.zsgo_metodo_id ?? ''}
+                  className={inputCls}
+                >
+                  <option value="">— escolhe —</option>
+                  {metodos.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nome}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  name="documento_zsgo_metodo_id"
+                  defaultValue={rascunho.documento.zsgo_metodo_id ?? ''}
+                  placeholder="ID do método no ZS Go"
+                  className={inputCls}
+                />
+              )}
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-6">
+              <label className={labelCls}>Observações na fatura</label>
+              <input name="documento_notas" defaultValue={rascunho.documento.notas ?? ''} className={inputCls} />
+            </div>
+          </fieldset>
         </div>
-        <div className="flex flex-col gap-0.5 sm:col-span-2">
-          <label className={labelCls}>Data</label>
-          <input name="documento_data" type="date" defaultValue={rascunho.documento.data} className={inputCls} />
-        </div>
-        <div className="flex flex-col gap-0.5 sm:col-span-2">
-          <label className={labelCls}>
-            Pagamento {rascunho.documento.metodo ? `(na app: ${rascunho.documento.metodo})` : ''}
-          </label>
-          <input type="hidden" name="documento_metodo" value={rascunho.documento.metodo ?? ''} />
-          {metodos ? (
-            <select
-              name="documento_zsgo_metodo_id"
-              defaultValue={rascunho.documento.zsgo_metodo_id ?? ''}
-              className={inputCls}
-            >
-              <option value="">— escolhe —</option>
-              {metodos.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nome}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              name="documento_zsgo_metodo_id"
-              defaultValue={rascunho.documento.zsgo_metodo_id ?? ''}
-              placeholder="ID do método no ZS Go"
-              className={inputCls}
-            />
-          )}
-        </div>
-        <div className="flex flex-col gap-0.5 sm:col-span-6">
-          <label className={labelCls}>Observações na fatura</label>
-          <input name="documento_notas" defaultValue={rascunho.documento.notas ?? ''} className={inputCls} />
-        </div>
-      </fieldset>
+      </details>
 
       {/* Linhas */}
       <div className="flex flex-col gap-1.5">

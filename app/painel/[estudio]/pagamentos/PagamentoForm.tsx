@@ -46,12 +46,20 @@ export default function PagamentoForm({
   const [pedirFatura, setPedirFatura] = useState(true)
   const { marcarSujo } = useAvisoSairSemGuardar()
 
-  // O valor a pagar segue sempre o preço do plano menos o desconto —
-  // continua editável à mão a seguir, para qualquer outro caso (ex.:
-  // pagamento parcial).
+  // Valor e desconto seguem sempre o preço do plano um em função do
+  // outro (valor = preço - desconto, e vice-versa) — editar qualquer
+  // um dos dois atualiza o outro; continuam ambos editáveis à mão
+  // para qualquer outro caso (ex.: pagamento parcial).
+  const arred = (n: number) => Math.round(n * 100) / 100
+
   const calcularValor = (valorPlano: number, descontoStr: string) => {
     const d = Number(descontoStr.replace(',', '.')) || 0
-    return String(Math.round((valorPlano - d) * 100) / 100)
+    return String(arred(valorPlano - d))
+  }
+
+  const calcularDesconto = (valorPlano: number, valorStr: string) => {
+    const v = Number(valorStr.replace(',', '.')) || 0
+    return String(Math.max(0, arred(valorPlano - v)))
   }
 
   const escolherPlano = (id: string) => {
@@ -64,6 +72,12 @@ export default function PagamentoForm({
     setDesconto(novoDesconto)
     const plano = planos.find((p) => p.id === planoId)
     if (plano) setValor(calcularValor(plano.valor, novoDesconto))
+  }
+
+  const mudarValor = (novoValor: string) => {
+    setValor(novoValor)
+    const plano = planos.find((p) => p.id === planoId)
+    if (plano) setDesconto(calcularDesconto(plano.valor, novoValor))
   }
 
   // Pergunta sempre, mesmo com a checkbox já marcada — a resposta é que
@@ -115,7 +129,7 @@ export default function PagamentoForm({
             step="0.01"
             required
             value={valor}
-            onChange={(e) => setValor(e.target.value)}
+            onChange={(e) => mudarValor(e.target.value)}
             className={inputCls}
           />
         </div>

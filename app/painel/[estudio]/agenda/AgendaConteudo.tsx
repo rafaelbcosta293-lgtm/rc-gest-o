@@ -1,11 +1,12 @@
 import Link from 'next/link'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft, CalendarOff, Plus } from 'lucide-react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getEquipaDoEstudio, obterOutroEstudioEClientes } from '@/lib/data/estudios'
 import { fmt, MESES, DIAS_SEMANA, diasDoMes, offsetPrimeiroDia } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { corTipoEvento } from '@/lib/data/agenda'
+import { feriadosNoIntervalo } from '@/lib/data/feriados'
 import AgendaInterativa from './AgendaInterativa'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda, Estudio } from '@/lib/supabase/database.types'
@@ -224,6 +225,7 @@ export default async function AgendaConteudo({
   }
 
   const eventos = await buscarEventos(supabase, estudio.id, inicio, fimExclusivo, ptFiltro)
+  const feriadosPeriodo = feriadosNoIntervalo(inicio, fimExclusivo)
 
   return (
     <div>
@@ -309,6 +311,17 @@ export default async function AgendaConteudo({
           <Plus className="h-4 w-4" /> Evento
         </Link>
       </div>
+
+      {feriadosPeriodo.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-amber-700 dark:text-amber-400">
+          {feriadosPeriodo.map((f) => (
+            <span key={f.data} className="inline-flex items-center gap-1">
+              <CalendarOff className="h-3 w-3 shrink-0" />
+              Feriado{vista !== 'dia' ? ` · ${fmt(f.data)}` : ''}: {f.nome}
+            </span>
+          ))}
+        </div>
+      )}
 
       {error && (
         <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

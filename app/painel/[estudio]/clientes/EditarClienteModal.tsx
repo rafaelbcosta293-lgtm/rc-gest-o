@@ -23,7 +23,7 @@ export type ClienteEdicao = {
 }
 
 const inputCls =
-  'w-full rounded-lg bg-zinc-100 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-brand/50 dark:bg-zinc-800 dark:focus:bg-zinc-900'
+  'w-full rounded-lg border border-black bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900'
 const labelCls = 'text-sm font-medium text-foreground'
 
 // Edição rápida, aberta com o botão direito do rato em cima do nome, na

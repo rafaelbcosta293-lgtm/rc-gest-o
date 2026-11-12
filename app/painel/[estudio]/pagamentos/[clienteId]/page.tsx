@@ -116,7 +116,7 @@ export default async function PagamentosClientePage({
             type="number"
             step="0.01"
             required
-            className="rounded-md bg-zinc-100 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-brand/50 dark:bg-zinc-800 dark:focus:bg-zinc-900"
+            className="rounded-md border border-black bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -127,7 +127,7 @@ export default async function PagamentosClientePage({
             name="data_pagamento"
             type="date"
             defaultValue={hoje}
-            className="rounded-md bg-zinc-100 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-brand/50 dark:bg-zinc-800 dark:focus:bg-zinc-900"
+            className="rounded-md border border-black bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900"
           />
         </div>
         <SubmitButton
@@ -195,7 +195,7 @@ export default async function PagamentosClientePage({
                   name="motivo"
                   required
                   placeholder="Motivo da anulação"
-                  className="w-40 rounded-md bg-zinc-100 px-2 py-1 text-xs outline-none focus:bg-white focus:ring-2 focus:ring-brand/50 dark:bg-zinc-800 dark:focus:bg-zinc-900"
+                  className="w-40 rounded-md border border-black bg-white px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900"
                 />
                 <SubmitButton
                   pendingText="…"

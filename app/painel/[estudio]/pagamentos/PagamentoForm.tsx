@@ -6,7 +6,7 @@ import type { Plano } from '@/lib/supabase/database.types'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 const inputCls =
-  'rounded-md bg-zinc-100 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-brand/50 dark:bg-zinc-800 dark:focus:bg-zinc-900'
+  'rounded-md border border-black bg-white px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900'
 const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 
 const METODOS = ['Numerário', 'Multibanco', 'MB Way', 'Transferência']
@@ -63,7 +63,7 @@ export default function PagamentoForm({
   }
 
   return (
-    <form action={aoGuardar} onChange={marcarSujo} className="mt-4 flex flex-col gap-4">
+    <form action={aoGuardar} onChange={marcarSujo} className="mt-3 flex flex-col gap-3">
       <input type="hidden" name="estudio_slug" value={estudioSlug} />
       <input type="hidden" name="cliente_id" value={clienteId} />
 
@@ -73,8 +73,8 @@ export default function PagamentoForm({
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1">
           <label className={labelCls}>Plano</label>
           <select
             name="plano_id"
@@ -92,7 +92,7 @@ export default function PagamentoForm({
           </select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label className={labelCls}>Valor (€)</label>
           <input
             name="valor"
@@ -105,7 +105,7 @@ export default function PagamentoForm({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label className={labelCls}>Método</label>
           <select name="metodo" required defaultValue="" className={inputCls}>
             <option value="">— escolhe um método —</option>
@@ -117,7 +117,7 @@ export default function PagamentoForm({
           </select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label className={labelCls}>Data do pagamento</label>
           {/* Sempre o dia de hoje, o dia em que o pagamento está a ser
               registado — não é um campo editável (ver pedido do dono). */}
@@ -131,7 +131,7 @@ export default function PagamentoForm({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label className={labelCls}>Válido até</label>
           <input
             name="valido_ate"
@@ -144,7 +144,7 @@ export default function PagamentoForm({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 text-sm text-zinc-700 dark:text-zinc-300">
+      <div className="flex flex-wrap gap-3 text-sm text-zinc-700 dark:text-zinc-300">
         <label className="flex items-center gap-1.5">
           <input type="checkbox" name="inclui_inscricao" /> Inclui inscrição
         </label>
@@ -156,14 +156,14 @@ export default function PagamentoForm({
         </label>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <label className={labelCls}>Nota</label>
         <textarea name="nota" rows={2} className={inputCls} />
       </div>
 
       {/* Pedir fatura: não emite nada — só avisa a Administração, que
           revê o rascunho pré-preenchido e decide se a fatura sai. */}
-      <div className="rounded-lg border border-border-subtle p-3">
+      <div className="rounded-lg border border-border-subtle p-2.5">
         <label className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
           <input
             type="checkbox"
@@ -174,8 +174,8 @@ export default function PagamentoForm({
           Pedir fatura à Administração
         </label>
         {pedirFatura && (
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
               <label className={labelCls}>NIF do cliente</label>
               <input
                 name="nif"
@@ -186,7 +186,7 @@ export default function PagamentoForm({
                 className={inputCls}
               />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               <label className={labelCls}>Nota para a Administração</label>
               <input name="nota_fatura" placeholder="Opcional" className={inputCls} />
             </div>

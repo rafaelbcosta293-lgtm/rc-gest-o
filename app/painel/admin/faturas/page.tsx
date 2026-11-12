@@ -253,7 +253,7 @@ export default async function AdminFaturasPage({
                 </div>
               ) : (
                 <>
-                  <div className="mt-3">
+                  <div className="mt-2">
                     <FaturaEditor
                       id={p.id}
                       rascunho={r}
@@ -267,19 +267,19 @@ export default async function AdminFaturasPage({
                   <ConfirmarAcao
                     action={rejeitarPedidoFatura}
                     confirmacao={`Rejeitar o pedido de fatura de ${r.cliente.nome}? Não é emitida nenhuma fatura.`}
-                    className="mt-2 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-2"
+                    className="mt-1 flex flex-wrap items-center gap-1.5"
                   >
                     <input type="hidden" name="id" value={p.id} />
                     <input
                       name="motivo"
                       placeholder="Motivo (opcional, a equipa vê)"
-                      className="w-64 rounded-md border border-border-subtle px-2 py-1 text-xs dark:bg-zinc-900"
+                      className="w-56 rounded-md border border-border-subtle px-2 py-0.5 text-xs dark:bg-zinc-900"
                     />
                     <SubmitButton
                       pendingText="…"
-                      className="rounded-full border border-red-800 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-950"
+                      className="rounded-full border border-red-800 px-2.5 py-1 text-xs font-semibold text-red-400 hover:bg-red-950"
                     >
-                      Rejeitar pedido
+                      Rejeitar
                     </SubmitButton>
                   </ConfirmarAcao>
                 </>

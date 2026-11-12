@@ -21,6 +21,7 @@ export async function criarPagamento(formData: FormData) {
   // confirma-se aqui também (nunca confiar só na validação do browser).
   const planoId = campoOuNull(formData, 'plano_id')
   const valorBruto = campoOuNull(formData, 'valor')
+  const descontoBruto = campoOuNull(formData, 'desconto')
   const metodo = campoOuNull(formData, 'metodo')
   const dataPagamento = campoOuNull(formData, 'data_pagamento')
   const validoAte = campoOuNull(formData, 'valido_ate')
@@ -50,6 +51,7 @@ export async function criarPagamento(formData: FormData) {
       cliente_id: clienteId,
       plano_id: planoId,
       valor: Number(valorBruto),
+      desconto: descontoBruto ? Number(descontoBruto) : 0,
       metodo,
       data_pagamento: dataPagamento,
       valido_ate: validoAte,

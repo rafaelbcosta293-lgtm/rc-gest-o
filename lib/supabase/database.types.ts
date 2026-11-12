@@ -432,6 +432,7 @@ export type Pagamento = {
   cliente_id: string
   plano_id: string | null
   valor: number
+  desconto: number
   metodo: string | null
   data_pagamento: string
   valido_ate: string

@@ -28,7 +28,7 @@ export async function criarPedidoFatura(
   const { data: pagamento, error: erroPag } = await supabase
     .from('pagamentos')
     .select(
-      'id, cliente_id, valor, metodo, data_pagamento, valido_ate, inclui_inscricao, inclui_seguro, inclui_reativacao, nota, anulado_em, plano:planos(nome, valor), cliente:clientes(id, nome, nif, morada, codigo_postal, cidade, email, estudio_id)'
+      'id, cliente_id, valor, desconto, metodo, data_pagamento, valido_ate, inclui_inscricao, inclui_seguro, inclui_reativacao, nota, anulado_em, plano:planos(nome, valor), cliente:clientes(id, nome, nif, morada, codigo_postal, cidade, email, estudio_id)'
     )
     .eq('id', pagamentoId)
     .maybeSingle()
@@ -53,6 +53,7 @@ export async function criarPedidoFatura(
   const rascunho = montarRascunho({
     pagamento: {
       valor: Number(pagamento.valor),
+      desconto: Number(pagamento.desconto),
       metodo: pagamento.metodo,
       data_pagamento: pagamento.data_pagamento,
       valido_ate: pagamento.valido_ate,

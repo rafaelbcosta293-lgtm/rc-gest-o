@@ -37,6 +37,7 @@ export default function PagamentoForm({
   const hoje = new Date().toISOString().slice(0, 10)
   const [planoId, setPlanoId] = useState('')
   const [valor, setValor] = useState('')
+  const [desconto, setDesconto] = useState('')
   const [validoAte, setValidoAte] = useState(fimDoMes(hoje))
   // A maior parte dos pagamentos pede fatura — vem já marcado, para não
   // ser preciso clicar sempre; mesmo assim, ao guardar confirma-se
@@ -45,10 +46,24 @@ export default function PagamentoForm({
   const [pedirFatura, setPedirFatura] = useState(true)
   const { marcarSujo } = useAvisoSairSemGuardar()
 
+  // O valor a pagar segue sempre o preço do plano menos o desconto —
+  // continua editável à mão a seguir, para qualquer outro caso (ex.:
+  // pagamento parcial).
+  const calcularValor = (valorPlano: number, descontoStr: string) => {
+    const d = Number(descontoStr.replace(',', '.')) || 0
+    return String(Math.round((valorPlano - d) * 100) / 100)
+  }
+
   const escolherPlano = (id: string) => {
     setPlanoId(id)
     const plano = planos.find((p) => p.id === id)
-    if (plano) setValor(String(plano.valor))
+    if (plano) setValor(calcularValor(plano.valor, desconto))
+  }
+
+  const mudarDesconto = (novoDesconto: string) => {
+    setDesconto(novoDesconto)
+    const plano = planos.find((p) => p.id === planoId)
+    if (plano) setValor(calcularValor(plano.valor, novoDesconto))
   }
 
   // Pergunta sempre, mesmo com a checkbox já marcada — a resposta é que
@@ -101,6 +116,20 @@ export default function PagamentoForm({
             required
             value={valor}
             onChange={(e) => setValor(e.target.value)}
+            className={inputCls}
+          />
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <label className={labelCls}>Desconto (€)</label>
+          <input
+            name="desconto"
+            type="number"
+            step="0.01"
+            min="0"
+            value={desconto}
+            onChange={(e) => mudarDesconto(e.target.value)}
+            placeholder="0,00"
             className={inputCls}
           />
         </div>

@@ -18,6 +18,7 @@ const config = {
 const cliente = { nome: 'Ana', nif: '123 456 789', morada: null, codigo_postal: null, cidade: null, email: null }
 const pagamento = {
   valor: 113.5,
+  desconto: 0,
   metodo: 'MB Way',
   data_pagamento: '2026-11-11',
   valido_ate: '2026-11-30',
@@ -51,6 +52,18 @@ describe('montarRascunho', () => {
     })
     expect(r.linhas).toHaveLength(1)
     expect(r.linhas[0]).toMatchObject({ tipo: 'mensalidade', preco_com_iva: 30 })
+  })
+
+  it('desconta o desconto do pagamento ao preço de tabela da mensalidade', () => {
+    const r = montarRascunho({
+      pagamento: { ...pagamento, desconto: 40, inclui_inscricao: false, inclui_seguro: false },
+      plano: { nome: 'Express 8', valor: 220 },
+      cliente,
+      config,
+    })
+    expect(r.linhas).toEqual([
+      expect.objectContaining({ tipo: 'mensalidade', preco_com_iva: 180 }),
+    ])
   })
 })
 

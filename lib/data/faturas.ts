@@ -118,6 +118,7 @@ export function normalizarNif(nif: string | null | undefined): string | null {
 export type DadosParaRascunho = {
   pagamento: {
     valor: number
+    desconto: number
     metodo: string | null
     data_pagamento: string
     valido_ate: string
@@ -143,8 +144,10 @@ export type DadosParaRascunho = {
 // Monta o rascunho pré-preenchido a partir do pagamento registado.
 // Uma linha por cada opção escolhida no registo do pagamento — pacote
 // (plano), inscrição, seguro, reativação — cada uma com o seu preço de
-// tabela. Não se tenta dividir o valor pago: se houver diferença, o
-// editor da Administração mostra-a e pode-se acertar à mão.
+// tabela (a mensalidade já com o desconto registado nesse pagamento
+// descontado). Não se tenta dividir mais nenhuma diferença: se mesmo
+// assim o valor pago não bater certo, o editor da Administração
+// mostra-a e pode-se acertar à mão.
 export function montarRascunho(d: DadosParaRascunho): RascunhoFatura {
   const { pagamento: p, config } = d
   const produto = (t: TipoLinhaFatura) => config[chaveProduto(t)] || null
@@ -162,7 +165,8 @@ export function montarRascunho(d: DadosParaRascunho): RascunhoFatura {
 
   const linhas: LinhaRascunho[] = []
   if (d.plano) {
-    linhas.push(linha('mensalidade', `Mensalidade ${d.plano.nome} — ${periodo}`, Number(d.plano.valor)))
+    const precoComDesconto = Number(d.plano.valor) - (p.desconto || 0)
+    linhas.push(linha('mensalidade', `Mensalidade ${d.plano.nome} — ${periodo}`, precoComDesconto))
   }
   if (p.inclui_inscricao) linhas.push(linha('inscricao', 'Taxa de inscrição', numeroConfig(config.taxa_inscricao)))
   if (p.inclui_seguro) linhas.push(linha('seguro', 'Seguro anual', numeroConfig(config.seguro_anual)))

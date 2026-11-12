@@ -74,6 +74,17 @@ export default async function EstudioPage({
     notFound()
   }
 
+  // Chamada direta (sem JSX, sem await) para a Agenda já começar a
+  // pedir os seus próprios dados agora — em paralelo com os pedidos do
+  // resumo abaixo — em vez de só começar depois de todos eles
+  // terminarem (o que a tornaria uma 2ª leva sequencial).
+  const agendaPromise = AgendaConteudo({
+    estudio,
+    searchParams: sp,
+    basePath: `/painel/${slug}`,
+    mostrarVoltar: false,
+  })
+
   // Estas cinco só precisam do estúdio, não umas das outras — correm
   // todas ao mesmo tempo em vez de à vez.
   const [
@@ -220,9 +231,7 @@ export default async function EstudioPage({
         />
       </div>
 
-      <div className="mt-3">
-        <AgendaConteudo estudio={estudio} searchParams={sp} basePath={`/painel/${slug}`} mostrarVoltar={false} />
-      </div>
+      <div className="mt-3">{await agendaPromise}</div>
     </div>
   )
 }

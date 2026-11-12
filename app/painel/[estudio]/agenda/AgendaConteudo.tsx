@@ -160,32 +160,9 @@ export default async function AgendaConteudo({
 
   const supabase = await createClient()
 
-  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }, { outroEstudio, clientesOutroEstudio }] =
-    await Promise.all([
-      getEquipaDoEstudio(supabase, estudio.id),
-      supabase
-        .from('clientes')
-        .select('id, nome')
-        .eq('estudio_id', estudio.id)
-        .order('nome'),
-      supabase
-        .from('leads')
-        .select('id, nome, telefone')
-        .eq('estudio_id', estudio.id)
-        .neq('estado', 'Perdida')
-        .order('nome'),
-      obterOutroEstudioEClientes(supabase, estudio.id),
-    ])
-  if (erroClientes) {
-    throw new Error(erroClientes.message)
-  }
-  if (erroLeads) {
-    throw new Error(erroLeads.message)
-  }
-  const clientes = (clientesData ?? []) as { id: string; nome: string }[]
-  const leads = (leadsData ?? []) as LeadOpcao[]
-  const qsExtra = ptFiltro ? `&pt=${ptFiltro}` : ''
-
+  // O período (inicio/fimExclusivo) só depende de vista/dataSel, já
+  // conhecidos — calcula-se já aqui para buscarEventos poder correr na
+  // mesma leva que o resto, em vez de ser um 5º pedido só depois deles.
   let inicio: string
   let fimExclusivo: string
   let anterior: string
@@ -224,7 +201,32 @@ export default async function AgendaConteudo({
     tituloPeriodo = `${MESES[mes - 1]} ${ano}`
   }
 
-  const eventos = await buscarEventos(supabase, estudio.id, inicio, fimExclusivo, ptFiltro)
+  const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }, { outroEstudio, clientesOutroEstudio }, eventos] =
+    await Promise.all([
+      getEquipaDoEstudio(supabase, estudio.id),
+      supabase
+        .from('clientes')
+        .select('id, nome')
+        .eq('estudio_id', estudio.id)
+        .order('nome'),
+      supabase
+        .from('leads')
+        .select('id, nome, telefone')
+        .eq('estudio_id', estudio.id)
+        .neq('estado', 'Perdida')
+        .order('nome'),
+      obterOutroEstudioEClientes(supabase, estudio.id),
+      buscarEventos(supabase, estudio.id, inicio, fimExclusivo, ptFiltro),
+    ])
+  if (erroClientes) {
+    throw new Error(erroClientes.message)
+  }
+  if (erroLeads) {
+    throw new Error(erroLeads.message)
+  }
+  const clientes = (clientesData ?? []) as { id: string; nome: string }[]
+  const leads = (leadsData ?? []) as LeadOpcao[]
+  const qsExtra = ptFiltro ? `&pt=${ptFiltro}` : ''
   const feriadosPeriodo = feriadosNoIntervalo(inicio, fimExclusivo)
 
   return (

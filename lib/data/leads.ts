@@ -85,6 +85,23 @@ export async function criarLeadAutomatica(
     .select('id')
     .single()
 
-  if (error || !data) return { error: error?.message ?? 'Não foi possível criar o lead.' }
+  if (error) {
+    // 23505 = violação do índice único de external_id — a mesma origem
+    // externa reentregou o mesmo evento em simultâneo (ex.: retry do
+    // Meta/Google Forms) entre a verificação acima e este insert. Não é
+    // um erro real: a lead já ficou criada pelo outro pedido, por isso
+    // devolve-se esse id como duplicado em vez de falhar (500) de volta
+    // à origem externa.
+    if (error.code === '23505' && input.externalId) {
+      const { data: existente } = await admin
+        .from('leads')
+        .select('id')
+        .eq('external_id', input.externalId)
+        .maybeSingle()
+      if (existente) return { ok: true, id: existente.id, duplicado: true }
+    }
+    return { error: error.message }
+  }
+  if (!data) return { error: 'Não foi possível criar o lead.' }
   return { ok: true, id: data.id, duplicado: false }
 }

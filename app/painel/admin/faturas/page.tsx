@@ -100,26 +100,26 @@ export default async function AdminFaturasPage({
 
   // Artigos e métodos de pagamento vêm do ZS Go — só são precisos para
   // editar pedidos por validar. Se a ligação falhar, o editor continua a
-  // funcionar com campos de texto e mostra-se o erro.
+  // funcionar com campos de texto e mostra-se o erro. A série (só para
+  // mostrar qual vai ser usada — sem ela a frase fica sem nomear a série,
+  // não vale a pena rebentar a página) é sempre pedida; corre-se as duas
+  // chamadas ao ZS Go em paralelo, nunca uma à espera da outra.
   let produtos: ProdutoZsgo[] | null = null
   let metodos: MetodoPagamentoZsgo[] | null = null
   let erroLigacao: string | null = null
-  if (separador.chave === 'pendentes' && pedidos.length > 0) {
-    try {
-      ;[produtos, metodos] = await Promise.all([listarProdutos(), listarMetodosPagamento()])
-    } catch (e) {
-      erroLigacao = e instanceof Error ? e.message : 'Erro desconhecido.'
-    }
-  }
 
-  // Só para mostrar qual série vai ser usada — se o ZS Go não responder,
-  // mostra-se a frase sem nomear a série, não vale a pena rebentar a
-  // página só por isto.
-  let series: string[] = []
-  try {
-    series = await listarSeries()
-  } catch {
-    // sem série a mostrar, a página continua a funcionar
+  const precisaProdutosEMetodos = separador.chave === 'pendentes' && pedidos.length > 0
+  const [produtosEMetodos, series] = await Promise.all([
+    precisaProdutosEMetodos
+      ? Promise.all([listarProdutos(), listarMetodosPagamento()]).catch((e) => {
+          erroLigacao = e instanceof Error ? e.message : 'Erro desconhecido.'
+          return null
+        })
+      : Promise.resolve(null),
+    listarSeries().catch(() => [] as string[]),
+  ])
+  if (produtosEMetodos) {
+    ;[produtos, metodos] = produtosEMetodos
   }
 
   const qsEstudio = sp.estudio ? `&estudio=${sp.estudio}` : ''

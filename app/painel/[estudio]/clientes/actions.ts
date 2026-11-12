@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { nifValido, normalizarNif } from '@/lib/data/faturas'
 
 type ResultadoClienteRapido = { error: string } | { ok: true }
 
@@ -17,6 +18,7 @@ export async function atualizarClienteRapido(input: {
   numeroSocio: string | null
   telefone: string | null
   email: string | null
+  nif: string | null
   nascimento: string | null
   frequenciaSemanal: number | null
   estado: string
@@ -25,6 +27,11 @@ export async function atualizarClienteRapido(input: {
   const nome = input.nome.trim()
   if (!nome) {
     return { error: 'O nome é obrigatório.' }
+  }
+
+  const nif = normalizarNif(input.nif)
+  if (nif && !nifValido(nif)) {
+    return { error: `O NIF ${nif} não é válido.` }
   }
 
   const supabase = await createClient()
@@ -51,6 +58,7 @@ export async function atualizarClienteRapido(input: {
       numero_socio: input.numeroSocio,
       telefone: input.telefone,
       email: input.email,
+      nif,
       nascimento: input.nascimento,
       frequencia_semanal: input.frequenciaSemanal,
       estado: input.estado,

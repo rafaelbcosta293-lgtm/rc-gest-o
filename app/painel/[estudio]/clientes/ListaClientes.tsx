@@ -14,6 +14,7 @@ export type LinhaCliente = {
   nomePreferido: string | null
   telefone: string | null
   email: string | null
+  nif: string | null
   nascimento: string | null
   frequenciaSemanal: number | null
   estado: EstadoCliente
@@ -87,6 +88,7 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
                       numeroSocio: l.numeroSocio,
                       telefone: l.telefone,
                       email: l.email,
+                      nif: l.nif,
                       nascimento: l.nascimento,
                       frequenciaSemanal: l.frequenciaSemanal,
                       estado: l.estado,

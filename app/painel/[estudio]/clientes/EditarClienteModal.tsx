@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { atualizarClienteRapido } from './actions'
 import type { EstadoCliente, GeneroCliente } from '@/lib/supabase/database.types'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
+import { nifValido } from '@/lib/data/faturas'
 
 export type ClienteEdicao = {
   id: string
@@ -14,6 +15,7 @@ export type ClienteEdicao = {
   numeroSocio: string | null
   telefone: string | null
   email: string | null
+  nif: string | null
   nascimento: string | null
   frequenciaSemanal: number | null
   estado: EstadoCliente
@@ -57,12 +59,18 @@ export default function EditarClienteModal({
     const numeroSocio = (formData.get('numero_socio') as string)?.trim() || null
     const telefone = (formData.get('telefone') as string)?.trim() || null
     const email = (formData.get('email') as string)?.trim() || null
+    const nifBruto = (formData.get('nif') as string)?.replace(/[^\d]/g, '') || null
     const nascimento = (formData.get('nascimento') as string) || null
     const frequenciaSemanal = formData.get('frequencia_semanal')
       ? Number(formData.get('frequencia_semanal'))
       : null
     const estado = formData.get('estado') as string
     const genero = (formData.get('genero') as string) || null
+
+    if (nifBruto && !nifValido(nifBruto)) {
+      setErro(`O NIF ${nifBruto} não é válido.`)
+      return
+    }
 
     iniciarTransicao(async () => {
       const resultado = await atualizarClienteRapido({
@@ -73,6 +81,7 @@ export default function EditarClienteModal({
         numeroSocio,
         telefone,
         email,
+        nif: nifBruto,
         nascimento,
         frequenciaSemanal,
         estado,
@@ -180,6 +189,21 @@ export default function EditarClienteModal({
                 name="email"
                 type="email"
                 defaultValue={cliente.email ?? ''}
+                className={inputCls}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="nif" className={labelCls}>
+                NIF
+              </label>
+              <input
+                id="nif"
+                name="nif"
+                inputMode="numeric"
+                maxLength={11}
+                defaultValue={cliente.nif ?? ''}
+                placeholder="Em branco = consumidor final"
                 className={inputCls}
               />
             </div>

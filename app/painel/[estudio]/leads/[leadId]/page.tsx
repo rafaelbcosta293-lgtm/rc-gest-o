@@ -255,6 +255,7 @@ export default async function LeadPage({
         pts={pts}
         lead={lead}
         action={atualizarLead}
+        outrosEstudios={outrosEstudios}
       />
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">

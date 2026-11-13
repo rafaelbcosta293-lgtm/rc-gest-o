@@ -129,8 +129,30 @@ export async function atualizarLead(formData: FormData) {
   const estado = formData.get('estado') as string
   const visitaData = campoOuNull(formData, 'visita_data')
   const visitaMarcadaAtual = campoOuNull(formData, 'visita_marcada_em_atual')
+  const moverParaSlug = campoOuNull(formData, 'mover_para_estudio_slug')
   const hoje = new Date().toISOString().slice(0, 10)
   const supabase = await createClient()
+
+  // Permite enviar a lead para o outro estúdio no mesmo "Guardar" (ver
+  // LeadForm) — ex.: contacto que chegou a Fátima mas é para Leiria.
+  // Mesma lógica de moverLeadEstudio (só muda estudio_id, mantém estado
+  // e histórico), só que integrada aqui para não precisar de uma ação
+  // à parte.
+  let slugDestino: string | null = null
+  let estudioIdDestino: number | null = null
+  if (moverParaSlug) {
+    const { data: destino, error: erroDestino } = await supabase
+      .from('estudios')
+      .select('id, slug')
+      .eq('slug', moverParaSlug)
+      .eq('ativo', true)
+      .maybeSingle()
+    if (erroDestino || !destino) {
+      redirect(`/painel/${estudioSlug}/leads/${id}?error=${encodeURIComponent('Estúdio de destino não encontrado.')}`)
+    }
+    slugDestino = destino.slug
+    estudioIdDestino = destino.id
+  }
 
   const { error } = await supabase
     .from('leads')
@@ -144,6 +166,7 @@ export async function atualizarLead(formData: FormData) {
       visita_marcada_em: visitaData ? (visitaMarcadaAtual ?? hoje) : null,
       motivo_perda: estado === 'Perdida' ? campoOuNull(formData, 'motivo_perda') : null,
       fecho_em: estado === 'Perdida' ? hoje : null,
+      ...(estudioIdDestino ? { estudio_id: estudioIdDestino } : {}),
     })
     .eq('id', id)
 
@@ -153,6 +176,13 @@ export async function atualizarLead(formData: FormData) {
 
   revalidatePath(`/painel/${estudioSlug}/leads`)
   revalidatePath(`/painel/${estudioSlug}/leads/${id}`)
+
+  if (slugDestino) {
+    revalidatePath(`/painel/${slugDestino}/leads`)
+    revalidatePath(`/painel/${slugDestino}/leads/${id}`)
+    redirect(`/painel/${slugDestino}/leads/${id}`)
+  }
+
   redirect(`/painel/${estudioSlug}/leads/${id}`)
 }
 

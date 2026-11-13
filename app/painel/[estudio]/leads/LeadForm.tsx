@@ -7,8 +7,8 @@ import SubmitButton from '@/components/SubmitButton'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 const inputCls =
-  'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
-const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
+  'rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-black/30 dark:focus:border-white/30'
+const labelCls = 'text-xs font-semibold text-muted'
 
 const ESTADOS_EDITAVEIS = Object.keys(ESTADOS_LEAD).filter((k) => k !== 'Ganha')
 const TEMPERATURAS: TemperaturaLead[] = ['Fria', 'Morna', 'Quente']
@@ -22,6 +22,7 @@ export default function LeadForm({
   lead,
   action,
   error,
+  outrosEstudios = [],
 }: {
   estudioSlug: string
   estudioId: number
@@ -29,8 +30,13 @@ export default function LeadForm({
   lead?: Lead
   action: (formData: FormData) => void
   error?: string
+  // Só faz sentido ao editar (nunca ao criar) — permite enviar esta
+  // lead para outro estúdio no mesmo "Guardar", sem precisar de uma
+  // ação à parte (ex.: contacto que chegou a Fátima mas é para Leiria).
+  outrosEstudios?: { slug: string; nome: string }[]
 }) {
   const { marcarSujo } = useAvisoSairSemGuardar()
+  const [moverPara, setMoverPara] = useState('')
 
   // Origem conhecida fica logo escolhida; uma guardada à mão (ou vinda
   // de antes desta lista existir) cai em "Outra", com o texto original
@@ -47,9 +53,10 @@ export default function LeadForm({
   const [objetivoOutro, setObjetivoOutro] = useState(lead?.objetivo && !objetivoConhecido ? lead.objetivo : '')
 
   return (
-    <form action={action} onChange={marcarSujo} className="mt-6 flex flex-col gap-4">
+    <form action={action} onChange={marcarSujo} className="mt-4 flex flex-col gap-3">
       <input type="hidden" name="estudio_slug" value={estudioSlug} />
       <input type="hidden" name="estudio_id" value={estudioId} />
+      <input type="hidden" name="mover_para_estudio_slug" value={moverPara} />
       {lead && <input type="hidden" name="id" value={lead.id} />}
       {lead && (
         <input
@@ -65,7 +72,7 @@ export default function LeadForm({
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="nome" className={labelCls}>
             Nome
@@ -161,7 +168,7 @@ export default function LeadForm({
             {TEMPERATURAS.map((t) => (
               <label
                 key={t}
-                className="flex-1 cursor-pointer rounded-md border border-border-subtle px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-medium"
+                className="flex-1 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-medium"
               >
                 <input
                   type="radio"
@@ -176,8 +183,8 @@ export default function LeadForm({
           </div>
         </div>
 
-        <div className="flex flex-col justify-end gap-1.5 pb-2.5">
-          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <div className="flex flex-col justify-end gap-1.5 pb-1.5">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <input type="checkbox" name="walk_in" defaultChecked={lead?.walk_in ?? false} />
             Walk-in (apareceu sem marcação)
           </label>
@@ -371,6 +378,41 @@ export default function LeadForm({
           className={inputCls}
         />
       </div>
+
+      {lead && outrosEstudios.length > 0 && (
+        <div className="flex flex-col gap-1.5 rounded-md border border-border-subtle bg-surface p-3">
+          <span className={labelCls}>Enviar para outro estúdio</span>
+          {outrosEstudios.length === 1 ? (
+            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={moverPara === outrosEstudios[0].slug}
+                onChange={(e) => setMoverPara(e.target.checked ? outrosEstudios[0].slug : '')}
+              />
+              Enviar esta lead para {outrosEstudios[0].nome}
+            </label>
+          ) : (
+            <select
+              value={moverPara}
+              onChange={(e) => setMoverPara(e.target.value)}
+              className={`${inputCls} w-fit`}
+            >
+              <option value="">— não mover —</option>
+              {outrosEstudios.map((e) => (
+                <option key={e.slug} value={e.slug}>
+                  Enviar para {e.nome}
+                </option>
+              ))}
+            </select>
+          )}
+          {moverPara && (
+            <p className="text-xs text-muted">
+              Ao guardar, esta lead passa para o estúdio escolhido — mantém o estado e o
+              histórico, só muda de onde é vista.
+            </p>
+          )}
+        </div>
+      )}
 
       <SubmitButton
         pendingText="A guardar…"

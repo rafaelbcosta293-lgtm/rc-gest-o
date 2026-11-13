@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { normalizarTelefoneSms } from '@/lib/sms/gateway'
 import type { EstadoLead } from '@/lib/supabase/database.types'
@@ -166,12 +167,27 @@ export async function atualizarLead(formData: FormData) {
       visita_marcada_em: visitaData ? (visitaMarcadaAtual ?? hoje) : null,
       motivo_perda: estado === 'Perdida' ? campoOuNull(formData, 'motivo_perda') : null,
       fecho_em: estado === 'Perdida' ? hoje : null,
-      ...(estudioIdDestino ? { estudio_id: estudioIdDestino } : {}),
     })
     .eq('id', id)
 
   if (error) {
     redirect(`/painel/${estudioSlug}/leads/${id}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  // A política da tabela (RLS) só deixa quem tem acesso ao estúdio de
+  // DESTINO escrever lá — exatamente o que uma conta de um só estúdio
+  // (ex.: a conta fixa de Fátima) nunca tem para o outro. Por isso só
+  // esta mudança de estúdio usa o cliente admin (ignora RLS); tudo o
+  // resto do formulário continua a passar pela sessão normal.
+  if (estudioIdDestino) {
+    const admin = createAdminClient()
+    const { error: erroMover } = await admin
+      .from('leads')
+      .update({ estudio_id: estudioIdDestino })
+      .eq('id', id)
+    if (erroMover) {
+      redirect(`/painel/${estudioSlug}/leads/${id}?error=${encodeURIComponent(erroMover.message)}`)
+    }
   }
 
   revalidatePath(`/painel/${estudioSlug}/leads`)
@@ -384,7 +400,11 @@ export async function moverLeadEstudio(formData: FormData) {
     )
   }
 
-  const { error } = await supabase
+  // RLS só deixa escrever numa lead cujo estúdio (velho ou novo) a
+  // sessão tenha — uma conta de um só estúdio nunca tem o outro, por
+  // isso esta mudança em concreto usa o cliente admin (ignora RLS).
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('leads')
     .update({ estudio_id: destino.id })
     .eq('id', leadId)

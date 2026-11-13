@@ -153,9 +153,8 @@ export default async function PagamentosClientePage({
             className={`flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface p-3 text-sm ${p.anulado_em ? 'opacity-50' : ''}`}
           >
             <span className={`font-medium text-foreground ${p.anulado_em ? 'line-through' : ''}`}>
-              {p.valor}€
+              {p.plano?.nome ?? 'sem plano'}
             </span>
-            <span className="text-xs text-zinc-500">{p.plano?.nome ?? 'sem plano'}</span>
             <span className="text-xs text-zinc-500">{p.metodo}</span>
             <span className="text-xs text-zinc-500">
               pago {fmt(p.data_pagamento)} · válido até {fmt(p.valido_ate)}
@@ -185,7 +184,7 @@ export default async function PagamentosClientePage({
             ) : (
               <ConfirmarAcao
                 action={anularPagamento}
-                confirmacao={`Anular o pagamento de ${p.valor}€ de ${fmt(p.data_pagamento)}? Fica registado quem anulou e porquê, e a administração recebe sempre um alerta — não pode ser desfeito.`}
+                confirmacao={`Anular o pagamento de ${fmt(p.data_pagamento)} (${p.plano?.nome ?? 'sem plano'})? Fica registado quem anulou e porquê, e a administração recebe sempre um alerta — não pode ser desfeito.`}
                 className="ml-auto flex items-center gap-1.5"
               >
                 <input type="hidden" name="estudio_slug" value={slug} />

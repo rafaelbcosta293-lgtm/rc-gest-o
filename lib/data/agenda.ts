@@ -1,6 +1,7 @@
 import { somarDias } from '@/lib/data/horarios'
 import { PALETA } from '@/lib/data/constantes'
-import type { RepeticaoSerieAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
+import { normalizarTexto } from '@/lib/texto'
+import type { EstadoEventoAgenda, RepeticaoSerieAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
 
 export const TIPOS_EVENTO_AGENDA: TipoEventoAgenda[] = [
   'Treino',
@@ -111,4 +112,39 @@ export function eventoJaTerminou(data: string, horaInicio: string, duracaoMin: n
   const fim = new Date(`${data}T${horaInicio.slice(0, 5)}:00`)
   fim.setMinutes(fim.getMinutes() + duracaoMin)
   return fim.getTime() <= Date.now()
+}
+
+export type EventoPesquisavel = {
+  id: string
+  data: string
+  hora_inicio: string
+  duracao_min: number
+  tipo: TipoEventoAgenda
+  titulo: string | null
+  estado: EstadoEventoAgenda
+  nota: string | null
+  cliente: { nome: string; nome_preferido: string | null; numero_socio: string | null } | null
+  pt: { nome: string } | null
+}
+
+// Pesquisa na agenda: compara o texto (sem acentos/maiúsculas, ver
+// normalizarTexto) contra tudo o que pode identificar um evento — nome
+// e nº de sócio do cliente, nome do instrutor, título (Reunião/Outro/
+// Sessão experimental) e nota — para "pesquisar o nome de um cliente"
+// encontrar todos os eventos dele, sejam de que tipo forem.
+export function pesquisarEventosAgenda<T extends EventoPesquisavel>(eventos: T[], texto: string): T[] {
+  const alvo = normalizarTexto(texto.trim())
+  if (!alvo) return []
+  return eventos.filter((e) => {
+    const campos = [
+      e.cliente?.nome,
+      e.cliente?.nome_preferido,
+      e.cliente?.numero_socio,
+      e.pt?.nome,
+      e.titulo,
+      e.nota,
+      rotuloTipoEvento(e.tipo, e.titulo),
+    ]
+    return campos.some((campo) => campo && normalizarTexto(campo).includes(alvo))
+  })
 }

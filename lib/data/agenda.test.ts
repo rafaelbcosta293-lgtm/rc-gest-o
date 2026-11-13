@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { gerarOcorrencias, gerarExtensaoSerie, corTipoEvento, eventoJaTerminou } from './agenda'
+import {
+  gerarOcorrencias,
+  gerarExtensaoSerie,
+  corTipoEvento,
+  eventoJaTerminou,
+  pesquisarEventosAgenda,
+  type EventoPesquisavel,
+} from './agenda'
 
 describe('gerarOcorrencias', () => {
   it('sem repetição devolve só a data inicial', () => {
@@ -92,5 +99,50 @@ describe('eventoJaTerminou', () => {
     vi.setSystemTime(new Date('2026-11-11T23:00:00'))
     expect(eventoJaTerminou('2026-11-12', '06:50', 40)).toBe(false)
     vi.useRealTimers()
+  })
+})
+
+describe('pesquisarEventosAgenda', () => {
+  const base: EventoPesquisavel = {
+    id: '1',
+    data: '2026-11-11',
+    hora_inicio: '10:00',
+    duracao_min: 40,
+    tipo: 'Treino',
+    titulo: null,
+    estado: 'Agendado',
+    nota: null,
+    cliente: { nome: 'Joana Pêpê', nome_preferido: null, numero_socio: 'F24010' },
+    pt: { nome: 'Carolina Ribeiro' },
+  }
+  const eventos: EventoPesquisavel[] = [
+    base,
+    { ...base, id: '2', cliente: { nome: 'Miguel Alves', nome_preferido: null, numero_socio: 'F24020' } },
+    { ...base, id: '3', tipo: 'Reunião', titulo: 'Reunião de equipa', cliente: null, pt: null },
+    { ...base, id: '4', nota: 'Confirmar com o André', cliente: null, pt: null },
+  ]
+
+  it('encontra pelo nome do cliente, sem distinguir acentos/maiúsculas', () => {
+    expect(pesquisarEventosAgenda(eventos, 'joana pepe').map((e) => e.id)).toEqual(['1'])
+  })
+
+  it('encontra por nº de sócio', () => {
+    expect(pesquisarEventosAgenda(eventos, 'F24020').map((e) => e.id)).toEqual(['2'])
+  })
+
+  it('encontra pelo nome do instrutor', () => {
+    expect(pesquisarEventosAgenda(eventos, 'carolina').map((e) => e.id)).toEqual(['1', '2'])
+  })
+
+  it('encontra por título (ex.: Reunião)', () => {
+    expect(pesquisarEventosAgenda(eventos, 'equipa').map((e) => e.id)).toEqual(['3'])
+  })
+
+  it('encontra por nota', () => {
+    expect(pesquisarEventosAgenda(eventos, 'andré').map((e) => e.id)).toEqual(['4'])
+  })
+
+  it('texto vazio não devolve nada', () => {
+    expect(pesquisarEventosAgenda(eventos, '   ')).toEqual([])
   })
 })

@@ -10,6 +10,7 @@ import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { corTipoEvento } from '@/lib/data/agenda'
 import { feriadosNoIntervalo } from '@/lib/data/feriados'
 import AgendaInterativa from './AgendaInterativa'
+import BuscaAgenda from './BuscaAgenda'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda, Estudio } from '@/lib/supabase/database.types'
 
@@ -321,14 +322,17 @@ export default async function AgendaConteudo({
           </div>
         )}
 
-        {!somenteLeitura && (
-          <Link
-            href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
-            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-          >
-            <Plus className="h-4 w-4" /> Evento
-          </Link>
-        )}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <BuscaAgenda estudioId={estudio.id} basePath={basePath} />
+          {!somenteLeitura && (
+            <Link
+              href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+            >
+              <Plus className="h-4 w-4" /> Evento
+            </Link>
+          )}
+        </div>
       </div>
 
       {feriadosPeriodo.length > 0 && (

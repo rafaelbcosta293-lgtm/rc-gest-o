@@ -7,13 +7,66 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { ehContaFixa } from '@/lib/data/acessos'
-import { gerarOcorrencias, eventoJaTerminou, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
+import {
+  gerarOcorrencias,
+  eventoJaTerminou,
+  pesquisarEventosAgenda,
+  type EventoPesquisavel,
+  type LimiteRepeticao,
+  type Repeticao,
+} from '@/lib/data/agenda'
 import type { TipoEventoAgenda } from '@/lib/supabase/database.types'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
   if (typeof v !== 'string' || v.trim() === '') return null
   return v.trim()
+}
+
+export type ResultadoPesquisaAgenda = {
+  id: string
+  data: string
+  horaInicio: string
+  duracaoMin: number
+  tipo: TipoEventoAgenda
+  titulo: string | null
+  estado: EventoPesquisavel['estado']
+  nomeCliente: string | null
+  nomePt: string | null
+}
+
+// Pesquisa global na agenda (não só no período visível) — pede-se um
+// mínimo de 2 caracteres para não trazer o estúdio inteiro a cada
+// toque de tecla. Vai buscar tudo do estúdio (sem janela de datas: a
+// agenda de um estúdio ainda é pequena) e filtra em memória com
+// pesquisarEventosAgenda, para encontrar por nome mesmo com acentos
+// diferentes dos escritos.
+export async function pesquisarAgenda(estudioId: number, texto: string): Promise<ResultadoPesquisaAgenda[]> {
+  if (texto.trim().length < 2) return []
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('agenda_eventos')
+    .select(
+      'id, data, hora_inicio, duracao_min, tipo, titulo, estado, nota, cliente:clientes(nome, nome_preferido, numero_socio), pt:perfis!pt_id(nome)'
+    )
+    .eq('estudio_id', estudioId)
+    .order('data', { ascending: false })
+    .order('hora_inicio', { ascending: false })
+  if (error) throw new Error(error.message)
+
+  const eventos = (data ?? []) as unknown as EventoPesquisavel[]
+  const encontrados = pesquisarEventosAgenda(eventos, texto).slice(0, 50)
+  return encontrados.map((e) => ({
+    id: e.id,
+    data: e.data,
+    horaInicio: e.hora_inicio,
+    duracaoMin: e.duracao_min,
+    tipo: e.tipo,
+    titulo: e.titulo,
+    estado: e.estado,
+    nomeCliente: e.cliente?.nome_preferido ?? e.cliente?.nome ?? null,
+    nomePt: e.pt?.nome ?? null,
+  }))
 }
 
 // Uma conta pessoal (registada por um instrutor em /registo, fora das

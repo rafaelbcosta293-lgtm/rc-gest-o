@@ -275,6 +275,14 @@ export async function criarEvento(formData: FormData) {
   redirect(`/painel/${estudioSlug}/agenda?vista=dia&data=${data}`)
 }
 
+// Âmbito ao editar um evento de uma série repetida — "um" é só esta
+// ocorrência (o de sempre, com data própria); "seguintes" e "serie"
+// aplicam os campos partilhados (tipo, cliente, instrutor, hora,
+// duração, nota, …) a várias ocorrências de uma vez, mas nunca mexem
+// no campo "data" de cada uma — cada ocorrência mantém o seu próprio
+// dia, só a hora/duração/resto é que fica igual em todas.
+export type EscopoEditar = 'um' | 'seguintes' | 'serie'
+
 export async function atualizarEvento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
@@ -288,6 +296,7 @@ export async function atualizarEvento(formData: FormData) {
   const horaInicio = formData.get('hora_inicio') as string
   const duracaoMin = Number(formData.get('duracao_min')) || 40
   const nota = campoOuNull(formData, 'nota')
+  const escopo = ((formData.get('escopo') as string) || 'um') as EscopoEditar
   const supabase = await createClient()
 
   const bloqueio = await bloquearEscritaNaAgenda()
@@ -302,7 +311,7 @@ export async function atualizarEvento(formData: FormData) {
   // sempre, mesmo sendo para outro dia.
   const { data: eventoAtual, error: erroAtual } = await supabase
     .from('agenda_eventos')
-    .select('data, hora_inicio, lembrete_enviado')
+    .select('data, hora_inicio, lembrete_enviado, serie_id')
     .eq('id', id)
     .maybeSingle()
   if (erroAtual) {
@@ -313,36 +322,84 @@ export async function atualizarEvento(formData: FormData) {
     (eventoAtual.data !== data || eventoAtual.hora_inicio.slice(0, 5) !== horaInicio.slice(0, 5))
   const repoeLembrete = eventoAtual?.lembrete_enviado === true && mudouQuandoOuHora
 
-  // Só afeta esta linha (uma ocorrência) — nunca o resto da série,
-  // mesmo que serie_id esteja preenchido.
-  const { error } = await supabase
-    .from('agenda_eventos')
-    .update({
-      tipo,
-      cliente_id: clienteId,
-      pt_id: ptId,
-      titulo,
-      lead_id: leadId,
-      telefone,
-      data,
-      hora_inicio: horaInicio,
-      duracao_min: duracaoMin,
-      nota,
-      ...(repoeLembrete ? { lembrete_enviado: false, lembrete_enviado_em: null } : {}),
-    })
-    .eq('id', id)
+  if (escopo === 'um' || !eventoAtual?.serie_id) {
+    // Só afeta esta linha (uma ocorrência) — nunca o resto da série.
+    const { error } = await supabase
+      .from('agenda_eventos')
+      .update({
+        tipo,
+        cliente_id: clienteId,
+        pt_id: ptId,
+        titulo,
+        lead_id: leadId,
+        telefone,
+        data,
+        hora_inicio: horaInicio,
+        duracao_min: duracaoMin,
+        nota,
+        ...(repoeLembrete ? { lembrete_enviado: false, lembrete_enviado_em: null } : {}),
+      })
+      .eq('id', id)
 
-  if (error) {
-    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
-  }
+    if (error) {
+      redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
+    }
 
-  // Mudar o dia/hora de uma Sessão experimental tem de se refletir logo
-  // na lead associada — senão ela fica a mostrar uma visita para um
-  // dia/hora que já não é o do evento (ver sincronizarVisitaLead).
-  if (tipo === 'Sessão experimental') {
-    const erroLead = await sincronizarVisitaLead(supabase, leadId, data, horaInicio)
-    if (erroLead) {
-      redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroLead)}`)
+    // Mudar o dia/hora de uma Sessão experimental tem de se refletir
+    // logo na lead associada — senão ela fica a mostrar uma visita para
+    // um dia/hora que já não é o do evento (ver sincronizarVisitaLead).
+    if (tipo === 'Sessão experimental') {
+      const erroLead = await sincronizarVisitaLead(supabase, leadId, data, horaInicio)
+      if (erroLead) {
+        redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroLead)}`)
+      }
+    }
+  } else {
+    // "Este e os seguintes" / "Toda a série" — aplica os campos
+    // partilhados a todas as ocorrências visadas, cada uma guardando a
+    // sua própria "data" (nunca se muda o dia de várias ocorrências de
+    // uma vez só). Também repõe "Agendado" nas que já estavam
+    // "Concluído" mas, com a nova hora/duração, ainda não terminaram.
+    let selecao = supabase.from('agenda_eventos').select('id, data, estado').eq('serie_id', eventoAtual.serie_id)
+    if (escopo === 'seguintes') selecao = selecao.gte('data', eventoAtual.data)
+    const { data: linhas, error: erroLinhas } = await selecao
+    if (erroLinhas) {
+      redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroLinhas.message)}`)
+    }
+
+    const idsTodos = (linhas ?? []).map((l) => l.id)
+    const idsReabrir = (linhas ?? [])
+      .filter((l) => l.estado === 'Concluído' && !eventoJaTerminou(l.data, horaInicio, duracaoMin))
+      .map((l) => l.id)
+
+    const { error } = await supabase
+      .from('agenda_eventos')
+      .update({
+        tipo,
+        cliente_id: clienteId,
+        pt_id: ptId,
+        titulo,
+        lead_id: leadId,
+        telefone,
+        hora_inicio: horaInicio,
+        duracao_min: duracaoMin,
+        nota,
+        ...(repoeLembrete ? { lembrete_enviado: false, lembrete_enviado_em: null } : {}),
+      })
+      .in('id', idsTodos)
+
+    if (error) {
+      redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
+    }
+
+    if (idsReabrir.length > 0) {
+      const { error: erroReabrir } = await supabase
+        .from('agenda_eventos')
+        .update({ estado: 'Agendado' })
+        .in('id', idsReabrir)
+      if (erroReabrir) {
+        redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroReabrir.message)}`)
+      }
     }
   }
 
@@ -633,12 +690,64 @@ export async function criarEventoRapido(
 }
 
 export async function atualizarEventoRapido(
-  input: CamposEvento & { id: string; grupoId: string | null; estudioId: number }
+  input: CamposEvento & {
+    id: string
+    grupoId: string | null
+    serieId: string | null
+    escopo: EscopoEditar
+    estudioId: number
+  }
 ): Promise<ResultadoAcaoRapida> {
   const bloqueio = await bloquearEscritaNaAgenda()
   if (bloqueio) return { error: bloqueio }
 
   const supabase = await createClient()
+
+  // "Este e os seguintes" / "Toda a série" — só para o caso comum (sem
+  // treino em simultâneo): aplica os campos partilhados a todas as
+  // ocorrências visadas, cada uma guardando a sua própria "data". A UI
+  // só oferece esta opção quando não há grupo, mas confirma-se aqui
+  // também, nunca confiando só nela.
+  if (input.escopo !== 'um' && input.serieId && !input.grupoId) {
+    let selecao = supabase.from('agenda_eventos').select('id, data, estado').eq('serie_id', input.serieId)
+    if (input.escopo === 'seguintes') selecao = selecao.gte('data', input.data)
+    const { data: linhas, error: erroLinhas } = await selecao
+    if (erroLinhas) return { error: erroLinhas.message }
+
+    const idsTodos = (linhas ?? []).map((l) => l.id)
+    const idsReabrir = (linhas ?? [])
+      .filter((l) => l.estado === 'Concluído' && !eventoJaTerminou(l.data, input.horaInicio, input.duracaoMin))
+      .map((l) => l.id)
+    const clienteUnico = input.clienteIds[0] ?? null
+
+    const { error } = await supabase
+      .from('agenda_eventos')
+      .update({
+        tipo: input.tipo,
+        cliente_id: clienteUnico,
+        pt_id: input.ptId,
+        titulo: input.titulo,
+        lead_id: input.leadId,
+        telefone: input.telefone,
+        hora_inicio: input.horaInicio,
+        duracao_min: input.duracaoMin,
+        grupo_id: null,
+        nota: input.nota,
+      })
+      .in('id', idsTodos)
+    if (error) return { error: error.message }
+
+    if (idsReabrir.length > 0) {
+      const { error: erroReabrir } = await supabase
+        .from('agenda_eventos')
+        .update({ estado: 'Agendado' })
+        .in('id', idsReabrir)
+      if (erroReabrir) return { error: erroReabrir.message }
+    }
+
+    revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+    return { ok: true }
+  }
 
   // Linhas que hoje compõem este treino (só esta, ou todo o grupo
   // partilhado) — comparadas com a lista de pessoas pedida agora, para

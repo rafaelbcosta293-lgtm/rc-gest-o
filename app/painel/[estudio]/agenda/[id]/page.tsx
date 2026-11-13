@@ -119,8 +119,9 @@ export default async function EventoAgendaPage({
       {evento.serie_id && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-brand/[.06] px-3 py-2">
           <p className="text-xs text-muted">
-            Esta é uma ocorrência de uma série de eventos repetidos — alterar, desmarcar ou apagar
-            afeta só este dia, nunca as outras ocorrências.
+            Esta é uma ocorrência de uma série de eventos repetidos — ao guardar ou apagar podes
+            escolher se é só este dia, este e os seguintes, ou toda a série. Desmarcar afeta
+            sempre só este dia.
           </p>
           <ConfirmarAcao
             action={pararSerie}

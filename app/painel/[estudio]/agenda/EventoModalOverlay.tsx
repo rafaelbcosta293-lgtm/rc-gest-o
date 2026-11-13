@@ -7,7 +7,7 @@ import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
 import type { TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
-import type { EscopoApagar } from './actions'
+import type { EscopoApagar, EscopoEditar } from './actions'
 import type { EstadoModal, PtOpcao, EstudioOpcao } from './AgendaInterativa'
 
 const inputCls =
@@ -77,6 +77,14 @@ export default function EventoModalOverlay({
   const [aConfirmarApagar, setAConfirmarApagar] = useState(false)
   const [escopoApagar, setEscopoApagar] = useState<EscopoApagar>('um')
 
+  // Editar uma ocorrência de uma série — por omissão só afeta esta,
+  // mas pode-se escolher alargar a "este e os seguintes" ou "toda a
+  // série" (ver EscopoEditar em actions.ts). Só disponível quando não
+  // há treino em simultâneo (participantes.length <= 1) — reconciliar
+  // grupos de várias pessoas em várias ocorrências de uma vez é um
+  // problema diferente, fora deste v1.
+  const [escopoEditar, setEscopoEditar] = useState<EscopoEditar>('um')
+
   // Quem já está neste treino — para um treino em simultâneo, o grupo
   // tem mais do que uma pessoa; pode-se adicionar ou remover enquanto
   // se edita, e guardar aplica a todas.
@@ -118,7 +126,11 @@ export default function EventoModalOverlay({
 
         {evento?.serie_id && (
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-brand/[.06] px-3 py-2">
-            <p className="text-xs text-muted">Parte de uma série repetida — isto só afeta esta ocorrência.</p>
+            <p className="text-xs text-muted">
+              {participantes.length <= 1
+                ? 'Parte de uma série repetida — escolhe abaixo se guardar afeta só este dia, este e os seguintes, ou toda a série.'
+                : 'Parte de uma série repetida — guardar, desmarcar ou apagar um treino em simultâneo afeta só este dia.'}
+            </p>
             {!somenteLeitura && (
               <button
                 type="button"
@@ -256,7 +268,15 @@ export default function EventoModalOverlay({
           )}
 
           <div className="grid grid-cols-3 gap-2">
-            <input type="date" name="data" defaultValue={dataDefault} required className={inputCls} />
+            <input
+              type="date"
+              name="data"
+              defaultValue={dataDefault}
+              required
+              readOnly={escopoEditar !== 'um'}
+              title={escopoEditar !== 'um' ? 'A data de cada ocorrência mantém-se — escolhe "Só este" para a mudar.' : undefined}
+              className={`${inputCls} ${escopoEditar !== 'um' ? 'opacity-50' : ''}`}
+            />
             <input type="time" name="hora_inicio" defaultValue={horaDefault} required className={inputCls} />
             <input
               type="number"
@@ -276,6 +296,41 @@ export default function EventoModalOverlay({
               ))}
             </datalist>
           </div>
+
+          {editar && evento?.serie_id && participantes.length <= 1 && (
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="text-xs font-semibold text-muted">Ao guardar, aplicar a</legend>
+              <div className="grid grid-cols-3 gap-1 rounded-full bg-border-subtle p-1">
+                {(
+                  [
+                    { valor: 'um', label: 'Só este' },
+                    { valor: 'seguintes', label: 'Este e seguintes' },
+                    { valor: 'serie', label: 'Toda a série' },
+                  ] as const
+                ).map((o) => (
+                  <label key={o.valor} className="relative">
+                    <input
+                      type="radio"
+                      name="escopo"
+                      value={o.valor}
+                      checked={escopoEditar === o.valor}
+                      onChange={() => setEscopoEditar(o.valor)}
+                      className="peer sr-only"
+                    />
+                    <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[10px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
+                      {o.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {escopoEditar !== 'um' && (
+                <p className="text-[11px] text-muted">
+                  A data de cada ocorrência mantém-se — só a hora, duração, instrutor, cliente,
+                  tipo e nota ficam iguais em todas.
+                </p>
+              )}
+            </fieldset>
+          )}
 
           {!editar && (
             <div className="rounded-lg border border-border-subtle bg-surface p-3">

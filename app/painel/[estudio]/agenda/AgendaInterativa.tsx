@@ -20,6 +20,7 @@ import {
   apagarEventoRapido,
   pararSerieRapido,
   type EscopoApagar,
+  type EscopoEditar,
 } from './actions'
 import type { EventoAgenda, TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
 
@@ -232,10 +233,13 @@ export default function AgendaInterativa({
     iniciarTransicao(async () => {
       let resultado
       if (modal.aberto && modal.modo === 'editar') {
+        const escopo = ((formData.get('escopo') as string) || 'um') as EscopoEditar
         resultado = await atualizarEventoRapido({
           ...campos,
           id: modal.evento.id,
           grupoId: modal.evento.grupo_id,
+          serieId: modal.evento.serie_id,
+          escopo,
           estudioId,
         })
       } else {

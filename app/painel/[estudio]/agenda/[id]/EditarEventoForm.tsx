@@ -6,7 +6,14 @@ import SubmitButton from '@/components/SubmitButton'
 import ClienteCombobox from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
+import type { EscopoEditar } from '../actions'
 import type { EventoAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
+
+const OPCOES_ESCOPO = [
+  { valor: 'um', label: 'Só este' },
+  { valor: 'seguintes', label: 'Este e seguintes' },
+  { valor: 'serie', label: 'Toda a série' },
+] as const
 
 type EventoComCliente = EventoAgenda & { cliente: { id: string; nome: string; estudio_id: number } | null }
 
@@ -42,6 +49,7 @@ export default function EditarEventoForm({
     !!evento.cliente && evento.cliente.estudio_id !== estudioId
   )
   const experimental = tipo === 'Sessão experimental'
+  const [escopo, setEscopo] = useState<EscopoEditar>('um')
 
   return (
     <form action={action} onChange={marcarSujo} className="mt-6 flex flex-col gap-5">
@@ -134,10 +142,48 @@ export default function EditarEventoForm({
         </div>
       )}
 
+      {evento.serie_id && (
+        <fieldset className="flex flex-col gap-1.5">
+          <legend className="text-xs font-semibold text-muted">Ao guardar, aplicar a</legend>
+          <div className="flex gap-1.5">
+            {OPCOES_ESCOPO.map((o) => (
+              <label
+                key={o.valor}
+                className="flex-1 cursor-pointer rounded-md border border-border-subtle px-3 py-2 text-center text-sm has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold"
+              >
+                <input
+                  type="radio"
+                  name="escopo"
+                  value={o.valor}
+                  checked={escopo === o.valor}
+                  onChange={() => setEscopo(o.valor)}
+                  className="sr-only"
+                />
+                {o.label}
+              </label>
+            ))}
+          </div>
+          {escopo !== 'um' && (
+            <p className="text-xs text-muted">
+              A data de cada ocorrência mantém-se — só a hora, duração, instrutor, cliente, tipo e
+              nota ficam iguais em todas.
+            </p>
+          )}
+        </fieldset>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-muted">Data</label>
-          <input type="date" name="data" defaultValue={evento.data} required className={inputCls} />
+          <input
+            type="date"
+            name="data"
+            defaultValue={evento.data}
+            required
+            readOnly={escopo !== 'um'}
+            title={escopo !== 'um' ? 'A data de cada ocorrência mantém-se — escolhe "Só este" para a mudar.' : undefined}
+            className={`${inputCls} ${escopo !== 'um' ? 'opacity-50' : ''}`}
+          />
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-muted">Hora</label>

@@ -1,0 +1,20 @@
+name: Cópia de segurança diária
+
+# Uma vez por dia: exporta todas as tabelas para o Vercel Blob
+# (rc-gestao-backups, acesso privado) — rede de segurança própria
+# enquanto o projeto Supabase estiver no plano gratuito, que não
+# inclui backups automáticos.
+on:
+  schedule:
+    - cron: '10 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  chamar-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Exportar e guardar cópia de segurança
+        run: |
+          curl --fail-with-body -sS -L -X GET \
+            "${{ secrets.APP_URL }}/api/cron/backup" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

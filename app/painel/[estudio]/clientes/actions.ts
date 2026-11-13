@@ -4,8 +4,37 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { nifValido, normalizarNif } from '@/lib/data/faturas'
+import type { EstadoCliente } from '@/lib/supabase/database.types'
 
 type ResultadoClienteRapido = { error: string } | { ok: true }
+
+// Só o estado — usada pelo menu de contexto (botão direito numa linha
+// de Pagamentos/Clientes), sem abrir a ficha completa. Tal como editar
+// o estado na ficha, marca sempre estado_automatico=false (alteração
+// manual): a transição automática por falta de pagamento só volta a
+// mexer depois do próximo pagamento (ver lib/data/estadoClientes.ts).
+export async function atualizarEstadoClienteRapido(input: {
+  estudioSlug: string
+  id: string
+  estado: EstadoCliente
+}): Promise<ResultadoClienteRapido> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('clientes')
+    .update({ estado: input.estado, estado_automatico: false })
+    .eq('id', input.id)
+  if (error) {
+    return { error: 'Não foi possível guardar o novo estado.' }
+  }
+
+  revalidatePath(`/painel/${input.estudioSlug}/clientes`)
+  revalidatePath(`/painel/${input.estudioSlug}/clientes/${input.id}`)
+  revalidatePath(`/painel/${input.estudioSlug}/pagamentos`)
+  revalidatePath(`/painel/${input.estudioSlug}/pagamentos/${input.id}`)
+  revalidatePath(`/painel/${input.estudioSlug}/presencas`)
+  revalidatePath('/painel/admin', 'layout')
+  return { ok: true }
+}
 
 // Chamado diretamente do modal de edição rápida (sem <form action>/redirect):
 // devolve o resultado para o modal decidir se fecha ou mostra o erro, sem

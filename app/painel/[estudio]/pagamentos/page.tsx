@@ -153,6 +153,7 @@ export default async function PagamentosPage({
   const paraLinha = (c: ClientePagamento, variante: 'atrasado' | 'emDia'): LinhaPagamentoAtraso => ({
     clienteId: c.cliente_id,
     nome: c.nome,
+    estado: c.estado,
     variante,
     situacaoLabel:
       variante === 'atrasado'
@@ -167,14 +168,17 @@ export default async function PagamentosPage({
   })
   const linhasAtrasados = atrasados.map((c) => paraLinha(c, 'atrasado'))
   const linhasEmDia = emDia.map((c) => paraLinha(c, 'emDia'))
+  const estadoPorCliente = new Map(clientesBase.map((c) => [c.id, c.estado]))
   const linhasSeguros: LinhaSeguro[] = segurosARenovar.map((c) => ({
     clienteId: c.id,
     nome: c.nome,
+    estado: estadoPorCliente.get(c.id) ?? 'Ativo',
     dataReferencia: c.dataRenovacao,
   }))
   const linhasInativos: LinhaInativo[] = inativos.map((c) => ({
     clienteId: c.cliente_id,
     nome: c.nome,
+    estado: c.estado,
     semPagarDesdeLabel: c.valido_ate ? `sem pagar desde ${fmt(c.valido_ate)}` : 'sem pagamentos',
   }))
 

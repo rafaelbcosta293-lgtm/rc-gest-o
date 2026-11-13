@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   ArrowDownAZ,
   ArrowUpAZ,
@@ -17,10 +18,14 @@ import {
 } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
 import { fmt } from '@/lib/data/presencas'
+import { ESTADOS_CLIENTE } from '@/lib/data/constantes'
+import { atualizarEstadoClienteRapido } from '../clientes/actions'
+import type { EstadoCliente } from '@/lib/supabase/database.types'
 
 export type LinhaPagamentoAtraso = {
   clienteId: string
   nome: string
+  estado: EstadoCliente
   variante: 'atrasado' | 'emDia'
   situacaoLabel: string
   dataReferencia: string | null
@@ -30,12 +35,14 @@ export type LinhaPagamentoAtraso = {
 export type LinhaSeguro = {
   clienteId: string
   nome: string
+  estado: EstadoCliente
   dataReferencia: string
 }
 
 export type LinhaInativo = {
   clienteId: string
   nome: string
+  estado: EstadoCliente
   semPagarDesdeLabel: string
 }
 
@@ -204,6 +211,7 @@ function LinhaCompacta({
   primeira,
   corFundo,
   corBorda,
+  onContextMenu,
 }: {
   href: string
   nome: string
@@ -211,10 +219,12 @@ function LinhaCompacta({
   primeira: boolean
   corFundo: string
   corBorda: string
+  onContextMenu?: (e: React.MouseEvent) => void
 }) {
   return (
     <Link
       href={href}
+      onContextMenu={onContextMenu}
       className={`flex items-center justify-between gap-2 px-3 py-2 text-xs ${corFundo} ${
         primeira ? '' : corBorda
       }`}
@@ -222,6 +232,60 @@ function LinhaCompacta({
       <span className="truncate font-medium text-foreground">{nome}</span>
       <span className="flex shrink-0 items-center gap-3">{colunas}</span>
     </Link>
+  )
+}
+
+// Menu de contexto (botão direito numa linha) — mudar o estado do
+// cliente sem abrir a ficha completa. Fecha ao clicar fora, ao
+// pressionar Esc, ou depois de escolher uma opção.
+function MenuEstado({
+  x,
+  y,
+  estadoAtual,
+  aPendente,
+  onEscolher,
+  onFechar,
+}: {
+  x: number
+  y: number
+  estadoAtual: EstadoCliente
+  aPendente: boolean
+  onEscolher: (estado: EstadoCliente) => void
+  onFechar: () => void
+}) {
+  useEffect(() => {
+    window.addEventListener('mousedown', onFechar)
+    function aoTeclar(e: KeyboardEvent) {
+      if (e.key === 'Escape') onFechar()
+    }
+    window.addEventListener('keydown', aoTeclar)
+    return () => {
+      window.removeEventListener('mousedown', onFechar)
+      window.removeEventListener('keydown', aoTeclar)
+    }
+  }, [onFechar])
+
+  return (
+    <div
+      className="fixed z-50 min-w-40 overflow-hidden rounded-xl border border-border-subtle bg-surface py-1 shadow-pop"
+      style={{ left: x, top: y }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted">Mudar estado</p>
+      {(Object.keys(ESTADOS_CLIENTE) as EstadoCliente[]).map((estado) => (
+        <button
+          key={estado}
+          type="button"
+          disabled={aPendente || estado === estadoAtual}
+          onClick={() => onEscolher(estado)}
+          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-foreground hover:bg-brand/[.08] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: ESTADOS_CLIENTE[estado].tx }} />
+          {ESTADOS_CLIENTE[estado].label}
+          {estado === estadoAtual && <span className="ml-auto text-[9px] text-muted">atual</span>}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -301,10 +365,35 @@ export default function ListaPagamentos({
   segurosARenovar: LinhaSeguro[]
   inativos: LinhaInativo[]
 }) {
+  const router = useRouter()
   const [filtro, setFiltro] = useState('')
   const ordemAtrasados = useOrdem(CAMPOS_ATRASADOS)
   const ordemEmDia = useOrdem(CAMPOS_EM_DIA)
   const [mostrarInativos, setMostrarInativos] = useState(false)
+  const [menu, setMenu] = useState<{ x: number; y: number; clienteId: string; estado: EstadoCliente } | null>(null)
+  const [aGuardarEstado, iniciarGuardarEstado] = useTransition()
+
+  function abrirMenuEstado(l: { clienteId: string; estado: EstadoCliente }) {
+    return (e: React.MouseEvent) => {
+      e.preventDefault()
+      // Larguras/alturas aproximadas do menu — nunca deixar abrir fora
+      // do ecrã quando o botão direito acontece perto de uma borda.
+      const x = Math.min(e.clientX, window.innerWidth - 170)
+      const y = Math.min(e.clientY, window.innerHeight - 190)
+      setMenu({ x, y, clienteId: l.clienteId, estado: l.estado })
+    }
+  }
+
+  function escolherEstado(estado: EstadoCliente) {
+    if (!menu) return
+    const { clienteId } = menu
+    iniciarGuardarEstado(async () => {
+      const resultado = await atualizarEstadoClienteRapido({ estudioSlug: slug, id: clienteId, estado })
+      setMenu(null)
+      if ('error' in resultado) window.alert(resultado.error)
+      else router.refresh()
+    })
+  }
 
   const aPesquisar = filtro.trim().length > 0
 
@@ -408,6 +497,7 @@ export default function ListaPagamentos({
                     corFundo="bg-red-50 hover:bg-red-100/70 dark:bg-red-950/40 dark:hover:bg-red-950/70"
                     corBorda="border-t border-red-200 dark:border-red-900"
                     primeira={i === 0}
+                    onContextMenu={abrirMenuEstado(l)}
                   />
                 ))}
               </div>
@@ -435,6 +525,7 @@ export default function ListaPagamentos({
                       corFundo="bg-amber-50 hover:bg-amber-100/70 dark:bg-amber-950/40 dark:hover:bg-amber-950/70"
                       corBorda="border-t border-amber-200 dark:border-amber-900"
                       primeira={i === 0}
+                      onContextMenu={abrirMenuEstado(l)}
                     />
                   ))}
                 </div>
@@ -477,6 +568,7 @@ export default function ListaPagamentos({
                     corFundo="bg-surface hover:bg-brand/[.06]"
                     corBorda="border-t border-border-subtle"
                     primeira={i === 0}
+                    onContextMenu={abrirMenuEstado(l)}
                   />
                 ))}
                 </div>
@@ -508,10 +600,22 @@ export default function ListaPagamentos({
               corFundo="bg-surface hover:bg-brand/[.06]"
               corBorda="border-t border-border-subtle"
               primeira={i === 0}
+              onContextMenu={abrirMenuEstado(l)}
             />
           ))}
         </div>
       </SeccaoColapsavel>
+
+      {menu && (
+        <MenuEstado
+          x={menu.x}
+          y={menu.y}
+          estadoAtual={menu.estado}
+          aPendente={aGuardarEstado}
+          onEscolher={escolherEstado}
+          onFechar={() => setMenu(null)}
+        />
+      )}
     </>
   )
 }

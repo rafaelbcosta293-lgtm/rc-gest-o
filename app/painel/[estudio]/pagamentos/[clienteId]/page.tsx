@@ -98,6 +98,7 @@ export default async function PagamentosClientePage({
         planos={planos}
         action={criarPagamento}
         clienteNif={cliente.nif}
+        validadeAtual={validoAte}
       />
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">

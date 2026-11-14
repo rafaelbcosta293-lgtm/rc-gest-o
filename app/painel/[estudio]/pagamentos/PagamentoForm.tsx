@@ -4,20 +4,13 @@ import { useState } from 'react'
 import SubmitButton from '@/components/SubmitButton'
 import type { Plano } from '@/lib/supabase/database.types'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
+import { fimDoMes, validadeSugerida } from '@/lib/data/validadePagamento'
 
 const inputCls =
   'rounded-md border border-black bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900'
 const labelCls = 'text-[11px] font-semibold uppercase tracking-wide text-zinc-500'
 
 const METODOS = ['Numerário', 'Multibanco', 'MB Way', 'Transferência']
-
-// Último dia do mês da data dada — valor por omissão do "válido até"
-// (a mensalidade cobre o mês em que é paga, de ponta a ponta).
-function fimDoMes(dataISO: string) {
-  const d = new Date(`${dataISO}T00:00:00`)
-  const fim = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-  return fim.toISOString().slice(0, 10)
-}
 
 export default function PagamentoForm({
   estudioSlug,
@@ -26,6 +19,7 @@ export default function PagamentoForm({
   action,
   error,
   clienteNif = null,
+  validadeAtual = null,
 }: {
   estudioSlug: string
   clienteId: string
@@ -33,12 +27,15 @@ export default function PagamentoForm({
   action: (formData: FormData) => void
   error?: string
   clienteNif?: string | null
+  validadeAtual?: string | null
 }) {
   const hoje = new Date().toISOString().slice(0, 10)
+  const fimEsteMes = fimDoMes(hoje)
+  const fimProximoMes = fimDoMes(hoje, 1)
   const [planoId, setPlanoId] = useState('')
   const [valor, setValor] = useState('')
   const [desconto, setDesconto] = useState('')
-  const [validoAte, setValidoAte] = useState(fimDoMes(hoje))
+  const [validoAte, setValidoAte] = useState(validadeSugerida(hoje, validadeAtual))
   // A maior parte dos pagamentos pede fatura — vem já marcado, para não
   // ser preciso clicar sempre; mesmo assim, ao guardar confirma-se
   // sempre (abaixo), para nunca sair um pedido sem o instrutor dar por
@@ -184,6 +181,28 @@ export default function PagamentoForm({
             onChange={(e) => setValidoAte(e.target.value)}
             className={inputCls}
           />
+          <div className="mt-0.5 flex gap-1">
+            {[
+              { label: 'Este mês', valor: fimEsteMes },
+              { label: 'Próximo mês', valor: fimProximoMes },
+            ].map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => {
+                  setValidoAte(o.valor)
+                  marcarSujo()
+                }}
+                className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                  validoAte === o.valor
+                    ? 'border-brand bg-brand text-black'
+                    : 'border-zinc-300 text-zinc-600 dark:border-white/20 dark:text-zinc-300'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

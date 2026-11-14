@@ -171,6 +171,17 @@ const COR_CONTORNO_BLOCO = '#2B2622'
 const ABA_CANCELADO = 12
 const ALTURA_MIN_BLOCO = 18
 
+// Cruz de "criar evento" desenhada por nós: a cruz do sistema (Windows)
+// inverte as cores consoante o fundo e ficava branca, invisível sobre a
+// grelha clara. Esta é sempre preta, com um fio branco à volta para se
+// ver também por cima de um bloco escuro.
+const CURSOR_CRUZ = `url("data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 25 25">' +
+    '<path d="M12.5 1v23M1 12.5h23" stroke="#fff" stroke-width="4" stroke-linecap="square"/>' +
+    '<path d="M12.5 1v23M1 12.5h23" stroke="#000" stroke-width="2" stroke-linecap="square"/>' +
+    '</svg>'
+)}") 12 12, crosshair`
+
 export default function AgendaInterativa({
   slug,
   estudioId,
@@ -900,7 +911,8 @@ function ColunaDia({
     <div
       ref={registarRef}
       onMouseDown={somenteLeitura ? undefined : onIniciarCriacao}
-      className={`relative border-l border-border-subtle bg-surface transition-colors select-none ${somenteLeitura ? '' : 'cursor-crosshair'}`}
+      className="relative border-l border-border-subtle bg-surface transition-colors select-none"
+      style={somenteLeitura ? undefined : { cursor: CURSOR_CRUZ }}
     >
       {HORAS_GRADE.map((h) => (
         <div

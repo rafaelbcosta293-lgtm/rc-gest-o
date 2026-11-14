@@ -565,6 +565,14 @@ function GrelhaInterativa({
 
   const localizar = useCallback(
     (clientX: number, clientY: number): { dia: string; minuto: number } | null => {
+      // Só conta a parte da grelha que está mesmo à vista. As colunas têm
+      // a altura das 24 horas e continuam "por trás" do cabeçalho e dos
+      // filtros quando a grelha está rolada — sem este limite, a hora
+      // acompanhava o rato para fora da agenda.
+      const visivel = scrollRef.current?.getBoundingClientRect()
+      if (visivel && (clientY < visivel.top || clientY > visivel.bottom || clientX < visivel.left || clientX > visivel.right)) {
+        return null
+      }
       for (const dia of dias) {
         const el = colRefs.current[dia]
         if (!el) continue

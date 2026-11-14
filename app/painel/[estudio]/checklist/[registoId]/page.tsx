@@ -6,7 +6,8 @@ import { fmt } from '@/lib/data/presencas'
 import { alternarItem, guardarOcorrencia } from '../actions'
 import SubmitButton from '@/components/SubmitButton'
 import OcorrenciaForm from './OcorrenciaForm'
-import type { ChecklistResposta } from '@/lib/supabase/database.types'
+import { AJUDA_OCORRENCIAS, TEXTO_CHECKLIST } from '@/lib/data/checklistPadrao'
+import type { ChecklistResposta, TipoOperacao } from '@/lib/supabase/database.types'
 
 export default async function ChecklistRegistoPage({
   params,
@@ -24,7 +25,7 @@ export default async function ChecklistRegistoPage({
       getEstudioPorSlug(supabase, slug),
       supabase
         .from('checklist_registos')
-        .select('id, estudio_id, tipo, data, hora, concluidos, total, ocorrencia')
+        .select('id, estudio_id, tipo, data, hora, concluidos, total, ocorrencia, pt:perfis!pt_id(nome)')
         .eq('id', registoId)
         .maybeSingle(),
       supabase.from('checklist_respostas').select('*').eq('registo_id', registoId),
@@ -62,6 +63,9 @@ export default async function ChecklistRegistoPage({
     porSecao.set(r.secao, lista)
   }
 
+  const responsavel = (registo.pt as unknown as { nome: string } | null)?.nome?.trim() ?? null
+  const texto = TEXTO_CHECKLIST[registo.tipo as TipoOperacao]
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
@@ -76,8 +80,14 @@ export default async function ChecklistRegistoPage({
       </h1>
       <p className="mt-1 text-sm text-muted">
         {fmt(registo.data)} · {registo.hora.slice(0, 5)} · {registo.concluidos} de {registo.total}{' '}
-        feitos
+        feitos{responsavel ? ` · Responsável: ${responsavel}` : ''}
       </p>
+      {texto && (
+        <div className="mt-4 rounded-xl border border-border-subtle bg-surface p-4 text-sm text-muted">
+          <p>{texto.intro}</p>
+          <p className="mt-2 font-medium text-foreground">⚠️ {texto.nota}</p>
+        </div>
+      )}
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -123,8 +133,9 @@ export default async function ChecklistRegistoPage({
       )}
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Ocorrência (opcional)
+        Ocorrências ou notas de turno (opcional)
       </h2>
+      <p className="mt-1 text-xs text-zinc-500">{AJUDA_OCORRENCIAS}</p>
       <OcorrenciaForm
         slug={slug}
         registoId={registoId}

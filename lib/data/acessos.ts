@@ -80,3 +80,35 @@ export function podeAcederCoordenacao(email: string | null): boolean {
 export function podeAcederAdmin(email: string | null): boolean {
   return normalizado(email) === EMAIL_DONO
 }
+
+// ── Permissões das contas pessoais ─────────────────────────────────
+// Guardadas em app_metadata da própria conta (Supabase Auth) — só a
+// Administração as altera (Administração → Contas). Sem nada definido,
+// a conta fica com os módulos de omissão e a Agenda só para ver.
+export const MODULOS_CONTA_PESSOAL_OMISSAO = ['treinos', 'agenda', 'horarios', 'assiduidade', 'ferias']
+
+export type PermissoesConta = { modulos: string[]; agendaEscrita: boolean }
+
+export function permissoesDaConta(appMetadata: Record<string, unknown> | null | undefined): PermissoesConta {
+  const modulos = appMetadata?.modulos
+  return {
+    modulos: Array.isArray(modulos) ? modulos.filter((m): m is string => typeof m === 'string') : MODULOS_CONTA_PESSOAL_OMISSAO,
+    agendaEscrita: appMetadata?.agenda_escrita === true,
+  }
+}
+
+// Um instrutor pode existir só como perfil (para escalas, horas, ficar
+// associado a treinos…) sem conseguir entrar na app. Como cada perfil
+// vive pendurado numa conta do Supabase Auth, esses perfis ficam com um
+// email interno (um "+alias" da conta geral do negócio, que nunca
+// recebe nada) e com o login bloqueado.
+const PREFIXO_SEM_CONTA = 'rc.privatefitstudio+perfil-'
+
+export function emailPerfilSemConta(token: string): string {
+  return `${PREFIXO_SEM_CONTA}${token.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com`
+}
+
+export function ehEmailSemConta(email: string | null): boolean {
+  const e = normalizado(email)
+  return !!e && e.startsWith(PREFIXO_SEM_CONTA) && e.endsWith('@gmail.com')
+}

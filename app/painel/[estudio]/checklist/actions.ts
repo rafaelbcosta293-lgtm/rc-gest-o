@@ -3,13 +3,22 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { CHECKLIST_PADRAO, itensEmFalta } from '@/lib/data/checklistPadrao'
+import type { TipoOperacao } from '@/lib/supabase/database.types'
 
 export async function iniciarChecklist(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
   const tipo = formData.get('tipo') as string
+  // Quem faz a abertura/fecho: como a conta do estúdio é partilhada, o
+  // responsável escolhe o seu nome (tal como no formulário antigo).
+  const responsavelId = String(formData.get('responsavel_id') ?? '')
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
+  if (!responsavelId) {
+    redirect(`/painel/${estudioSlug}/checklist?error=${encodeURIComponent('Escolhe quem é o responsável por esta checklist.')}`)
+  }
 
   const { data: itens, error: erroItens } = await supabase
     .from('checklist_modelo')
@@ -27,7 +36,7 @@ export async function iniciarChecklist(formData: FormData) {
     .insert({
       estudio_id: estudioId,
       tipo,
-      pt_id: userData.user?.id ?? null,
+      pt_id: responsavelId || (userData.user?.id ?? null),
       total: itens?.length ?? 0,
     })
     .select('id')
@@ -189,4 +198,49 @@ export async function guardarOcorrencia(formData: FormData) {
 
   revalidatePath(`/painel/${estudioSlug}/checklist/${registoId}`)
   redirect(`/painel/${estudioSlug}/checklist/${registoId}`)
+}
+
+// Carrega no modelo a checklist oficial (a do formulário que a equipa
+// preenchia). "acrescentar" junta só os itens que ainda não existem;
+// "substituir" desativa os itens atuais e fica só com a oficial.
+export async function aplicarChecklistPadrao(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const substituir = formData.get('modo') === 'substituir'
+  const destino = `/painel/${estudioSlug}/checklist`
+  const sessao = await getSessaoAtual()
+  if (!papeisDaSessao(sessao).ehGestao) {
+    redirect(`${destino}?error=${encodeURIComponent('Só a gestão pode alterar a checklist.')}`)
+  }
+  const supabase = await createClient()
+
+  if (substituir) {
+    const { error } = await supabase.from('checklist_modelo').update({ ativo: false }).eq('ativo', true)
+    if (error) redirect(`${destino}?error=${encodeURIComponent(error.message)}`)
+  }
+  const { data: atuais, error: erroAtuais } = await supabase
+    .from('checklist_modelo')
+    .select('tipo, item, ordem')
+    .eq('ativo', true)
+  if (erroAtuais) redirect(`${destino}?error=${encodeURIComponent(erroAtuais.message)}`)
+
+  const { data: ultimo } = await supabase
+    .from('checklist_modelo')
+    .select('ordem')
+    .order('ordem', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  let ordem = (ultimo?.ordem ?? -1) + 1
+  const novos: { tipo: TipoOperacao; secao: string; item: string; ordem: number }[] = []
+  for (const tipo of Object.keys(CHECKLIST_PADRAO) as TipoOperacao[]) {
+    for (const it of itensEmFalta(tipo, (atuais ?? []).filter((a) => a.tipo === tipo))) {
+      novos.push({ tipo, ...it, ordem: ordem++ })
+    }
+  }
+  if (novos.length > 0) {
+    const { error } = await supabase.from('checklist_modelo').insert(novos)
+    if (error) redirect(`${destino}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(destino)
+  redirect(`${destino}?ok=${novos.length}`)
 }

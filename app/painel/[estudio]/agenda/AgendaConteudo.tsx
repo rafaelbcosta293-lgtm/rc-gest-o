@@ -233,7 +233,7 @@ export default async function AgendaConteudo({
   // mover/redimensionar (ver AgendaInterativa.tsx) — a escrita já fica
   // bloqueada nas próprias ações (actions.ts), isto é só para a UI
   // deixar de sugerir algo que ia ser recusado.
-  const somenteLeitura = !ehContaFixa(sessao.email)
+  const somenteLeitura = !ehContaFixa(sessao.email) && !sessao.agendaEscrita
   if (erroClientes) {
     throw new Error(erroClientes.message)
   }

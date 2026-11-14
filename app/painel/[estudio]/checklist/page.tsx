@@ -2,10 +2,13 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { ehContaFixa } from '@/lib/data/acessos'
+import { TEXTO_CHECKLIST, itensEmFalta } from '@/lib/data/checklistPadrao'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { fmt } from '@/lib/data/presencas'
-import { iniciarChecklist, criarItemModelo, atualizarItemModelo, removerItemModelo } from './actions'
+import { iniciarChecklist, criarItemModelo, atualizarItemModelo, removerItemModelo, aplicarChecklistPadrao } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import ItemModeloForm from './ItemModeloForm'
 import type { ChecklistModelo, TipoOperacao } from '@/lib/supabase/database.types'
@@ -19,6 +22,7 @@ type RegistoResumo = {
   hora: string
   concluidos: number
   total: number
+  pt: { nome: string } | null
 }
 
 export default async function ChecklistPage({
@@ -26,10 +30,10 @@ export default async function ChecklistPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; ok?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error } = await searchParams
+  const { error, ok } = await searchParams
   const hoje = new Date().toISOString().slice(0, 10)
 
   const supabase = await createClient()
@@ -47,12 +51,12 @@ export default async function ChecklistPage({
   ] = await Promise.all([
     supabase
       .from('checklist_registos')
-      .select('id, tipo, data, hora, concluidos, total')
+      .select('id, tipo, data, hora, concluidos, total, pt:perfis!pt_id(nome)')
       .eq('estudio_id', estudio.id)
       .eq('data', hoje),
     supabase
       .from('checklist_registos')
-      .select('id, tipo, data, hora, concluidos, total')
+      .select('id, tipo, data, hora, concluidos, total, pt:perfis!pt_id(nome)')
       .eq('estudio_id', estudio.id)
       .lt('data', hoje)
       .order('data', { ascending: false })
@@ -61,14 +65,18 @@ export default async function ChecklistPage({
     supabase.from('checklist_modelo').select('*').eq('ativo', true).order('ordem'),
     supabase.from('fechos_caixa').select('id').eq('estudio_id', estudio.id).eq('data', hoje).maybeSingle(),
   ])
+  const equipa = await getEquipaDoEstudio(supabase, estudio.id)
+  // Numa conta pessoal o responsável já vem escolhido (é a própria pessoa).
+  const responsavelOmissao = !ehContaFixa(sessao.email) && equipa.some((p) => p.id === sessao.userId) ? sessao.userId! : ''
 
   if (erroHoje || erroRecentes || erroModelo || erroFechoCaixaHoje) {
     throw new Error((erroHoje ?? erroRecentes ?? erroModelo ?? erroFechoCaixaHoje)!.message)
   }
 
-  const registosHoje = (deHoje ?? []) as RegistoResumo[]
+  const registosHoje = (deHoje ?? []) as unknown as RegistoResumo[]
   const modelo = (modeloData ?? []) as ChecklistModelo[]
-  const historico = (recentes ?? []) as RegistoResumo[]
+  const historico = (recentes ?? []) as unknown as RegistoResumo[]
+  const emFalta = TIPOS.reduce((s, t) => s + itensEmFalta(t, modelo.filter((m) => m.tipo === t)).length, 0)
   const fechoCaixaFeitoHoje = fechoCaixaHoje != null
 
   return (
@@ -84,9 +92,14 @@ export default async function ChecklistPage({
         Abertura / Fecho
       </h1>
       <p className="mt-1 text-sm text-muted">
-        {estudio.nome} · checklist diária do estúdio.
+        {estudio.nome} · checklist diária do estúdio. {TEXTO_CHECKLIST.Abertura.nota.split('.')[0]}.
       </p>
 
+      {ok !== undefined && (
+        <p className="mt-4 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+          {ok === '0' ? 'A checklist já tinha todos os itens do formulário.' : `Checklist atualizada: ${ok} itens acrescentados.`}
+        </p>
+      )}
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {error}
@@ -106,6 +119,7 @@ export default async function ChecklistPage({
                 <>
                   <p className="mt-1 text-sm text-muted">
                     {registo.concluidos} de {registo.total} feitos · {registo.hora.slice(0, 5)}
+                    {registo.pt?.nome ? ` · ${registo.pt.nome.trim()}` : ''}
                   </p>
                   <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                     <div
@@ -127,6 +141,24 @@ export default async function ChecklistPage({
                   <input type="hidden" name="estudio_slug" value={slug} />
                   <input type="hidden" name="estudio_id" value={estudio.id} />
                   <input type="hidden" name="tipo" value={tipo} />
+                  <label className="mb-3 block text-xs font-medium text-muted">
+                    Responsável
+                    <select
+                      name="responsavel_id"
+                      required
+                      defaultValue={responsavelOmissao}
+                      className="mt-1 block w-full rounded-md border border-border-subtle bg-background px-2 py-1.5 text-sm text-foreground"
+                    >
+                      <option value="" disabled>
+                        Quem está a fazer?
+                      </option>
+                      {equipa.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nome.trim()}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <SubmitButton
                     pendingText="A iniciar…"
                     className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
@@ -170,6 +202,7 @@ export default async function ChecklistPage({
           >
             <span>
               {fmt(r.data)} · {r.tipo}
+              {r.pt?.nome ? <span className="text-zinc-500"> · {r.pt.nome.trim()}</span> : null}
             </span>
             <span className="text-xs text-zinc-500">
               {r.concluidos} de {r.total} feitos
@@ -188,6 +221,35 @@ export default async function ChecklistPage({
             <p className="text-xs text-zinc-500">
               Alterar aqui não muda checklists já iniciadas — só as próximas.
             </p>
+            <div className="rounded-lg border border-border-subtle p-3">
+              <p className="text-sm font-semibold text-foreground">Checklist oficial (formulário de Abertura/Fecho)</p>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                {emFalta > 0
+                  ? `Faltam ${emFalta} itens do formulário nesta checklist.`
+                  : 'Esta checklist já tem todos os itens do formulário.'}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {emFalta > 0 && (
+                  <form action={aplicarChecklistPadrao}>
+                    <input type="hidden" name="estudio_slug" value={slug} />
+                    <input type="hidden" name="modo" value="acrescentar" />
+                    <SubmitButton pendingText="A acrescentar…" className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-black hover:bg-brand-strong">
+                      Acrescentar os {emFalta} itens em falta
+                    </SubmitButton>
+                  </form>
+                )}
+                <ConfirmarAcao
+                  action={aplicarChecklistPadrao}
+                  confirmacao="Substituir a checklist atual pela do formulário? Os itens atuais que não estão no formulário deixam de aparecer nas próximas checklists."
+                >
+                  <input type="hidden" name="estudio_slug" value={slug} />
+                  <input type="hidden" name="modo" value="substituir" />
+                  <button type="submit" className="rounded-full border border-border-strong px-4 py-1.5 text-xs font-semibold hover:bg-foreground/[.08]">
+                    Usar só a checklist do formulário
+                  </button>
+                </ConfirmarAcao>
+              </div>
+            </div>
             {TIPOS.map((tipo) => {
               const itens = modelo.filter((m) => m.tipo === tipo)
               return (

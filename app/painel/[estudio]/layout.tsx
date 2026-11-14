@@ -24,13 +24,6 @@ const SUBPASTAS_CLIENTES = new Set(['treinos', 'avaliacoes'])
 // do computador/tablet (ver NavLinkPastaHorarios).
 const SUBPASTAS_HORARIOS = new Set(['assiduidade', 'ferias'])
 
-// Conta pessoal (instrutor registado em /registo, fora das 4 contas
-// fixas do negócio — ver ehContaFixa): só vê estes módulos: Treinos
-// completo, Agenda/Horários só para ver, e o seu Registo de Horas e Férias (a escrita é bloqueada nas
-// próprias ações, ver app/painel/[estudio]/agenda/actions.ts). Tudo o
-// resto fica de fora, mesmo do menu.
-const MODULOS_CONTA_INDIVIDUAL = new Set(['treinos', 'agenda', 'horarios', 'assiduidade', 'ferias'])
-
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
 
@@ -57,7 +50,10 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
 
   const podeAceder = (m: (typeof MODULOS)[number]) => {
     if (!m.pronto) return false
-    if (contaIndividual) return MODULOS_CONTA_INDIVIDUAL.has(m.id)
+    // Conta pessoal: só os módulos que a Administração lhe deu
+    // (Administração → Contas); por omissão Treinos, Agenda, Horários,
+    // Registo de Horas e Férias.
+    if (contaIndividual) return sessao.modulos.includes(m.id)
     return !m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao)
   }
   const tituloBloqueado = (m: (typeof MODULOS)[number]) => {

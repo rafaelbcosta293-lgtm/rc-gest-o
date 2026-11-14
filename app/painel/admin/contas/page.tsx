@@ -7,7 +7,22 @@ import { resolverIdPorEmail } from './dados'
 import { definirPasswordEstudio, corrigirAcessoEstudio } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import PasswordInput from '@/components/PasswordInput'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import GestaoEquipa from './GestaoEquipa'
 import type { SupabaseClient } from '@supabase/supabase-js'
+
+const MENSAGENS_OK: Record<string, string> = {
+  'perfil-criado': 'Perfil de instrutor criado (sem acesso à app).',
+  'conta-criada': 'Conta criada — o instrutor já pode entrar com o email e a palavra-passe indicados.',
+  guardado: 'Alterações guardadas. As permissões novas aplicam-se no próximo login (ou dentro de uma hora).',
+  'acesso-criado': 'Acesso criado — o instrutor já pode entrar na app.',
+  'acesso-atualizado': 'Acesso atualizado.',
+  'acesso-removido': 'Acesso retirado. O perfil mantém-se.',
+  desativado: 'Instrutor desativado.',
+  reativado: 'Instrutor reativado — escolhe os estúdios onde trabalha.',
+  eliminado: 'Instrutor eliminado.',
+  'desativado-com-historico': 'Este instrutor tem histórico na app, por isso não foi apagado: ficou desativado e sem acesso.',
+}
 
 type LigacaoEstudio = { estudio_id: number; estudio: { nome: string } | null }
 
@@ -33,11 +48,13 @@ async function acessoAtual(supabase: SupabaseClient, email: string) {
 export default async function ContasEstudiosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; sucesso?: string; sucessoAcesso?: string; estudio?: string }>
+  searchParams: Promise<{ error?: string; sucesso?: string; sucessoAcesso?: string; estudio?: string; ok?: string }>
 }) {
-  const { error, sucesso, sucessoAcesso, estudio: estudioParam } = await searchParams
+  const { error, sucesso, sucessoAcesso, estudio: estudioParam, ok } = await searchParams
   const supabase = await createClient()
-  const estudios = filtrarPorEstudio(await getEstudios(supabase), estudioParam)
+  const [todosEstudios, sessao] = await Promise.all([getEstudios(supabase), getSessaoAtual()])
+  const estudios = filtrarPorEstudio(todosEstudios, estudioParam)
+  const { ehAdmin } = papeisDaSessao(sessao)
 
   const comAcesso = await Promise.all(
     estudios.map(async (estudio) => {
@@ -58,12 +75,15 @@ export default async function ContasEstudiosPage({
       </Link>
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
-        Contas de login dos estúdios
+        Contas
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Cada estúdio tem uma conta de email própria, partilhada pela equipa — separada das fichas
-        dos instrutores. Aqui vês a que estúdio cada conta está ligada, e podes corrigir ou definir
-        uma nova palavra-passe.
+        Contas partilhadas dos estúdios (em cima) e instrutores e contas pessoais (em baixo).
+      </p>
+      <h2 className="mt-6 text-xl font-bold tracking-tight text-foreground">Contas de login dos estúdios</h2>
+      <p className="mt-1 text-sm text-muted">
+        Cada estúdio tem uma conta de email própria, partilhada pela equipa. Aqui vês a que estúdio cada conta está
+        ligada, e podes corrigir ou definir uma nova palavra-passe.
       </p>
 
       {sucesso && (
@@ -74,6 +94,11 @@ export default async function ContasEstudiosPage({
       {sucessoAcesso && (
         <p className="mt-4 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
           Acesso corrigido.
+        </p>
+      )}
+      {ok && MENSAGENS_OK[ok] && (
+        <p className="mt-4 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+          {MENSAGENS_OK[ok]}
         </p>
       )}
       {error && (
@@ -154,6 +179,8 @@ export default async function ContasEstudiosPage({
           )
         })}
       </div>
+
+      {ehAdmin && <GestaoEquipa estudios={todosEstudios.map((e) => ({ id: e.id, nome: e.nome }))} />}
     </div>
   )
 }

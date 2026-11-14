@@ -1,11 +1,16 @@
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import type { Perfil } from '@/lib/supabase/database.types'
+import { permissoesDaConta } from './acessos'
 
 export type SessaoAtual = {
   userId: string | null
   email: string | null
   perfil: Pick<Perfil, 'id' | 'nome' | 'papel'> | null
+  // Módulos que uma conta pessoal pode abrir e se pode editar a Agenda
+  // (definidos pela Administração — ver permissoesDaConta).
+  modulos: string[]
+  agendaEscrita: boolean
 }
 
 // "Quem sou eu e qual é o meu papel" é preciso em quase todas as páginas
@@ -18,7 +23,7 @@ export const getSessaoAtual = cache(async (): Promise<SessaoAtual> => {
   const { data: userData } = await supabase.auth.getUser()
   const user = userData.user
   if (!user) {
-    return { userId: null, email: null, perfil: null }
+    return { userId: null, email: null, perfil: null, ...permissoesDaConta(null) }
   }
 
   const { data: perfil } = await supabase
@@ -27,7 +32,7 @@ export const getSessaoAtual = cache(async (): Promise<SessaoAtual> => {
     .eq('id', user.id)
     .maybeSingle()
 
-  return { userId: user.id, email: user.email ?? null, perfil }
+  return { userId: user.id, email: user.email ?? null, perfil, ...permissoesDaConta(user.app_metadata) }
 })
 
 export function papeisDaSessao(sessao: SessaoAtual) {

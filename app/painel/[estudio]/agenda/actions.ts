@@ -74,15 +74,16 @@ export async function pesquisarAgenda(estudioId: number, texto: string): Promise
   }))
 }
 
-// Uma conta pessoal (registada por um instrutor em /registo, fora das
-// 4 contas fixas do negócio) só pode VER a Agenda — todas as ações que
+// Uma conta pessoal (fora das 4 contas fixas do negócio) só pode VER a
+// Agenda, a não ser que a Administração lhe tenha dado permissão para
+// a editar (Administração → Contas) — todas as ações que
 // escrevem chamam isto primeiro, nunca confiando só em a UI escondido
 // os botões (um pedido direto à ação continuaria a escrever sem isto).
 const MENSAGEM_AGENDA_SO_LEITURA = 'A tua conta só pode ver a Agenda — pede a um responsável para fazer esta alteração.'
 
 async function bloquearEscritaNaAgenda(): Promise<string | null> {
   const sessao = await getSessaoAtual()
-  return ehContaFixa(sessao.email) ? null : MENSAGEM_AGENDA_SO_LEITURA
+  return ehContaFixa(sessao.email) || sessao.agendaEscrita ? null : MENSAGEM_AGENDA_SO_LEITURA
 }
 
 type LinhaParaReconciliar = { id: string; cliente_id: string | null; data: string; pt_id: string | null }

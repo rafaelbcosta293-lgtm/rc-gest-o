@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Estudio, Perfil } from '@/lib/supabase/database.types'
+import { idsContasPartilhadas } from './contasPartilhadas'
 
 export async function getEstudios(supabase: SupabaseClient): Promise<Estudio[]> {
   const { data } = await supabase
@@ -34,15 +35,20 @@ export async function getEstudioPorSlug(
 }
 
 // Só quem o admin autorizou (em "Equipa") aparece para escolher como PT
-// dentro deste estúdio — em vez de toda a gente registada na app.
+// dentro deste estúdio — em vez de toda a gente registada na app. As
+// contas partilhadas (Coordenação, RC Fátima, RC Leiria) ficam de fora:
+// não são instrutores. "manter" é o id que um registo antigo já tem
+// escolhido — esse continua na lista, para editar o registo não lhe
+// trocar o instrutor sem ninguém dar por isso.
 export async function getEquipaDoEstudio(
   supabase: SupabaseClient,
-  estudioId: number
+  estudioId: number,
+  manter?: string | null
 ): Promise<Pick<Perfil, 'id' | 'nome'>[]> {
-  const { data, error } = await supabase
-    .from('perfis_estudios')
-    .select('perfil:perfis!perfil_id(id, nome)')
-    .eq('estudio_id', estudioId)
+  const [{ data, error }, partilhadas] = await Promise.all([
+    supabase.from('perfis_estudios').select('perfil:perfis!perfil_id(id, nome)').eq('estudio_id', estudioId),
+    idsContasPartilhadas(),
+  ])
 
   if (error) {
     throw new Error(error.message)
@@ -50,7 +56,7 @@ export async function getEquipaDoEstudio(
 
   const pessoas = (data ?? [])
     .map((d) => d.perfil as unknown as Pick<Perfil, 'id' | 'nome'> | null)
-    .filter((p): p is Pick<Perfil, 'id' | 'nome'> => p !== null)
+    .filter((p): p is Pick<Perfil, 'id' | 'nome'> => p !== null && (!partilhadas.has(p.id) || p.id === manter))
 
   return pessoas.sort((a, b) => a.nome.localeCompare(b.nome))
 }

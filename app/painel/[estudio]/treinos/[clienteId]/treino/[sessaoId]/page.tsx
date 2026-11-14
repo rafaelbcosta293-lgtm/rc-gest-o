@@ -65,7 +65,7 @@ export default async function EditarTreinoPage({
     notFound()
   }
 
-  const pts = await getEquipaDoEstudio(supabase, estudio.id)
+  const pts = await getEquipaDoEstudio(supabase, estudio.id, sessao.pt_id)
 
   const historico = (historicoData ?? []) as unknown as SessaoHistorico[]
   const ultimosValores: Record<

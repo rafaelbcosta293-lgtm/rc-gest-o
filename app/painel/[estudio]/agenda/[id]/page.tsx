@@ -57,7 +57,7 @@ export default async function EventoAgendaPage({
 
   const [pts, { data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }, { outroEstudio, clientesOutroEstudio }] =
     await Promise.all([
-      getEquipaDoEstudio(supabase, estudio.id),
+      getEquipaDoEstudio(supabase, estudio.id, evento.pt_id),
       supabase
         .from('clientes')
         .select('id, nome')

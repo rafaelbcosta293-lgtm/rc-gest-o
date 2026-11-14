@@ -31,7 +31,7 @@ export default async function EditarAvaliacaoPage({
     notFound()
   }
 
-  const pts = await getEquipaDoEstudio(supabase, estudio.id)
+  const pts = await getEquipaDoEstudio(supabase, estudio.id, avaliacao.pt_id)
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">

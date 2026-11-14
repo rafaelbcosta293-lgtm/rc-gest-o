@@ -32,3 +32,15 @@ describe('perfis sem conta', () => {
     expect(ehEmailSemConta('alguem@gmail.com')).toBe(false)
   })
 })
+
+describe('ehContaPartilhada', () => {
+  it('inclui a Coordenação e as contas dos estúdios, mas não a do dono nem contas pessoais', async () => {
+    const { ehContaPartilhada, EMAIL_GERAL, EMAIL_POR_ESTUDIO } = await import('./acessos')
+    expect(ehContaPartilhada(EMAIL_GERAL)).toBe(true)
+    expect(ehContaPartilhada(` ${EMAIL_POR_ESTUDIO.fatima.toUpperCase()} `)).toBe(true)
+    expect(ehContaPartilhada(EMAIL_POR_ESTUDIO.leiria)).toBe(true)
+    expect(ehContaPartilhada('rafaelbcosta293@gmail.com')).toBe(false)
+    expect(ehContaPartilhada('instrutor@example.com')).toBe(false)
+    expect(ehContaPartilhada(null)).toBe(false)
+  })
+})

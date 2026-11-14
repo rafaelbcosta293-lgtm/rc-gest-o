@@ -72,6 +72,14 @@ export function ehContaFixa(email: string | null): boolean {
   return e === EMAIL_DONO || e === EMAIL_GERAL || Object.values(EMAIL_POR_ESTUDIO).includes(e)
 }
 
+// As contas que a equipa partilha (Coordenação e a de cada estúdio) —
+// ao contrário da do dono, não correspondem a nenhuma pessoa.
+export function ehContaPartilhada(email: string | null): boolean {
+  const e = normalizado(email)
+  if (!e) return false
+  return e === EMAIL_GERAL || Object.values(EMAIL_POR_ESTUDIO).includes(e)
+}
+
 export function podeAcederCoordenacao(email: string | null): boolean {
   const e = normalizado(email)
   return e === EMAIL_DONO || e === EMAIL_GERAL

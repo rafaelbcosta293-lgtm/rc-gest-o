@@ -70,7 +70,7 @@ export default async function LeadPage({
 
   const { ehGestao } = papeisDaSessao(sessao)
   const outrosEstudios = todosEstudios.filter((e) => e.slug !== slug)
-  const pts = await getEquipaDoEstudio(supabase, estudio.id)
+  const pts = await getEquipaDoEstudio(supabase, estudio.id, lead.responsavel_id)
 
   const contactos = (contactosData ?? []) as unknown as (LeadContacto & {
     feito: { nome: string } | null

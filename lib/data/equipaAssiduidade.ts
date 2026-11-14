@@ -37,14 +37,25 @@ function configPorOmissao(perfilId: string, estudioId: number): ConfigAssiduidad
 // Instrutores ativos de um estúdio, com a sua configuração (ou a de
 // omissão: 8h/dia, contrato, este estúdio).
 export async function equipaAssiduidade(supabase: SupabaseClient, estudioId: number): Promise<MembroEquipa[]> {
-  const [{ data: ligacoes, error }, fixas] = await Promise.all([
+  const [{ data: ligacoes, error }, { data: semEstudio }, fixas] = await Promise.all([
     supabase.from('perfis_estudios').select('perfil:perfis!perfil_id(id, nome, ativo)').eq('estudio_id', estudioId),
+    // Um perfil de instrutor criado sem estúdio atribuído conta para
+    // todos os estúdios — senão não aparecia em lado nenhum.
+    supabase.from('perfis').select('id, nome, ativo, ligacoes:perfis_estudios(estudio_id)').eq('ativo', true),
     idsContasFixas(),
   ])
   if (error) throw new Error(error.message)
-  const pessoas = (ligacoes ?? [])
-    .map((l) => l.perfil as unknown as { id: string; nome: string; ativo: boolean } | null)
-    .filter((p): p is { id: string; nome: string; ativo: boolean } => !!p && p.ativo && !fixas.has(p.id))
+  type Pessoa = { id: string; nome: string; ativo: boolean }
+  const doEstudio = (ligacoes ?? []).map((l) => l.perfil as unknown as Pessoa | null)
+  const soltos = ((semEstudio ?? []) as unknown as (Pessoa & { ligacoes: unknown[] | null })[]).filter(
+    (p) => (p.ligacoes ?? []).length === 0
+  )
+  const vistos = new Set<string>()
+  const pessoas = [...doEstudio, ...soltos].filter((p): p is Pessoa => {
+    if (!p || !p.ativo || fixas.has(p.id) || vistos.has(p.id)) return false
+    vistos.add(p.id)
+    return true
+  })
   if (pessoas.length === 0) return []
   const { data: configs, error: erroConfig } = await supabase
     .from('config_assiduidade')

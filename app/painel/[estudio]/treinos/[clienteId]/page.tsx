@@ -54,7 +54,11 @@ export default async function FichaClientePage({
   }
 
   const lista = (sessoesData ?? []) as unknown as SessaoComExtras[]
-  const ultima = lista[0]
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
+  // A nota para o próximo PT vem do último treino FEITO (registado) —
+  // um treino só planeado ainda não deixou nota nenhuma.
+  const ultima = lista.find((s) => s.correu)
+  const porRegistar = lista.filter((s) => !s.correu && s.data <= hoje).length
   const a = ALERTAS[cliente.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
 
   return (
@@ -133,6 +137,11 @@ export default async function FichaClientePage({
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
         Histórico de treinos
+        {porRegistar > 0 && (
+          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 normal-case tracking-normal text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            {porRegistar === 1 ? '1 treino por registar' : `${porRegistar} treinos por registar`}
+          </span>
+        )}
       </h2>
 
       {lista.length === 0 && (
@@ -164,12 +173,20 @@ export default async function FichaClientePage({
                     <strong className="text-sm text-foreground">
                       {s.foco || 'Treino'}
                     </strong>
-                    {s.correu && (
+                    {s.correu ? (
                       <span
                         className="rounded-full px-2 py-0.5 text-xs font-medium"
                         style={{ background: cc.bg, color: cc.tx }}
                       >
                         {s.correu}
+                      </span>
+                    ) : s.data > hoje ? (
+                      <span className="rounded-full border border-dashed border-sky-400 px-2 py-0.5 text-xs font-medium text-sky-700 dark:text-sky-300">
+                        Planeado
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                        Por registar — como correu?
                       </span>
                     )}
                     <span className="text-xs text-zinc-500">{s.pt?.nome ?? '—'}</span>

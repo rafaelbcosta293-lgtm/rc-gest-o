@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { getCatalogoExercicios } from '@/lib/data/catalogo'
 import type { ItemCatalogo } from '@/lib/data/catalogo'
-import { atualizarSessao } from '../actions'
+import { guardarPlano, registarTreino } from '../actions'
 import TreinoForm, { type LinhaExercicio } from '../../../TreinoForm'
 import type { BlocoTipo } from '@/lib/data/constantes'
 
@@ -24,10 +24,11 @@ export default async function EditarTreinoPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string; clienteId: string; sessaoId: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; ok?: string }>
 }) {
   const { estudio: slug, clienteId, sessaoId } = await params
-  const { error } = await searchParams
+  const { error, ok } = await searchParams
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
 
   const supabase = await createClient()
   const [
@@ -114,7 +115,7 @@ export default async function EditarTreinoPage({
         ← {cliente.nome}
       </Link>
       <h1 className="mt-3 text-2xl font-semibold text-foreground">
-        Editar treino
+        {sessao.correu ? 'Treino' : sessao.data > hoje ? 'Planear treino' : 'Treino de hoje'}
       </h1>
       <p className="mt-1 text-sm text-muted">{cliente.nome}</p>
 
@@ -136,8 +137,11 @@ export default async function EditarTreinoPage({
           nota_proxima: sessao.nota_proxima,
           exercicios,
         }}
-        action={atualizarSessao}
+        hoje={hoje}
+        acaoPlano={guardarPlano}
+        acaoRegisto={registarTreino}
         error={error}
+        ok={ok}
       />
     </div>
   )

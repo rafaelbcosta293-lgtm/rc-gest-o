@@ -115,8 +115,11 @@ export default function TreinoForm({
   catalogo: catalogoInicial,
   ultimosValores = {},
   maisUsados = [],
-  action,
+  hoje,
+  acaoPlano,
+  acaoRegisto,
   error,
+  ok,
 }: {
   estudioSlug: string
   estudioId: number
@@ -126,15 +129,18 @@ export default function TreinoForm({
   catalogo: CatalogoExercicios
   ultimosValores?: Record<string, ValoresSugeridos>
   maisUsados?: ItemCatalogo[]
-  action: (formData: FormData) => void
+  hoje: string
+  acaoPlano: (formData: FormData) => void
+  acaoRegisto: (formData: FormData) => void
   error?: string
+  ok?: string
 }) {
   const sessaoId = inicial.id
   const [catalogo, setCatalogo] = useState(catalogoInicial)
   const [data, setData] = useState(inicial.data)
   const [pt, setPt] = useState(inicial.pt_id ?? pts[0]?.id ?? '')
   const [foco, setFoco] = useState(inicial.foco ?? '')
-  const [correu, setCorreu] = useState(inicial.correu ?? 'Bem')
+  const [correu, setCorreu] = useState(inicial.correu ?? '')
   const [tipoNota, setTipoNota] = useState(inicial.tipo_nota ?? 'Normal')
   const [notaProxima, setNotaProxima] = useState(inicial.nota_proxima ?? '')
   const [exercicios, setExercicios] = useState<LinhaExercicio[]>(
@@ -143,7 +149,10 @@ export default function TreinoForm({
   const [estados, setEstados] = useState<Record<string, EstadoLinha>>({})
   const [seletorPara, setSeletorPara] = useState<string | null>(null)
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
-  const { marcarSujo } = useAvisoSairSemGuardar()
+  const { marcarSujo, limparSujo } = useAvisoSairSemGuardar()
+  const registado = !!inicial.correu
+  // O registo de como correu só abre no dia do treino (ou depois).
+  const jaAconteceu = data <= hoje
 
   const guardarLinha = async (linha: LinhaExercicio, ordem: number) => {
     if (!linha.exercicio_nome.trim()) return
@@ -296,7 +305,7 @@ export default function TreinoForm({
 
       <div>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Plano</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">1 · Plano (antes do treino)</h2>
           <span className="text-[11px] text-zinc-400">guarda-se sozinho, exercício a exercício</span>
         </div>
 
@@ -435,36 +444,23 @@ export default function TreinoForm({
         }}
       />
 
-      <form action={action} onChange={marcarSujo} className="flex flex-col gap-6">
+      {ok === 'plano' && (
+        <p className="rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">Plano guardado.</p>
+      )}
+
+      <form action={acaoPlano} onChange={marcarSujo} onSubmit={limparSujo} className="flex flex-col gap-3">
         <input type="hidden" name="estudio_slug" value={estudioSlug} />
         <input type="hidden" name="estudio_id" value={estudioId} />
         <input type="hidden" name="cliente_id" value={clienteId} />
         <input type="hidden" name="id" value={sessaoId} />
-
-        {/* Os 5 campos numa só linha (em ecrãs largos) — pedido do dono
-            depois de gostar da grelha do plano mais acima; deixou de
-            fazer sentido um cabeçalho "Fecho do treino" à parte só
-            para "Como correu"/"Tipo de nota" quando já estão lado a
-            lado com Data/PT/Foco. */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[160px_1fr_2fr_auto] sm:items-end">
           <div className="flex flex-col gap-1">
-            <label className={labelCompactoCls}>Data</label>
-            <input
-              type="date"
-              name="data"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className={inputCls}
-            />
+            <label className={labelCompactoCls}>Data do treino</label>
+            <input type="date" name="data" value={data} onChange={(e) => setData(e.target.value)} className={inputCls} />
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelCompactoCls}>PT</label>
-            <select
-              name="pt_id"
-              value={pt}
-              onChange={(e) => setPt(e.target.value)}
-              className={inputCls}
-            >
+            <select name="pt_id" value={pt} onChange={(e) => setPt(e.target.value)} className={inputCls}>
               {pts.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.nome}
@@ -482,64 +478,116 @@ export default function TreinoForm({
               className={inputCls}
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label className={labelCompactoCls}>Como correu</label>
-            <select
-              name="correu"
-              value={correu ?? 'Bem'}
-              onChange={(e) => setCorreu(e.target.value)}
-              className={inputCls}
-            >
-              {Object.keys(CORREU).map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className={labelCompactoCls}>Tipo de nota</label>
-            <select
-              name="tipo_nota"
-              value={tipoNota ?? 'Normal'}
-              onChange={(e) => setTipoNota(e.target.value)}
-              className={inputCls}
-            >
-              {['Normal', 'Ajuste', 'Excelente', 'Lesão', 'Doença', 'Prova/Evento'].map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 dark:bg-amber-950">
-          <label className="block text-sm font-semibold text-amber-800 dark:text-amber-200">
-            ⚑ Nota para o próximo treino
-            <span className="font-normal">
-              {' '}
-              — é isto que o próximo PT vai ler antes de começar
-            </span>
-          </label>
-          <textarea
-            name="nota_proxima"
-            rows={4}
-            value={notaProxima}
-            onChange={(e) => setNotaProxima(e.target.value)}
-            className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm dark:bg-zinc-900"
-          />
-        </div>
-
-        <div className="flex justify-end gap-3">
           <SubmitButton
             pendingText="A guardar…"
-            className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+            className="rounded-full border border-border-strong px-5 py-2 text-sm font-bold hover:bg-foreground/[.08]"
           >
-            Guardar treino
+            Guardar plano
           </SubmitButton>
         </div>
       </form>
+
+      <section
+        className={`rounded-2xl border-2 p-4 ${
+          jaAconteceu ? 'border-brand/60 bg-surface' : 'border-dashed border-border-subtle bg-surface/60'
+        }`}
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">2 · Depois do treino</h2>
+          {registado && <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">✓ Treino registado</span>}
+        </div>
+
+        {!jaAconteceu ? (
+          <p className="mt-2 text-sm text-muted">
+            Disponível a partir do dia do treino. Até lá, prepara o plano acima — os exercícios ficam guardados sozinhos.
+          </p>
+        ) : (
+          <form action={acaoRegisto} onChange={marcarSujo} onSubmit={limparSujo} className="mt-3 flex flex-col gap-4">
+            <input type="hidden" name="estudio_slug" value={estudioSlug} />
+            <input type="hidden" name="cliente_id" value={clienteId} />
+            <input type="hidden" name="id" value={sessaoId} />
+            <input type="hidden" name="correu" value={correu} />
+            <input type="hidden" name="tipo_nota" value={tipoNota} />
+
+            <div>
+              <p className={labelCompactoCls}>Como correu?</p>
+              <div className="mt-1.5 flex flex-wrap gap-2" role="radiogroup" aria-label="Como correu">
+                {(Object.keys(CORREU) as (keyof typeof CORREU)[]).map((k) => {
+                  const ativo = correu === k
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      role="radio"
+                      aria-checked={ativo}
+                      onClick={() => {
+                        setCorreu(k)
+                        marcarSujo()
+                      }}
+                      className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        ativo ? 'border-transparent' : 'border-border-subtle text-muted hover:text-foreground'
+                      }`}
+                      style={ativo ? { background: CORREU[k].bg, color: CORREU[k].tx } : undefined}
+                    >
+                      {k}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className={labelCompactoCls}>Tipo de nota</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Tipo de nota">
+                {['Normal', 'Ajuste', 'Excelente', 'Lesão', 'Doença', 'Prova/Evento'].map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="radio"
+                    aria-checked={tipoNota === k}
+                    onClick={() => {
+                      setTipoNota(k)
+                      marcarSujo()
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                      tipoNota === k
+                        ? 'border-brand bg-brand/15 text-foreground'
+                        : 'border-border-subtle text-muted hover:text-foreground'
+                    }`}
+                  >
+                    {k}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 dark:bg-amber-950">
+              <label className="block text-sm font-semibold text-amber-800 dark:text-amber-200">
+                ⚑ Nota para o próximo treino
+                <span className="font-normal"> — é isto que o próximo PT vai ler antes de começar</span>
+              </label>
+              <textarea
+                name="nota_proxima"
+                rows={3}
+                value={notaProxima}
+                onChange={(e) => setNotaProxima(e.target.value)}
+                className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm dark:bg-zinc-900"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {!correu && <span className="text-xs text-muted">Escolhe como correu para concluir.</span>}
+              <SubmitButton
+                pendingText="A registar…"
+                disabled={!correu}
+                className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+              >
+                {registado ? 'Atualizar registo' : 'Concluir treino'}
+              </SubmitButton>
+            </div>
+          </form>
+        )}
+      </section>
     </div>
   )
 }

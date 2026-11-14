@@ -26,16 +26,17 @@ async function marcarPresencaDoTreino(
   })
 }
 
-// Cria já a sessão (em branco) e leva logo para a ficha de edição — para
-// o PT poder ir registando cada exercício em tempo real, durante o
-// treino, sem ter de preencher tudo antes de gravar nada pela primeira
-// vez.
+const hojeLisboa = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
+
+// "Planear treino": cria a sessão (em branco) e leva logo para o plano.
+// Planear é ANTES do treino — ainda não conta como presença; isso só
+// acontece quando o treino é registado como feito (registarTreino).
 export async function iniciarTreino(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
   const clienteId = formData.get('cliente_id') as string
   const ptId = (formData.get('pt_id') as string) || null
-  const hoje = new Date().toISOString().slice(0, 10)
+  const data = /^\d{4}-\d{2}-\d{2}$/.test(String(formData.get('data') ?? '')) ? String(formData.get('data')) : hojeLisboa()
   const supabase = await createClient()
 
   const { data: sessao, error } = await supabase
@@ -43,7 +44,7 @@ export async function iniciarTreino(formData: FormData) {
     .insert({
       cliente_id: clienteId,
       estudio_id: estudioId,
-      data: hoje,
+      data,
       pt_id: ptId,
       nota_proxima: '',
     })
@@ -56,17 +57,13 @@ export async function iniciarTreino(formData: FormData) {
     )
   }
 
-  await marcarPresencaDoTreino(supabase, sessao.id, clienteId, hoje, ptId)
-
   revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
-  revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)
   redirect(`/painel/${estudioSlug}/treinos/${clienteId}/treino/${sessao.id}`)
 }
 
-// Só os campos do próprio treino (data, PT, foco, fecho) — os exercícios
-// já ficam guardados um a um por guardarLinhaExercicio/apagarLinhaExercicio
-// enquanto o PT vai preenchendo o plano.
-export async function atualizarSessao(formData: FormData) {
+// ANTES do treino: data, PT e foco (os exercícios já se guardam um a
+// um, à medida que se escrevem). Não mexe em "como correu".
+export async function guardarPlano(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const clienteId = formData.get('cliente_id') as string
   const id = formData.get('id') as string
@@ -74,25 +71,54 @@ export async function atualizarSessao(formData: FormData) {
   const ptId = (formData.get('pt_id') as string) || null
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const { data: sessao, error } = await supabase
     .from('sessoes')
-    .update({
-      data: dataTreino,
-      pt_id: ptId,
-      foco: (formData.get('foco') as string) || null,
-      correu: (formData.get('correu') as string) || null,
-      nota_proxima: formData.get('nota_proxima') as string,
-      tipo_nota: (formData.get('tipo_nota') as string) || null,
-    })
+    .update({ data: dataTreino, pt_id: ptId, foco: (formData.get('foco') as string) || null })
     .eq('id', id)
+    .select('correu')
+    .single()
 
   if (error) {
     redirect(
-      `/painel/${estudioSlug}/treinos/${clienteId}/treino/${id}?error=${encodeURIComponent('Não foi possível guardar as alterações.')}`
+      `/painel/${estudioSlug}/treinos/${clienteId}/treino/${id}?error=${encodeURIComponent('Não foi possível guardar o plano.')}`
     )
   }
 
-  await marcarPresencaDoTreino(supabase, id, clienteId, dataTreino, ptId)
+  // Treino já registado como feito: a presença acompanha a nova data/PT.
+  if (sessao?.correu) await marcarPresencaDoTreino(supabase, id, clienteId, dataTreino, ptId)
+
+  revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)
+  redirect(`/painel/${estudioSlug}/treinos/${clienteId}/treino/${id}?ok=plano`)
+}
+
+// DEPOIS do treino: como correu, tipo de nota e nota para o próximo.
+// Só a partir do dia do treino — e é aqui que conta como presença.
+export async function registarTreino(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const clienteId = formData.get('cliente_id') as string
+  const id = formData.get('id') as string
+  const correu = (formData.get('correu') as string) || ''
+  const voltar = (erro: string): never =>
+    redirect(`/painel/${estudioSlug}/treinos/${clienteId}/treino/${id}?error=${encodeURIComponent(erro)}`)
+  if (!correu) voltar('Escolhe como correu o treino.')
+
+  const supabase = await createClient()
+  const { data: atual } = await supabase.from('sessoes').select('data, pt_id').eq('id', id).maybeSingle()
+  if (!atual) voltar('Treino não encontrado.')
+  if (atual!.data > hojeLisboa()) voltar('Este treino ainda não aconteceu — o registo de como correu fica disponível no dia do treino.')
+
+  const { error } = await supabase
+    .from('sessoes')
+    .update({
+      correu,
+      tipo_nota: (formData.get('tipo_nota') as string) || 'Normal',
+      nota_proxima: (formData.get('nota_proxima') as string) ?? '',
+    })
+    .eq('id', id)
+  if (error) voltar('Não foi possível registar o treino.')
+
+  await marcarPresencaDoTreino(supabase, id, clienteId, atual!.data, atual!.pt_id)
 
   revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
   revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)

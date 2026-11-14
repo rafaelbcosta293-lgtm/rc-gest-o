@@ -1,69 +1,67 @@
 import { describe, expect, it } from 'vitest'
-import { simular, type EntradasSimulador } from './simulador'
+import { calcularCenario, leadsParaMeta, trajetoria, type Cenario } from './simulador'
 
-function entradas(partial: Partial<EntradasSimulador> = {}): EntradasSimulador {
-  return {
-    leadsPorMes: 100,
-    taxaFecho: 0.1, // 10 clientes novos/mês
-    churnMensal: 0.05,
-    precoMedio: 50,
-    margemBrutaPct: 0.7,
-    nPts: 2,
-    custoHoraPt: 8,
-    horasPorPtPorMes: 80,
-    custoMarketingMensal: 500,
-    terceiroEstudio: false,
-    custosFixosTerceiroEstudio: 0,
-    ...partial,
-  }
+const base: Cenario = {
+  leadsMes: 100,
+  taxaFecho: 0.1, // 10 novos/mês
+  churn: 0.05, // estado estável: 200 clientes
+  arpu: 100,
+  horasPtPorCliente: 4,
+  horasPorPt: 100,
+  custoHoraPt: 10,
+  custoPorLead: 5,
+  custosFixos: 2000,
 }
 
-describe('simular', () => {
-  it('novosClientesPorMes é leads × taxa de fecho', () => {
-    expect(simular(entradas()).novosClientesPorMes).toBe(10)
+describe('calcularCenario', () => {
+  it('liga leads → novos → clientes → MRR → PTs → custos', () => {
+    const r = calcularCenario(base)
+    expect(r.novosMes).toBe(10)
+    expect(r.clientesEstaveis).toBe(200)
+    expect(r.mrr).toBe(20000)
+    expect(r.horasPtMes).toBe(800)
+    expect(r.ptsNecessarios).toBe(8)
+    expect(r.custoPt).toBe(8000)
+    expect(r.custoMarketing).toBe(500)
+    expect(r.custoTotal).toBe(10500)
+    expect(r.margem).toBe(9500)
   })
 
-  it('clientesEstaveis é novos/churn (estado estável), null quando churn é 0', () => {
-    expect(simular(entradas()).clientesEstaveis).toBe(200) // 10 / 0,05
-    expect(simular(entradas({ churnMensal: 0 })).clientesEstaveis).toBeNull()
+  it('valor do cliente a partir da margem de contribuição', () => {
+    const r = calcularCenario(base)
+    expect(r.margemContribuicaoCliente).toBe(60) // 100 − 4h × €10
+    expect(r.ltv).toBe(1200) // 60 / 0,05
+    expect(r.cac).toBe(50) // 500 / 10
+    expect(r.ratioLtvCac).toBe(24)
+    expect(r.pontoEquilibrioClientes).toBeCloseTo(2500 / 60)
+    expect(r.vidaMediaMeses).toBe(20)
   })
 
-  it('mrr fica null quando não há estado estável (sem clientesEstaveis)', () => {
-    expect(simular(entradas({ churnMensal: 0 })).mrr).toBeNull()
+  it('churn 0 não tem estado estável', () => {
+    expect(calcularCenario({ ...base, churn: 0 }).clientesEstaveis).toBeNull()
+  })
+})
+
+describe('leadsParaMeta', () => {
+  it('qualquer meta volta às leads necessárias com os mesmos rácios', () => {
+    expect(leadsParaMeta('novosMes', 20, base)).toBe(200)
+    expect(leadsParaMeta('clientes', 300, base)).toBeCloseTo(150)
+    expect(leadsParaMeta('mrr', 30000, base)).toBeCloseTo(150)
+    expect(leadsParaMeta('pts', 12, base)).toBeCloseTo(150)
+    expect(leadsParaMeta('marketing', 1000, base)).toBe(200)
+    expect(leadsParaMeta('novosMes', 5, { ...base, taxaFecho: 0 })).toBeNull()
   })
 
-  it('custo total soma PTs + marketing, e só soma o 3º estúdio quando ativo', () => {
-    const sem3 = simular(entradas()).custoTotalMensal
-    const com3 = simular(entradas({ terceiroEstudio: true, custosFixosTerceiroEstudio: 1000 })).custoTotalMensal
-    expect(com3 - sem3).toBe(1000)
-    expect(sem3).toBe(2 * 8 * 80 + 500) // 1780
+  it('a meta pedida é reproduzida pelo cenário resultante', () => {
+    const leads = leadsParaMeta('clientes', 300, base)!
+    expect(calcularCenario({ ...base, leadsMes: leads }).clientesEstaveis).toBeCloseTo(300)
   })
+})
 
-  it('margem é mrr - custo total, e margemPct é margem/mrr', () => {
-    const r = simular(entradas())
-    expect(r.mrr).toBe(200 * 50) // 10000
-    expect(r.margem).toBe(10000 - r.custoTotalMensal)
-    expect(r.margemPct).toBeCloseTo(r.margem! / r.mrr!)
-  })
-
-  it('cac é custo de marketing / novos clientes por mês', () => {
-    expect(simular(entradas()).cac).toBe(50) // 500 / 10
-  })
-
-  it('ltv é precoMedio × margemBrutaPct ÷ churn, null sem churn', () => {
-    const r = simular(entradas())
-    expect(r.ltv).toBeCloseTo((50 * 0.7) / 0.05) // 700
-    expect(simular(entradas({ churnMensal: 0 })).ltv).toBeNull()
-  })
-
-  it('ratioLtvCac e mesesParaRecuperarCac derivam de ltv/cac de forma consistente', () => {
-    const r = simular(entradas())
-    expect(r.ratioLtvCac).toBeCloseTo(r.ltv! / r.cac!)
-    expect(r.mesesParaRecuperarCac).toBeCloseTo(r.cac! / (50 * 0.7))
-  })
-
-  it('pontoDeEquilibrioClientes é custo total / preço médio', () => {
-    const r = simular(entradas())
-    expect(r.pontoDeEquilibrioClientes).toBeCloseTo(r.custoTotalMensal / 50)
+describe('trajetoria', () => {
+  it('converge para o estado estável', () => {
+    const t = trajetoria(100, base, 120)
+    expect(t[0].clientes).toBeCloseTo(105) // 100 × 0,95 + 10
+    expect(t[119].clientes).toBeCloseTo(200, 0)
   })
 })

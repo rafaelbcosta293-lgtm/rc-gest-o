@@ -7,6 +7,7 @@ import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import { PALETA, corGraficoEstudio } from '@/lib/data/constantes'
 import { agingDivida, parseValorConfig } from '@/lib/data/financeiro'
+import { carregarPagamentosAnalise } from '@/lib/data/cargaFinanceira'
 import {
   MESES_CURTOS,
   NOMES_MESES,
@@ -58,17 +59,6 @@ const pctSimples = (v: number, casas = 1) => `${(v * 100).toFixed(casas).replace
 const tendencia = (v: number | null, label: string) =>
   v == null ? undefined : { valor: Math.round(v * 1000) / 10, label: `% ${label}` }
 
-type LinhaPagamento = {
-  cliente_id: string
-  valor: number | string
-  desconto: number | string | null
-  metodo: string | null
-  plano_id: string | null
-  data_pagamento: string
-  valido_ate: string
-  clientes: { estudio_id: number } | { estudio_id: number }[]
-}
-
 export default async function FinanceiroPage({
   searchParams,
 }: {
@@ -92,7 +82,7 @@ export default async function FinanceiroPage({
   const tipo: TipoPeriodo = periodoParam === 'ano' || periodoParam === 'sempre' ? periodoParam : 'mes'
 
   const [
-    { data: pagamentosData, error: erroPagamentos },
+    pagamentos,
     { data: clientesData, error: erroClientes },
     { data: planosData },
     { data: comprasData },
@@ -100,15 +90,7 @@ export default async function FinanceiroPage({
     { data: registosData },
     { data: configData },
   ] = await Promise.all([
-    todasAsLinhas<LinhaPagamento>(
-      (de, ate) =>
-        supabase
-          .from('pagamentos_ativos')
-          .select('cliente_id, valor, desconto, metodo, plano_id, data_pagamento, valido_ate, clientes!inner(estudio_id)')
-          .order('id')
-          .range(de, ate),
-      { emParalelo: 6 }
-    ),
+    carregarPagamentosAnalise(supabase, idsEstudios),
     todasAsLinhas<{ id: string; estudio_id: number; estado: string }>(
       (de, ate) => supabase.from('clientes').select('id, estudio_id, estado').order('id').range(de, ate),
       { emParalelo: 2 }
@@ -126,25 +108,9 @@ export default async function FinanceiroPage({
     ),
     supabase.from('config').select('valor').eq('chave', 'custo_hora_pt').maybeSingle(),
   ])
-  if (erroPagamentos) throw new Error(erroPagamentos.message)
   if (erroClientes) throw new Error(erroClientes.message)
 
   // ── Dados base ────────────────────────────────────────────────────
-  const pagamentos: PagamentoAnalise[] = []
-  for (const p of pagamentosData) {
-    const c = Array.isArray(p.clientes) ? p.clientes[0] : p.clientes
-    if (!c || !idsEstudios.has(c.estudio_id)) continue
-    pagamentos.push({
-      cliente_id: p.cliente_id,
-      estudio_id: c.estudio_id,
-      valor: Number(p.valor),
-      desconto: Number(p.desconto ?? 0),
-      metodo: p.metodo,
-      plano_id: p.plano_id,
-      data_pagamento: p.data_pagamento,
-      valido_ate: p.valido_ate,
-    })
-  }
   const clientes = clientesData.filter((c) => idsEstudios.has(c.estudio_id))
   const nomePlano = new Map((planosData ?? []).map((p) => [p.id as string, p.nome as string]))
   const custoHoraPt = parseValorConfig(configData?.valor) ?? 0

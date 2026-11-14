@@ -36,9 +36,11 @@ type Direcao = 'asc' | 'desc'
 
 export default function ListaPagamentosMes({
   linhas,
+  periodo = 'mês',
   mostrarEstudio,
 }: {
   linhas: LinhaPagamentoMes[]
+  periodo?: 'dia' | 'mês' | 'ano'
   mostrarEstudio: boolean
 }) {
   const [filtro, setFiltro] = useState('')
@@ -74,7 +76,7 @@ export default function ListaPagamentosMes({
 
   return (
     <div className="mt-6">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Resumo do mês</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Resumo do {periodo}</h2>
       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Total recebido</h3>
@@ -158,7 +160,7 @@ export default function ListaPagamentosMes({
 
       {linhasFiltradas.length === 0 ? (
         <div className="mt-4 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
-          {filtro ? 'Nenhum pagamento com esse nome.' : 'Sem pagamentos registados neste mês.'}
+          {filtro ? 'Nenhum pagamento com esse nome.' : `Sem pagamentos registados neste ${periodo}.`}
         </div>
       ) : (
         <div className="mt-4 overflow-x-auto rounded-2xl border border-border-subtle shadow-card">

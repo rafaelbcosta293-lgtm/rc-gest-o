@@ -169,6 +169,113 @@ export function NavLinkClientesComSubmenu({
   )
 }
 
+// Horários (escalas), Registo de Horas e Férias vivem na mesma "pasta"
+// da barra do computador/tablet: uma pílula só, que ao passar o rato
+// mostra as três. No telemóvel continuam separadas (não há "hover").
+const PASTA_HORARIOS: { id: string; rotulo: string }[] = [
+  { id: 'horarios', rotulo: 'Escalas' },
+  { id: 'assiduidade', rotulo: 'Registo de Horas' },
+  { id: 'ferias', rotulo: 'Férias' },
+]
+
+export function NavLinkPastaHorarios({
+  slug,
+  bloqueados,
+}: {
+  slug: string
+  // id do módulo → motivo por que não está disponível para esta conta
+  bloqueados: Record<string, string>
+}) {
+  const pathname = usePathname()
+  const soIcone = useModoIcone()
+  const itens = PASTA_HORARIOS.map((p) => ({ ...p, modulo: moduloPorId(p.id), href: `/painel/${slug}/${p.id}` }))
+  const disponiveis = itens.filter((i) => !bloqueados[i.id])
+  const principal = disponiveis[0] ?? itens[0]
+  const { icone: Icone, cor } = moduloPorId('horarios')
+  const ativo = itens.some((i) => estaAtivo(pathname, i.href))
+
+  const [aberto, setAberto] = useState(false)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  const fecharRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pillRef = useRef<HTMLAnchorElement>(null)
+
+  function abrir() {
+    if (fecharRef.current) clearTimeout(fecharRef.current)
+    const rect = pillRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setPos({ left: rect.left, top: rect.bottom + 4 })
+    setAberto(true)
+  }
+  function agendarFechar() {
+    fecharRef.current = setTimeout(() => setAberto(false), 150)
+  }
+  function manterAberto() {
+    if (fecharRef.current) clearTimeout(fecharRef.current)
+  }
+
+  return (
+    <div className="shrink-0" onMouseEnter={abrir} onMouseLeave={agendarFechar} onFocus={abrir} onBlur={agendarFechar}>
+      <Link
+        ref={pillRef}
+        href={principal.href}
+        title={soIcone ? 'Horários' : undefined}
+        aria-haspopup="menu"
+        aria-expanded={aberto}
+        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-medium tracking-tight text-foreground transition-colors ${
+          soIcone ? 'p-2' : 'px-3 py-1.5'
+        } ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
+        style={{
+          background: ativo ? PALETA[cor].bg : undefined,
+          color: ativo ? PALETA[cor].tx : undefined,
+        }}
+      >
+        <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
+        {!soIcone && 'Horários'}
+        {!soIcone && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
+      </Link>
+
+      {aberto &&
+        pos &&
+        createPortal(
+          <div onMouseEnter={manterAberto} onMouseLeave={agendarFechar} className="fixed z-50" style={{ left: pos.left, top: pos.top }}>
+            <div role="menu" className="flex flex-col gap-0.5 rounded-xl border border-border-subtle bg-surface p-1 shadow-pop">
+              {itens.map(({ id, rotulo, modulo: m, href }) => {
+                const subAtivo = estaAtivo(pathname, href)
+                const motivo = bloqueados[id]
+                return motivo ? (
+                  <span
+                    key={id}
+                    title={motivo}
+                    className="flex cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-muted opacity-50"
+                  >
+                    <m.icone className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
+                    {rotulo}
+                  </span>
+                ) : (
+                  <Link
+                    key={id}
+                    role="menuitem"
+                    href={href}
+                    onClick={() => setAberto(false)}
+                    className="flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-brand/[.08]"
+                    style={{
+                      background: subAtivo ? PALETA[m.cor].bg : undefined,
+                      color: subAtivo ? PALETA[m.cor].tx : undefined,
+                    }}
+                  >
+                    <m.icone className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} style={{ color: subAtivo ? undefined : PALETA[m.cor].tx }} />
+                    {rotulo}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
+    </div>
+  )
+}
+
 // Módulo ainda não acessível a este papel — mesma pílula visual dos
 // outros, mas desativada, e também reage ao modo só-ícone.
 export function NavLinkBloqueado({ id, titulo }: { id: string; titulo: string }) {

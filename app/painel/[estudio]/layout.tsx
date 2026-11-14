@@ -13,12 +13,16 @@ import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import BarraAjustavel from '@/components/BarraAjustavel'
 import AvisosFerias from './ferias/AvisosFerias'
-import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPhone, NavLinkBloqueado } from './NavLink'
+import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado } from './NavLink'
 
 // Na barra do computador/tablet, Treinos e Avaliações deixam de ter
 // pílula própria — passam a aparecer só dentro do submenu de Clientes
 // (ver NavLinkClientesComSubmenu). No telemóvel continuam como estavam.
 const SUBPASTAS_CLIENTES = new Set(['treinos', 'avaliacoes'])
+
+// Registo de Horas e Férias ficam dentro da pasta "Horários" na barra
+// do computador/tablet (ver NavLinkPastaHorarios).
+const SUBPASTAS_HORARIOS = new Set(['assiduidade', 'ferias'])
 
 // Conta pessoal (instrutor registado em /registo, fora das 4 contas
 // fixas do negócio — ver ehContaFixa): só vê estes módulos: Treinos
@@ -122,8 +126,19 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
           <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
-            {MODULOS.filter((m) => !subpastasClientesParaFiltrar.has(m.id)).map((m) =>
-              m.id === 'clientes' && !contaIndividual ? (
+            {MODULOS.filter((m) => !subpastasClientesParaFiltrar.has(m.id) && !SUBPASTAS_HORARIOS.has(m.id)).map((m) =>
+              m.id === 'horarios' ? (
+                <NavLinkPastaHorarios
+                  key={m.id}
+                  slug={slug}
+                  bloqueados={Object.fromEntries(
+                    MODULOS.filter((x) => (x.id === 'horarios' || SUBPASTAS_HORARIOS.has(x.id)) && !podeAceder(x)).map((x) => [
+                      x.id,
+                      tituloBloqueado(x),
+                    ])
+                  )}
+                />
+              ) : m.id === 'clientes' && !contaIndividual ? (
                 <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />
               ) : podeAceder(m) ? (
                 <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} />

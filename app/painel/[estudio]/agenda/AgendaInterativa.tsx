@@ -152,8 +152,8 @@ const EVENTO_TEXTO = '#FFFFFF'
 // Blocos ao estilo Google Calendar: cor sólida por tipo, texto branco,
 // cantos arredondados e um fio claro à volta (separa blocos vizinhos).
 const COR_BLOCO: Record<string, string> = {
-  Treino: '#8C7E6D',
-  'Sessão experimental': '#1F8A63',
+  Treino: '#A79B8E',
+  'Sessão experimental': '#A79B8E',
   Avaliação: '#2F6FB5',
   Reunião: '#0B6B43',
   Outro: '#B8860B',

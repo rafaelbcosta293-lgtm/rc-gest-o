@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { fmt } from '@/lib/data/presencas'
 import { desbloquearAdmin } from '../actions'
 import PortaSenha from '@/components/PortaSenha'
@@ -62,9 +62,7 @@ export default async function AdminFaturasPage({
   const sp = await searchParams
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha
         titulo="Administração — Faturas"
@@ -273,7 +271,7 @@ export default async function AdminFaturasPage({
                     <input
                       name="motivo"
                       placeholder="Motivo (opcional, a equipa vê)"
-                      className="w-56 rounded-md border border-border-subtle px-2 py-0.5 text-xs dark:bg-zinc-900"
+                      className="w-56 rounded-lg border border-border-subtle bg-surface px-2 py-0.5 text-xs outline-none focus:border-brand"
                     />
                     <SubmitButton
                       pendingText="…"

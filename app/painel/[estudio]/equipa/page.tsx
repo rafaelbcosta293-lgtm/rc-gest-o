@@ -44,7 +44,7 @@ export default async function EquipaPage({
       >
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Equipa — {estudio.nome}
       </h1>
       <p className="mt-1 text-sm text-muted">
@@ -73,7 +73,7 @@ export default async function EquipaPage({
           return (
             <div
               key={p.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-3"
             >
               <div>
                 <p className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -84,7 +84,7 @@ export default async function EquipaPage({
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-zinc-500">{!p.ativo && 'inativo'}</p>
+                <p className="text-xs text-muted">{!p.ativo && 'inativo'}</p>
               </div>
               <div className="flex items-center gap-2">
                 <form action={mudarPapel} className="flex items-center gap-1">
@@ -93,7 +93,7 @@ export default async function EquipaPage({
                   <select
                     name="papel"
                     defaultValue={p.papel}
-                    className="rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
+                    className="rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand"
                   >
                     {PAPEIS.map((papel) => (
                       <option key={papel} value={papel}>
@@ -103,7 +103,7 @@ export default async function EquipaPage({
                   </select>
                   <SubmitButton
                     pendingText="…"
-                    className="rounded-md border border-border-subtle px-2 py-1.5 text-xs"
+                    className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-brand/[.08]"
                   >
                     Guardar
                   </SubmitButton>
@@ -131,7 +131,7 @@ export default async function EquipaPage({
       </div>
 
       {(perfis ?? []).length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
           Ainda não há ninguém registado.
         </div>
       )}

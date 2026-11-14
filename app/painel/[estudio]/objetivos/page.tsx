@@ -205,7 +205,7 @@ export default async function ObjetivosPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">Objetivos</h1>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Objetivos</h1>
       <p className="mt-1 text-sm text-muted">
         {estudio.nome} · {mes}/{ano} · dia {diaDoMes} de {diasDoMes}
       </p>
@@ -284,8 +284,8 @@ export default async function ObjetivosPage({
         <input type="hidden" name="ano" value={ano} />
         <input type="hidden" name="mes" value={mes} />
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Métrica</label>
-          <select name="metrica" className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900">
+          <label className="text-xs font-medium text-foreground/80">Métrica</label>
+          <select name="metrica" className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand">
             {METRICAS.filter((m) => !m.soAdmin || ehAdmin).map((m) => (
               <option key={m.chave} value={m.chave}>
                 {m.label}
@@ -294,13 +294,13 @@ export default async function ObjetivosPage({
           </select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Meta</label>
+          <label className="text-xs font-medium text-foreground/80">Meta</label>
           <input
             type="number"
             name="meta"
             step="any"
             required
-            className="w-32 rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+            className="w-32 rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
           />
         </div>
         <SubmitButton

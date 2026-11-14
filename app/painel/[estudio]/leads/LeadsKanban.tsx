@@ -109,12 +109,12 @@ export default function LeadsKanban({
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Pesquisar nome ou telefone…"
-          className="min-w-[180px] flex-1 rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30"
+          className="min-w-[180px] flex-1 rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
         <select
           value={filtroResponsavel}
           onChange={(e) => setFiltroResponsavel(e.target.value)}
-          className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+          className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         >
           <option value="">Todos os responsáveis</option>
           {pts.map((p) => (
@@ -126,7 +126,7 @@ export default function LeadsKanban({
         <select
           value={filtroOrigem}
           onChange={(e) => setFiltroOrigem(e.target.value)}
-          className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+          className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         >
           <option value="">Todas as origens</option>
           {origens.map((o) => (
@@ -138,7 +138,7 @@ export default function LeadsKanban({
         <select
           value={filtroTemperatura}
           onChange={(e) => setFiltroTemperatura(e.target.value)}
-          className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+          className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         >
           <option value="">Todas as temperaturas</option>
           {TEMPERATURAS.map((t) => (
@@ -215,7 +215,7 @@ export default function LeadsKanban({
                         e.dataTransfer.setData('text/plain', l.id)
                         e.dataTransfer.effectAllowed = 'move'
                       }}
-                      className="flex flex-col gap-1.5 rounded-lg border border-border-subtle bg-surface p-3 text-left transition-colors hover:border-brand/50 active:cursor-grabbing"
+                      className="flex flex-col gap-1.5 rounded-xl border border-border-subtle bg-surface p-3 text-left transition-colors hover:border-brand/50 active:cursor-grabbing"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <strong className="text-sm text-foreground">{l.nome}</strong>

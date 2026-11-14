@@ -28,19 +28,19 @@ export default function CriarMarcoForm({
           name="titulo"
           required
           placeholder="ex.: Campanha Instagram outubro"
-          className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+          className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
         <input
           type="date"
           name="data"
           required
           defaultValue={hoje}
-          className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+          className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
         <select
           name="tipo"
           defaultValue="Outro"
-          className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+          className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         >
           {TIPOS_MARCO.map((t) => (
             <option key={t} value={t}>
@@ -51,7 +51,7 @@ export default function CriarMarcoForm({
         <select
           name="estudio_id"
           defaultValue=""
-          className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+          className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         >
           <option value="">Ambos os estúdios</option>
           {estudios.map((e) => (
@@ -65,7 +65,7 @@ export default function CriarMarcoForm({
         name="descricao"
         rows={2}
         placeholder="Notas (opcional)"
-        className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+        className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
       />
       <SubmitButton
         pendingText="A guardar…"

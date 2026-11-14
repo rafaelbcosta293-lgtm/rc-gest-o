@@ -3,7 +3,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import { PALETA, corGraficoEstudio } from '@/lib/data/constantes'
 import { agingDivida, parseValorConfig } from '@/lib/data/financeiro'
@@ -68,9 +68,7 @@ export default async function FinanceiroPage({
   const { erroSenha, estudio: estudioParam, periodo: periodoParam, ref } = await searchParams
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha titulo="Administração — Financeiro" destino="/painel/admin/financeiro" action={desbloquearAdmin} erro={erroSenha} />
     )

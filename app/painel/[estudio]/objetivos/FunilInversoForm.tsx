@@ -22,7 +22,7 @@ export default function FunilInversoForm({
           min={1}
           value={desejados}
           onChange={(e) => setDesejados(Math.max(1, Number(e.target.value) || 1))}
-          className="w-20 rounded-md border border-border-subtle px-2 py-1 text-center text-sm dark:bg-zinc-900"
+          className="w-20 rounded-lg border border-border-subtle bg-surface px-2 py-1 text-center text-sm outline-none focus:border-brand"
         />
         clientes novos este mês
       </label>

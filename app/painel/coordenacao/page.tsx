@@ -3,7 +3,7 @@ import { ArrowLeft, CalendarCheck2, KeyRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { desbloquearCoordenacao } from './actions'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { PALETA } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
 import StatCard from '@/components/StatCard'
@@ -18,9 +18,7 @@ export default async function CoordenacaoPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'coordenacao')
-  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'coordenacao')) {
     return (
       <PortaSenha
         titulo="Coordenação"

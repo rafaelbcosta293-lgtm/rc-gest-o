@@ -47,7 +47,7 @@ const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const hm = (h: string | null) => (h ? h.slice(0, 5) : '')
 const dataCurta = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`
 const inputCls =
-  'rounded-md border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground outline-none focus:border-black/30 disabled:opacity-50'
+  'rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground outline-none focus:border-brand disabled:opacity-50'
 
 const MENSAGENS: Record<string, string> = {
   registado: 'Horas registadas.',
@@ -179,7 +179,7 @@ export default async function RegistoHorasPage({
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Registo de Horas</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Registo de Horas</h1>
           <p className="mt-1 text-sm text-muted">
             Entradas e saídas de cada dia, saldo de horas do mês e fecho mensal
             {modo === 'partilhada' ? ' — escolhe o teu nome para registares as tuas horas.' : '.'}

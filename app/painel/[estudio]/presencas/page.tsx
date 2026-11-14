@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
@@ -158,7 +158,7 @@ export default async function PresencasPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Presenças
       </h1>
       <p className="mt-1 text-sm text-muted">
@@ -168,18 +168,20 @@ export default async function PresencasPage({
       <div className="mt-6 flex items-center gap-3">
         <Link
           href={`/painel/${slug}/presencas?ano=${mesAnterior.ano}&mes=${mesAnterior.mes}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Anterior"
         >
-          ←
+          <ChevronLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm font-medium">
           {MESES[mes - 1]} {ano}
         </span>
         <Link
           href={`/painel/${slug}/presencas?ano=${mesSeguinte.ano}&mes=${mesSeguinte.mes}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Seguinte"
         >
-          →
+          <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
 

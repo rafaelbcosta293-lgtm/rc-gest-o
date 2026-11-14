@@ -151,7 +151,7 @@ export default function CamposSessaoExperimental({
           </div>
         )}
         {aberto && termo && filtrados.length === 0 && !aCriarLead && (
-          <div className="absolute top-full z-20 mt-1 w-full rounded-lg border border-border-subtle bg-surface p-3 text-xs text-muted shadow-pop">
+          <div className="absolute top-full z-20 mt-1 w-full rounded-xl border border-border-subtle bg-surface p-3 text-xs text-muted shadow-pop">
             <p>Sem leads com esse nome.</p>
             <button
               type="button"

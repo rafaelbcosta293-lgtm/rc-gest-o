@@ -3,7 +3,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, MessageSquareWarning } from 'luci
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { somarDias } from '@/lib/data/horarios'
 import { fmt } from '@/lib/data/presencas'
 import { desbloquearCoordenacao } from '../actions'
@@ -35,9 +35,7 @@ export default async function CoordenacaoChecklistPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'coordenacao')
-  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'coordenacao')) {
     return <PortaSenha titulo="Coordenação — Checklist" destino={ROTA} action={desbloquearCoordenacao} erro={sp.erroSenha} />
   }
 

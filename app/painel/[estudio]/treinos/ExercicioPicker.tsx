@@ -123,7 +123,7 @@ export default function ExercicioPicker({
           <button
             type="button"
             onClick={fechar}
-            className="rounded-full p-1 text-zinc-500 hover:bg-black/[.06] dark:hover:bg-white/[.08]"
+            className="rounded-full p-1 text-muted hover:bg-black/[.06] dark:hover:bg-white/[.08]"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -138,14 +138,14 @@ export default function ExercicioPicker({
             setErroNovo(null)
           }}
           placeholder="Pesquisar, ou escrever o nome de um exercício novo…"
-          className="mt-4 w-full rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-800"
+          className="mt-4 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
 
         {!emPesquisa && (
           <>
             {maisUsados.length > 0 && (
               <>
-                <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-muted">
                   Mais usados com este cliente
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -178,7 +178,7 @@ export default function ExercicioPicker({
                   className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors ${
                     grupo === parte
                       ? 'bg-white text-foreground shadow-sm dark:bg-zinc-900'
-                      : 'text-zinc-500'
+                      : 'text-muted'
                   }`}
                 >
                   {parte === 'A' ? 'Grupos musculares' : 'Tipo de treino'}
@@ -208,7 +208,7 @@ export default function ExercicioPicker({
 
         <div className="mt-4 flex flex-col gap-1">
           {lista.length === 0 && (
-            <p className="py-4 text-center text-sm text-zinc-500">
+            <p className="py-4 text-center text-sm text-muted">
               {emPesquisa ? 'Nenhum exercício com esse nome.' : 'Escolhe uma categoria acima ou pesquisa pelo nome.'}
             </p>
           )}

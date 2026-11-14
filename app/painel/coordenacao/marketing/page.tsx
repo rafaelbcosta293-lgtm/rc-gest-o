@@ -3,12 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { fmt, MESES, DIAS_SEMANA, diasDoMes, offsetPrimeiroDia } from '@/lib/data/presencas'
 import { somarDias, inicioDaSemana } from '@/lib/data/horarios'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { corEstudio } from '@/lib/data/constantes'
 import { desbloquearCoordenacao } from '../actions'
 import { metricasNoIntervalo, METRICAS_MARKETING, type LeadMarketing, type MetricasMarketing } from '@/lib/data/marketing'
 import PortaSenha from '@/components/PortaSenha'
 import type { Estudio } from '@/lib/supabase/database.types'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const VISTAS = ['dia', 'semana', 'mes', 'ano'] as const
 type Vista = (typeof VISTAS)[number]
@@ -43,7 +44,7 @@ function TabelaMetricas({ metricas }: { metricas: MetricasMarketing }) {
           >
             {metricas[m.chave]}
           </strong>
-          <span className="text-[10px] text-zinc-500">{m.label}</span>
+          <span className="text-[10px] text-muted">{m.label}</span>
         </div>
       ))}
     </div>
@@ -94,7 +95,7 @@ function CalendarioDia({
               }`}
               style={{ background: `rgba(14, 149, 148, ${intensidade})` }}
             >
-              <span className="text-[10px] text-zinc-500">{numero}</span>
+              <span className="text-[10px] text-muted">{numero}</span>
               <strong className="text-sm text-foreground">{valor}</strong>
             </div>
           )
@@ -120,9 +121,9 @@ function ListaSemanas({ leads, anoMes, mesMes }: { leads: LeadMarketing[]; anoMe
         return (
           <div
             key={inicioSemana}
-            className="rounded-lg border border-border-subtle bg-surface p-3"
+            className="rounded-xl border border-border-subtle bg-surface p-3"
           >
-            <p className="text-xs font-medium text-zinc-500">
+            <p className="text-xs font-medium text-muted">
               {fmt(inicioSemana)} – {fmt(fimSemana)}
             </p>
             <TabelaMetricas metricas={metricas} />
@@ -144,9 +145,9 @@ function ListaMeses({ leads, anoSelecionado }: { leads: LeadMarketing[]; anoSele
         return (
           <div
             key={m}
-            className="rounded-lg border border-border-subtle bg-surface p-3"
+            className="rounded-xl border border-border-subtle bg-surface p-3"
           >
-            <p className="text-xs font-medium text-zinc-500">{MESES[m - 1]}</p>
+            <p className="text-xs font-medium text-muted">{MESES[m - 1]}</p>
             <TabelaMetricas metricas={metricas} />
           </div>
         )
@@ -175,7 +176,7 @@ function ResumoAno({ leads, anoSelecionado }: { leads: LeadMarketing[]; anoSelec
           >
             {metricas[m.chave]}
           </strong>
-          <span className="text-xs text-zinc-500">{m.label}</span>
+          <span className="text-xs text-muted">{m.label}</span>
         </div>
       ))}
     </div>
@@ -212,9 +213,7 @@ export default async function MarketingPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'coordenacao')
-  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'coordenacao')) {
     return (
       <PortaSenha
         titulo="Coordenação"
@@ -259,11 +258,11 @@ export default async function MarketingPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
-      <Link href="/painel/coordenacao" className="text-sm text-muted underline">
-        ← Coordenação
+      <Link href="/painel/coordenacao" className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Coordenação
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">Marketing</h1>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Marketing</h1>
       <p className="mt-1 text-sm text-muted">
         {estudios.map((e) => e.nome).join(' e ')} · funil de leads ao longo do tempo, lado a lado.
       </p>
@@ -275,22 +274,24 @@ export default async function MarketingPage({
           <div className="mt-4 flex items-center justify-center gap-3">
             <Link
               href={`/painel/coordenacao/marketing?vista=dia&mes=${mesAnteriorParam}&metrica=${metricaAtual}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+              aria-label="Anterior"
             >
-              ←
+              <ChevronLeft className="h-4 w-4" />
             </Link>
             <span className="text-sm font-medium text-foreground">
               {MESES[mesMes - 1]} {anoMes}
             </span>
             <Link
               href={`/painel/coordenacao/marketing?vista=dia&mes=${mesSeguinteParam}&metrica=${metricaAtual}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+              aria-label="Seguinte"
             >
-              →
+              <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
 
-          <p className="mt-3 text-xs text-zinc-500">Ver no calendário:</p>
+          <p className="mt-3 text-xs text-muted">Ver no calendário:</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {METRICAS_MARKETING.map((m) => (
               <Link
@@ -323,18 +324,20 @@ export default async function MarketingPage({
           <div className="mt-4 flex items-center justify-center gap-3">
             <Link
               href={`/painel/coordenacao/marketing?vista=semana&mes=${mesAnteriorParam}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+              aria-label="Anterior"
             >
-              ←
+              <ChevronLeft className="h-4 w-4" />
             </Link>
             <span className="text-sm font-medium text-foreground">
               {MESES[mesMes - 1]} {anoMes}
             </span>
             <Link
               href={`/painel/coordenacao/marketing?vista=semana&mes=${mesSeguinteParam}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+              aria-label="Seguinte"
             >
-              →
+              <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
 
@@ -354,16 +357,18 @@ export default async function MarketingPage({
           <div className="mt-4 flex items-center justify-center gap-3">
             <Link
               href={`/painel/coordenacao/marketing?vista=mes&ano=${anoSelecionado - 1}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+              aria-label="Anterior"
             >
-              ←
+              <ChevronLeft className="h-4 w-4" />
             </Link>
             <span className="text-sm font-medium text-foreground">{anoSelecionado}</span>
             <Link
               href={`/painel/coordenacao/marketing?vista=mes&ano=${anoSelecionado + 1}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+              aria-label="Seguinte"
             >
-              →
+              <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
 
@@ -383,16 +388,18 @@ export default async function MarketingPage({
           <div className="mt-4 flex items-center justify-center gap-3">
             <Link
               href={`/painel/coordenacao/marketing?vista=ano&ano=${anoSelecionado - 1}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+              aria-label="Anterior"
             >
-              ←
+              <ChevronLeft className="h-4 w-4" />
             </Link>
             <span className="text-sm font-medium text-foreground">{anoSelecionado}</span>
             <Link
               href={`/painel/coordenacao/marketing?vista=ano&ano=${anoSelecionado + 1}`}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+              aria-label="Seguinte"
             >
-              →
+              <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
 

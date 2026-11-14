@@ -7,6 +7,7 @@ import { registarChecklist } from '../actions'
 import ChecklistForm from './ChecklistForm'
 import { AJUDA_OCORRENCIAS, TEXTO_CHECKLIST } from '@/lib/data/checklistPadrao'
 import type { ChecklistResposta, TipoOperacao } from '@/lib/supabase/database.types'
+import { ArrowLeft } from 'lucide-react'
 
 export default async function ChecklistRegistoPage({
   params,
@@ -72,11 +73,11 @@ export default async function ChecklistRegistoPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-3">
-      <Link href={`/painel/${slug}/checklist`} className="text-sm text-muted underline">
-        ← Abertura / Fecho
+      <Link href={`/painel/${slug}/checklist`} className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Abertura / Fecho
       </Link>
       <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-2xl font-semibold text-foreground">{registo.tipo}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">{registo.tipo}</h1>
         <p className="text-sm text-muted">
           {fmt(registo.data)} · {registo.hora.slice(0, 5)}
           {responsavel ? ` · Responsável: ${responsavel}` : ''}
@@ -93,7 +94,7 @@ export default async function ChecklistRegistoPage({
       )}
 
       {respostas.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
           Esta checklist não tem itens.
         </div>
       )}

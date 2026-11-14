@@ -7,7 +7,7 @@ import SubmitButton from '@/components/SubmitButton'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 const inputCls =
-  'rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-black/30 dark:focus:border-white/30'
+  'rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-brand'
 const labelCls = 'text-xs font-semibold text-muted'
 
 const ESTADOS_EDITAVEIS = Object.keys(ESTADOS_LEAD).filter((k) => k !== 'Ganha')

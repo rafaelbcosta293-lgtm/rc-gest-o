@@ -3,7 +3,7 @@ import { ArrowLeft, UserCheck, Hourglass, PauseCircle, UserMinus, CalendarCheck2
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import { corEstudio, PALETA } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
@@ -22,9 +22,7 @@ export default async function AdminAgoraPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha
         titulo="Administração — Agora"

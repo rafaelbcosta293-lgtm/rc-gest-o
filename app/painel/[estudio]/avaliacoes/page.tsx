@@ -71,7 +71,7 @@ export default async function AvaliacoesPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Avaliações
       </h1>
       <p className="mt-1 text-sm text-muted">

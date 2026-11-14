@@ -5,8 +5,8 @@ import SubmitButton from '@/components/SubmitButton'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 const inputCls =
-  'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
-const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
+  'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
+const labelCls = 'text-sm font-medium text-foreground/80'
 
 function Campo({
   id,
@@ -105,7 +105,7 @@ export default function AvaliacaoForm({
         </div>
       </div>
 
-      <h2 className="mt-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-2 text-xs font-semibold uppercase tracking-wider text-muted">
         Composição corporal
       </h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -149,7 +149,7 @@ export default function AvaliacaoForm({
           defaultValue={avaliacao?.densidade_ossea}
         />
       </div>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted">
         O IMC e a massa gorda/magra em kg são calculados sozinhos a partir do
         peso, da altura e da massa gorda (%), quando preenchidos.
       </p>

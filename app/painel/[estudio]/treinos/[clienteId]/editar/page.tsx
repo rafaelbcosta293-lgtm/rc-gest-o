@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { atualizarCliente } from '../../actions'
 import ClienteForm from '../../ClienteForm'
+import { ArrowLeft } from 'lucide-react'
 
 const MODULOS_ORIGEM = ['clientes', 'treinos']
 
@@ -34,12 +35,12 @@ export default async function EditarClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/${voltar}/${clienteId}`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← {cliente.nome}
+        <ArrowLeft className="h-4 w-4" /> {cliente.nome}
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Editar ficha
       </h1>
 

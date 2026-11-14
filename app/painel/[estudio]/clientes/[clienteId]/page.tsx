@@ -9,6 +9,7 @@ import { proximoAniversario, idadeEm, fmtDiaMes } from '@/lib/data/aniversarios'
 import { fmt, intervaloMes, MESES } from '@/lib/data/presencas'
 import ApagarClienteModal from './ApagarClienteModal'
 import type { Cliente, EstadoPagamento } from '@/lib/supabase/database.types'
+import { ArrowLeft } from 'lucide-react'
 
 type ClienteCompleto = Cliente & { pt_principal: { nome: string } | null }
 type AvaliacaoResumo = {
@@ -105,15 +106,15 @@ export default async function FichaCompletaClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/clientes`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Clientes
+        <ArrowLeft className="h-4 w-4" /> Clientes
       </Link>
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold text-foreground">{c.nome}</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">{c.nome}</h1>
             <span
               className="rounded-full px-2.5 py-0.5 text-xs font-medium"
               style={{ background: est.bg, color: est.tx }}
@@ -121,7 +122,7 @@ export default async function FichaCompletaClientePage({
               {est.label}
             </span>
             {c.numero_socio && (
-              <span className="font-mono text-xs text-zinc-500">Sócio {c.numero_socio}</span>
+              <span className="font-mono text-xs text-muted">Sócio {c.numero_socio}</span>
             )}
           </div>
           {c.objetivo && (
@@ -207,7 +208,7 @@ export default async function FichaCompletaClientePage({
       {/* Avaliações */}
       <section className="mt-8 rounded-xl border border-border-subtle p-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
             Avaliações
           </h2>
           <Link
@@ -218,14 +219,14 @@ export default async function FichaCompletaClientePage({
           </Link>
         </div>
         {avaliacao ? (
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground/80">
             <span>{fmt(avaliacao.data)}</span>
             {avaliacao.peso_kg && <span>{avaliacao.peso_kg} kg</span>}
             {avaliacao.massa_gorda_pct && <span>{avaliacao.massa_gorda_pct}% gordura</span>}
             {avaliacao.imc && <span>IMC {avaliacao.imc}</span>}
           </div>
         ) : (
-          <p className="mt-2 text-sm text-zinc-500">Ainda não há avaliações.</p>
+          <p className="mt-2 text-sm text-muted">Ainda não há avaliações.</p>
         )}
         {avaliacao?.proxima_reavaliacao && (
           <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
@@ -237,7 +238,7 @@ export default async function FichaCompletaClientePage({
       {/* Planos de treino */}
       <section className="mt-4 rounded-xl border border-border-subtle p-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
             Planos de treino
           </h2>
           <Link
@@ -247,13 +248,13 @@ export default async function FichaCompletaClientePage({
             Ver histórico ({totalSessoes ?? 0})
           </Link>
         </div>
-        {sessoes.length === 0 && <p className="mt-2 text-sm text-zinc-500">Sem treinos registados.</p>}
+        {sessoes.length === 0 && <p className="mt-2 text-sm text-muted">Sem treinos registados.</p>}
         <div className="mt-2 flex flex-col gap-1.5">
           {sessoes.map((s) => (
             <div key={s.id} className="flex items-center gap-2 text-sm">
-              <span className="w-16 shrink-0 text-xs text-zinc-500">{fmt(s.data)}</span>
-              <span className="truncate text-zinc-700 dark:text-zinc-300">{s.foco || 'Treino'}</span>
-              <span className="shrink-0 text-xs text-zinc-500">{s.pt?.nome ?? '—'}</span>
+              <span className="w-16 shrink-0 text-xs text-muted">{fmt(s.data)}</span>
+              <span className="truncate text-foreground/80">{s.foco || 'Treino'}</span>
+              <span className="shrink-0 text-xs text-muted">{s.pt?.nome ?? '—'}</span>
             </div>
           ))}
         </div>
@@ -262,7 +263,7 @@ export default async function FichaCompletaClientePage({
       {/* Presenças */}
       <section className="mt-4 rounded-xl border border-border-subtle p-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
             Presenças · {MESES[mes - 1]}
           </h2>
           <Link
@@ -281,7 +282,7 @@ export default async function FichaCompletaClientePage({
       {/* Pagamentos */}
       <section className="mt-4 rounded-xl border border-border-subtle p-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
             Pagamento
           </h2>
           <Link
@@ -300,7 +301,7 @@ export default async function FichaCompletaClientePage({
               : `Por regularizar${estadoPagamento.valido_ate ? ` · venceu em ${fmt(estadoPagamento.valido_ate)}` : ''}`}
           </p>
         ) : (
-          <p className="mt-2 text-sm text-zinc-500">Sem pagamentos registados.</p>
+          <p className="mt-2 text-sm text-muted">Sem pagamentos registados.</p>
         )}
       </section>
     </div>

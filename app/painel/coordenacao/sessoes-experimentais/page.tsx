@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import { somarDias } from '@/lib/data/horarios'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearCoordenacao } from '../actions'
 import { corEstudio, ESTADOS_LEAD } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
@@ -39,9 +39,7 @@ export default async function CoordenacaoSessoesExperimentaisPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'coordenacao')
-  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'coordenacao')) {
     return (
       <PortaSenha
         titulo="Coordenação — Sessões experimentais"
@@ -116,16 +114,18 @@ async function SessoesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
       <div className="mt-2 flex items-center gap-3">
         <Link
           href={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: diaSessoesAnterior })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Anterior"
         >
-          ←
+          <ChevronLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm font-medium">{diaSessoesEhHoje ? 'Hoje' : fmt(diaSessoes)}</span>
         <Link
           href={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: diaSessoesSeguinte })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Seguinte"
         >
-          →
+          <ChevronRight className="h-4 w-4" />
         </Link>
         {!diaSessoesEhHoje && (
           <Link
@@ -143,7 +143,7 @@ async function SessoesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
             <Link
               key={l.id}
               href={`/painel/${slug}/leads/${l.id}`}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm transition-colors hover:border-border-strong"
+              className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-3 text-sm transition-colors hover:border-border-strong"
             >
               <span className="flex items-center gap-2">
                 {l.visita_hora && (

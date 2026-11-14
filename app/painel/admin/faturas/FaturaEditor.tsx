@@ -15,7 +15,7 @@ import {
 import type { ProdutoZsgo, MetodoPagamentoZsgo } from '@/lib/zsgo'
 
 const inputCls =
-  'w-full rounded-md border border-border-subtle bg-transparent px-2 py-1 text-sm outline-none focus:border-white/30 dark:bg-zinc-900'
+  'w-full rounded-lg border border-border-subtle bg-transparent px-2 py-1 text-sm outline-none focus:border-brand'
 const labelCls = 'text-[11px] font-semibold uppercase tracking-wider text-muted'
 
 const fmtEuro = (n: number) =>

@@ -167,7 +167,7 @@ export default async function RetencaoPage({
         <ArrowLeft className="h-4 w-4" /> Clientes
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">Clientes e retenção</h1>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Clientes e retenção</h1>
       <p className="mt-1 text-sm text-muted">{estudio.nome}</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">

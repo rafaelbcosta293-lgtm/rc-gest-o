@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { getEstudios } from '@/lib/data/estudios'
 import { desbloquearAdmin } from '../actions'
 import { somarDias } from '@/lib/data/horarios'
@@ -58,9 +58,7 @@ export default async function LembretesSmsPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha
         titulo="Administração — Lembretes SMS"

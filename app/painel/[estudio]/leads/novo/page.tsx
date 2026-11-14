@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { criarLead } from '../actions'
 import LeadForm from '../LeadForm'
+import { ArrowLeft } from 'lucide-react'
 
 export default async function NovoLeadPage({
   params,
@@ -26,12 +27,12 @@ export default async function NovoLeadPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/leads`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Leads
+        <ArrowLeft className="h-4 w-4" /> Leads
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">Novo lead</h1>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Novo lead</h1>
 
       <LeadForm
         estudioSlug={slug}

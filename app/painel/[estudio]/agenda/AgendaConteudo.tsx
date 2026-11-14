@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, CalendarOff, Plus } from 'lucide-react'
+import { ArrowLeft, CalendarOff, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
@@ -284,16 +284,18 @@ export default async function AgendaConteudo({
         <div className="flex shrink-0 items-center gap-2">
           <Link
             href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: anterior })}`}
-            className="rounded-md border border-border-subtle px-2.5 py-1 text-sm"
+            className="rounded-full border border-border-strong px-2 py-1 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+            aria-label="Anterior"
           >
-            ←
+            <ChevronLeft className="h-4 w-4" />
           </Link>
           <span className="text-sm font-semibold whitespace-nowrap text-foreground">{tituloPeriodo}</span>
           <Link
             href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: seguinte })}`}
-            className="rounded-md border border-border-subtle px-2.5 py-1 text-sm"
+            className="rounded-full border border-border-strong px-2 py-1 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+            aria-label="Seguinte"
           >
-            →
+            <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
 

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../../actions'
 import PortaSenha from '@/components/PortaSenha'
 import SubmitButton from '@/components/SubmitButton'
@@ -22,9 +22,7 @@ export default async function CategoriasPage({
   const sp = await searchParams
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return <PortaSenha titulo="Administração — Categorias de despesa" destino={ROTA} action={desbloquearAdmin} erro={sp.erroSenha} />
   }
 

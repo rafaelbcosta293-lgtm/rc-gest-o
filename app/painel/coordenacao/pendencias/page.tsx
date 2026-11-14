@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearCoordenacao } from '../actions'
 import { corEstudio } from '@/lib/data/constantes'
 import { segurosPorPagar } from '@/lib/data/clientes'
@@ -29,9 +29,7 @@ export default async function CoordenacaoPendenciasPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'coordenacao')
-  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'coordenacao')) {
     return (
       <PortaSenha
         titulo="Coordenação — Pendências"

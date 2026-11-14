@@ -133,7 +133,7 @@ export default function ListaPagamentosMes({
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
           placeholder="Procurar por nome…"
-          className="flex-1 basis-60 rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
+          className="flex-1 basis-60 rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
         <select
           value={campo}

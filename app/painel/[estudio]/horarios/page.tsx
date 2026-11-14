@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
@@ -75,7 +75,7 @@ export default async function HorariosPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">Horários</h1>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Horários</h1>
       <p className="mt-1 text-sm text-muted">
         {estudio.nome} · escala da semana.
       </p>
@@ -89,21 +89,23 @@ export default async function HorariosPage({
       <div className="mt-6 flex items-center gap-3">
         <Link
           href={`/painel/${slug}/horarios?semana=${semanaAnterior}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Anterior"
         >
-          ←
+          <ChevronLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm font-medium">
           {fmt(dias[0])} – {fmt(dias[6])}
         </span>
         <Link
           href={`/painel/${slug}/horarios?semana=${semanaSeguinte}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Seguinte"
         >
-          →
+          <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-muted">
         Só para consulta — a escala é planeada em Coordenação.
       </p>
 

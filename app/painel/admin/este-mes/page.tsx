@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { ArrowLeft, Megaphone, TrendingUp, UserPlus, Euro, Dumbbell } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Dumbbell, Euro, Megaphone, TrendingUp, UserPlus } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { MESES } from '@/lib/data/presencas'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import { corEstudio, PALETA } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
@@ -40,9 +40,7 @@ export default async function AdminEsteMesPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha
         titulo="Administração — Este mês"
@@ -160,18 +158,20 @@ async function EsteMesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
       <div className="mt-2 flex items-center gap-3">
         <Link
           href={`/painel/admin/este-mes${comQuery(sp, { [pk('mes')]: mesAnteriorParam })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Anterior"
         >
-          ←
+          <ChevronLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm font-medium">
           {MESES[mes - 1]} {ano}
         </span>
         <Link
           href={`/painel/admin/este-mes${comQuery(sp, { [pk('mes')]: mesSeguinteParam })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Seguinte"
         >
-          →
+          <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
       <div className="bg-tech-grid mt-3 grid grid-cols-2 gap-3 rounded-2xl p-1 sm:grid-cols-3">

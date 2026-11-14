@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import { diferencasAuditoria } from '@/lib/data/auditoria'
 import PortaSenha from '@/components/PortaSenha'
@@ -23,9 +23,7 @@ export default async function AuditoriaPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha
         titulo="Administração — Auditoria"

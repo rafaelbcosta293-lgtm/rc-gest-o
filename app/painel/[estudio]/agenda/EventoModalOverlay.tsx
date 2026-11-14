@@ -333,7 +333,7 @@ export default function EventoModalOverlay({
           )}
 
           {!editar && (
-            <div className="rounded-lg border border-border-subtle bg-surface p-3">
+            <div className="rounded-xl border border-border-subtle bg-surface p-3">
               <label className="text-xs font-semibold text-muted">Repetição</label>
               <select
                 name="repeticao"

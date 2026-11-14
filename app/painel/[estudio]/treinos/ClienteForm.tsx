@@ -7,7 +7,7 @@ import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 const inputCls =
   'rounded-md border border-black bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900'
-const labelCls = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
+const labelCls = 'text-sm font-medium text-foreground/80'
 
 export default function ClienteForm({
   estudioSlug,

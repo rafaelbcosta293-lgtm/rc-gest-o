@@ -7,6 +7,7 @@ import type { ItemCatalogo } from '@/lib/data/catalogo'
 import { guardarPlano, registarTreino } from '../actions'
 import TreinoForm, { type LinhaExercicio } from '../../../TreinoForm'
 import type { BlocoTipo } from '@/lib/data/constantes'
+import { ArrowLeft } from 'lucide-react'
 
 type SessaoHistorico = {
   data: string
@@ -110,11 +111,11 @@ export default async function EditarTreinoPage({
     <div className="mx-auto max-w-5xl px-4 py-10">
       <Link
         href={`/painel/${slug}/treinos/${clienteId}`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← {cliente.nome}
+        <ArrowLeft className="h-4 w-4" /> {cliente.nome}
       </Link>
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         {sessao.correu ? 'Treino' : sessao.data > hoje ? 'Planear treino' : 'Treino de hoje'}
       </h1>
       <p className="mt-1 text-sm text-muted">{cliente.nome}</p>

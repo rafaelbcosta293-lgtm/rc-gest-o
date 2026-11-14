@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { getEstudios } from '@/lib/data/estudios'
 import { CATEGORIA_AJUSTE, gerarDespesasRecorrentes, hojeEmLisboa } from '@/lib/data/despesas'
 import { desbloquearAdmin } from '../../actions'
@@ -21,9 +21,7 @@ export default async function DespesasAnualPage({
   const sp = await searchParams
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return <PortaSenha titulo="Administração — Despesas (vista anual)" destino={ROTA} action={desbloquearAdmin} erro={sp.erroSenha} />
   }
 

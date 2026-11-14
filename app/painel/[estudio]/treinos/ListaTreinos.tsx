@@ -31,7 +31,7 @@ export default function ListaTreinos({ linhas, slug }: { linhas: LinhaTreino[]; 
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
         placeholder="Procurar cliente…"
-        className="mt-6 w-full rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
+        className="mt-6 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
       />
 
       <div className="mt-4 flex flex-col overflow-hidden rounded-xl border border-border-subtle">
@@ -58,15 +58,15 @@ export default function ListaTreinos({ linhas, slug }: { linhas: LinhaTreino[]; 
                   {l.alertaLabel}
                 </span>
               )}
-              <span className="shrink-0 text-xs text-zinc-500">{l.ultimoTreinoLabel}</span>
+              <span className="shrink-0 text-xs text-muted">{l.ultimoTreinoLabel}</span>
             </div>
-            {l.objetivo && <p className="text-xs text-zinc-500">{l.objetivo}</p>}
+            {l.objetivo && <p className="text-xs text-muted">{l.objetivo}</p>}
           </Link>
         ))}
       </div>
 
       {linhasFiltradas.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-zinc-500">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
           {filtro ? 'Nenhum cliente com esse nome.' : 'Ainda não há clientes neste estúdio.'}
         </div>
       )}

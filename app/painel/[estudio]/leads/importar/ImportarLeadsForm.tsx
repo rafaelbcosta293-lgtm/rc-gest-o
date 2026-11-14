@@ -63,7 +63,7 @@ export default function ImportarLeadsForm({
         >
           Escolher ficheiro .csv
         </button>
-        <p className="mt-3 text-xs text-zinc-500">
+        <p className="mt-3 text-xs text-muted">
           Colunas reconhecidas: nome (obrigatória), telefone, email, origem, campanha,
           modalidade_interesse, objetivo, interesse, valor_potencial, temperatura. A ordem das
           colunas não importa.

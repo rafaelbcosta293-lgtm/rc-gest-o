@@ -6,16 +6,17 @@ import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/h
 import { guardarSemana, copiarSemanaAnterior, criarInstrutor, desbloquearCoordenacao } from '../actions'
 import { alternarAcesso } from '../../[estudio]/equipa/actions'
 import { coresInstrutores, corEstudio } from '@/lib/data/constantes'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import TituloSeccao from '@/components/TituloSeccao'
 import PortaSenha from '@/components/PortaSenha'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import type { Estudio, Perfil } from '@/lib/supabase/database.types'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const inputCls =
-  'rounded-md border border-border-subtle px-2 py-1.5 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-sm outline-none focus:border-brand'
 
 type TurnoSemana = { data: string; hora: number; minuto: number; pt: { id: string; nome: string } | null }
 type SP = Record<string, string | undefined>
@@ -46,9 +47,7 @@ export default async function HorariosCoordenacaoPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'coordenacao')
-  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'coordenacao')) {
     return (
       <PortaSenha
         titulo="Coordenação"
@@ -63,11 +62,11 @@ export default async function HorariosCoordenacaoPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
-      <Link href="/painel/coordenacao" className="text-sm text-muted underline">
-        ← Coordenação
+      <Link href="/painel/coordenacao" className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Coordenação
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Planeamento da semana
       </h1>
       <p className="mt-1 text-sm text-muted">
@@ -177,18 +176,20 @@ async function PainelHorariosEstudio({
       <div className="mt-2 flex items-center gap-3">
         <Link
           href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaAnterior, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Anterior"
         >
-          ←
+          <ChevronLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm font-medium">
           {fmt(diasSemana[0])} – {fmt(diasSemana[6])}
         </span>
         <Link
           href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaSeguinte, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+          aria-label="Seguinte"
         >
-          →
+          <ChevronRight className="h-4 w-4" />
         </Link>
         <ConfirmarAcao
           action={copiarSemanaAnterior}
@@ -230,7 +231,7 @@ async function PainelHorariosEstudio({
           Não foi possível copiar o horário. Tenta de novo.
         </p>
       )}
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-muted">
         Escolhe um instrutor em &quot;Pintar com&quot; e arrasta pelos blocos para marcar vários de
         uma vez (ex.: a semana toda de manhã). Sem ninguém escolhido, clica num bloco para
         escolher um ou vários instrutores à mão. A equipa vê esta escala em
@@ -251,7 +252,7 @@ async function PainelHorariosEstudio({
         />
       </div>
 
-      <h3 className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+      <h3 className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
         Horas planeadas esta semana
       </h3>
       <div className="mt-1.5 flex flex-wrap gap-2">
@@ -266,11 +267,11 @@ async function PainelHorariosEstudio({
             >
               {r.nome}
             </span>
-            <span className="text-zinc-500">{r.horas}h</span>
+            <span className="text-muted">{r.horas}h</span>
           </div>
         ))}
         {resumoEscalaSemana.length === 0 && (
-          <p className="text-sm text-zinc-500">Sem turnos marcados esta semana.</p>
+          <p className="text-sm text-muted">Sem turnos marcados esta semana.</p>
         )}
       </div>
 
@@ -280,7 +281,7 @@ async function PainelHorariosEstudio({
           Instrutores
         </summary>
         <div className="border-t border-border-subtle p-4">
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted">
             Só quem tem acesso aqui aparece para escolher no planeamento da semana.
           </p>
 
@@ -290,15 +291,15 @@ async function PainelHorariosEstudio({
           >
             <input type="hidden" name="estudio_id" value={estudio.id} />
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-zinc-500">Nome</label>
+              <label className="text-xs text-muted">Nome</label>
               <input name="nome" required className={inputCls} />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-zinc-500">Email</label>
+              <label className="text-xs text-muted">Email</label>
               <input name="email" type="email" required className={inputCls} />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-zinc-500">Telefone (opcional)</label>
+              <label className="text-xs text-muted">Telefone (opcional)</label>
               <input name="telefone" className={inputCls} />
             </div>
             <SubmitButton
@@ -308,7 +309,7 @@ async function PainelHorariosEstudio({
               Criar instrutor
             </SubmitButton>
           </form>
-          <p className="mt-1.5 text-xs text-zinc-500">
+          <p className="mt-1.5 text-xs text-muted">
             Cria já a ficha com acesso a este estúdio. Se um dia quiser entrar na app, usa
             &quot;Esqueci-me da password&quot; com este email.
           </p>
@@ -320,12 +321,12 @@ async function PainelHorariosEstudio({
               return (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-3 text-sm"
                 >
                   <div className="flex items-center gap-2">
                     {cor && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cor.tx }} />}
                     <span className="font-medium text-foreground">{p.nome}</span>
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-xs text-muted">
                       {p.papel}
                       {!p.ativo && ' · inativo'}
                     </span>
@@ -351,7 +352,7 @@ async function PainelHorariosEstudio({
               )
             })}
             {perfis.length === 0 && (
-              <p className="text-sm text-zinc-500">Ainda não há ninguém registado.</p>
+              <p className="text-sm text-muted">Ainda não há ninguém registado.</p>
             )}
           </div>
         </div>

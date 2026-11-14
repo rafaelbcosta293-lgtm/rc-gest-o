@@ -40,9 +40,12 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   // /registo e já aprovada pelo dono em Equipa ("Dar acesso" — grava em
   // perfis_estudios). O "papel" da ficha em "perfis" nunca decide isto
   // por si só, só o que a conta pode FAZER depois de já ter entrado.
-  const aprovado = estudio ? await podeAcederEstudioAprovado(supabase, sessao.userId, estudio.id) : false
-  if (!podeAcederEstudio(sessao.email, slug) && !aprovado) {
-    redirect('/painel?erro=sem-acesso')
+  // As contas fixas entram só pelo email — a consulta a perfis_estudios
+  // só é precisa para as contas pessoais (poupa uma ida à base de dados
+  // em cada página para o dono, a Coordenação e as contas dos estúdios).
+  if (!podeAcederEstudio(sessao.email, slug)) {
+    const aprovado = estudio ? await podeAcederEstudioAprovado(supabase, sessao.userId, estudio.id) : false
+    if (!aprovado) redirect('/painel?erro=sem-acesso')
   }
 
   const { ehAdmin, ehGestao } = papeisDaSessao(sessao)

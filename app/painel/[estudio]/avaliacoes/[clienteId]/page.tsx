@@ -6,6 +6,7 @@ import { fmt } from '@/lib/data/presencas'
 import { apagarAvaliacao } from '../actions'
 import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
 import type { Avaliacao } from '@/lib/supabase/database.types'
+import { ArrowLeft } from 'lucide-react'
 
 type AvaliacaoComPt = Avaliacao & { pt: { nome: string } | null }
 
@@ -52,13 +53,13 @@ export default async function AvaliacoesClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/avaliacoes`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Avaliações
+        <ArrowLeft className="h-4 w-4" /> Avaliações
       </Link>
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
           {cliente.nome}
         </h1>
         <Link
@@ -146,12 +147,12 @@ export default async function AvaliacoesClientePage({
         </div>
       )}
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Histórico ({lista.length})
       </h2>
 
       {lista.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
           Ainda não há avaliações registadas para {cliente.nome}.
         </div>
       )}
@@ -160,9 +161,9 @@ export default async function AvaliacoesClientePage({
         {lista.map((a) => (
           <div
             key={a.id}
-            className="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface p-3"
+            className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface p-3"
           >
-            <span className="w-20 text-xs text-zinc-500">{fmt(a.data)}</span>
+            <span className="w-20 text-xs text-muted">{fmt(a.data)}</span>
             <span className="flex-1 text-xs text-muted">
               {a.peso_kg ? `${a.peso_kg} kg` : '—'}
               {a.massa_gorda_pct ? ` · ${a.massa_gorda_pct}% gordura` : ''}

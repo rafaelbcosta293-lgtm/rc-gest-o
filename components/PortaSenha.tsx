@@ -17,7 +17,7 @@ export default function PortaSenha({
       <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/15 text-brand-strong shadow-pop">
         <Lock className="h-6 w-6" strokeWidth={2.25} />
       </span>
-      <h1 className="mt-5 text-xl font-bold tracking-tight text-foreground">{titulo}</h1>
+      <h1 className="mt-5 text-3xl font-bold tracking-tight text-foreground">{titulo}</h1>
       <p className="mt-1 text-sm text-muted">
         Esta área está protegida por password.
       </p>

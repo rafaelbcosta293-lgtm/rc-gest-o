@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { intervaloMes, MESES } from '@/lib/data/presencas'
 import { somarDias } from '@/lib/data/horarios'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import PortaSenha from '@/components/PortaSenha'
 import ListaPagamentosMes, { type LinhaPagamentoMes } from './ListaPagamentosMes'
@@ -81,9 +81,7 @@ export default async function AdminPagamentosPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha
         titulo="Administração — Pagamentos"
@@ -185,16 +183,16 @@ export default async function AdminPagamentosPage({
           </div>
           <Link
             href={linkVista(vista, periodo.anterior.qs)}
-            className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+            className="inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
           >
-            ← {periodo.anterior.rotulo}
+            <ChevronLeft className="h-4 w-4" /> {periodo.anterior.rotulo}
           </Link>
           <strong className="text-sm capitalize text-foreground">{periodo.rotulo}</strong>
           <Link
             href={linkVista(vista, periodo.seguinte.qs)}
-            className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+            className="inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
           >
-            {periodo.seguinte.rotulo} →
+            {periodo.seguinte.rotulo} <ChevronRight className="h-4 w-4" />
           </Link>
           {vista === 'dia' && (
             <form action="/painel/admin/pagamentos" className="flex items-center gap-1">

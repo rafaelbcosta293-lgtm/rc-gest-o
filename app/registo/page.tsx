@@ -20,10 +20,10 @@ export default async function RegistoPage({
   const { error, success } = await searchParams
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
-      <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-8">
+    <div className="flex flex-1 items-center justify-center px-4">
+      <div className="w-full max-w-sm rounded-3xl border border-border-subtle bg-surface p-8 shadow-card-hover">
         <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="mx-auto h-9 w-auto" />
-        <h1 className="mt-6 text-2xl font-semibold text-foreground">
+        <h1 className="mt-6 text-3xl font-bold tracking-tight text-foreground">
           Criar conta
         </h1>
         <p className="mt-1 text-sm text-muted">
@@ -31,13 +31,13 @@ export default async function RegistoPage({
         </p>
 
         {error && (
-          <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
             {error}
           </p>
         )}
 
         {success && (
-          <p className="mt-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
+          <p className="mt-4 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
             {success}
           </p>
         )}
@@ -46,7 +46,7 @@ export default async function RegistoPage({
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="nome"
-              className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="text-sm font-medium text-foreground/80"
             >
               Nome
             </label>
@@ -56,14 +56,14 @@ export default async function RegistoPage({
               type="text"
               required
               autoComplete="name"
-              className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30"
+              className="rounded-lg border border-border-subtle bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-brand/60"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="email"
-              className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="text-sm font-medium text-foreground/80"
             >
               Email
             </label>
@@ -73,7 +73,10 @@ export default async function RegistoPage({
               type="email"
               required
               autoComplete="email"
-              className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="rounded-lg border border-border-subtle bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-brand/60"
             />
           </div>
 
@@ -105,7 +108,7 @@ export default async function RegistoPage({
           Já tens conta?{' '}
           <Link
             href="/login"
-            className="font-medium text-zinc-950 underline dark:text-zinc-50"
+            className="font-medium text-foreground underline decoration-border-strong underline-offset-2 hover:decoration-foreground"
           >
             Iniciar sessão
           </Link>

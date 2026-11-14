@@ -241,11 +241,11 @@ export default function ListaPresencas({
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
         placeholder="Procurar por nome…"
-        className="mt-4 w-full rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
+        className="mt-4 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
       />
 
       {semResultados ? (
-        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-zinc-500">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
           {aPesquisar ? 'Nenhum cliente com esse nome.' : 'Ainda não há clientes neste estúdio.'}
         </div>
       ) : (

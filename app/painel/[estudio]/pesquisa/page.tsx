@@ -59,7 +59,7 @@ export default async function PesquisaPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">Pesquisar</h1>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Pesquisar</h1>
 
       <form className="mt-4">
         <div className="relative">
@@ -91,10 +91,10 @@ export default async function PesquisaPage({
               <Link
                 key={c.id}
                 href={`/painel/${slug}/clientes/${c.id}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm transition-colors hover:border-black/30"
+                className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-3 text-sm transition-colors hover:border-black/30"
               >
                 <span className="text-foreground">{c.nome}</span>
-                <span className="text-xs text-zinc-500">{c.telefone ?? c.numero_socio ?? ''}</span>
+                <span className="text-xs text-muted">{c.telefone ?? c.numero_socio ?? ''}</span>
               </Link>
             ))}
           </div>
@@ -109,10 +109,10 @@ export default async function PesquisaPage({
               <Link
                 key={l.id}
                 href={`/painel/${slug}/leads/${l.id}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm transition-colors hover:border-black/30"
+                className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-3 text-sm transition-colors hover:border-black/30"
               >
                 <span className="text-foreground">{l.nome}</span>
-                <span className="text-xs text-zinc-500">{l.estado}</span>
+                <span className="text-xs text-muted">{l.estado}</span>
               </Link>
             ))}
           </div>
@@ -126,7 +126,7 @@ export default async function PesquisaPage({
             {equipa.map((p) => (
               <div
                 key={p.id}
-                className="rounded-lg border border-border-subtle bg-surface p-3 text-sm text-foreground"
+                className="rounded-xl border border-border-subtle bg-surface p-3 text-sm text-foreground"
               >
                 {p.nome}
               </div>

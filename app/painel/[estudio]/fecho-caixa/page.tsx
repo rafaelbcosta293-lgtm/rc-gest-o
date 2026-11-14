@@ -26,7 +26,7 @@ const TIPOS_SAIDA: TipoSaidaCaixa[] = ['Sangria', 'Compra']
 const TIPOS_OUTROS: TipoMovimentoOutros[] = ['Entrada', 'Saída']
 const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const inputCls =
-  'rounded-md border border-border-subtle px-2.5 py-1.5 text-xs outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-brand'
 
 type FechoResumo = {
   id: string
@@ -317,7 +317,7 @@ export default async function FechoCaixaPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">Fecho de Caixa</h1>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Fecho de Caixa</h1>
       <p className="mt-1 text-sm text-muted">
         {estudio.nome} · {diaSemana}, {fmt(hoje)}.
       </p>
@@ -411,11 +411,11 @@ export default async function FechoCaixaPage({
         )}
       </div>
 
-      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted">
         Entradas de hoje ({linhasEntradas.length})
       </h2>
       {linhasEntradas.length === 0 ? (
-        <p className="mt-2 text-xs text-zinc-500">Sem entradas hoje.</p>
+        <p className="mt-2 text-xs text-muted">Sem entradas hoje.</p>
       ) : (
         <div className="mt-2 overflow-x-auto rounded-lg border border-border-subtle">
           <table className="w-full text-xs">
@@ -439,7 +439,7 @@ export default async function FechoCaixaPage({
         </div>
       )}
 
-      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted">
         Movimentos de caixa
       </h2>
       <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
@@ -533,11 +533,11 @@ export default async function FechoCaixaPage({
         </div>
       )}
 
-      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted">
         Histórico recente
       </h2>
       {recentes.length === 0 ? (
-        <p className="mt-2 text-xs text-zinc-500">Ainda não há fechos de dias anteriores.</p>
+        <p className="mt-2 text-xs text-muted">Ainda não há fechos de dias anteriores.</p>
       ) : (
         <div className="mt-2 overflow-x-auto rounded-lg border border-border-subtle">
           <table className="w-full text-xs">

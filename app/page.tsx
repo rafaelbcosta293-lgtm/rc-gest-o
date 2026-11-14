@@ -17,7 +17,7 @@ export default async function Home() {
   const destino = emLogado && podeAcederAdmin(sessao.email) ? '/painel/admin' : '/painel'
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 px-4 text-center dark:bg-black">
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 text-center">
       <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-14 w-auto" />
 
       {emLogado ? (

@@ -7,6 +7,7 @@ import { ALERTAS, CORREU } from '@/lib/data/constantes'
 import { iniciarTreino, apagarSessao } from './treino/actions'
 import SubmitButton from '@/components/SubmitButton'
 import ApagarSessaoForm from './ApagarSessaoForm'
+import { ArrowLeft } from 'lucide-react'
 
 function fmt(iso: string | null) {
   if (!iso) return '—'
@@ -65,14 +66,14 @@ export default async function FichaClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/treinos`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Treinos
+        <ArrowLeft className="h-4 w-4" /> Treinos
       </Link>
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             {cliente.nome}
           </h1>
           {cliente.objetivo && (
@@ -120,7 +121,7 @@ export default async function FichaClientePage({
         <div className="bg-surface p-4">
           {ultima?.nota_proxima ? (
             <>
-              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
+              <div className="text-[11px] uppercase tracking-wide text-muted">
                 Nota do último treino · {fmt(ultima.data)} · {ultima.pt?.nome ?? '—'}
               </div>
               <p className="mt-2 text-base font-medium text-foreground">
@@ -128,14 +129,14 @@ export default async function FichaClientePage({
               </p>
             </>
           ) : (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted">
               O primeiro treino que registares deixa aqui a nota para o próximo PT.
             </p>
           )}
         </div>
       </section>
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Histórico de treinos
         {porRegistar > 0 && (
           <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 normal-case tracking-normal text-amber-800 dark:bg-amber-950 dark:text-amber-300">
@@ -145,7 +146,7 @@ export default async function FichaClientePage({
       </h2>
 
       {lista.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
           Ainda não há treinos registados para {cliente.nome}.
         </div>
       )}
@@ -165,7 +166,7 @@ export default async function FichaClientePage({
                 href={`/painel/${slug}/treinos/${clienteId}/treino/${s.id}`}
                 className="flex flex-1 gap-4 p-4"
               >
-                <div className="min-w-[70px] pt-0.5 text-xs text-zinc-500">
+                <div className="min-w-[70px] pt-0.5 text-xs text-muted">
                   {fmt(s.data)}
                 </div>
                 <div className="flex-1">
@@ -189,7 +190,7 @@ export default async function FichaClientePage({
                         Por registar — como correu?
                       </span>
                     )}
-                    <span className="text-xs text-zinc-500">{s.pt?.nome ?? '—'}</span>
+                    <span className="text-xs text-muted">{s.pt?.nome ?? '—'}</span>
                   </div>
                   {s.nota_proxima && (
                     <p className="mt-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
@@ -197,7 +198,7 @@ export default async function FichaClientePage({
                     </p>
                   )}
                   {numExercicios > 0 && (
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-xs text-muted">
                       {numExercicios} exercícios
                     </p>
                   )}

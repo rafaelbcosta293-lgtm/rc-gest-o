@@ -9,7 +9,7 @@ import { atualizarPlano, apagarPlano, reordenarPlanos } from './actions'
 import type { Plano } from '@/lib/supabase/database.types'
 
 const inputCls =
-  'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
 
 // Lista arrastável (pega à esquerda de cada linha, ao estilo
 // Trello/Notion) — a ordem em ecrã atualiza-se logo ao arrastar, por
@@ -51,7 +51,7 @@ export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[
             arrastarSobre(p.id)
           }}
           onDragEnd={aoLargar}
-          className={`flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface p-3 transition-opacity ${
+          className={`flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle bg-surface p-3 transition-opacity ${
             arrastadoId === p.id ? 'opacity-40' : ''
           }`}
         >
@@ -84,7 +84,7 @@ export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[
             </label>
             <SubmitButton
               pendingText="…"
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-brand/[.08]"
             >
               Guardar
             </SubmitButton>
@@ -105,7 +105,7 @@ export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[
         </div>
       ))}
       {planos.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+        <div className="rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
           Ainda não há serviços registados.
         </div>
       )}

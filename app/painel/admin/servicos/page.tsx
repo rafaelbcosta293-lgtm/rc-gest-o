@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { areaTemPassword, areaDesbloqueada, chaveConfigSenha } from '@/lib/data/gate'
+import { areaBloqueada, chaveConfigSenha } from '@/lib/data/gate'
 import { ESTUDIOS_COM_CONTA_PARTILHADA, chaveAtivoDispositivo, dispositivoAutorizado } from '@/lib/data/dispositivo'
 import {
   criarPlano,
@@ -17,9 +17,10 @@ import TituloSeccao from '@/components/TituloSeccao'
 import ListaPlanos from './ListaPlanos'
 import SeccaoProdutos, { type CategoriaProduto, type Produto } from './SeccaoProdutos'
 import type { ConfigLinha, Plano } from '@/lib/supabase/database.types'
+import { ArrowLeft } from 'lucide-react'
 
 const inputCls =
-  'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
 
 const NOME_ESTUDIO: Record<string, string> = { fatima: 'Fátima', leiria: 'Leiria' }
 
@@ -109,9 +110,7 @@ export default async function ServicosPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha
         titulo="Administração"
@@ -154,8 +153,8 @@ export default async function ServicosPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <Link href="/painel/admin" className="text-sm text-muted underline">
-        ← Administração
+      <Link href="/painel/admin" className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Administração
       </Link>
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
@@ -172,7 +171,7 @@ export default async function ServicosPage({
       )}
 
       <TituloSeccao cor="teal">Serviços</TituloSeccao>
-      <p className="mt-1 text-xs text-zinc-500">Arrasta pela pega à esquerda para mudar a ordem.</p>
+      <p className="mt-1 text-xs text-muted">Arrasta pela pega à esquerda para mudar a ordem.</p>
       <ListaPlanos planos={planos} />
 
       <form
@@ -201,12 +200,12 @@ export default async function ServicosPage({
           + Serviço
         </SubmitButton>
       </form>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-muted">
         &quot;Sessões/sem&quot; é a frequência semanal, não o total do ciclo — ex.: Express/Premium
         4 → 1, 8 → 2, 12 → 3. É o número usado em Pagamentos para calcular a meta de treinos do
         mês.
       </p>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-muted">
         Eliminar um serviço já usado em pagamentos antigos pode não ser possível — nesse caso,
         desmarca &quot;ativo&quot; em vez de eliminar.
       </p>
@@ -214,22 +213,22 @@ export default async function ServicosPage({
       <SeccaoProdutos categorias={categoriasProduto} produtos={produtos} />
 
       <TituloSeccao cor="vermelho">Passwords de acesso</TituloSeccao>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-muted">
         Passwords extra, separadas do login normal, para entrar em Administração e em
         Coordenação. Deixa em branco e guarda para não alterar a password atual.
       </p>
       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <form
           action={guardarSenha}
-          className="flex flex-col gap-1.5 rounded-lg border border-border-subtle bg-surface p-3"
+          className="flex flex-col gap-1.5 rounded-xl border border-border-subtle bg-surface p-3"
         >
           <input type="hidden" name="chave" value={chaveConfigSenha('admin')} />
-          <label className="text-xs font-medium text-zinc-500">Password de Administração</label>
+          <label className="text-xs font-medium text-muted">Password de Administração</label>
           <div className="flex items-end gap-2">
             <input type="password" name="senha" placeholder="Nova password" className={`${inputCls} flex-1`} />
             <SubmitButton
               pendingText="…"
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-brand/[.08]"
             >
               Guardar
             </SubmitButton>
@@ -237,15 +236,15 @@ export default async function ServicosPage({
         </form>
         <form
           action={guardarSenha}
-          className="flex flex-col gap-1.5 rounded-lg border border-border-subtle bg-surface p-3"
+          className="flex flex-col gap-1.5 rounded-xl border border-border-subtle bg-surface p-3"
         >
           <input type="hidden" name="chave" value={chaveConfigSenha('coordenacao')} />
-          <label className="text-xs font-medium text-zinc-500">Password de Coordenação</label>
+          <label className="text-xs font-medium text-muted">Password de Coordenação</label>
           <div className="flex items-end gap-2">
             <input type="password" name="senha" placeholder="Nova password" className={`${inputCls} flex-1`} />
             <SubmitButton
               pendingText="…"
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
+              className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-brand/[.08]"
             >
               Guardar
             </SubmitButton>
@@ -254,7 +253,7 @@ export default async function ServicosPage({
       </div>
 
       <TituloSeccao cor="vermelho">Computadores autorizados (contas de Fátima/Leiria)</TituloSeccao>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-muted">
         Restringe a conta partilhada de cada estúdio a computadores já autorizados aqui — para a
         password do estúdio não servir para entrar fora dele (ex.: em casa). Autoriza primeiro
         todos os computadores desse estúdio antes de ativar a restrição, para a equipa não ficar
@@ -262,9 +261,9 @@ export default async function ServicosPage({
       </p>
       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {dispositivos.map(({ slug, ativo, autorizado }) => (
-          <div key={slug} className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface p-3">
-            <span className="text-xs font-medium text-zinc-500">{NOME_ESTUDIO[slug]}</span>
-            <p className="text-xs text-zinc-500">
+          <div key={slug} className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface p-3">
+            <span className="text-xs font-medium text-muted">{NOME_ESTUDIO[slug]}</span>
+            <p className="text-xs text-muted">
               Restrição: <strong>{ativo ? 'ativa' : 'desativada'}</strong> · Este computador:{' '}
               <strong>{autorizado ? 'autorizado' : 'não autorizado'}</strong>
             </p>
@@ -272,20 +271,20 @@ export default async function ServicosPage({
               <input type="hidden" name="estudio" value={slug} />
               <SubmitButton
                 pendingText="…"
-                className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
+                className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-brand/[.08]"
               >
                 {autorizado ? 'Remover autorização deste computador' : 'Autorizar este computador'}
               </SubmitButton>
             </form>
             <form action={alternarRestricaoDispositivo} className="flex items-center gap-2">
               <input type="hidden" name="estudio" value={slug} />
-              <label className="flex flex-1 items-center gap-1.5 text-xs text-zinc-500">
+              <label className="flex flex-1 items-center gap-1.5 text-xs text-muted">
                 <input type="checkbox" name="ativo" defaultChecked={ativo} />
                 Exigir computador autorizado para esta conta
               </label>
               <SubmitButton
                 pendingText="…"
-                className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
+                className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-brand/[.08]"
               >
                 Guardar
               </SubmitButton>
@@ -314,12 +313,12 @@ export default async function ServicosPage({
                   <form
                     key={c.chave}
                     action={guardarConfig}
-                    className={`flex flex-col gap-1.5 rounded-lg border border-border-subtle bg-surface p-3 ${
+                    className={`flex flex-col gap-1.5 rounded-xl border border-border-subtle bg-surface p-3 ${
                       meta?.tipo === 'textarea' ? 'sm:col-span-2' : ''
                     }`}
                   >
                     <input type="hidden" name="chave" value={c.chave} />
-                    <label className="text-xs font-medium text-zinc-500">{meta?.label ?? c.chave}</label>
+                    <label className="text-xs font-medium text-muted">{meta?.label ?? c.chave}</label>
                     <div className="flex items-end gap-2">
                       {meta?.tipo === 'textarea' ? (
                         <textarea
@@ -338,7 +337,7 @@ export default async function ServicosPage({
                       )}
                       <SubmitButton
                         pendingText="…"
-                        className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium"
+                        className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-brand/[.08]"
                       >
                         Guardar
                       </SubmitButton>
@@ -351,7 +350,7 @@ export default async function ServicosPage({
         ))
       })()}
       {config.length === 0 && (
-        <p className="mt-8 text-sm text-zinc-500">Sem definições configuradas.</p>
+        <p className="mt-8 text-sm text-muted">Sem definições configuradas.</p>
       )}
     </div>
   )

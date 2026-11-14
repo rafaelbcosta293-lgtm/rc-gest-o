@@ -36,7 +36,7 @@ export default function ListaAvaliacoes({
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
         placeholder="Procurar por nome…"
-        className="mt-4 w-full rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900"
+        className="mt-4 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
       />
 
       <div className="mt-4 flex flex-col gap-2">
@@ -54,13 +54,13 @@ export default function ListaAvaliacoes({
                     Reavaliação prevista
                   </span>
                 )}
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-muted">
                   {l.ultimaData ? `última em ${l.ultimaData}` : 'sem avaliações'}
                 </span>
               </div>
             </div>
             {l.ultimaData && (
-              <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                 <span>{l.pesoKg != null ? `${l.pesoKg} kg` : 'sem peso'}</span>
                 {l.imc != null && <span>· IMC {l.imc}</span>}
                 {l.massaGordaPct != null && <span>· {l.massaGordaPct}% gordura</span>}
@@ -71,7 +71,7 @@ export default function ListaAvaliacoes({
       </div>
 
       {linhasFiltradas.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-zinc-500">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
           {filtro ? 'Nenhum cliente ativo com esse nome.' : 'Ainda não há clientes ativos neste estúdio.'}
         </div>
       )}

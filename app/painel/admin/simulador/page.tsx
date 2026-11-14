@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { parseValorConfig } from '@/lib/data/financeiro'
 import { carregarDespesas, carregarPagamentosAnalise } from '@/lib/data/cargaFinanceira'
@@ -24,9 +24,7 @@ export default async function SimuladorPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha titulo="Administração — Simulador" destino="/painel/admin/simulador" action={desbloquearAdmin} erro={erroSenha} />
     )

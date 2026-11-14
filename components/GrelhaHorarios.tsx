@@ -167,7 +167,7 @@ function Cabecalho({ dias }: { dias: string[] }) {
         >
           {DIAS_SEMANA[i].slice(0, 3)}
           <br />
-          <span className="font-normal text-zinc-500">{fmt(d)}</span>
+          <span className="font-normal text-muted">{fmt(d)}</span>
         </div>
       ))}
     </>
@@ -184,7 +184,7 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
         <Cabecalho dias={dias} />
         {BLOCOS_HORARIO.map((bloco) => (
           <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-            <div className="flex items-center bg-surface px-1 py-0.5 text-[9px] text-zinc-500">
+            <div className="flex items-center bg-surface px-1 py-0.5 text-[9px] text-muted">
               {bloco.label}
             </div>
             {dias.map((dia) => {
@@ -308,7 +308,7 @@ function GrelhaEditavel({
     <div>
       {pts.length > 0 && (
         <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-medium text-zinc-500">Pintar com:</span>
+          <span className="text-[11px] font-medium text-muted">Pintar com:</span>
           {pts.map((p) => {
             const ativo = ptAtivoId === p.id
             const cor = corDoPt(corPorPt, p.id)
@@ -330,7 +330,7 @@ function GrelhaEditavel({
             )
           })}
           {ptAtivoId && (
-            <span className="text-[11px] text-zinc-500">
+            <span className="text-[11px] text-muted">
               — arrasta pelos blocos para marcar/desmarcar vários de uma vez
             </span>
           )}
@@ -344,7 +344,7 @@ function GrelhaEditavel({
           <Cabecalho dias={dias} />
           {BLOCOS_HORARIO.map((bloco) => (
             <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-              <div className="flex items-center bg-surface px-1 py-0.5 text-[9px] text-zinc-500">
+              <div className="flex items-center bg-surface px-1 py-0.5 text-[9px] text-muted">
                 {bloco.label}
               </div>
               {dias.map((dia) => {
@@ -371,7 +371,7 @@ function GrelhaEditavel({
                       <button
                         type="button"
                         onClick={() => setAbertaChave(null)}
-                        className="mt-0.5 self-start text-[9px] text-zinc-500 underline"
+                        className="mt-0.5 self-start text-[9px] text-muted underline"
                       >
                         Fechar
                       </button>

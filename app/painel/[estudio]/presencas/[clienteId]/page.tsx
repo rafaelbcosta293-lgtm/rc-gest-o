@@ -15,6 +15,7 @@ import {
 import { marcarPresenca, apagarPresenca } from '../actions'
 import SubmitButton from '@/components/SubmitButton'
 import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
+import { ArrowLeft } from 'lucide-react'
 
 export default async function PresencasClientePage({
   params,
@@ -80,12 +81,12 @@ export default async function PresencasClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/presencas?ano=${ano}&mes=${mes}`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Presenças
+        <ArrowLeft className="h-4 w-4" /> Presenças
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         {cliente.nome}
       </h1>
       <p className="mt-1 text-sm text-muted">
@@ -150,7 +151,7 @@ export default async function PresencasClientePage({
             )
           })}
         </div>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-zinc-500">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted">
           {Object.entries(PRESENCAS).map(([k, v]) => (
             <span key={k} className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: v.tx }} />
@@ -166,27 +167,27 @@ export default async function PresencasClientePage({
         </p>
       )}
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Marcar presença
       </h2>
       <form className="mt-2 flex flex-wrap items-end gap-3" action={marcarPresenca}>
         <input type="hidden" name="estudio_slug" value={slug} />
         <input type="hidden" name="cliente_id" value={clienteId} />
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Dia</label>
+          <label className="text-xs font-medium text-foreground/80">Dia</label>
           <input
             type="date"
             name="data"
             defaultValue={hoje}
-            className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+            className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Estado</label>
+          <label className="text-xs font-medium text-foreground/80">Estado</label>
           <select
             name="estado"
             defaultValue="Presente"
-            className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+            className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
           >
             {Object.keys(PRESENCAS).map((k) => (
               <option key={k} value={k}>
@@ -196,13 +197,13 @@ export default async function PresencasClientePage({
           </select>
         </div>
         <div className="flex flex-1 flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          <label className="text-xs font-medium text-foreground/80">
             Nota (opcional)
           </label>
           <input
             name="nota"
             placeholder="ex.: avisou de manhã"
-            className="w-full rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+            className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
           />
         </div>
         <SubmitButton
@@ -212,15 +213,15 @@ export default async function PresencasClientePage({
           Registar
         </SubmitButton>
       </form>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-muted">
         Só pode existir um registo por dia — marcar de novo substitui o anterior desse dia.
       </p>
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Registos de {MESES[mes - 1]} ({lista.length})
       </h2>
       {lista.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
           Sem registos neste mês.
         </div>
       )}
@@ -233,16 +234,16 @@ export default async function PresencasClientePage({
           return (
             <div
               key={p.id}
-              className="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface p-3"
+              className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface p-3"
             >
-              <span className="w-16 text-xs text-zinc-500">{fmt(p.data)}</span>
+              <span className="w-16 text-xs text-muted">{fmt(p.data)}</span>
               <span
                 className="rounded-full px-2 py-0.5 text-xs font-medium"
                 style={{ background: st.bg, color: st.tx }}
               >
                 {p.estado}
               </span>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-muted">
                 {p.origem === 'calendario' ? 'Calendário (histórico)' : (p.pt?.nome ?? '—')}
               </span>
               {p.nota && (

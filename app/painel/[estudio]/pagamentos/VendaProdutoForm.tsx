@@ -8,8 +8,8 @@ export type ProdutoVenda = { id: string; nome: string; valor: number; categoria:
 
 const METODOS = ['Numerário', 'Multibanco', 'MB Way', 'Transferência']
 const inputCls =
-  'rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
-const labelCls = 'text-[11px] font-semibold uppercase tracking-wide text-zinc-500'
+  'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
+const labelCls = 'text-[11px] font-semibold uppercase tracking-wide text-muted'
 
 const eur = (v: number) => `${v.toFixed(2).replace('.', ',')} €`
 

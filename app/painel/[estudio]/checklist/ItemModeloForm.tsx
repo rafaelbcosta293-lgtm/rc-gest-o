@@ -35,14 +35,14 @@ export default function ItemModeloForm({
         name="secao"
         defaultValue={item.secao}
         placeholder="Secção"
-        className="w-28 rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
+        className="w-28 rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand"
       />
       <input
         name="item"
         defaultValue={item.item}
-        className="min-w-[160px] flex-1 rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
+        className="min-w-[160px] flex-1 rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand"
       />
-      <SubmitButton pendingText="…" className="rounded-md border border-border-subtle px-2 py-1 text-xs">
+      <SubmitButton pendingText="…" className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-brand/[.08]">
         Guardar
       </SubmitButton>
       <SubmitButton

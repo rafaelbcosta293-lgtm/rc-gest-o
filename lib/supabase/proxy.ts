@@ -37,6 +37,25 @@ function isPublicPath(pathname: string) {
   )
 }
 
+// A resposta fica em memória 30 segundos: ativar ou desativar a
+// restrição por computador demora, no máximo, esse tempo a notar-se.
+const VALIDADE_RESTRICAO_MS = 30_000
+const restricaoEmMemoria = new Map<string, { ativa: boolean; ate: number }>()
+
+async function restricaoPorDispositivoAtiva(
+  supabase: ReturnType<typeof createServerClient>,
+  chave: string
+): Promise<boolean> {
+  const guardada = restricaoEmMemoria.get(chave)
+  if (guardada && guardada.ate > Date.now()) return guardada.ativa
+  const { data, error } = await supabase.from('config').select('valor').eq('chave', chave).maybeSingle()
+  const ativa = !!data?.valor
+  // Só se guarda uma resposta fiável — se a consulta falhar, pergunta-se
+  // outra vez no pedido seguinte.
+  if (!error) restricaoEmMemoria.set(chave, { ativa, ate: Date.now() + VALIDADE_RESTRICAO_MS })
+  return ativa
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -90,9 +109,14 @@ export async function updateSession(request: NextRequest) {
     const slugPartilhado = slugEstudioDoEmailPartilhado(session.user.email ?? null)
     const chaveAtivo = slugPartilhado ? chaveAtivoDispositivo(slugPartilhado) : undefined
     if (slugPartilhado && chaveAtivo) {
-      const { data } = await supabase.from('config').select('valor').eq('chave', chaveAtivo).maybeSingle()
       const autorizado = request.cookies.get(NOME_COOKIE[slugPartilhado])?.value === '1'
-      if (data?.valor && !autorizado) {
+      // Um computador já autorizado passa sempre, esteja a restrição
+      // ativa ou não — só é preciso perguntar à base de dados se ela
+      // está ativa quando o computador NÃO está autorizado. Poupa uma
+      // consulta em cada página (e em cada pré-carregamento de link)
+      // às contas dos estúdios, que são quem mais usa a app.
+      const restricaoAtiva = autorizado ? false : await restricaoPorDispositivoAtiva(supabase, chaveAtivo)
+      if (restricaoAtiva) {
         await supabase.auth.signOut()
         const url = request.nextUrl.clone()
         url.pathname = '/login'

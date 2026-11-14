@@ -76,7 +76,7 @@ export default async function AlertasPage({
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Centro de alertas</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Centro de alertas</h1>
           <p className="mt-1 text-sm text-muted">
             {estudio.nome} · {alertas.length} {alertas.length === 1 ? 'alerta aberto' : 'alertas abertos'}
           </p>
@@ -90,7 +90,7 @@ export default async function AlertasPage({
       )}
 
       {alertas.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-zinc-500">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
           Sem alertas em aberto.
         </div>
       )}
@@ -102,7 +102,7 @@ export default async function AlertasPage({
           const cor = COR_SEVERIDADE[severidade]
           return (
             <div key={severidade}>
-              <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
                 <span className="rounded-full px-2 py-0.5" style={{ background: cor.bg, color: cor.tx }}>
                   {severidade}
                 </span>
@@ -129,7 +129,7 @@ export default async function AlertasPage({
                             <p className="text-sm font-medium text-foreground">{a.titulo}</p>
                           )}
                           {a.estado === 'Adiado' && a.adiado_ate && (
-                            <p className="mt-0.5 text-xs text-zinc-500">adiado até {a.adiado_ate}</p>
+                            <p className="mt-0.5 text-xs text-muted">adiado até {a.adiado_ate}</p>
                           )}
                         </div>
                       </div>
@@ -172,7 +172,7 @@ export default async function AlertasPage({
                               name="adiado_ate"
                               required
                               min={new Date().toISOString().slice(0, 10)}
-                              className="rounded-md border border-border-subtle px-2 py-1 text-xs dark:bg-zinc-900"
+                              className="rounded-lg border border-border-subtle bg-surface px-2 py-1 text-xs outline-none focus:border-brand"
                             />
                             <SubmitButton
                               pendingText="…"

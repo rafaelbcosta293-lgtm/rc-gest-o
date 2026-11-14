@@ -8,7 +8,7 @@ import { fimDoMes, validadeSugerida } from '@/lib/data/validadePagamento'
 
 const inputCls =
   'rounded-md border border-black bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900'
-const labelCls = 'text-[11px] font-semibold uppercase tracking-wide text-zinc-500'
+const labelCls = 'text-[11px] font-semibold uppercase tracking-wide text-muted'
 
 const METODOS = ['Numerário', 'Multibanco', 'MB Way', 'Transferência']
 
@@ -206,7 +206,7 @@ export default function PagamentoForm({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-700 dark:text-zinc-300">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-foreground/80">
         <label className="flex items-center gap-1">
           <input type="checkbox" name="inclui_inscricao" /> Inclui inscrição
         </label>
@@ -225,8 +225,8 @@ export default function PagamentoForm({
 
       {/* Pedir fatura: não emite nada — só avisa a Administração, que
           revê o rascunho pré-preenchido e decide se a fatura sai. */}
-      <div className="rounded-lg border border-border-subtle p-2">
-        <label className="flex items-center gap-2 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+      <div className="rounded-xl border border-border-subtle p-2">
+        <label className="flex items-center gap-2 text-xs font-medium text-foreground/80">
           <input
             type="checkbox"
             name="pedir_fatura"

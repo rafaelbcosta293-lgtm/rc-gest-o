@@ -1,16 +1,21 @@
+import { cache } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Estudio, Perfil } from '@/lib/supabase/database.types'
 import { idsContasPartilhadas } from './contasPartilhadas'
 
-export async function getEstudios(supabase: SupabaseClient): Promise<Estudio[]> {
+// Em cache() por pedido: o layout e a página (e às vezes componentes
+// dentro dela) pedem os mesmos estúdios — assim a consulta corre uma
+// vez só por pedido em vez de duas ou três. O cliente Supabase também
+// é o mesmo objeto durante o pedido (ver lib/supabase/server.ts).
+export const getEstudios = cache(async (supabase: SupabaseClient): Promise<Estudio[]> => {
   const { data } = await supabase
     .from('estudios')
     .select('*')
     .eq('ativo', true)
     .order('nome')
   return (data as Estudio[] | null) ?? []
-}
+})
 
 // Usado pelas pastas "filtráveis" da Administração (submenu "só
 // Fátima/só Leiria" no menu superior) — sem slug, ou com um slug que
@@ -21,10 +26,7 @@ export function filtrarPorEstudio<T extends { slug: string }>(estudios: T[], slu
   return filtrado.length > 0 ? filtrado : estudios
 }
 
-export async function getEstudioPorSlug(
-  supabase: SupabaseClient,
-  slug: string
-): Promise<Estudio | null> {
+export const getEstudioPorSlug = cache(async (supabase: SupabaseClient, slug: string): Promise<Estudio | null> => {
   const { data } = await supabase
     .from('estudios')
     .select('*')
@@ -32,7 +34,7 @@ export async function getEstudioPorSlug(
     .eq('ativo', true)
     .maybeSingle()
   return data as Estudio | null
-}
+})
 
 // Só quem o admin autorizou (em "Equipa") aparece para escolher como PT
 // dentro deste estúdio — em vez de toda a gente registada na app. As

@@ -3,7 +3,7 @@ import { ArrowLeft, UserPlus, Euro, Dumbbell, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { getEvolucaoMensal } from '@/lib/data/evolucaoMensal'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from './actions'
 import { corGraficoEstudio } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
@@ -19,9 +19,7 @@ export default async function AdminPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'admin')
-  const desbloqueada = protegida ? await areaDesbloqueada('admin') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'admin')) {
     return (
       <PortaSenha titulo="Administração" destino="/painel/admin" action={desbloquearAdmin} erro={erroSenha} />
     )

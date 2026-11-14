@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
-import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
+import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearCoordenacao } from '../actions'
 import { fmt } from '@/lib/data/presencas'
 import { somarDias } from '@/lib/data/horarios'
@@ -25,9 +25,7 @@ export default async function TimelineEmpresaPage({
 
   const supabase = await createClient()
 
-  const protegida = await areaTemPassword(supabase, 'coordenacao')
-  const desbloqueada = protegida ? await areaDesbloqueada('coordenacao') : true
-  if (protegida && !desbloqueada) {
+  if (await areaBloqueada(supabase, 'coordenacao')) {
     return (
       <PortaSenha
         titulo="Coordenação — Timeline"
@@ -71,7 +69,7 @@ export default async function TimelineEmpresaPage({
         <ArrowLeft className="h-4 w-4" /> Coordenação
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">Timeline da empresa</h1>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Timeline da empresa</h1>
       <p className="mt-1 text-sm text-muted">Fátima + Leiria</p>
 
       {error && (
@@ -112,7 +110,7 @@ export default async function TimelineEmpresaPage({
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Marcos ({marcos.length})</h2>
         <div className="mt-2 flex flex-col gap-2">
           {marcos.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+            <div className="rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
               Ainda não há marcos registados.
             </div>
           )}
@@ -121,10 +119,10 @@ export default async function TimelineEmpresaPage({
             return (
               <div
                 key={m.id}
-                className="flex items-start justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm"
+                className="flex items-start justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-3 text-sm"
               >
                 <div>
-                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <div className="flex items-center gap-2 text-xs text-muted">
                     <span>{fmt(m.data)}</span>
                     <span>· {m.tipo}</span>
                     <span>· {estudio ? estudio.nome : 'Ambos'}</span>

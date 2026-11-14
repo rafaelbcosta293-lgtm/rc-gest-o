@@ -11,10 +11,10 @@ export default async function AtualizarPasswordPage({
   const { error } = await searchParams
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
-      <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-8">
+    <div className="flex flex-1 items-center justify-center px-4">
+      <div className="w-full max-w-sm rounded-3xl border border-border-subtle bg-surface p-8 shadow-card-hover">
         <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="mx-auto h-9 w-auto" />
-        <h1 className="mt-6 text-2xl font-semibold text-foreground">
+        <h1 className="mt-6 text-3xl font-bold tracking-tight text-foreground">
           Nova palavra-passe
         </h1>
         <p className="mt-1 text-sm text-muted">
@@ -22,7 +22,7 @@ export default async function AtualizarPasswordPage({
         </p>
 
         {error && (
-          <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
             {error}
           </p>
         )}

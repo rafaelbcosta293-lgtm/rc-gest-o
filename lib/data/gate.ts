@@ -41,6 +41,15 @@ export async function areaDesbloqueada(area: AreaProtegida): Promise<boolean> {
   return jar.get(NOME_COOKIE[area])?.value === '1'
 }
 
+// "Esta área está trancada para este pedido?" — vê primeiro a cookie
+// (não custa nada) e só vai à base de dados perguntar se há password
+// definida quando a cookie não existe. Quem já desbloqueou não paga
+// essa consulta em cada página que abre.
+export async function areaBloqueada(supabase: SupabaseClient, area: AreaProtegida): Promise<boolean> {
+  if (await areaDesbloqueada(area)) return false
+  return areaTemPassword(supabase, area)
+}
+
 export async function tentarDesbloquear(
   supabase: SupabaseClient,
   area: AreaProtegida,

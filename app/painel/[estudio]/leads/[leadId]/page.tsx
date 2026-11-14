@@ -20,6 +20,7 @@ import SubmitButton from '@/components/SubmitButton'
 import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import type { Activity, LeadContacto } from '@/lib/supabase/database.types'
+import { ArrowLeft } from 'lucide-react'
 
 export default async function LeadPage({
   params,
@@ -90,9 +91,9 @@ export default async function LeadPage({
       node: (
         <div
           key={`contacto-${c.id}`}
-          className="rounded-lg border border-border-subtle bg-surface p-3 text-sm"
+          className="rounded-xl border border-border-subtle bg-surface p-3 text-sm"
         >
-          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
             <span>{fmt(c.data)}</span>
             <span>· {c.tipo}</span>
             {c.feito && <span>· {c.feito.nome}</span>}
@@ -110,7 +111,7 @@ export default async function LeadPage({
           key={`atividade-${a.id}`}
           className="rounded-lg border border-dashed border-border-subtle bg-foreground/[0.02] p-3 text-sm"
         >
-          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
             <span>{fmt(a.criado_em.slice(0, 10))}</span>
             <span>· {a.tipo}</span>
           </div>
@@ -124,13 +125,13 @@ export default async function LeadPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/leads`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Leads
+        <ArrowLeft className="h-4 w-4" /> Leads
       </Link>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">{lead.nome}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">{lead.nome}</h1>
         <span
           className="rounded-full px-2.5 py-1 text-xs font-medium"
           style={{ background: cor.bg, color: cor.tx }}
@@ -174,25 +175,25 @@ export default async function LeadPage({
                 required
                 defaultValue={lead.nome}
                 placeholder="Nome"
-                className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+                className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
               />
               <input
                 name="telefone"
                 defaultValue={lead.telefone ?? ''}
                 placeholder="Telefone"
-                className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+                className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
               />
               <input
                 name="email"
                 defaultValue={lead.email ?? ''}
                 placeholder="Email"
-                className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+                className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
               />
               <input
                 name="objetivo"
                 defaultValue={lead.objetivo ?? ''}
                 placeholder="Objetivo"
-                className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+                className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
               />
             </div>
             <SubmitButton
@@ -217,23 +218,23 @@ export default async function LeadPage({
             <input type="hidden" name="nome_lead" value={lead.nome} />
             <input type="hidden" name="telefone_lead" value={lead.telefone ?? ''} />
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Dia</label>
+              <label className="text-xs font-medium text-foreground/80">Dia</label>
               <input
                 type="date"
                 name="data"
                 required
                 defaultValue={lead.visita_data ?? ''}
-                className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+                className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Hora</label>
+              <label className="text-xs font-medium text-foreground/80">Hora</label>
               <input
                 type="time"
                 name="hora_inicio"
                 required
                 defaultValue={lead.visita_hora ?? ''}
-                className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+                className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
               />
             </div>
             <SubmitButton
@@ -246,7 +247,7 @@ export default async function LeadPage({
         </details>
       )}
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Editar lead
       </h2>
       <LeadForm
@@ -258,27 +259,27 @@ export default async function LeadPage({
         outrosEstudios={outrosEstudios}
       />
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Registar contacto
       </h2>
       <form action={adicionarContacto} className="mt-2 flex flex-wrap items-end gap-3">
         <input type="hidden" name="estudio_slug" value={slug} />
         <input type="hidden" name="lead_id" value={lead.id} />
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Dia</label>
+          <label className="text-xs font-medium text-foreground/80">Dia</label>
           <input
             type="date"
             name="data"
             defaultValue={new Date().toISOString().slice(0, 10)}
-            className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+            className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Tipo</label>
+          <label className="text-xs font-medium text-foreground/80">Tipo</label>
           <select
             name="tipo"
             defaultValue="Telefone"
-            className="rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+            className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
           >
             {TIPOS_CONTACTO.map((t) => (
               <option key={t} value={t}>
@@ -288,20 +289,20 @@ export default async function LeadPage({
           </select>
         </div>
         <div className="flex flex-col justify-end gap-1.5 pb-2.5">
-          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <label className="flex items-center gap-2 text-sm text-foreground/80">
             <input type="checkbox" name="sucesso" defaultChecked />
             Conseguiu falar com a lead
           </label>
         </div>
         <div className="flex flex-1 flex-col gap-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          <label className="text-xs font-medium text-foreground/80">
             Resultado
           </label>
           <input
             name="resultado"
             required
             placeholder="ex.: não atendeu, marcou visita para sexta"
-            className="w-full rounded-md border border-border-subtle px-3 py-2 text-sm dark:bg-zinc-900"
+            className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
           />
         </div>
         <SubmitButton
@@ -312,11 +313,11 @@ export default async function LeadPage({
         </SubmitButton>
       </form>
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Linha do tempo ({timeline.length})
       </h2>
       {timeline.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
           Ainda não há atividade registada.
         </div>
       )}
@@ -324,7 +325,7 @@ export default async function LeadPage({
 
       {ehGestao && !lead.cliente_id && outrosEstudios.length > 0 && (
         <div className="mt-8 border-t border-border-subtle pt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
             Corrigir estúdio
           </h2>
           <p className="mt-1 text-xs text-muted">

@@ -292,8 +292,8 @@ export default function TreinoForm({
   }
 
   const inputCls =
-    'rounded-md border border-border-subtle px-2.5 py-1.5 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
-  const labelCompactoCls = 'text-[11px] font-semibold uppercase tracking-wide text-zinc-500'
+    'rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-brand'
+  const labelCompactoCls = 'text-[11px] font-semibold uppercase tracking-wide text-muted'
 
   return (
     <div className="mt-6 flex flex-col gap-6">
@@ -305,7 +305,7 @@ export default function TreinoForm({
 
       <div>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">1 · Plano (antes do treino)</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">1 · Plano (antes do treino)</h2>
           <span className="text-[11px] text-zinc-400">guarda-se sozinho, exercício a exercício</span>
         </div>
 
@@ -321,7 +321,7 @@ export default function TreinoForm({
             {CABECALHOS_GRID.map((h, i) => (
               <span
                 key={i}
-                className="border-b-2 border-border-strong bg-zinc-50 px-1 py-2 text-center text-[10px] font-bold tracking-wide text-zinc-500 uppercase dark:bg-white/[.03]"
+                className="border-b-2 border-border-strong bg-zinc-50 px-1 py-2 text-center text-[10px] font-bold tracking-wide text-muted uppercase dark:bg-white/[.03]"
               >
                 {h}
               </span>
@@ -493,7 +493,7 @@ export default function TreinoForm({
         }`}
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">2 · Depois do treino</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">2 · Depois do treino</h2>
           {registado && <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">✓ Treino registado</span>}
         </div>
 

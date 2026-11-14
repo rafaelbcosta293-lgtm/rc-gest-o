@@ -119,7 +119,7 @@ export default async function ContasEstudiosPage({
       <div className="mt-6 flex flex-col gap-6">
         <div className="rounded-xl border border-border-subtle bg-surface p-4">
           <h2 className="font-semibold text-foreground">Coordenação</h2>
-          <p className="mt-0.5 font-mono text-xs text-zinc-500">{EMAIL_GERAL}</p>
+          <p className="mt-0.5 font-mono text-xs text-muted">{EMAIL_GERAL}</p>
           <div className="mt-2">
             {!coordenacao.encontrada ? (
               <p className="text-xs text-red-700 dark:text-red-400">
@@ -167,7 +167,7 @@ export default async function ContasEstudiosPage({
               className="rounded-xl border border-border-subtle bg-surface p-4"
             >
               <h2 className="font-semibold text-foreground">{estudio.nome}</h2>
-              <p className="mt-0.5 font-mono text-xs text-zinc-500">{email}</p>
+              <p className="mt-0.5 font-mono text-xs text-muted">{email}</p>
 
               <div className="mt-2">
                 {!acesso.encontrada ? (

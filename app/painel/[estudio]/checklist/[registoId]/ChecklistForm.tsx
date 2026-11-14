@@ -100,7 +100,7 @@ export default function ChecklistForm({
             rows={2}
             defaultValue={ocorrenciaInicial}
             placeholder={`${ajudaOcorrencias} Ex.: torneira da casa de banho a pingar.`}
-            className="rounded-md border border-border-subtle bg-background px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-black/30"
+            className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-brand"
           />
         </label>
         <div className="flex items-center justify-between gap-4 lg:justify-end">

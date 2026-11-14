@@ -10,6 +10,7 @@ import SubmitButton from '@/components/SubmitButton'
 import CopiarTexto from '@/components/CopiarTexto'
 import ConfigAniversarioForm from './ConfigAniversarioForm'
 import type { EnvioAniversario, EstadoSmsGateway } from '@/lib/supabase/database.types'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 
 type ClienteAniversario = {
   id: string
@@ -60,22 +61,22 @@ function Calendario({
       <div className="flex items-center justify-between gap-3">
         <Link
           href={`/painel/${slug}/clientes/aniversarios?mes=${anoAnterior}-${String(mesAnteriorNum).padStart(2, '0')}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
         >
-          ← {MESES[mesAnteriorNum - 1].slice(0, 3)}
+          <ChevronLeft className="h-4 w-4" /> {MESES[mesAnteriorNum - 1].slice(0, 3)}
         </Link>
         <strong className="text-sm text-foreground">
           {MESES[mes - 1]} {ano}
         </strong>
         <Link
           href={`/painel/${slug}/clientes/aniversarios?mes=${anoSeguinte}-${String(mesSeguinteNum).padStart(2, '0')}`}
-          className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
+          className="inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
         >
-          {MESES[mesSeguinteNum - 1].slice(0, 3)} →
+          {MESES[mesSeguinteNum - 1].slice(0, 3)} <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
 
-      <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-zinc-500">
+      <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-muted">
         {DIAS_SEMANA_CURTOS.map((d) => (
           <div key={d}>{d}</div>
         ))}
@@ -211,12 +212,12 @@ export default async function AniversariosPage({
     <div className="mx-auto max-w-5xl px-4 py-10">
       <Link
         href={`/painel/${slug}/clientes`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Clientes
+        <ArrowLeft className="h-4 w-4" /> Clientes
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Aniversários
       </h1>
       <p className="mt-1 text-sm text-muted">
@@ -270,7 +271,7 @@ export default async function AniversariosPage({
                 <strong className="text-sm text-foreground">
                   {cliente.nome}
                 </strong>
-                <span className="ml-2 text-xs text-zinc-500">
+                <span className="ml-2 text-xs text-muted">
                   {fmtDiaMes(dataProximo)} · faz {idade} anos
                   {cliente.estado === 'Inativo' && ' · inativo'}
                 </span>
@@ -338,7 +339,7 @@ export default async function AniversariosPage({
       </div>
 
       {lista.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-zinc-500">
+        <div className="mt-6 rounded-xl border border-dashed border-border-subtle p-8 text-center text-sm text-muted">
           Nenhum cliente com data de nascimento registada.
         </div>
       )}
@@ -394,7 +395,7 @@ export default async function AniversariosPage({
             Editar mensagens
           </summary>
           <div className="flex flex-col gap-4 border-t border-border-subtle p-4">
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted">
               Usa <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{'{nome}'}</code> onde
               quiseres que apareça o nome da pessoa, e{' '}
               <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{'{estimado}'}</code> onde

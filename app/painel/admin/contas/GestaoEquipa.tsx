@@ -153,7 +153,7 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
         </summary>
         <form action={criarInstrutor} className="mt-4 flex flex-col gap-4">
           <CamposPerfil estudios={estudios} />
-          <div className="rounded-lg border border-border-subtle p-3">
+          <div className="rounded-xl border border-border-subtle p-3">
             <p className="text-sm font-semibold text-foreground">Acesso à app (opcional)</p>
             <p className="mt-0.5 text-xs text-muted">Deixa o email em branco para criar só o perfil. Podes dar-lhe acesso mais tarde.</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -214,7 +214,7 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
                   </SubmitButton>
                 </form>
 
-                <form action={definirAcesso} className="rounded-lg border border-border-subtle p-3">
+                <form action={definirAcesso} className="rounded-xl border border-border-subtle p-3">
                   <input type="hidden" name="id" value={p.id} />
                   <p className="text-sm font-semibold text-foreground">
                     {p.semConta ? 'Dar acesso à app' : 'Alterar email ou palavra-passe'}

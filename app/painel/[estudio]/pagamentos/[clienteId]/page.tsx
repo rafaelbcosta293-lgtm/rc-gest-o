@@ -8,6 +8,7 @@ import PagamentoForm from '../PagamentoForm'
 import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import type { Pagamento, Plano } from '@/lib/supabase/database.types'
+import { ArrowLeft } from 'lucide-react'
 
 type PagamentoComExtras = Pagamento & {
   plano: { nome: string } | null
@@ -65,12 +66,12 @@ export default async function PagamentosClientePage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/pagamentos`}
-        className="text-sm text-muted underline"
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
-        ← Pagamentos
+        <ArrowLeft className="h-4 w-4" /> Pagamentos
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         {cliente.nome}
       </h1>
       <p
@@ -89,7 +90,7 @@ export default async function PagamentosClientePage({
         </p>
       )}
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Registar pagamento
       </h2>
       <PagamentoForm
@@ -101,17 +102,17 @@ export default async function PagamentosClientePage({
         validadeAtual={validoAte}
       />
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Registar só o seguro
       </h2>
-      <p className="mt-1 text-xs text-zinc-500">
+      <p className="mt-1 text-xs text-muted">
         Sem mexer na mensalidade — só marca o seguro deste ciclo como pago.
       </p>
       <form action={registarPagamentoSeguro} className="mt-3 flex flex-wrap items-end gap-3">
         <input type="hidden" name="estudio_slug" value={slug} />
         <input type="hidden" name="cliente_id" value={clienteId} />
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Valor (€)</label>
+          <label className="text-sm font-medium text-foreground/80">Valor (€)</label>
           <input
             name="valor"
             type="number"
@@ -121,7 +122,7 @@ export default async function PagamentosClientePage({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label className="text-sm font-medium text-foreground/80">
             Data do pagamento
           </label>
           <input
@@ -139,11 +140,11 @@ export default async function PagamentosClientePage({
         </SubmitButton>
       </form>
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Histórico ({pagamentos.length})
       </h2>
       {pagamentos.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
           Ainda não há pagamentos registados.
         </div>
       )}
@@ -151,17 +152,17 @@ export default async function PagamentosClientePage({
         {pagamentos.map((p) => (
           <div
             key={p.id}
-            className={`flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface p-3 text-sm ${p.anulado_em ? 'opacity-50' : ''}`}
+            className={`flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle bg-surface p-3 text-sm ${p.anulado_em ? 'opacity-50' : ''}`}
           >
             <span className={`font-medium text-foreground ${p.anulado_em ? 'line-through' : ''}`}>
               {p.plano?.nome ?? 'sem plano'}
             </span>
-            <span className="text-xs text-zinc-500">{p.metodo}</span>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted">{p.metodo}</span>
+            <span className="text-xs text-muted">
               pago {fmt(p.data_pagamento)} · válido até {fmt(p.valido_ate)}
             </span>
             {(p.inclui_inscricao || p.inclui_seguro || p.inclui_reativacao) && (
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-muted">
                 +{[
                   p.inclui_inscricao && 'inscrição',
                   p.inclui_seguro && 'seguro',

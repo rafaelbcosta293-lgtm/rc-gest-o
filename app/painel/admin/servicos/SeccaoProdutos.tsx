@@ -14,7 +14,7 @@ export type CategoriaProduto = { id: number; nome: string; ordem: number }
 export type Produto = { id: string; categoria_id: number; nome: string; valor: number; ativo: boolean }
 
 const inputCls =
-  'rounded-md border border-border-subtle px-3 py-2 text-sm outline-none focus:border-black/30 dark:bg-zinc-900 dark:focus:border-white/30'
+  'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
 const botaoSec = 'rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-brand/[.08]'
 
 function SelectCategoria({ categorias, valor }: { categorias: CategoriaProduto[]; valor?: number }) {
@@ -36,7 +36,7 @@ export default function SeccaoProdutos({ categorias, produtos }: { categorias: C
   return (
     <section id="produtos" className="scroll-mt-24">
       <TituloSeccao cor="laranja">Produtos</TituloSeccao>
-      <p className="mt-1 text-xs text-zinc-500">
+      <p className="mt-1 text-xs text-muted">
         O que se vende para além dos serviços — bar, merchandising e outras categorias que criares.
       </p>
 
@@ -62,7 +62,7 @@ export default function SeccaoProdutos({ categorias, produtos }: { categorias: C
                     Mudar nome
                   </SubmitButton>
                 </form>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-muted">
                   {doGrupo.length} produto{doGrupo.length === 1 ? '' : 's'}
                 </span>
                 {doGrupo.length === 0 && (
@@ -75,9 +75,9 @@ export default function SeccaoProdutos({ categorias, produtos }: { categorias: C
                 )}
               </div>
               <div className="mt-2 flex flex-col gap-2">
-                {doGrupo.length === 0 && <p className="text-xs text-zinc-500">Ainda sem produtos nesta categoria.</p>}
+                {doGrupo.length === 0 && <p className="text-xs text-muted">Ainda sem produtos nesta categoria.</p>}
                 {doGrupo.map((p) => (
-                  <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface p-3">
+                  <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle bg-surface p-3">
                     <form action={atualizarProduto} className="flex flex-1 flex-wrap items-center gap-2">
                       <input type="hidden" name="id" value={p.id} />
                       <input name="nome" required defaultValue={p.nome} className={`${inputCls} flex-1 basis-40`} />

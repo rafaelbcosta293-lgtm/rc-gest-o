@@ -88,7 +88,7 @@ export default async function ChecklistPage({
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Abertura / Fecho
       </h1>
       <p className="mt-1 text-sm text-muted">
@@ -190,11 +190,11 @@ export default async function ChecklistPage({
         </div>
       </div>
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
         Histórico recente
       </h2>
       {historico.length === 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
+        <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
           Ainda não há checklists de dias anteriores.
         </div>
       )}
@@ -203,13 +203,13 @@ export default async function ChecklistPage({
           <Link
             key={r.id}
             href={`/painel/${slug}/checklist/${r.id}`}
-            className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3 text-sm"
+            className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface p-3 text-sm"
           >
             <span>
               {fmt(r.data)} · {r.tipo}
-              {r.pt?.nome ? <span className="text-zinc-500"> · {r.pt.nome.trim()}</span> : null}
+              {r.pt?.nome ? <span className="text-muted"> · {r.pt.nome.trim()}</span> : null}
             </span>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted">
               {r.concluidos} de {r.total} feitos
             </span>
           </Link>
@@ -223,12 +223,12 @@ export default async function ChecklistPage({
             Editar checklist
           </summary>
           <div className="flex flex-col gap-6 border-t border-border-subtle p-4">
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted">
               Alterar aqui não muda checklists já iniciadas — só as próximas.
             </p>
-            <div className="rounded-lg border border-border-subtle p-3">
+            <div className="rounded-xl border border-border-subtle p-3">
               <p className="text-sm font-semibold text-foreground">Checklist oficial (formulário de Abertura/Fecho)</p>
-              <p className="mt-0.5 text-xs text-zinc-500">
+              <p className="mt-0.5 text-xs text-muted">
                 {emFalta > 0
                   ? `Faltam ${emFalta} itens do formulário nesta checklist.`
                   : 'Esta checklist já tem todos os itens do formulário.'}
@@ -271,7 +271,7 @@ export default async function ChecklistPage({
                       />
                     ))}
                     {itens.length === 0 && (
-                      <p className="text-xs text-zinc-500">Sem itens ainda.</p>
+                      <p className="text-xs text-muted">Sem itens ainda.</p>
                     )}
                   </div>
                   <form
@@ -284,13 +284,13 @@ export default async function ChecklistPage({
                       name="secao"
                       placeholder="Secção"
                       defaultValue="Geral"
-                      className="w-28 rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
+                      className="w-28 rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand"
                     />
                     <input
                       name="item"
                       required
                       placeholder="Novo item…"
-                      className="min-w-[160px] flex-1 rounded-md border border-border-subtle px-2 py-1.5 text-xs dark:bg-zinc-900"
+                      className="min-w-[160px] flex-1 rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand"
                     />
                     <SubmitButton
                       pendingText="…"

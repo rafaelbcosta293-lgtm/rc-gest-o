@@ -65,6 +65,8 @@ const TABELAS: Record<string, string[]> = {
   perfis_estudios: ['perfil_id', 'estudio_id'],
   planos: ['id'],
   presencas: ['id'],
+  produto_categorias: ['id'],
+  produtos: ['id'],
   receitas_outras: ['id'],
   registos_horario: ['id'],
   registos_pt: ['id'],

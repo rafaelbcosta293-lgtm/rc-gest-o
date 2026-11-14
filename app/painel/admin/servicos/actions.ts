@@ -173,3 +173,86 @@ export async function apagarPlano(formData: FormData) {
   revalidatePath('/painel/admin/servicos')
   redirect('/painel/admin/servicos')
 }
+
+// ── Produtos (bar, merchandising…) e as suas categorias ──────────────
+
+const ROTA_PRODUTOS = '/painel/admin/servicos'
+
+function voltarProdutos(params: Record<string, string> = {}): never {
+  const qs = new URLSearchParams(params).toString()
+  revalidatePath(ROTA_PRODUTOS)
+  redirect(`${ROTA_PRODUTOS}${qs ? `?${qs}` : ''}#produtos`)
+}
+
+function precoDe(formData: FormData): number | null {
+  const n = Number(String(formData.get('valor') ?? '').replace(/\s/g, '').replace(',', '.'))
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+
+export async function criarProduto(formData: FormData) {
+  const nome = campoOuNull(formData, 'nome')
+  const categoriaId = Number(formData.get('categoria_id'))
+  const valor = precoDe(formData)
+  if (!nome || !categoriaId || valor === null) voltarProdutos({ error: 'Indica o nome, a categoria e o preço do produto.' })
+  const supabase = await createClient()
+  const { error } = await supabase.from('produtos').insert({ nome, categoria_id: categoriaId, valor })
+  if (error) voltarProdutos({ error: error.message })
+  voltarProdutos()
+}
+
+export async function atualizarProduto(formData: FormData) {
+  const id = formData.get('id') as string
+  const nome = campoOuNull(formData, 'nome')
+  const categoriaId = Number(formData.get('categoria_id'))
+  const valor = precoDe(formData)
+  if (!nome || !categoriaId || valor === null) voltarProdutos({ error: 'Indica o nome, a categoria e o preço do produto.' })
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('produtos')
+    .update({ nome, categoria_id: categoriaId, valor, ativo: formData.get('ativo') === 'on' })
+    .eq('id', id)
+  if (error) voltarProdutos({ error: error.message })
+  voltarProdutos()
+}
+
+export async function apagarProduto(formData: FormData) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('produtos').delete().eq('id', formData.get('id') as string)
+  if (error) voltarProdutos({ error: error.message })
+  voltarProdutos()
+}
+
+export async function criarCategoriaProduto(formData: FormData) {
+  const nome = campoOuNull(formData, 'nome')
+  if (!nome) voltarProdutos({ error: 'Indica o nome da categoria.' })
+  const supabase = await createClient()
+  const { data: ultima } = await supabase
+    .from('produto_categorias')
+    .select('ordem')
+    .order('ordem', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const { error } = await supabase.from('produto_categorias').insert({ nome, ordem: (ultima?.ordem ?? 0) + 1 })
+  if (error) voltarProdutos({ error: error.code === '23505' ? 'Já existe uma categoria com esse nome.' : error.message })
+  voltarProdutos()
+}
+
+export async function renomearCategoriaProduto(formData: FormData) {
+  const nome = campoOuNull(formData, 'nome')
+  if (!nome) voltarProdutos({ error: 'Indica o nome da categoria.' })
+  const supabase = await createClient()
+  const { error } = await supabase.from('produto_categorias').update({ nome }).eq('id', Number(formData.get('id')))
+  if (error) voltarProdutos({ error: error.code === '23505' ? 'Já existe uma categoria com esse nome.' : error.message })
+  voltarProdutos()
+}
+
+export async function apagarCategoriaProduto(formData: FormData) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('produto_categorias').delete().eq('id', Number(formData.get('id')))
+  if (error) {
+    voltarProdutos({
+      error: error.code === '23503' ? 'Esta categoria ainda tem produtos — muda-os de categoria ou elimina-os primeiro.' : error.message,
+    })
+  }
+  voltarProdutos()
+}

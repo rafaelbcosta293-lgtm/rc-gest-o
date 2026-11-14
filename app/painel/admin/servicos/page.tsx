@@ -15,6 +15,7 @@ import PortaSenha from '@/components/PortaSenha'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
 import ListaPlanos from './ListaPlanos'
+import SeccaoProdutos, { type CategoriaProduto, type Produto } from './SeccaoProdutos'
 import type { ConfigLinha, Plano } from '@/lib/supabase/database.types'
 
 const inputCls =
@@ -121,15 +122,23 @@ export default async function ServicosPage({
     )
   }
 
-  const [{ data: planosData, error: erroPlanos }, { data: configData, error: erroConfig }] =
-    await Promise.all([
-      supabase.from('planos').select('*').order('ordem'),
-      supabase.from('config').select('*').order('chave'),
-    ])
+  const [
+    { data: planosData, error: erroPlanos },
+    { data: configData, error: erroConfig },
+    { data: categoriasProdutoData, error: erroCategoriasProduto },
+    { data: produtosData, error: erroProdutos },
+  ] = await Promise.all([
+    supabase.from('planos').select('*').order('ordem'),
+    supabase.from('config').select('*').order('chave'),
+    supabase.from('produto_categorias').select('id, nome, ordem').order('ordem'),
+    supabase.from('produtos').select('id, categoria_id, nome, valor, ativo').order('nome'),
+  ])
 
-  if (erroPlanos || erroConfig) {
-    throw new Error((erroPlanos ?? erroConfig)!.message)
+  if (erroPlanos || erroConfig || erroCategoriasProduto || erroProdutos) {
+    throw new Error((erroPlanos ?? erroConfig ?? erroCategoriasProduto ?? erroProdutos)!.message)
   }
+  const categoriasProduto = (categoriasProdutoData ?? []) as CategoriaProduto[]
+  const produtos = ((produtosData ?? []) as Produto[]).map((p) => ({ ...p, valor: Number(p.valor) }))
 
   const planos = (planosData ?? []) as Plano[]
   const configTodo = (configData ?? []) as ConfigLinha[]
@@ -153,7 +162,7 @@ export default async function ServicosPage({
         Serviços / Produtos
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Valores dos planos (partilhados por todos os estúdios), definições do negócio e acessos.
+        Serviços (planos) e produtos, partilhados por todos os estúdios, definições do negócio e acessos.
       </p>
 
       {error && (
@@ -162,7 +171,8 @@ export default async function ServicosPage({
         </p>
       )}
 
-      <p className="mt-6 text-xs text-zinc-500">Arrasta pela pega à esquerda para mudar a ordem.</p>
+      <TituloSeccao cor="teal">Serviços</TituloSeccao>
+      <p className="mt-1 text-xs text-zinc-500">Arrasta pela pega à esquerda para mudar a ordem.</p>
       <ListaPlanos planos={planos} />
 
       <form
@@ -200,6 +210,8 @@ export default async function ServicosPage({
         Eliminar um serviço já usado em pagamentos antigos pode não ser possível — nesse caso,
         desmarca &quot;ativo&quot; em vez de eliminar.
       </p>
+
+      <SeccaoProdutos categorias={categoriasProduto} produtos={produtos} />
 
       <TituloSeccao cor="vermelho">Passwords de acesso</TituloSeccao>
       <p className="mt-2 text-xs text-zinc-500">

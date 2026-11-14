@@ -4,33 +4,13 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
-async function marcarPresencaDoTreino(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  sessaoId: string,
-  clienteId: string,
-  data: string,
-  ptId: string | null
-) {
-  // Um treino registado conta sempre como presença. Remove qualquer
-  // registo anterior ligado a este treino (caso a data tenha mudado)
-  // e qualquer registo manual já existente nesse novo dia, para nunca
-  // haver mais do que uma presença por cliente e por dia.
-  await supabase.from('presencas').delete().eq('sessao_id', sessaoId)
-  await supabase.from('presencas').delete().match({ cliente_id: clienteId, data })
-  await supabase.from('presencas').insert({
-    cliente_id: clienteId,
-    data,
-    estado: 'Presente',
-    pt_id: ptId,
-    sessao_id: sessaoId,
-  })
-}
+// As presenças contam só a partir dos eventos da Agenda (ver
+// lib/data/agenda.ts e o cron de presenças) — planear ou registar um
+// treino aqui nunca cria nem apaga presenças.
 
 const hojeLisboa = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
 
 // "Planear treino": cria a sessão (em branco) e leva logo para o plano.
-// Planear é ANTES do treino — ainda não conta como presença; isso só
-// acontece quando o treino é registado como feito (registarTreino).
 export async function iniciarTreino(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
@@ -71,12 +51,10 @@ export async function guardarPlano(formData: FormData) {
   const ptId = (formData.get('pt_id') as string) || null
   const supabase = await createClient()
 
-  const { data: sessao, error } = await supabase
+  const { error } = await supabase
     .from('sessoes')
     .update({ data: dataTreino, pt_id: ptId, foco: (formData.get('foco') as string) || null })
     .eq('id', id)
-    .select('correu')
-    .single()
 
   if (error) {
     redirect(
@@ -84,16 +62,12 @@ export async function guardarPlano(formData: FormData) {
     )
   }
 
-  // Treino já registado como feito: a presença acompanha a nova data/PT.
-  if (sessao?.correu) await marcarPresencaDoTreino(supabase, id, clienteId, dataTreino, ptId)
-
   revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
-  revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)
   redirect(`/painel/${estudioSlug}/treinos/${clienteId}/treino/${id}?ok=plano`)
 }
 
 // DEPOIS do treino: como correu, tipo de nota e nota para o próximo.
-// Só a partir do dia do treino — e é aqui que conta como presença.
+// Só a partir do dia do treino.
 export async function registarTreino(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const clienteId = formData.get('cliente_id') as string
@@ -104,7 +78,7 @@ export async function registarTreino(formData: FormData) {
   if (!correu) voltar('Escolhe como correu o treino.')
 
   const supabase = await createClient()
-  const { data: atual } = await supabase.from('sessoes').select('data, pt_id').eq('id', id).maybeSingle()
+  const { data: atual } = await supabase.from('sessoes').select('data').eq('id', id).maybeSingle()
   if (!atual) voltar('Treino não encontrado.')
   if (atual!.data > hojeLisboa()) voltar('Este treino ainda não aconteceu — o registo de como correu fica disponível no dia do treino.')
 
@@ -118,10 +92,7 @@ export async function registarTreino(formData: FormData) {
     .eq('id', id)
   if (error) voltar('Não foi possível registar o treino.')
 
-  await marcarPresencaDoTreino(supabase, id, clienteId, atual!.data, atual!.pt_id)
-
   revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
-  revalidatePath(`/painel/${estudioSlug}/presencas/${clienteId}`)
   redirect(`/painel/${estudioSlug}/treinos/${clienteId}`)
 }
 

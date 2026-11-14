@@ -32,6 +32,101 @@ function Insignia({ nome, cor, compacta = false }: { nome: string; cor: CorPt; c
 
 const porNome = (a: string, b: string) => a.localeCompare(b, 'pt')
 
+// A grelha e o resumo de horas por baixo usam as mesmas colunas, para
+// cada dia do resumo ficar exatamente por baixo do mesmo dia da grelha.
+// O resumo tem mais uma coluna à direita (o total da semana); a grelha
+// reserva esse espaço com uma margem.
+const LARGURA_ROTULO = 96
+const LARGURA_TOTAL = 60
+const COLUNAS_GRELHA = `${LARGURA_ROTULO}px repeat(7, 1fr)`
+const COLUNAS_RESUMO = `${LARGURA_ROTULO}px repeat(7, 1fr) ${LARGURA_TOTAL}px`
+const HORAS_POR_BLOCO = 0.5
+
+const fmtHoras = (h: number) => (h === 0 ? '–' : `${String(h).replace('.', ',')}h`)
+
+// Horas de cada instrutor em cada dia da semana e o total da semana —
+// por ordem alfabética, só quem tem pelo menos um bloco marcado. Na
+// grelha editável acompanha o que está no ecrã, mesmo antes de guardar.
+function ResumoHoras({
+  dias,
+  blocosPorPt,
+  nomes,
+  corPorPt,
+}: {
+  dias: string[]
+  // pt_id → nº de blocos em cada um dos 7 dias
+  blocosPorPt: Map<string, number[]>
+  nomes: Map<string, string>
+  corPorPt?: Record<string, CorPt>
+}) {
+  const linhas = [...blocosPorPt.entries()]
+    .map(([id, blocos]) => ({ id, nome: nomes.get(id) ?? '—', horas: blocos.map((b) => b * HORAS_POR_BLOCO) }))
+    .filter((l) => l.horas.some((h) => h > 0))
+    .sort((a, b) => porNome(a.nome, b.nome))
+  if (linhas.length === 0) return null
+  const totalDia = dias.map((_, i) => linhas.reduce((s, l) => s + l.horas[i], 0))
+  const cel = 'flex items-center justify-center bg-surface px-1 py-1 tabular-nums'
+  return (
+    <div
+      className="mt-2 grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-border-subtle bg-black/10 text-[11px] dark:bg-white/10"
+      style={{ gridTemplateColumns: COLUNAS_RESUMO }}
+    >
+      <div className="bg-zinc-50 px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:bg-zinc-900">Horas</div>
+      {dias.map((d, i) => (
+        <div key={d} className="bg-zinc-50 py-1 text-center text-[10px] font-medium text-foreground dark:bg-zinc-900">
+          {DIAS_SEMANA[i].slice(0, 3)}
+        </div>
+      ))}
+      <div className="bg-zinc-50 py-1 text-center text-[10px] font-semibold text-foreground dark:bg-zinc-900">Total</div>
+      {linhas.map((l) => {
+        const cor = corDoPt(corPorPt, l.id)
+        return (
+          <Fragment key={l.id}>
+            <div className="flex items-center bg-surface p-0.5">
+              <span title={l.nome} className="w-full truncate rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: cor.bg, color: cor.tx }}>
+                {l.nome.trim().split(/\s+/)[0]}
+              </span>
+            </div>
+            {l.horas.map((h, i) => (
+              <div key={dias[i]} className={`${cel} ${h === 0 ? 'text-zinc-300 dark:text-zinc-700' : 'text-foreground'}`}>
+                {fmtHoras(h)}
+              </div>
+            ))}
+            <div className={`${cel} font-bold text-foreground`}>{fmtHoras(l.horas.reduce((s, h) => s + h, 0))}</div>
+          </Fragment>
+        )
+      })}
+      <div className="flex items-center bg-zinc-50 px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:bg-zinc-900">
+        Total
+      </div>
+      {totalDia.map((h, i) => (
+        <div key={dias[i]} className="flex items-center justify-center bg-zinc-50 py-1 font-semibold tabular-nums text-foreground dark:bg-zinc-900">
+          {fmtHoras(h)}
+        </div>
+      ))}
+      <div className="flex items-center justify-center bg-zinc-50 py-1 font-bold tabular-nums text-foreground dark:bg-zinc-900">
+        {fmtHoras(totalDia.reduce((s, h) => s + h, 0))}
+      </div>
+    </div>
+  )
+}
+
+// Conta os blocos de cada instrutor por dia a partir de "chave do bloco
+// → ids de quem lá está".
+function contarBlocos(dias: string[], idsPorChave: (chave: string) => string[]): Map<string, number[]> {
+  const mapa = new Map<string, number[]>()
+  dias.forEach((dia, i) => {
+    for (const bloco of BLOCOS_HORARIO) {
+      for (const id of idsPorChave(chaveSlot(dia, bloco.hora, bloco.minuto))) {
+        const linha = mapa.get(id) ?? Array<number>(dias.length).fill(0)
+        linha[i]++
+        mapa.set(id, linha)
+      }
+    }
+  })
+  return mapa
+}
+
 type PropsComuns = {
   dias: string[]
   slots: Record<string, SlotPt[]>
@@ -84,7 +179,7 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
     <div className="overflow-x-auto">
       <div
         className="grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-border-subtle bg-black/10 text-[10px] dark:bg-white/10"
-        style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}
+        style={{ gridTemplateColumns: COLUNAS_GRELHA, marginRight: LARGURA_TOTAL + 1 }}
       >
         <Cabecalho dias={dias} />
         {BLOCOS_HORARIO.map((bloco) => (
@@ -114,6 +209,12 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
           </Fragment>
         ))}
       </div>
+      <ResumoHoras
+        dias={dias}
+        blocosPorPt={contarBlocos(dias, (chave) => (slots[chave] ?? []).map((x) => x.pt_id))}
+        nomes={new Map(Object.values(slots).flatMap((lista) => lista.map((x) => [x.pt_id, x.nome] as const)))}
+        corPorPt={corPorPt}
+      />
     </div>
   )
 }
@@ -238,7 +339,7 @@ function GrelhaEditavel({
       <div className="overflow-x-auto">
         <div
           className={`grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-border-subtle bg-black/10 text-[10px] dark:bg-white/10 ${ptAtivoId ? 'select-none' : ''}`}
-          style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}
+          style={{ gridTemplateColumns: COLUNAS_GRELHA, marginRight: LARGURA_TOTAL + 1 }}
         >
           <Cabecalho dias={dias} />
           {BLOCOS_HORARIO.map((bloco) => (
@@ -325,6 +426,12 @@ function GrelhaEditavel({
             </Fragment>
           ))}
         </div>
+        <ResumoHoras
+          dias={dias}
+          blocosPorPt={contarBlocos(dias, (chave) => atribuicoes[chave] ?? [])}
+          nomes={ptsPorId}
+          corPorPt={corPorPt}
+        />
       </div>
 
       <div className="mt-3 flex items-center gap-3">

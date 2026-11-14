@@ -7,6 +7,7 @@ import { Minus, Plus, HelpCircle, TriangleAlert } from 'lucide-react'
 import type { ClienteOpcao } from '@/components/ClienteCombobox'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
+import { disporBlocos } from '@/lib/data/agendaLayout'
 import { nomeCurto } from '@/lib/data/clientes'
 import { PALETA, ALERTAS } from '@/lib/data/constantes'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
@@ -133,13 +134,13 @@ export type EstadoModal =
 
 // Níveis de zoom (pixels por minuto) — cada passo sobe/desce 50
 // pontos percentuais (50%, 100%, 150%, ..., 500%), sempre relativo a
-// NIVEIS_ZOOM[ZOOM_OMISSAO] = "100%". O zoom com que a agenda abre é
-// outro nível (ZOOM_INICIAL, 250%) — aproximado o suficiente para ver
-// bem os eventos sem precisar de dar zoom manualmente, pedido pelo
-// dono.
+// NIVEIS_ZOOM[ZOOM_OMISSAO] = "100%". A agenda abre em ZOOM_INICIAL
+// (200% = 54px por hora, perto dos 48px do Google Calendar): o dia de
+// trabalho inteiro cabe num ecrã e o texto dos blocos adapta-se à
+// altura (ver BlocoEvento), por isso nunca fica cortado.
 const NIVEIS_ZOOM = [0.225, 0.45, 0.675, 0.9, 1.125, 1.35, 1.575, 1.8, 2.025, 2.25]
 const ZOOM_OMISSAO = 1
-const ZOOM_INICIAL = 4
+const ZOOM_INICIAL = 3
 
 // Paleta pedida para os blocos de evento da grelha (dia/semana): fundo
 // bege suave, borda esquerda a ouro fosco (identidade da marca) e
@@ -147,9 +148,21 @@ const ZOOM_INICIAL = 4
 // por tipo continua a usar-se noutros sítios (pontos da vista de Mês,
 // ficha do evento), onde o objetivo é distinguir tipos, não aqui, onde
 // o objetivo é um aspeto leve e uniforme.
-const EVENTO_FUNDO = '#EFECE6'
-const EVENTO_BORDA = '#C5A059'
-const EVENTO_TEXTO = '#1A1A1A'
+const EVENTO_TEXTO = '#FFFFFF'
+// Blocos ao estilo Google Calendar: cor sólida por tipo, texto branco,
+// cantos arredondados e um fio claro à volta (separa blocos vizinhos).
+const COR_BLOCO: Record<string, string> = {
+  Treino: '#A3978A',
+  'Sessão experimental': '#2E9E78',
+  Avaliação: '#3F7FBF',
+  Reunião: '#0B7A4B',
+  Outro: '#D9A520',
+}
+const COR_BLOCO_CANCELADO = '#E9D5D3'
+// Largura (px) da aba que cada desmarcado deixa à vista, à direita, por
+// trás dos eventos ativos.
+const ABA_CANCELADO = 12
+const ALTURA_MIN_BLOCO = 18
 
 export default function AgendaInterativa({
   slug,
@@ -392,7 +405,17 @@ const DURACAO_MIN_MINIMA = 5
 // começar a ver aí por omissão.
 const HORA_INICIAL_VISIVEL = 6
 
-type EventoPosicionado = { evento: EventoComNomes; grupo: EventoComNomes[]; coluna: number; colunas: number }
+type EventoPosicionado = {
+  evento: EventoComNomes
+  grupo: EventoComNomes[]
+  coluna: number
+  colunas: number
+  largura: number
+  recuo: number
+  nivel: number
+  extra: number
+  coberto: boolean
+}
 
 // Um treino em simultâneo tem uma linha por pessoa — todas com o mesmo
 // grupo_id — mas só deve ocupar UM bloco na grelha (com todos os nomes),
@@ -414,31 +437,17 @@ function representantesDoDia(eventosDia: EventoComNomes[]): { evento: EventoComN
   return resultado
 }
 
-// Dispõe os eventos do dia numa grelha contínua: eventos que se
-// sobrepõem no tempo ficam lado a lado (como no Google Calendar), em
-// vez de empilhados uns sobre os outros.
+// Dispõe os eventos do dia (ver lib/data/agendaLayout.ts): sobrepostos
+// lado a lado, a alargar para o espaço livre; desmarcados por trás.
 function disporEventosDoDia(eventosDia: EventoComNomes[]): EventoPosicionado[] {
-  const ordenados = [...representantesDoDia(eventosDia)].sort(
-    (a, b) => minutosDoDia(a.evento.hora_inicio) - minutosDoDia(b.evento.hora_inicio)
-  )
-  const fimPorColuna: number[] = []
-  const base = ordenados.map((r) => {
-    const inicio = minutosDoDia(r.evento.hora_inicio)
-    const fim = inicio + r.evento.duracao_min
-    let coluna = fimPorColuna.findIndex((f) => f <= inicio)
-    if (coluna === -1) {
-      coluna = fimPorColuna.length
-      fimPorColuna.push(fim)
-    } else {
-      fimPorColuna[coluna] = fim
-    }
-    return { ...r, coluna, inicio, fim }
-  })
-  return base.map((p) => {
-    const simultaneos = base.filter((q) => q.inicio < p.fim && q.fim > p.inicio)
-    const colunas = Math.max(...simultaneos.map((q) => q.coluna + 1))
-    return { evento: p.evento, grupo: p.grupo, coluna: p.coluna, colunas }
-  })
+  const representantes = representantesDoDia(eventosDia)
+  const porId = new Map(representantes.map((r) => [r.evento.id, r]))
+  return disporBlocos(
+    representantes.map((r) => {
+      const inicio = minutosDoDia(r.evento.hora_inicio)
+      return { id: r.evento.id, inicio, fim: inicio + r.evento.duracao_min, cancelado: r.evento.estado === 'Cancelado' }
+    })
+  ).map((p) => ({ ...porId.get(p.id)!, ...p }))
 }
 
 // Arredondado aos 10 minutos aqui, na origem — para a caixa que
@@ -906,7 +915,7 @@ function ColunaDia({
           </span>
         </div>
       )}
-      {disporEventosDoDia(eventos).map(({ evento, grupo, coluna, colunas }) => {
+      {disporEventosDoDia(eventos).map(({ evento, grupo, coluna, colunas, largura, recuo, nivel, extra, coberto }) => {
         const inicioMin = minutosDoDia(evento.hora_inicio)
         const emArrasto = arrastandoId === evento.id
         const emSelecionado = selecionadoId === evento.id
@@ -917,24 +926,37 @@ function ColunaDia({
         // fica só para "Cancelado" (um já aconteceu, o outro não).
         const terminado =
           !cancelado && new Date(`${evento.data}T${horaFim(evento.hora_inicio, evento.duracao_min)}`).getTime() < agora
+        const altura = Math.max(evento.duracao_min * pxPorMinuto, ALTURA_MIN_BLOCO) - 2
+        const fim = horaFim(evento.hora_inicio, evento.duracao_min)
+        const rotulo = rotuloEvento(grupo, estudioId)
+        // Espaço útil à esquerda das abas dos desmarcados que ficam por
+        // trás deste bloco.
+        const util = `(100% - ${recuo * ABA_CANCELADO}px)`
         return (
           <button
             key={evento.id}
             type="button"
             draggable={false}
             title={
-              somenteLeitura
-                ? 'Botão direito para ver — a tua conta só pode ver a Agenda'
-                : emSelecionado
-                  ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar'
-                  : 'Arrasta para mover · clica uma vez para poder encurtar/alongar · botão direito para editar'
+              cancelado
+                ? `Desmarcado · ${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim} · clica para ver`
+                : somenteLeitura
+                  ? `${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim} · botão direito para ver`
+                  : emSelecionado
+                    ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar'
+                    : `${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${numerosSocio ? ` · sócio ${numerosSocio}` : ''} · arrasta para mover · botão direito para editar`
             }
-            onMouseDown={somenteLeitura ? undefined : onIniciarMovimento(evento)}
+            // Desmarcado: um clique abre logo os dados (não se arrasta);
+            // o mousedown não passa à coluna, para não criar um evento.
+            onMouseDown={
+              cancelado ? (e) => e.stopPropagation() : somenteLeitura ? undefined : onIniciarMovimento(evento)
+            }
+            onClick={cancelado ? onAbrirContexto(evento) : undefined}
             onContextMenu={onAbrirContexto(evento)}
-            className={`group absolute rounded-md text-left leading-tight shadow-sm transition-opacity select-none ${
-              somenteLeitura ? 'cursor-pointer' : emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
+            className={`group absolute rounded-md text-left transition-opacity select-none ${
+              cancelado || somenteLeitura ? 'cursor-pointer' : emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
             } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${
-              cancelado ? 'opacity-50 line-through' : terminado ? 'opacity-55' : ''
+              cancelado ? 'opacity-70 hover:!z-30 hover:opacity-100 hover:shadow-lg' : terminado ? 'opacity-60' : ''
             }`}
             style={{
               // Pequeno espaço (calc) entre blocos vizinhos — horizontal
@@ -942,17 +964,22 @@ function ColunaDia({
               // do que o espaço disponível) — para nunca ficarem
               // encostados uns aos outros, ao estilo Google Calendar.
               top: inicioMin * pxPorMinuto,
-              height: Math.max(evento.duracao_min * pxPorMinuto, 24) - 2,
-              left: `calc(${(coluna * 100) / colunas}% + 1px)`,
-              width: `calc(${100 / colunas}% - 2px)`,
-              background: EVENTO_FUNDO,
-              color: EVENTO_TEXTO,
-              // Linha fina à volta de toda a caixa, para se ver sempre o
-              // evento delimitado (mesmo encostado a outro) — a borda
-              // esquerda, mais grossa, por cima, é o destaque de
-              // identidade (ouro) ou de aviso (vermelho, desmarcado).
-              border: '1px solid #000',
-              borderLeft: `4px solid ${cancelado ? PALETA.vermelho.tx : EVENTO_BORDA}`,
+              height: altura,
+              left: `calc(${util} * ${coluna / colunas} + 1px)`,
+              width: `calc(${util} * ${(largura + extra) / colunas} - 2px)`,
+              // Desmarcados por trás de tudo (entre si pela ordem das
+              // abas); ativos por cima; ao passar o rato na aba, o
+              // desmarcado vem para a frente (hover:z-30 acima).
+              // Entre ativos, a coluna da direita fica por cima (escadinha).
+              zIndex: cancelado ? nivel : 5 + coluna,
+              background: cancelado ? COR_BLOCO_CANCELADO : (COR_BLOCO[evento.tipo] ?? COR_BLOCO.Treino),
+              color: cancelado ? PALETA.vermelho.tx : EVENTO_TEXTO,
+              // Fio claro à volta, como no Google Calendar: separa blocos
+              // encostados sem o peso de uma moldura escura. O desmarcado
+              // leva a margem direita a vermelho — é a aba que fica à
+              // vista por trás dos outros.
+              border: '1px solid rgba(255,255,255,.9)',
+              ...(cancelado ? { borderRight: `3px solid ${PALETA.vermelho.tx}` } : {}),
             }}
           >
             {/* Conteúdo num wrapper à parte, só este com overflow-hidden
@@ -961,11 +988,40 @@ function ColunaDia({
                 fora da borda sem ficarem cortadas. Reserva-se espaço à
                 direita (pr-6) para o nº de sócio (canto inferior
                 direito) nunca ficar por cima do texto truncado. */}
-            <span className="block h-full overflow-hidden px-1.5 py-1 pr-6 leading-snug">
-              <span className="block truncate text-[13px] font-medium">{rotuloEvento(grupo, estudioId)}</span>
-              <span className="block truncate text-[12px] font-normal">
-                {evento.hora_inicio.slice(0, 5)}–{horaFim(evento.hora_inicio, evento.duracao_min)}
-              </span>
+            {/* Texto adaptado à altura do bloco, como no Google Calendar:
+                com espaço, nome numa linha e horário por baixo; num
+                bloco baixo, tudo numa só linha ("Nome, 08:40"). Assim o
+                texto nunca fica cortado a meio, seja qual for o zoom. */}
+            <span
+              className={`block h-full overflow-hidden px-1.5 ${
+                cancelado ? `line-through ${coberto ? 'opacity-0 group-hover:opacity-100' : ''}` : ''
+              } ${altura >= 34 ? 'py-[3px]' : altura >= 22 ? 'py-px' : ''}`}
+            >
+              {altura >= 34 ? (
+                <>
+                  <span className="block truncate text-[12px] leading-[15px] font-semibold">{rotulo}</span>
+                  {/* Bloco estreito (vários ao mesmo tempo): só a hora de
+                      início, em vez de um intervalo cortado a meio. */}
+                  {/* A linha da hora fica só na parte do bloco que nunca é
+                      tapada pelo vizinho (a "escadinha" passa por baixo
+                      dele); é essa largura que decide o formato. */}
+                  <span className="@container block" style={{ width: `${(100 * largura) / (largura + extra)}%` }}>
+                    <span className="block truncate text-[11px] leading-[13px] font-normal opacity-95">
+                      {evento.hora_inicio.slice(0, 5)}
+                      <span className="hidden @[80px]:inline"> – {fim}</span>
+                    </span>
+                  </span>
+                </>
+              ) : (
+                <span
+                  className={`block truncate font-semibold ${
+                    altura >= 22 ? 'text-[12px] leading-[18px]' : 'text-[10px] leading-[14px]'
+                  }`}
+                >
+                  {rotulo}
+                  <span className="font-normal opacity-95">, {evento.hora_inicio.slice(0, 5)}</span>
+                </span>
+              )}
             </span>
             {/* Nº de sócio — nunca como texto (ficava a sobrepor-se ao
                 nome/hora em colunas estreitas, com vários eventos ao
@@ -973,10 +1029,11 @@ function ColunaDia({
                 mesmo tamanho, que nunca colide com mais nada; passa o
                 rato por cima para ver o número (title = tooltip
                 nativa do browser). */}
-            {numerosSocio && (
+            {numerosSocio && altura >= 34 && (
               <span
                 title={`Nº de sócio: ${numerosSocio}`}
-                className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-current opacity-40"
+                className="absolute right-1 bottom-1 h-1.5 w-1.5 rounded-full bg-current opacity-50"
+                style={{ display: colunas >= 3 ? 'none' : undefined }}
               />
             )}
             {/* Aviso discreto (canto superior direito) quando algum dos
@@ -985,7 +1042,7 @@ function ColunaDia({
                 limitação, prova a chegar). Só avisa que há algo; os
                 detalhes ficam na ficha do cliente. */}
             {avisos && (
-              <span title={avisos} className="absolute top-1 right-1">
+              <span title={avisos} className="absolute top-0.5 right-0.5 rounded-sm bg-white/90 p-px">
                 <TriangleAlert className="h-3 w-3 text-red-600" strokeWidth={2.5} />
               </span>
             )}

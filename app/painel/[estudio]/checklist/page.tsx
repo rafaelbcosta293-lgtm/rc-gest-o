@@ -30,10 +30,10 @@ export default async function ChecklistPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string; ok?: string }>
+  searchParams: Promise<{ error?: string; ok?: string; registado?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error, ok } = await searchParams
+  const { error, ok, registado } = await searchParams
   const hoje = new Date().toISOString().slice(0, 10)
 
   const supabase = await createClient()
@@ -95,6 +95,11 @@ export default async function ChecklistPage({
         {estudio.nome} · checklist diária do estúdio. {TEXTO_CHECKLIST.Abertura.nota.split('.')[0]}.
       </p>
 
+      {registado && (
+        <p className="mt-4 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+          {registado} registad{registado === 'Abertura' ? 'a' : 'o'}. Obrigado!
+        </p>
+      )}
       {ok !== undefined && (
         <p className="mt-4 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
           {ok === '0' ? 'A checklist já tinha todos os itens do formulário.' : `Checklist atualizada: ${ok} itens acrescentados.`}

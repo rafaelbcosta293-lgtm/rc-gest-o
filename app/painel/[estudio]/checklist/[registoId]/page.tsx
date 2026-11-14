@@ -3,9 +3,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
-import { alternarItem, guardarOcorrencia } from '../actions'
-import SubmitButton from '@/components/SubmitButton'
-import OcorrenciaForm from './OcorrenciaForm'
+import { registarChecklist } from '../actions'
+import ChecklistForm from './ChecklistForm'
 import { AJUDA_OCORRENCIAS, TEXTO_CHECKLIST } from '@/lib/data/checklistPadrao'
 import type { ChecklistResposta, TipoOperacao } from '@/lib/supabase/database.types'
 
@@ -66,65 +65,32 @@ export default async function ChecklistRegistoPage({
   const responsavel = (registo.pt as unknown as { nome: string } | null)?.nome?.trim() ?? null
   const texto = TEXTO_CHECKLIST[registo.tipo as TipoOperacao]
 
+  const secoes = [...porSecao.entries()].map(([secao, itens]) => ({
+    secao,
+    itens: itens.map((r) => ({ id: r.id, item: r.item, ok: r.ok })),
+  }))
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
-      <Link
-        href={`/painel/${slug}/checklist`}
-        className="text-sm text-muted underline"
-      >
-        ← Abertura / Fecho
-      </Link>
-
-      <h1 className="mt-3 text-2xl font-semibold text-foreground">
-        {registo.tipo}
-      </h1>
-      <p className="mt-1 text-sm text-muted">
-        {fmt(registo.data)} · {registo.hora.slice(0, 5)} · {registo.concluidos} de {registo.total}{' '}
-        feitos{responsavel ? ` · Responsável: ${responsavel}` : ''}
-      </p>
+    <div className="mx-auto max-w-7xl px-4 py-4">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <Link href={`/painel/${slug}/checklist`} className="text-sm text-muted underline">
+          ← Abertura / Fecho
+        </Link>
+        <h1 className="text-xl font-semibold text-foreground">{registo.tipo}</h1>
+        <p className="text-sm text-muted">
+          {fmt(registo.data)} · {registo.hora.slice(0, 5)}
+          {responsavel ? ` · Responsável: ${responsavel}` : ''}
+        </p>
+      </div>
       {texto && (
-        <div className="mt-4 rounded-xl border border-border-subtle bg-surface p-4 text-sm text-muted">
-          <p>{texto.intro}</p>
-          <p className="mt-2 font-medium text-foreground">⚠️ {texto.nota}</p>
-        </div>
-      )}
-
-      {error && (
-        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
+        <p className="mt-1.5 text-xs leading-snug text-muted">
+          {texto.intro} <span className="font-medium text-foreground">⚠️ {texto.nota}</span>
         </p>
       )}
 
-      <div className="mt-6 flex flex-col gap-6">
-        {[...porSecao.entries()].map(([secao, itens]) => (
-          <div key={secao}>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              {secao}
-            </h2>
-            <div className="mt-2 flex flex-col gap-1.5">
-              {itens.map((r) => (
-                <form key={r.id} action={alternarItem}>
-                  <input type="hidden" name="estudio_slug" value={slug} />
-                  <input type="hidden" name="registo_id" value={registoId} />
-                  <input type="hidden" name="resposta_id" value={r.id} />
-                  <input type="hidden" name="ok" value={(!r.ok).toString()} />
-                  <SubmitButton
-                    pendingText={r.item}
-                    className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left text-sm transition-colors ${
-                      r.ok
-                        ? 'border-teal-200 bg-teal-50 text-teal-900 dark:border-teal-900 dark:bg-teal-950 dark:text-teal-100'
-                        : 'border-border-subtle bg-surface'
-                    }`}
-                  >
-                    <span className="text-base leading-none">{r.ok ? '☑' : '☐'}</span>
-                    {r.item}
-                  </SubmitButton>
-                </form>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      {error && (
+        <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>
+      )}
 
       {respostas.length === 0 && (
         <div className="mt-3 rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-zinc-500">
@@ -132,15 +98,14 @@ export default async function ChecklistRegistoPage({
         </div>
       )}
 
-      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Ocorrências ou notas de turno (opcional)
-      </h2>
-      <p className="mt-1 text-xs text-zinc-500">{AJUDA_OCORRENCIAS}</p>
-      <OcorrenciaForm
+      <ChecklistForm
         slug={slug}
         registoId={registoId}
-        valorInicial={registo.ocorrencia ?? ''}
-        action={guardarOcorrencia}
+        tipo={registo.tipo}
+        secoes={secoes}
+        ocorrenciaInicial={registo.ocorrencia ?? ''}
+        ajudaOcorrencias={AJUDA_OCORRENCIAS}
+        action={registarChecklist}
       />
     </div>
   )

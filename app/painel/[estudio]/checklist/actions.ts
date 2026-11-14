@@ -200,6 +200,47 @@ export async function guardarOcorrencia(formData: FormData) {
   redirect(`/painel/${estudioSlug}/checklist/${registoId}`)
 }
 
+// Grava a checklist inteira de uma vez (vistos + ocorrências) e volta à
+// pasta Abertura / Fecho.
+export async function registarChecklist(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const registoId = formData.get('registo_id') as string
+  const tipo = (formData.get('tipo') as string) || 'Checklist'
+  const feitos = formData.getAll('ok').map(String)
+  const ocorrencia = (formData.get('ocorrencia') as string)?.trim() || null
+  const supabase = await createClient()
+  const erro = (mensagem: string): never =>
+    redirect(`/painel/${estudioSlug}/checklist/${registoId}?error=${encodeURIComponent(mensagem)}`)
+
+  const { error: erroLimpar } = await supabase.from('checklist_respostas').update({ ok: false }).eq('registo_id', registoId)
+  if (erroLimpar) erro(erroLimpar.message)
+  if (feitos.length > 0) {
+    const { error: erroFeitos } = await supabase
+      .from('checklist_respostas')
+      .update({ ok: true })
+      .eq('registo_id', registoId)
+      .in('id', feitos)
+    if (erroFeitos) erro(erroFeitos.message)
+  }
+
+  const { count, error: erroContagem } = await supabase
+    .from('checklist_respostas')
+    .select('id', { count: 'exact', head: true })
+    .eq('registo_id', registoId)
+    .eq('ok', true)
+  if (erroContagem) erro(erroContagem.message)
+
+  const { error: erroRegisto } = await supabase
+    .from('checklist_registos')
+    .update({ concluidos: count ?? 0, ocorrencia })
+    .eq('id', registoId)
+  if (erroRegisto) erro(erroRegisto.message)
+
+  revalidatePath(`/painel/${estudioSlug}/checklist`)
+  revalidatePath(`/painel/${estudioSlug}/checklist/${registoId}`)
+  redirect(`/painel/${estudioSlug}/checklist?registado=${encodeURIComponent(tipo)}`)
+}
+
 // Carrega no modelo a checklist oficial (a do formulário que a equipa
 // preenchia). "acrescentar" junta só os itens que ainda não existem;
 // "substituir" desativa os itens atuais e fica só com a oficial.

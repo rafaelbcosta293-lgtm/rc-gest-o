@@ -4,9 +4,14 @@ import { createClient } from '@/lib/supabase/server'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { getEstudios } from '@/lib/data/estudios'
 import { desbloquearAdmin } from '../actions'
+import { somarDias } from '@/lib/data/horarios'
 import {
+  CHAVE_TEMPLATE_LEMBRETE,
+  CHAVE_TEMPLATE_LEMBRETE_SABADO,
   TEMPLATE_LEMBRETE_OMISSAO,
   VARIAVEIS_TEMPLATE_LEMBRETE,
+  nomeDiaSemana,
+  templateSabadoDerivado,
   dataDeAmanhaEmLisboa,
   preencherTemplateLembrete,
   proximoDiaAlvoLembrete,
@@ -29,6 +34,7 @@ export default async function LembretesSmsPage({
     erroSenha?: string
     erroTeste?: string
     testeEnviado?: string
+    guardado?: string
     reenvioEstudio?: string
     reenvioEnviados?: string
     reenvioFalhas?: string
@@ -41,6 +47,7 @@ export default async function LembretesSmsPage({
     erroSenha,
     erroTeste,
     testeEnviado,
+    guardado,
     reenvioEstudio,
     reenvioEnviados,
     reenvioFalhas,
@@ -67,7 +74,7 @@ export default async function LembretesSmsPage({
   const estudios = await getEstudios(supabase)
 
   const [{ data: configData }, estadosPorEstudio] = await Promise.all([
-    supabase.from('config').select('valor').eq('chave', 'msg_lembrete_treino').maybeSingle(),
+    supabase.from('config').select('chave, valor').in('chave', [CHAVE_TEMPLATE_LEMBRETE, CHAVE_TEMPLATE_LEMBRETE_SABADO]),
     Promise.all(
       estudios.map(async (estudio): Promise<EstadoDoEstudio> => {
         // O dia visado pode não ser "amanhã" — ver proximoDiaAlvoLembrete
@@ -90,11 +97,23 @@ export default async function LembretesSmsPage({
     ),
   ])
 
-  const template = configData?.valor || TEMPLATE_LEMBRETE_OMISSAO
+  const valorConfig = (chave: string) => (configData ?? []).find((c) => c.chave === chave)?.valor?.trim() || null
+  const template = valorConfig(CHAVE_TEMPLATE_LEMBRETE) ?? TEMPLATE_LEMBRETE_OMISSAO
+  const templateSabado = valorConfig(CHAVE_TEMPLATE_LEMBRETE_SABADO)
   const textoPreview = preencherTemplateLembrete(template, {
     nome: 'Nome de Teste',
     data: amanha,
     horaInicio: '10:00:00',
+  })
+  // Pré-visualização do de sábado com a próxima segunda-feira.
+  let proximaSegunda = amanha
+  while (nomeDiaSemana(proximaSegunda) !== 'segunda-feira') proximaSegunda = somarDias(proximaSegunda, 1)
+  const textoPreviewSabado = preencherTemplateLembrete(template, {
+    nome: 'Nome de Teste',
+    data: proximaSegunda,
+    horaInicio: '10:00:00',
+    naoEAmanha: true,
+    templateSabado,
   })
 
   return (
@@ -169,10 +188,28 @@ export default async function LembretesSmsPage({
         })}
       </div>
 
-      <TituloSeccao cor="roxo">Modelo da mensagem</TituloSeccao>
-      <p className="mt-1 text-xs text-muted">Partilhado pelos dois estúdios.</p>
+      <TituloSeccao cor="roxo">Modelos da mensagem</TituloSeccao>
+      <p className="mt-1 text-xs text-muted">Partilhados pelos dois estúdios.</p>
       <div className="mt-2 flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface p-4">
-        <TemplateForm valorInicial={template} />
+        <div>
+          <p className="text-sm font-bold text-foreground">Mensagem padrão (todos os dias, para o dia seguinte)</p>
+          <p className="text-xs text-muted">Enviada às 10:00 a quem tem treino amanhã.</p>
+        </div>
+        {guardado === 'diario' && <p className="text-xs font-semibold text-teal-400">Modelo padrão guardado.</p>}
+        <TemplateForm valorInicial={template} tipo="diario" />
+        <PreVisualizacao texto={textoPreview} />
+
+        <div className="mt-3 border-t border-border-subtle pt-4">
+          <p className="text-sm font-bold text-foreground">Mensagem de sábado (referente à segunda-feira)</p>
+          <p className="text-xs text-muted">
+            Enviada ao sábado às 10:00 a quem tem treino na segunda-feira (domingo está fechado). Se ficar vazia, usa a
+            mensagem padrão com &quot;amanhã&quot; trocado por &quot;na próxima&quot;.
+          </p>
+        </div>
+        {guardado === 'sabado' && <p className="text-xs font-semibold text-teal-400">Modelo de sábado guardado.</p>}
+        <TemplateForm valorInicial={templateSabado ?? templateSabadoDerivado(template)} tipo="sabado" placeholder={templateSabadoDerivado(template)} />
+        <PreVisualizacao texto={textoPreviewSabado} />
+
         <div className="rounded-lg bg-brand/[.06] p-3 text-xs text-muted">
           <p className="font-semibold text-foreground">Variáveis disponíveis:</p>
           <ul className="mt-1.5 flex flex-col gap-0.5">
@@ -204,6 +241,15 @@ export default async function LembretesSmsPage({
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function PreVisualizacao({ texto }: { texto: string }) {
+  return (
+    <div className="rounded-lg border border-border-subtle bg-black/20 p-3 text-xs">
+      <p className="font-semibold text-muted">Pré-visualização</p>
+      <p className="mt-1 whitespace-pre-line text-foreground">{texto}</p>
     </div>
   )
 }

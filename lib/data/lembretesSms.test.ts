@@ -5,6 +5,7 @@ import {
   preencherTemplateLembrete,
   proximoDiaAlvoLembrete,
   TEMPLATE_LEMBRETE_OMISSAO,
+  templateSabadoDerivado,
   trocarAmanhaPorProximo,
 } from './lembretesSms'
 
@@ -111,6 +112,48 @@ describe('lembrete de sábado (para segunda-feira)', () => {
   it('funciona também com "amanhã" sem o dia da semana a seguir', () => {
     expect(trocarAmanhaPorProximo('O teu treino é amanhã às {hora}.', '2026-11-16')).toBe(
       'O teu treino é na próxima segunda-feira às {hora}.'
+    )
+  })
+})
+
+describe('modelo próprio do sábado', () => {
+  const diario = 'Olá {nome}! Amanhã, {dia_semana}, às {hora}, tens treino.'
+
+  it('usa o modelo de sábado quando existe', () => {
+    const texto = preencherTemplateLembrete(diario, {
+      nome: 'Ana Costa',
+      data: '2026-11-16',
+      horaInicio: '09:00:00',
+      naoEAmanha: true,
+      templateSabado: 'Bom fim de semana, {nome}! Segunda ({dia_mes}) às {hora} contamos contigo.',
+    })
+    expect(texto).toBe('Bom fim de semana, Ana! Segunda (16) às 09:00 contamos contigo.')
+  })
+
+  it('sem modelo de sábado (ou vazio), cai no diário com "amanhã" trocado', () => {
+    const texto = preencherTemplateLembrete(diario, {
+      nome: 'Ana Costa',
+      data: '2026-11-16',
+      horaInicio: '09:00:00',
+      naoEAmanha: true,
+      templateSabado: '   ',
+    })
+    expect(texto).toBe('Olá Ana! na próxima segunda-feira, às 09:00, tens treino.')
+  })
+
+  it('o modelo de sábado nunca é usado nos outros dias', () => {
+    const texto = preencherTemplateLembrete(diario, {
+      nome: 'Ana Costa',
+      data: '2026-11-17',
+      horaInicio: '09:00:00',
+      templateSabado: 'NÃO',
+    })
+    expect(texto).toBe('Olá Ana! Amanhã, terça-feira, às 09:00, tens treino.')
+  })
+
+  it('deriva o ponto de partida a partir do modelo diário', () => {
+    expect(templateSabadoDerivado('Lembramos que amanhã, {dia_semana}, dia {dia_mes}')).toBe(
+      'Lembramos que na próxima {dia_semana}, dia {dia_mes}'
     )
   })
 })

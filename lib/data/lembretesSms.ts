@@ -10,6 +10,20 @@ import type { ResultadoEstudio } from './smsGateway'
 export const TEMPLATE_LEMBRETE_OMISSAO =
   'Olá {nome}! Lembramos que o teu treino é {dia_semana}, dia {dia_mes}, às {hora}. Contamos contigo! Com os melhores cumprimentos, Equipa RC Private Fitness Studio'
 
+export const CHAVE_TEMPLATE_LEMBRETE = 'msg_lembrete_treino'
+// Modelo do lembrete enviado antes de um dia de fecho (ao sábado, para
+// a segunda-feira). Vazio = deriva do modelo diário (ver
+// templateSabadoDerivado).
+export const CHAVE_TEMPLATE_LEMBRETE_SABADO = 'msg_lembrete_treino_sabado'
+
+export type TemplatesLembrete = { diario: string; sabado: string | null }
+
+// "amanhã, {dia_semana}" → "na próxima {dia_semana}" — ponto de partida
+// para o modelo de sábado quando ainda não há um próprio.
+export function templateSabadoDerivado(template: string): string {
+  return template.replace(/amanhã(\s*,\s*\{dia_semana\}|\s+\{dia_semana\})?/giu, 'na próxima {dia_semana}')
+}
+
 export const VARIAVEIS_TEMPLATE_LEMBRETE = [
   { variavel: '{nome}', descricao: 'Nome do cliente (usa o nome preferido, se existir)' },
   { variavel: '{dia_semana}', descricao: 'Dia da semana por extenso (ex: terça-feira)' },
@@ -35,11 +49,24 @@ export function nomeDiaSemana(dataISO: string): string {
 
 export function preencherTemplateLembrete(
   template: string,
-  dados: { nome: string; data: string; horaInicio: string; nomePreferido?: string | null; naoEAmanha?: boolean }
+  dados: {
+    nome: string
+    data: string
+    horaInicio: string
+    nomePreferido?: string | null
+    naoEAmanha?: boolean
+    // Modelo próprio para quando o treino não é amanhã (lembrete de
+    // sábado para segunda). Sem ele, usa o diário com "amanhã" trocado.
+    templateSabado?: string | null
+  }
 ): string {
   const diaMes = Number(dados.data.slice(8, 10))
   const hora = dados.horaInicio.slice(0, 5)
-  const base = dados.naoEAmanha ? trocarAmanhaPorProximo(template, dados.data) : template
+  const base = dados.naoEAmanha
+    ? dados.templateSabado?.trim()
+      ? dados.templateSabado
+      : trocarAmanhaPorProximo(template, dados.data)
+    : template
   return base
     .replaceAll('{nome}', primeiroNomeExibicao(dados.nome, dados.nomePreferido))
     .replaceAll('{dia_semana}', nomeDiaSemana(dados.data))
@@ -123,10 +150,17 @@ export type ResultadoProcessamentoLembretes = {
   gatewayOffline: boolean
 }
 
-async function obterTemplate(admin: SupabaseClient): Promise<string> {
-  const { data, error } = await admin.from('config').select('valor').eq('chave', 'msg_lembrete_treino').maybeSingle()
+async function obterTemplates(admin: SupabaseClient): Promise<TemplatesLembrete> {
+  const { data, error } = await admin
+    .from('config')
+    .select('chave, valor')
+    .in('chave', [CHAVE_TEMPLATE_LEMBRETE, CHAVE_TEMPLATE_LEMBRETE_SABADO])
   if (error) throw new Error(error.message)
-  return data?.valor || TEMPLATE_LEMBRETE_OMISSAO
+  const valor = (chave: string) => (data ?? []).find((c) => c.chave === chave)?.valor?.trim() || null
+  return {
+    diario: valor(CHAVE_TEMPLATE_LEMBRETE) ?? TEMPLATE_LEMBRETE_OMISSAO,
+    sabado: valor(CHAVE_TEMPLATE_LEMBRETE_SABADO),
+  }
 }
 
 // Processa um único estúdio — cada um tem o seu próprio telemóvel/
@@ -140,7 +174,7 @@ async function processarLembretesDoEstudio(
   admin: SupabaseClient,
   estudio: Pick<Estudio, 'id' | 'slug' | 'nome'>,
   amanha: string,
-  template: string
+  templates: TemplatesLembrete
 ): Promise<ResultadoEstudio> {
   // Normalmente é mesmo "amanhã" — só avança quando amanhã cai num dia
   // de fecho deste estúdio (ver proximoDiaAlvoLembrete), para o
@@ -180,12 +214,13 @@ async function processarLembretesDoEstudio(
   let gatewayOffline = false
 
   for (const { evento, destino } of pendentes) {
-    const texto = preencherTemplateLembrete(template, {
+    const texto = preencherTemplateLembrete(templates.diario, {
       nome: destino.nome,
       data: evento.data,
       horaInicio: evento.hora_inicio,
       nomePreferido: destino.nomePreferido,
       naoEAmanha: diaAlvo !== amanha,
+      templateSabado: templates.sabado,
     })
     const resultado = await enviarSms(estudio.slug, destino.telefone ?? '', texto)
 
@@ -225,11 +260,11 @@ async function processarLembretesDoEstudio(
 // de cada vez — ver processarLembretesSmsDoEstudio).
 export async function processarLembretesSms(admin: SupabaseClient): Promise<ResultadoProcessamentoLembretes> {
   const amanha = dataDeAmanhaEmLisboa()
-  const [estudios, template] = await Promise.all([getEstudios(admin), obterTemplate(admin)])
+  const [estudios, templates] = await Promise.all([getEstudios(admin), obterTemplates(admin)])
 
   const porEstudio: ResultadoEstudio[] = []
   for (const estudio of estudios) {
-    porEstudio.push(await processarLembretesDoEstudio(admin, estudio, amanha, template))
+    porEstudio.push(await processarLembretesDoEstudio(admin, estudio, amanha, templates))
   }
 
   return { porEstudio, gatewayOffline: porEstudio.some((r) => r.gatewayOffline) }
@@ -244,6 +279,6 @@ export async function processarLembretesSmsDoEstudio(
   if (!estudio) throw new Error(`Estúdio "${estudioSlug}" não encontrado.`)
 
   const amanha = dataDeAmanhaEmLisboa()
-  const template = await obterTemplate(admin)
-  return processarLembretesDoEstudio(admin, estudio, amanha, template)
+  const templates = await obterTemplates(admin)
+  return processarLembretesDoEstudio(admin, estudio, amanha, templates)
 }

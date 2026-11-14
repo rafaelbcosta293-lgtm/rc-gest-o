@@ -4,26 +4,28 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { processarLembretesSmsDoEstudio } from '@/lib/data/lembretesSms'
+import {
+  CHAVE_TEMPLATE_LEMBRETE,
+  CHAVE_TEMPLATE_LEMBRETE_SABADO,
+  processarLembretesSmsDoEstudio,
+} from '@/lib/data/lembretesSms'
 import { enviarSms } from '@/lib/sms/gateway'
 
 const ROTA = '/painel/admin/lembretes-sms'
 
 export async function guardarTemplateLembrete(formData: FormData) {
   const valor = (formData.get('valor') as string)?.trim() || null
+  const chave = formData.get('tipo') === 'sabado' ? CHAVE_TEMPLATE_LEMBRETE_SABADO : CHAVE_TEMPLATE_LEMBRETE
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('config')
-    .update({ valor })
-    .eq('chave', 'msg_lembrete_treino')
+  const { error } = await supabase.from('config').upsert({ chave, valor }, { onConflict: 'chave' })
 
   if (error) {
     redirect(`${ROTA}?error=${encodeURIComponent(error.message)}`)
   }
 
   revalidatePath(ROTA)
-  redirect(ROTA)
+  redirect(`${ROTA}?guardado=${chave === CHAVE_TEMPLATE_LEMBRETE_SABADO ? 'sabado' : 'diario'}`)
 }
 
 export async function enviarSmsTeste(formData: FormData) {

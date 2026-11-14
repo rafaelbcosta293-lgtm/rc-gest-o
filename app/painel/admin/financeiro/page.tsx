@@ -13,6 +13,7 @@ import {
   NOMES_MESES,
   baseClientesMensal,
   cagr,
+  ehMensalidade,
   estatisticas,
   formatarValor,
   indicesSazonais,
@@ -379,7 +380,7 @@ export default async function FinanceiroPage({
     .sort((a, b) => b[1] - a[1])
     .map(([nome, valor], i) => ({ nome, valor, cor: nome.startsWith('Ajuste') ? COR.cinza : CORES_MIX[i % CORES_MIX.length] }))
   const taxaAteDia8 = (() => {
-    const doPeriodo = pagamentos.filter((p) => p.data_pagamento >= periodo.inicio && p.data_pagamento <= periodo.fim)
+    const doPeriodo = pagamentos.filter((p) => ehMensalidade(p) && p.data_pagamento >= periodo.inicio && p.data_pagamento <= periodo.fim)
     return doPeriodo.length ? doPeriodo.filter((p) => Number(p.data_pagamento.slice(8, 10)) <= 8).length / doPeriodo.length : 0
   })()
 
@@ -617,8 +618,8 @@ export default async function FinanceiroPage({
             valor={eur(resumo.receita)}
             tendencia={tendencia(variacao(resumo.receita, comparacaoPrincipal?.receita), rotuloComparacao)}
             historico={receitaEscopo.slice(-12)}
-            sufixo={resumo.receitaOutras ? `clientes ${eur(resumo.receitaClientes)} · outras ${eur(resumo.receitaOutras)}` : undefined}
-            formula="Tudo o que entrou no período: pagamentos de clientes (valor pago, já com descontos; sem anulados) + outras receitas (bar, merchandising, osteopatia, apoios…)."
+            sufixo={`mensalidades ${eur(resumo.receitaMensalidades)} · extras ${eur(resumo.receitaExtras)}${resumo.receitaOutras ? ` · outras ${eur(resumo.receitaOutras)}` : ''}`}
+            formula="Tudo o que entrou no período: mensalidades + extras de clientes (seguros, inscrições, reativações, nutrição…) + outras receitas (bar, merchandising, osteopatia, apoios…). Valor pago, já com descontos; sem anulados."
           />
           <StatCard
             label="Faturação bruta"
@@ -639,23 +640,23 @@ export default async function FinanceiroPage({
             }
           />
           <StatCard
-            label="Pagamentos"
+            label="Mensalidades pagas"
             valor={resumo.pagamentos.toLocaleString('pt-PT')}
             sufixo={`ticket médio ${eur2(resumo.ticketMedio)}`}
             tendencia={tendencia(variacao(resumo.pagamentos, comparacaoPrincipal?.pagamentos), rotuloComparacao)}
-            formula="Nº de pagamentos de clientes no período; ticket médio = receita de clientes ÷ nº pagamentos."
+            formula="Nº de mensalidades pagas no período (seguros, inscrições e outros extras não contam); ticket médio = receita de mensalidades ÷ nº de mensalidades."
           />
           <StatCard
             label="Clientes pagantes"
             valor={resumo.clientesPagantes.toLocaleString('pt-PT')}
             tendencia={tendencia(variacao(resumo.clientesPagantes, comparacaoPrincipal?.clientesPagantes), rotuloComparacao)}
-            formula="Clientes diferentes com pelo menos um pagamento no período."
+            formula="Clientes diferentes com pelo menos uma mensalidade paga no período. Quem só pagou seguro, inscrição ou outro extra não conta."
           />
           <StatCard
             label="Receita por cliente pagante"
             valor={eur2(resumo.receitaPorCliente)}
             tendencia={tendencia(variacao(resumo.receitaPorCliente, comparacaoPrincipal?.receitaPorCliente), rotuloComparacao)}
-            formula="Receita de clientes do período ÷ clientes pagantes."
+            formula="Receita de mensalidades do período ÷ clientes pagantes."
           />
           <StatCard
             label="Novos / perdidos"
@@ -823,7 +824,8 @@ export default async function FinanceiroPage({
             <Linha label="Faturação bruta" valor={eur(resumo.bruto)} />
             <Linha label="− Descontos" valor={eur(resumo.descontos)} />
             <Linha label="= Receita líquida" valor={eur(resumo.receita)} destaque />
-            {resumo.receitaOutras !== 0 && <Linha label="   da qual: clientes" valor={eur(resumo.receitaClientes)} />}
+            <Linha label="   da qual: mensalidades" valor={eur(resumo.receitaMensalidades)} />
+            {resumo.receitaExtras !== 0 && <Linha label="   da qual: extras de clientes (seguros, inscrições…)" valor={eur(resumo.receitaExtras)} />}
             {resumo.receitaOutras !== 0 && <Linha label="   da qual: outras receitas" valor={eur(resumo.receitaOutras)} />}
             {custos.registadas ? (
               custos.porCategoria.map(([cat, v]) => (

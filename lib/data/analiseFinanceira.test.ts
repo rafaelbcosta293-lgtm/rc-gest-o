@@ -196,3 +196,29 @@ describe('receitas sem cliente', () => {
     expect(normalizarMetodo('TPA')).toBe('Multibanco')
   })
 })
+
+describe('só as mensalidades contam clientes', () => {
+  it('seguros e extras contam em euros, nunca como clientes, pagamentos, base ou MRR', async () => {
+    const { mrrNormalizado } = await import('./analiseFinanceira')
+    const lista = [
+      pag('a', '2026-01-05', '2026-01-31', 60),
+      // Só pagou o seguro: não é cliente pagante.
+      pag('b', '2026-01-08', '2026-01-31', 25, { mensalidade: false }),
+      // Pagou mensalidade + um extra no mesmo mês.
+      pag('c', '2026-01-03', '2026-01-31', 50),
+      pag('c', '2026-01-03', '2026-01-03', 20, { mensalidade: false }),
+    ]
+    const r = resumirPeriodo(lista, '2026-01-01', '2026-01-31')
+    expect(r.receita).toBe(155)
+    expect(r.receitaMensalidades).toBe(110)
+    expect(r.receitaExtras).toBe(45)
+    expect(r.receitaClientes).toBe(155)
+    expect(r.pagamentos).toBe(2)
+    expect(r.clientesPagantes).toBe(2)
+    expect(r.ticketMedio).toBe(55)
+    const base = baseClientesMensal(lista, ['2026-01'])
+    expect(base[0].ativos).toBe(2)
+    expect(receitaMensal(lista, ['2026-01']).pagamentos).toEqual([2])
+    expect(mrrNormalizado(lista, '2026-01-10').cobertos).toBe(2)
+  })
+})

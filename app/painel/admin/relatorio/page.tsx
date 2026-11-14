@@ -53,7 +53,7 @@ export default async function RelatorioConsolidadoPage({
     supabase.from('clientes').select('id, estudio_id, estado'),
     supabase.from('activities').select('tipo, criado_em').in('tipo', ['Cancelamento', 'Suspensão', 'Reativação']),
     supabase.from('alerts').select('estudio_id, severidade').neq('estado', 'Resolvido'),
-    supabase.from('pagamentos_ativos').select('cliente_id, valor, data_pagamento, valido_ate').gte('data_pagamento', inicio),
+    supabase.from('pagamentos_ativos').select('cliente_id, valor, data_pagamento, valido_ate, mensalidade').gte('data_pagamento', inicio),
   ])
 
   for (const erro of [erroLeads, erroClientes, erroAtividades, erroAlertas, erroPagamentos]) {
@@ -69,6 +69,8 @@ export default async function RelatorioConsolidadoPage({
   const pagamentosFiltrados = (pagamentosData ?? []).filter((p) => idsClientesFiltrados.has(p.cliente_id))
   const maisRecentePorCliente = new Map<string, { valor: number; valido_ate: string }>()
   for (const p of pagamentosFiltrados) {
+    // Clientes e MRR: só mensalidades (seguros e extras contam só em €).
+    if (!p.mensalidade) continue
     if (!maisRecentePorCliente.has(p.cliente_id)) {
       maisRecentePorCliente.set(p.cliente_id, { valor: p.valor, valido_ate: p.valido_ate })
     }

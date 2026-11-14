@@ -10,6 +10,7 @@ type LinhaPagamento = {
   plano_id: string | null
   data_pagamento: string
   valido_ate: string
+  mensalidade: boolean | null
   clientes: { estudio_id: number } | { estudio_id: number }[]
 }
 
@@ -24,7 +25,7 @@ export async function carregarPagamentosAnalise(
     (de, ate) =>
       supabase
         .from('pagamentos_ativos')
-        .select('cliente_id, valor, desconto, metodo, plano_id, data_pagamento, valido_ate, clientes!inner(estudio_id)')
+        .select('cliente_id, valor, desconto, metodo, plano_id, data_pagamento, valido_ate, mensalidade, clientes!inner(estudio_id)')
         .order('id')
         .range(de, ate),
     { emParalelo: 6 }
@@ -43,6 +44,7 @@ export async function carregarPagamentosAnalise(
       plano_id: p.plano_id,
       data_pagamento: p.data_pagamento,
       valido_ate: p.valido_ate,
+      mensalidade: p.mensalidade !== false,
     })
   }
   return pagamentos

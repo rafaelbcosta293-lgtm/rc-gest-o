@@ -17,7 +17,14 @@ export type PagamentoAnalise = {
   // nome da categoria. Conta para a receita, mas não para clientes,
   // nº de pagamentos, planos, MRR nem churn.
   outra?: string
+  // false para seguros, inscrições, reativações, avulsos e outros
+  // produtos: contam em euros, nunca para clientes (ativos, pagantes,
+  // novos/perdidos, churn, MRR). Omisso = mensalidade.
+  mensalidade?: boolean
 }
+
+// Só as mensalidades definem se um cliente está a treinar.
+export const ehMensalidade = (p: Pick<PagamentoAnalise, 'outra' | 'mensalidade'>) => !p.outra && p.mensalidade !== false
 
 export type Despesa = { estudio_id: number; data: string; categoria: string; subcategoria: string | null; valor: number }
 
@@ -115,6 +122,8 @@ export type ResumoPeriodo = {
   porMetodo: Map<string, number>
   porPlano: Map<string | null, number>
   receitaClientes: number
+  receitaMensalidades: number
+  receitaExtras: number
   receitaOutras: number
   porOutras: Map<string, number>
 }
@@ -124,6 +133,8 @@ const r2 = (n: number) => Math.round(n * 100) / 100
 export function resumirPeriodo(pagamentos: PagamentoAnalise[], inicio: string, fim: string): ResumoPeriodo {
   let receita = 0
   let receitaOutras = 0
+  let receitaExtras = 0
+  let receitaMensalidades = 0
   let descontos = 0
   let n = 0
   const clientes = new Set<string>()
@@ -143,6 +154,12 @@ export function resumirPeriodo(pagamentos: PagamentoAnalise[], inicio: string, f
       porOutras.set(p.outra, (porOutras.get(p.outra) ?? 0) + p.valor)
       continue
     }
+    if (!ehMensalidade(p)) {
+      receitaExtras += p.valor
+      porOutras.set('Extras de clientes (seguros, inscrições…)', (porOutras.get('Extras de clientes (seguros, inscrições…)') ?? 0) + p.valor)
+      continue
+    }
+    receitaMensalidades += p.valor
     n++
     clientes.add(p.cliente_id)
     porPlano.set(p.plano_id, (porPlano.get(p.plano_id) ?? 0) + p.valor)
@@ -155,13 +172,15 @@ export function resumirPeriodo(pagamentos: PagamentoAnalise[], inicio: string, f
     descontos: r2(descontos),
     taxaDesconto: bruto > 0 ? descontos / bruto : 0,
     pagamentos: n,
-    ticketMedio: n > 0 ? receitaClientes / n : 0,
+    ticketMedio: n > 0 ? receitaMensalidades / n : 0,
     clientesPagantes: clientes.size,
-    receitaPorCliente: clientes.size > 0 ? receitaClientes / clientes.size : 0,
+    receitaPorCliente: clientes.size > 0 ? receitaMensalidades / clientes.size : 0,
     porEstudio,
     porMetodo,
     porPlano,
     receitaClientes: r2(receitaClientes),
+    receitaMensalidades: r2(receitaMensalidades),
+    receitaExtras: r2(receitaExtras),
     receitaOutras: r2(receitaOutras),
     porOutras,
   }
@@ -200,7 +219,7 @@ export function receitaMensal(
     if (i === undefined) continue
     total[i] += p.valor
     descontos[i] += p.desconto
-    if (!p.outra) n[i]++
+    if (ehMensalidade(p)) n[i]++
     const linha = porEstudio.get(p.estudio_id) ?? meses.map(() => 0)
     linha[i] += p.valor
     porEstudio.set(p.estudio_id, linha)
@@ -223,6 +242,7 @@ export function baseClientesMensal(pagamentos: PagamentoAnalise[], meses: string
   const ativoEm = new Map<string, Uint8Array>()
   const primeiro = new Map<string, string>()
   for (const p of pagamentos) {
+    if (!ehMensalidade(p)) continue
     const mesPag = p.data_pagamento.slice(0, 7)
     const p0 = primeiro.get(p.cliente_id)
     if (!p0 || mesPag < p0) primeiro.set(p.cliente_id, mesPag)
@@ -377,6 +397,7 @@ export function mrrNormalizado(
 ): { mrr: number; cobertos: number; porEstudio: Map<number, number> } {
   const cobre = new Map<string, PagamentoAnalise>()
   for (const p of pagamentos) {
+    if (!ehMensalidade(p)) continue
     if (p.data_pagamento > hoje || p.valido_ate < hoje) continue
     const atual = cobre.get(p.cliente_id)
     const recorrente = p.valido_ate > p.data_pagamento

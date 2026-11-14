@@ -132,6 +132,7 @@ export async function registarPagamentoSeguro(formData: FormData) {
     .from('pagamentos_ativos')
     .select('plano_id, valido_ate')
     .eq('cliente_id', clienteId)
+    .eq('mensalidade', true)
     .order('data_pagamento', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -147,6 +148,9 @@ export async function registarPagamentoSeguro(formData: FormData) {
     data_pagamento: dataPagamento,
     valido_ate: ultimoPagamento?.valido_ate ?? dataPagamento,
     inclui_seguro: true,
+    // Um seguro é um extra: conta em euros, nunca como mensalidade
+    // (não faz de ninguém um cliente ativo ou pagante).
+    mensalidade: false,
     nota: 'Pagamento do seguro',
     registado_por: userData.user?.id ?? null,
   })
@@ -209,6 +213,7 @@ export async function anularPagamento(formData: FormData) {
       .from('pagamentos_ativos')
       .select('valido_ate')
       .eq('cliente_id', clienteId)
+      .eq('mensalidade', true)
       .order('valido_ate', { ascending: false })
       .limit(1)
       .maybeSingle()

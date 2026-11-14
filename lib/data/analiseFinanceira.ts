@@ -13,7 +13,13 @@ export type PagamentoAnalise = {
   plano_id: string | null
   data_pagamento: string // YYYY-MM-DD
   valido_ate: string // YYYY-MM-DD
+  // Receita sem cliente (bar, merchandising, apoios, osteopatia…): o
+  // nome da categoria. Conta para a receita, mas não para clientes,
+  // nº de pagamentos, planos, MRR nem churn.
+  outra?: string
 }
+
+export type Despesa = { estudio_id: number; data: string; categoria: string; subcategoria: string | null; valor: number }
 
 export type TipoPeriodo = 'mes' | 'ano' | 'sempre'
 
@@ -108,43 +114,70 @@ export type ResumoPeriodo = {
   porEstudio: Map<number, number>
   porMetodo: Map<string, number>
   porPlano: Map<string | null, number>
+  receitaClientes: number
+  receitaOutras: number
+  porOutras: Map<string, number>
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 export function resumirPeriodo(pagamentos: PagamentoAnalise[], inicio: string, fim: string): ResumoPeriodo {
   let receita = 0
+  let receitaOutras = 0
   let descontos = 0
   let n = 0
   const clientes = new Set<string>()
   const porEstudio = new Map<number, number>()
   const porMetodo = new Map<string, number>()
   const porPlano = new Map<string | null, number>()
+  const porOutras = new Map<string, number>()
   for (const p of pagamentos) {
     if (p.data_pagamento < inicio || p.data_pagamento > fim) continue
     receita += p.valor
     descontos += p.desconto
+    porEstudio.set(p.estudio_id, (porEstudio.get(p.estudio_id) ?? 0) + p.valor)
+    const metodo = normalizarMetodo(p.metodo)
+    porMetodo.set(metodo, (porMetodo.get(metodo) ?? 0) + p.valor)
+    if (p.outra) {
+      receitaOutras += p.valor
+      porOutras.set(p.outra, (porOutras.get(p.outra) ?? 0) + p.valor)
+      continue
+    }
     n++
     clientes.add(p.cliente_id)
-    porEstudio.set(p.estudio_id, (porEstudio.get(p.estudio_id) ?? 0) + p.valor)
-    const metodo = p.metodo?.trim() || 'Não indicado'
-    porMetodo.set(metodo, (porMetodo.get(metodo) ?? 0) + p.valor)
     porPlano.set(p.plano_id, (porPlano.get(p.plano_id) ?? 0) + p.valor)
   }
   const bruto = receita + descontos
+  const receitaClientes = receita - receitaOutras
   return {
     receita: r2(receita),
     bruto: r2(bruto),
     descontos: r2(descontos),
     taxaDesconto: bruto > 0 ? descontos / bruto : 0,
     pagamentos: n,
-    ticketMedio: n > 0 ? receita / n : 0,
+    ticketMedio: n > 0 ? receitaClientes / n : 0,
     clientesPagantes: clientes.size,
-    receitaPorCliente: clientes.size > 0 ? receita / clientes.size : 0,
+    receitaPorCliente: clientes.size > 0 ? receitaClientes / clientes.size : 0,
     porEstudio,
     porMetodo,
     porPlano,
+    receitaClientes: r2(receitaClientes),
+    receitaOutras: r2(receitaOutras),
+    porOutras,
   }
+}
+
+// O histórico traz o mesmo método escrito de várias formas ("MBWay",
+// "MB WAY", "numerário", "Transferência bancária"…).
+export function normalizarMetodo(metodo: string | null): string {
+  const m = (metodo ?? '').trim()
+  if (!m) return 'Não indicado'
+  const chave = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')
+  if (chave === 'mbway') return 'MB Way'
+  if (chave === 'numerario') return 'Numerário'
+  if (chave.startsWith('transferencia')) return 'Transferência'
+  if (chave === 'tpa' || chave === 'multibanco') return 'Multibanco'
+  return m
 }
 
 export function variacao(atual: number, anterior: number | null | undefined): number | null {
@@ -167,7 +200,7 @@ export function receitaMensal(
     if (i === undefined) continue
     total[i] += p.valor
     descontos[i] += p.desconto
-    n[i]++
+    if (!p.outra) n[i]++
     const linha = porEstudio.get(p.estudio_id) ?? meses.map(() => 0)
     linha[i] += p.valor
     porEstudio.set(p.estudio_id, linha)

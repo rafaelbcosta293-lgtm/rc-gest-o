@@ -169,3 +169,30 @@ describe('formatarValor', () => {
     expect(formatarValor(0.123, 'pct')).toBe('12,3%')
   })
 })
+
+describe('receitas sem cliente', () => {
+  it('contam para a receita mas não para clientes, pagamentos nem planos', async () => {
+    const { resumirPeriodo, receitaMensal, normalizarMetodo } = await import('./analiseFinanceira')
+    const lista = [
+      pag('a', '2026-01-05', '2026-01-31', 60),
+      pag('', '2026-01-10', '2026-01-10', 40, { outra: 'Osteopatia', metodo: 'numerário' }),
+      pag('', '2026-01-01', '2026-01-01', -10, { outra: 'Ajuste', metodo: null }),
+    ]
+    const r = resumirPeriodo(lista, '2026-01-01', '2026-01-31')
+    expect(r.receita).toBe(90)
+    expect(r.receitaClientes).toBe(60)
+    expect(r.receitaOutras).toBe(30)
+    expect(r.pagamentos).toBe(1)
+    expect(r.clientesPagantes).toBe(1)
+    expect(r.ticketMedio).toBe(60)
+    expect(r.porOutras.get('Osteopatia')).toBe(40)
+    expect(r.porMetodo.get('Numerário')).toBe(40)
+    expect([...r.porPlano.values()]).toEqual([60])
+    const m = receitaMensal(lista, ['2026-01'])
+    expect(m.total).toEqual([90])
+    expect(m.pagamentos).toEqual([1])
+    expect(normalizarMetodo('MB WAY')).toBe('MB Way')
+    expect(normalizarMetodo('Transferência bancária')).toBe('Transferência')
+    expect(normalizarMetodo('TPA')).toBe('Multibanco')
+  })
+})

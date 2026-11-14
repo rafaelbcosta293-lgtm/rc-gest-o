@@ -5,7 +5,7 @@ import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { parseValorConfig } from '@/lib/data/financeiro'
-import { carregarPagamentosAnalise } from '@/lib/data/cargaFinanceira'
+import { carregarDespesas, carregarPagamentosAnalise } from '@/lib/data/cargaFinanceira'
 import { baseClientesMensal, mesesEntre, mrrNormalizado, receitaMensal, somarMeses } from '@/lib/data/analiseFinanceira'
 import type { Racios } from '@/lib/data/simulador'
 import { desbloquearAdmin } from '../actions'
@@ -43,9 +43,10 @@ export default async function SimuladorPage({
   const desde = `${primeiroMes}-01`
   const ate = `${mesAtual}-01`
 
-  const [pagamentos, { data: cenariosData, error: erroCenarios }, leadsRes, registosRes, mktRes, { data: configData }] =
+  const [pagamentos, despesasTodas, { data: cenariosData, error: erroCenarios }, leadsRes, registosRes, mktRes, { data: configData }] =
     await Promise.all([
       carregarPagamentosAnalise(supabase, ids),
+      carregarDespesas(supabase, ids),
       supabase.from('cenarios_simulador').select('*').order('criado_em', { ascending: false }),
       todasAsLinhas<{ estudio_id: number; entrada: string | null; criado_em: string }>((de, a) =>
         supabase.from('leads').select('estudio_id, entrada, criado_em').gte('criado_em', desde).order('id').range(de, a)
@@ -110,7 +111,17 @@ export default async function SimuladorPage({
   const custoMkt = (mktRes.data ?? [])
     .filter((m) => ids.has(m.estudio_id) && `${m.ano}-${String(m.mes).padStart(2, '0')}` >= primeiroMes && `${m.ano}-${String(m.mes).padStart(2, '0')}` <= ultimoMes)
     .reduce((s, m) => s + Number(m.custo), 0)
-  const custoPorLead = custoMkt > 0 && leads.length > 0 ? custoMkt / leads.length : null
+  // Despesas reais da janela: marketing (para o custo por lead, se não
+  // houver custos por campanha), honorários dos PTs (ficam de fora dos
+  // fixos — já entram como horas × custo/hora) e o resto = custos fixos.
+  const despesas = despesasTodas.filter((d) => d.data.slice(0, 7) >= primeiroMes && d.data.slice(0, 7) <= ultimoMes)
+  const ehMarketing = (d: { categoria: string }) => d.categoria.startsWith('Publicidade')
+  const ehPt = (d: { subcategoria: string | null }) => /^(Honorários PT|Prémios)/.test(d.subcategoria ?? '')
+  const despMarketing = despesas.filter(ehMarketing).reduce((s, d) => s + d.valor, 0)
+  const despFixas = despesas.filter((d) => !ehMarketing(d) && !ehPt(d)).reduce((s, d) => s + d.valor, 0)
+  const custosFixosMes = despesas.length > 0 ? despFixas / meses.length : null
+  const marketingTotal = custoMkt > 0 ? custoMkt : despMarketing
+  const custoPorLead = marketingTotal > 0 && leads.length > 0 ? marketingTotal / leads.length : null
 
   const custoHoraPt = parseValorConfig(configData?.valor) ?? 0
 
@@ -123,7 +134,7 @@ export default async function SimuladorPage({
     horasPorPt: horasPorPt != null ? Math.round(horasPorPt) : 120,
     custoHoraPt,
     custoPorLead: custoPorLead != null ? Math.round(custoPorLead * 100) / 100 : 0,
-    custosFixos: 0,
+    custosFixos: custosFixosMes != null ? Math.round(custosFixosMes) : 0,
   }
   const baseReal: BaseReal = {
     racios,
@@ -138,6 +149,7 @@ export default async function SimuladorPage({
       horasPorPt: horasPorPt == null,
       custoPorLead: custoPorLead == null,
       custoHoraPt: custoHoraPt === 0,
+      custosFixos: custosFixosMes == null,
     },
     janela: `${meses[0]} a ${meses[meses.length - 1]}`,
   }

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
-import type { PagamentoAnalise } from './analiseFinanceira'
+import type { Despesa, PagamentoAnalise } from './analiseFinanceira'
 
 type LinhaPagamento = {
   cliente_id: string
@@ -46,4 +46,62 @@ export async function carregarPagamentosAnalise(
     })
   }
   return pagamentos
+}
+
+// Receitas sem cliente (bar, merchandising, apoios, osteopatia… e os
+// ajustes de reconciliação com o Excel), no mesmo formato dos
+// pagamentos para entrarem nas contas de receita.
+export async function carregarOutrasReceitas(
+  supabase: SupabaseClient,
+  idsEstudios: Set<number>
+): Promise<PagamentoAnalise[]> {
+  const { data, error } = await todasAsLinhas<{
+    estudio_id: number
+    data: string
+    categoria: string
+    valor: number | string
+    metodo: string | null
+  }>((de, ate) =>
+    supabase
+      .from('receitas_outras')
+      .select('estudio_id, data, categoria, valor, metodo')
+      .is('anulado_em', null)
+      .order('id')
+      .range(de, ate)
+  )
+  if (error) throw new Error(error.message)
+  return data
+    .filter((r) => idsEstudios.has(r.estudio_id))
+    .map((r) => ({
+      cliente_id: '',
+      estudio_id: r.estudio_id,
+      valor: Number(r.valor),
+      desconto: 0,
+      metodo: r.metodo,
+      plano_id: null,
+      data_pagamento: r.data,
+      valido_ate: r.data,
+      outra: r.categoria,
+    }))
+}
+
+export async function carregarDespesas(supabase: SupabaseClient, idsEstudios: Set<number>): Promise<Despesa[]> {
+  const { data, error } = await todasAsLinhas<{
+    estudio_id: number
+    data: string
+    categoria: string
+    subcategoria: string | null
+    valor: number | string
+  }>(
+    (de, ate) =>
+      supabase
+        .from('despesas')
+        .select('estudio_id, data, categoria, subcategoria, valor')
+        .is('anulado_em', null)
+        .order('id')
+        .range(de, ate),
+    { emParalelo: 2 }
+  )
+  if (error) throw new Error(error.message)
+  return data.filter((d) => idsEstudios.has(d.estudio_id)).map((d) => ({ ...d, valor: Number(d.valor) }))
 }

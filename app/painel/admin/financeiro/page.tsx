@@ -7,7 +7,7 @@ import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import { PALETA, corGraficoEstudio } from '@/lib/data/constantes'
 import { agingDivida, parseValorConfig } from '@/lib/data/financeiro'
-import { carregarPagamentosAnalise } from '@/lib/data/cargaFinanceira'
+import { carregarDespesas, carregarOutrasReceitas, carregarPagamentosAnalise } from '@/lib/data/cargaFinanceira'
 import {
   MESES_CURTOS,
   NOMES_MESES,
@@ -83,6 +83,8 @@ export default async function FinanceiroPage({
 
   const [
     pagamentos,
+    outrasReceitas,
+    despesas,
     { data: clientesData, error: erroClientes },
     { data: planosData },
     { data: comprasData },
@@ -91,6 +93,8 @@ export default async function FinanceiroPage({
     { data: configData },
   ] = await Promise.all([
     carregarPagamentosAnalise(supabase, idsEstudios),
+    carregarOutrasReceitas(supabase, idsEstudios),
+    carregarDespesas(supabase, idsEstudios),
     todasAsLinhas<{ id: string; estudio_id: number; estado: string }>(
       (de, ate) => supabase.from('clientes').select('id, estudio_id, estado').order('id').range(de, ate),
       { emParalelo: 2 }
@@ -118,15 +122,19 @@ export default async function FinanceiroPage({
   const outrasSaidas = outrosData.filter((c) => idsEstudios.has(c.estudio_id))
   const registos = registosData.filter((r) => idsEstudios.has(r.estudio_id))
 
-  const primeiraData = pagamentos.reduce((m, p) => (p.data_pagamento < m ? p.data_pagamento : m), hoje)
+  // Receita = pagamentos de clientes + receitas sem cliente (bar,
+  // merchandising, apoios… e os ajustes de reconciliação com o Excel).
+  // A base de clientes, o MRR e o churn usam só os pagamentos.
+  const movimentos = [...pagamentos, ...outrasReceitas]
+  const primeiraData = movimentos.reduce((m, p) => (p.data_pagamento < m ? p.data_pagamento : m), hoje)
   const periodo = resolverPeriodo(tipo, ref, hoje, primeiraData)
   const anterior = periodoRecuado(periodo, 1)
   const homologo = periodo.tipo === 'mes' ? periodoRecuado(periodo, 12) : null
 
   // ── Período escolhido e comparações ──────────────────────────────
-  const resumo = resumirPeriodo(pagamentos, periodo.inicio, periodo.fim)
-  const resumoAnt = anterior ? resumirPeriodo(pagamentos, anterior.inicio, anterior.fim) : null
-  const resumoHom = homologo ? resumirPeriodo(pagamentos, homologo.inicio, homologo.fim) : null
+  const resumo = resumirPeriodo(movimentos, periodo.inicio, periodo.fim)
+  const resumoAnt = anterior ? resumirPeriodo(movimentos, anterior.inicio, anterior.fim) : null
+  const resumoHom = homologo ? resumirPeriodo(movimentos, homologo.inicio, homologo.fim) : null
   const somaEntre = <T extends { data: string }>(lista: T[], campo: (x: T) => number, de: string, ate: string) =>
     lista.filter((x) => x.data >= de && x.data <= ate).reduce((s, x) => s + Number(campo(x)), 0)
   const custosPeriodo = (de: string, ate: string) => {
@@ -134,7 +142,23 @@ export default async function FinanceiroPage({
     const outrasP = somaEntre(outrasSaidas, (c) => c.valor, de, ate)
     const horas = somaEntre(registos, (r) => r.horas, de, ate)
     const custoPt = horas * custoHoraPt
-    return { compras: comprasP, outras: outrasP, horas, custoPt, total: comprasP + outrasP + custoPt }
+    // Com despesas registadas no período (histórico do Excel ou lançadas
+    // na app) usam-se essas; sem elas, fica a estimativa antiga (caixa +
+    // horas de PT), para o resultado nunca aparecer sem custos.
+    const doPeriodo = despesas.filter((d) => d.data >= de && d.data <= ate)
+    const porCategoria = new Map<string, number>()
+    for (const d of doPeriodo) porCategoria.set(d.categoria, (porCategoria.get(d.categoria) ?? 0) + d.valor)
+    const registadas = doPeriodo.length > 0
+    const totalRegistado = doPeriodo.reduce((s, d) => s + d.valor, 0)
+    return {
+      compras: comprasP,
+      outras: outrasP,
+      horas,
+      custoPt,
+      registadas,
+      porCategoria: [...porCategoria.entries()].sort((a, b) => b[1] - a[1]),
+      total: registadas ? totalRegistado : comprasP + outrasP + custoPt,
+    }
   }
   const custos = custosPeriodo(periodo.inicio, periodo.fim)
   const resultado = resumo.receita - custos.total
@@ -147,7 +171,12 @@ export default async function FinanceiroPage({
   // ── Série mensal completa (desde sempre) ─────────────────────────
   const mesAtual = hoje.slice(0, 7)
   const todosMeses = mesesEntre(primeiraData, hoje)
-  const mensal = receitaMensal(pagamentos, todosMeses)
+  const mensal = receitaMensal(movimentos, todosMeses)
+  const despesaMensal = todosMeses.map(() => 0)
+  for (const d of despesas) {
+    const i = todosMeses.indexOf(d.data.slice(0, 7))
+    if (i >= 0) despesaMensal[i] += d.valor
+  }
   const serieFechada = todosMeses
     .map((mes, i) => ({ mes, receita: mensal.total[i] }))
     .filter((s) => s.mes < mesAtual)
@@ -220,6 +249,9 @@ export default async function FinanceiroPage({
   const piorMes = mesesFechadosEscopo.reduce<string | null>((b, m) => (b === null || valorMes(m) < valorMes(b) ? m : b), null)
   const mm12Todos = mediaMovel(mensal.total, 12)
 
+  // Meses do âmbito com despesas registadas (para o gráfico de resultado).
+  const mesesResultado = mesesEscopo.filter((m) => iMes.has(m) && m <= mesAtual && despesaMensal[iMes.get(m)!] > 0)
+
   // Gráfico principal
   let grafico: React.ReactNode
   if (tipo === 'mes') {
@@ -227,7 +259,7 @@ export default async function FinanceiroPage({
     const nDias = new Date(Date.UTC(a, m, 0)).getUTCDate()
     const acumulado = (mesISO: string, ateDia: number) => {
       const porDia = Array(nDias).fill(0)
-      for (const p of pagamentos) {
+      for (const p of movimentos) {
         if (!p.data_pagamento.startsWith(mesISO)) continue
         const d = Number(p.data_pagamento.slice(8, 10))
         if (d <= nDias) porDia[d - 1] += p.valor
@@ -309,7 +341,21 @@ export default async function FinanceiroPage({
     const ativosMedios = meses.length ? meses.reduce((s, m) => s + (basePorMes.get(m)?.ativos ?? 0), 0) / meses.length : 0
     const novos = meses.reduce((s, m) => s + (basePorMes.get(m)?.novos ?? 0), 0)
     const perdidos = meses.filter((m) => m < mesAtual).reduce((s, m) => s + (basePorMes.get(m)?.perdidos ?? 0), 0)
-    return { ano, total, porEst, mesesComReceita, mediaMensal: mesesComReceita ? total / mesesComReceita : 0, desc, npag, ativosMedios, novos, perdidos }
+    const despesasAno = meses.reduce((s, m) => s + (despesaMensal[iMes.get(m)!] ?? 0), 0)
+    return {
+      ano,
+      total,
+      porEst,
+      mesesComReceita,
+      mediaMensal: mesesComReceita ? total / mesesComReceita : 0,
+      desc,
+      npag,
+      ativosMedios,
+      novos,
+      perdidos,
+      despesas: despesasAno,
+      resultado: total - despesasAno,
+    }
   })
   const anosCompletos = porAno.filter((a) => a.mesesComReceita === 12 && Number(a.ano) < anoAtual).reverse()
   const cagrHist =
@@ -328,6 +374,10 @@ export default async function FinanceiroPage({
     ...planosOrdenados.slice(0, 7).map(([id, valor], i) => ({ nome: id ? nomePlano.get(id) ?? 'Plano removido' : 'Sem plano / histórico', valor, cor: CORES_MIX[i] })),
     ...(planosOrdenados.length > 7 ? [{ nome: 'Outros', valor: planosOrdenados.slice(7).reduce((s, [, v]) => s + v, 0), cor: COR.cinza }] : []),
   ]
+  const mixOutras = [...resumo.porOutras.entries()]
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([nome, valor], i) => ({ nome, valor, cor: nome.startsWith('Ajuste') ? COR.cinza : CORES_MIX[i % CORES_MIX.length] }))
   const taxaAteDia8 = (() => {
     const doPeriodo = pagamentos.filter((p) => p.data_pagamento >= periodo.inicio && p.data_pagamento <= periodo.fim)
     return doPeriodo.length ? doPeriodo.filter((p) => Number(p.data_pagamento.slice(8, 10)) <= 8).length / doPeriodo.length : 0
@@ -402,6 +452,23 @@ export default async function FinanceiroPage({
       tom: statsEscopo.cv < 0.25 ? 'neutro' : 'mau',
     })
   }
+  if (custos.registadas && resumo.receita > 0) {
+    conclusoes.splice(1, 0, {
+      texto: `Resultado operacional de ${periodo.rotulo}: ${eur(resultado)} (margem de ${pctSimples(margemOperacional)}) — despesas de ${eur(custos.total)}, ${pctSimples(custos.total / resumo.receita, 0)} da receita.`,
+      tom: resultado >= 0 ? 'bom' : 'mau',
+    })
+    const [maiorCat, maiorValor] = custos.porCategoria[0]
+    conclusoes.push({
+      texto: `${maiorCat} é a maior despesa do período: ${eur(maiorValor)} (${pctSimples(maiorValor / custos.total, 0)} das despesas, ${pctSimples(maiorValor / resumo.receita, 0)} da receita).`,
+      tom: 'neutro',
+    })
+  }
+  if (resumo.receitaOutras > 0 && resumo.receita > 0) {
+    conclusoes.push({
+      texto: `Outras receitas (bar, merchandising, osteopatia, apoios…) valem ${eur(resumo.receitaOutras)} — ${pctSimples(resumo.receitaOutras / resumo.receita)} da receita do período.`,
+      tom: 'neutro',
+    })
+  }
   if (emAtraso.length > 0) {
     conclusoes.push({
       texto: `${emAtraso.length} clientes ativos sem pagamento válido — cerca de ${eur(valorEmAtraso)} por cobrar.`,
@@ -428,6 +495,8 @@ export default async function FinanceiroPage({
       mes: m,
       ...Object.fromEntries(estudios.map((e) => [`e${e.id}`, Math.round((mensal.porEstudio.get(e.id)?.[i] ?? 0) * 100) / 100])),
       receita: mensal.total[i],
+      despesas: Math.round(despesaMensal[i] * 100) / 100,
+      resultado: Math.round((mensal.total[i] - despesaMensal[i]) * 100) / 100,
       descontos: mensal.descontos[i],
       pagamentos: mensal.pagamentos[i],
       ativos: b?.ativos ?? 0,
@@ -455,6 +524,8 @@ export default async function FinanceiroPage({
             { chave: 'mes', label: 'Mês' },
             ...estudios.map((e) => ({ chave: `e${e.id}`, label: `${e.nome} (€)` })),
             { chave: 'receita', label: 'Receita total (€)' },
+            { chave: 'despesas', label: 'Despesas (€)' },
+            { chave: 'resultado', label: 'Resultado (€)' },
             { chave: 'descontos', label: 'Descontos (€)' },
             { chave: 'pagamentos', label: 'Nº pagamentos' },
             { chave: 'ativos', label: 'Clientes cobertos' },
@@ -546,7 +617,8 @@ export default async function FinanceiroPage({
             valor={eur(resumo.receita)}
             tendencia={tendencia(variacao(resumo.receita, comparacaoPrincipal?.receita), rotuloComparacao)}
             historico={receitaEscopo.slice(-12)}
-            formula="Soma dos pagamentos recebidos no período (valor pago, já com descontos; sem anulados)."
+            sufixo={resumo.receitaOutras ? `clientes ${eur(resumo.receitaClientes)} · outras ${eur(resumo.receitaOutras)}` : undefined}
+            formula="Tudo o que entrou no período: pagamentos de clientes (valor pago, já com descontos; sem anulados) + outras receitas (bar, merchandising, osteopatia, apoios…)."
           />
           <StatCard
             label="Faturação bruta"
@@ -555,19 +627,23 @@ export default async function FinanceiroPage({
             formula="Receita líquida + descontos concedidos."
           />
           <StatCard
-            label="Resultado operacional (est.)"
+            label={custos.registadas ? 'Resultado operacional' : 'Resultado operacional (est.)'}
             cor={resultado >= 0 ? PALETA.verde : PALETA.vermelho}
             valor={eur(resultado)}
             sufixo={`margem ${pctSimples(margemOperacional)}`}
             tendencia={tendencia(variacao(resultado, resultadoAnt), anterior ? `vs ${anterior.rotulo}` : '')}
-            formula="Receita − compras de caixa − outras saídas − custo estimado das horas de PT. Não inclui rendas, salários fixos nem impostos (não registados na app)."
+            formula={
+              custos.registadas
+                ? 'Receita líquida − despesas registadas no período (recursos humanos, rendas, serviços, impostos, marketing…).'
+                : 'Sem despesas registadas neste período: estimativa = receita − compras de caixa − outras saídas − horas de PT × custo/hora.'
+            }
           />
           <StatCard
             label="Pagamentos"
             valor={resumo.pagamentos.toLocaleString('pt-PT')}
             sufixo={`ticket médio ${eur2(resumo.ticketMedio)}`}
             tendencia={tendencia(variacao(resumo.pagamentos, comparacaoPrincipal?.pagamentos), rotuloComparacao)}
-            formula="Nº de pagamentos no período; ticket médio = receita ÷ nº pagamentos."
+            formula="Nº de pagamentos de clientes no período; ticket médio = receita de clientes ÷ nº pagamentos."
           />
           <StatCard
             label="Clientes pagantes"
@@ -579,7 +655,7 @@ export default async function FinanceiroPage({
             label="Receita por cliente pagante"
             valor={eur2(resumo.receitaPorCliente)}
             tendencia={tendencia(variacao(resumo.receitaPorCliente, comparacaoPrincipal?.receitaPorCliente), rotuloComparacao)}
-            formula="Receita do período ÷ clientes pagantes."
+            formula="Receita de clientes do período ÷ clientes pagantes."
           />
           <StatCard
             label="Novos / perdidos"
@@ -610,6 +686,26 @@ export default async function FinanceiroPage({
       >
         <Cartao>{grafico}</Cartao>
       </Seccao>
+
+      {/* Receita, despesas e resultado */}
+      {mesesResultado.length > 0 && (
+        <Seccao
+          titulo="Receita, despesas e resultado por mês"
+          sub="Barras: o que entrou e o que saiu em cada mês. Linha: resultado (receita − despesas). Meses sem despesas registadas ficam de fora."
+        >
+          <Cartao>
+            <GraficoFinanceiro
+              rotulos={mesesResultado.map((m) => rotuloMes(m))}
+              rotulosCurtos={mesesResultado.map((m) => rotuloMes(m, true))}
+              barras={[
+                { nome: 'Receita', cor: COR.azul, valores: mesesResultado.map((m) => valorMes(m)) },
+                { nome: 'Despesas', cor: COR.laranja, valores: mesesResultado.map((m) => despesaMensal[iMes.get(m)!]) },
+              ]}
+              linhas={[{ nome: 'Resultado', cor: COR.amarelo, valores: mesesResultado.map((m) => valorMes(m) - despesaMensal[iMes.get(m)!]) }]}
+            />
+          </Cartao>
+        </Seccao>
+      )}
 
       {/* Retrato de hoje + projeções */}
       <div className="grid gap-x-6 lg:grid-cols-2">
@@ -678,7 +774,7 @@ export default async function FinanceiroPage({
 
       {/* Mix */}
       <Seccao titulo={`Composição da receita · ${periodo.rotulo}`}>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Cartao>
             <p className="mb-3 text-sm font-semibold text-foreground">Por estúdio</p>
             <ListaMix itens={mixEstudio} />
@@ -688,8 +784,12 @@ export default async function FinanceiroPage({
             <ListaMix itens={mixMetodo} />
           </Cartao>
           <Cartao>
-            <p className="mb-3 text-sm font-semibold text-foreground">Por plano</p>
+            <p className="mb-3 text-sm font-semibold text-foreground">Por plano (clientes)</p>
             <ListaMix itens={mixPlano} />
+          </Cartao>
+          <Cartao>
+            <p className="mb-3 text-sm font-semibold text-foreground">Outras receitas</p>
+            <ListaMix itens={mixOutras} vazio="Sem outras receitas no período." />
           </Cartao>
         </div>
       </Seccao>
@@ -711,15 +811,37 @@ export default async function FinanceiroPage({
           </Cartao>
         </Seccao>
 
-        <Seccao titulo={`Conta de exploração simplificada · ${periodo.rotulo}`} sub="Com os custos que a app regista. Rendas, salários fixos, seguros e impostos não estão incluídos.">
+        <Seccao
+          titulo={`Conta de exploração · ${periodo.rotulo}`}
+          sub={
+            custos.registadas
+              ? 'Receita e despesas registadas no período, por categoria (% da receita).'
+              : 'Sem despesas registadas neste período — custos estimados (caixa + horas de PT).'
+          }
+        >
           <Cartao>
             <Linha label="Faturação bruta" valor={eur(resumo.bruto)} />
             <Linha label="− Descontos" valor={eur(resumo.descontos)} />
             <Linha label="= Receita líquida" valor={eur(resumo.receita)} destaque />
-            <Linha label="− Compras (caixa)" valor={eur(custos.compras)} />
-            <Linha label="− Outras saídas (caixa)" valor={eur(custos.outras)} />
-            <Linha label={`− Horas de PT (${Math.round(custos.horas)}h × ${eur2(custoHoraPt)})`} valor={eur(custos.custoPt)} />
-            <Linha label="= Resultado operacional estimado" valor={`${eur(resultado)} · ${pctSimples(margemOperacional)}`} destaque />
+            {resumo.receitaOutras !== 0 && <Linha label="   da qual: clientes" valor={eur(resumo.receitaClientes)} />}
+            {resumo.receitaOutras !== 0 && <Linha label="   da qual: outras receitas" valor={eur(resumo.receitaOutras)} />}
+            {custos.registadas ? (
+              custos.porCategoria.map(([cat, v]) => (
+                <Linha key={cat} label={`− ${cat}`} valor={`${eur(v)} · ${pctSimples(resumo.receita ? v / resumo.receita : 0, 0)}`} />
+              ))
+            ) : (
+              <>
+                <Linha label="− Compras (caixa)" valor={eur(custos.compras)} />
+                <Linha label="− Outras saídas (caixa)" valor={eur(custos.outras)} />
+                <Linha label={`− Horas de PT (${Math.round(custos.horas)}h × ${eur2(custoHoraPt)})`} valor={eur(custos.custoPt)} />
+              </>
+            )}
+            {custos.registadas && <Linha label="= Total de despesas" valor={eur(custos.total)} destaque />}
+            <Linha
+              label={custos.registadas ? '= Resultado operacional' : '= Resultado operacional estimado'}
+              valor={`${eur(resultado)} · ${pctSimples(margemOperacional)}`}
+              destaque
+            />
             {custos.horas > 0 && <Linha label="Receita por hora de PT" valor={eur2(resumo.receita / custos.horas)} />}
           </Cartao>
         </Seccao>
@@ -740,6 +862,8 @@ export default async function FinanceiroPage({
               { chave: 'pagamentos', label: 'Nº pagamentos' },
               { chave: 'novos', label: 'Novos clientes' },
               { chave: 'perdidos', label: 'Clientes perdidos' },
+              { chave: 'despesas', label: 'Despesas (€)' },
+              { chave: 'resultado', label: 'Resultado (€)' },
             ]}
             linhas={porAno.map((a) => ({
               ano: a.ano,
@@ -750,6 +874,8 @@ export default async function FinanceiroPage({
               pagamentos: a.npag,
               novos: a.novos,
               perdidos: a.perdidos,
+              despesas: Math.round(a.despesas * 100) / 100,
+              resultado: Math.round(a.resultado * 100) / 100,
             }))}
             nomeFicheiro="evolucao-anual"
             className="text-xs text-muted underline hover:text-foreground"
@@ -757,7 +883,7 @@ export default async function FinanceiroPage({
         }
       >
         <div className="overflow-x-auto rounded-2xl border border-border-subtle bg-surface shadow-card">
-          <table className="w-full min-w-[860px] text-sm">
+          <table className="w-full min-w-[1100px] text-sm">
             <thead>
               <tr className="text-left text-xs text-muted">
                 <th className="px-4 py-2 font-semibold">Ano</th>
@@ -769,6 +895,9 @@ export default async function FinanceiroPage({
                 <th className="px-3 py-2 text-right font-semibold">Média/mês</th>
                 <th className="px-3 py-2 text-right font-semibold">Descontos</th>
                 <th className="px-3 py-2 text-right font-semibold">Pagamentos</th>
+                <th className="px-3 py-2 text-right font-semibold">Despesas</th>
+                <th className="px-3 py-2 text-right font-semibold">Resultado</th>
+                <th className="px-3 py-2 text-right font-semibold">Margem</th>
                 <th className="px-3 py-2 text-right font-semibold">Clientes médios</th>
                 <th className="px-3 py-2 text-right font-semibold">Novos / perdidos</th>
               </tr>
@@ -793,6 +922,11 @@ export default async function FinanceiroPage({
                     <td className="px-3 py-2 text-right tabular-nums">{eur(a.mediaMensal)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted">{eur(a.desc)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted">{a.npag.toLocaleString('pt-PT')}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{a.despesas ? eur(a.despesas) : '—'}</td>
+                    <td className={`px-3 py-2 text-right font-semibold tabular-nums ${!a.despesas ? 'text-muted' : a.resultado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {a.despesas ? eur(a.resultado) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted">{a.despesas && a.total ? pctSimples(a.resultado / a.total, 0) : '—'}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted">{Math.round(a.ativosMedios)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted">{a.novos} / {a.perdidos}</td>
                   </tr>
@@ -855,7 +989,9 @@ export default async function FinanceiroPage({
       </Seccao>
 
       <p className="mt-10 text-xs text-muted">
-        Notas: receita = dinheiro efetivamente recebido (data do pagamento), inclui o histórico importado do Excel e exclui pagamentos anulados.
+        Notas: receita = dinheiro efetivamente recebido (pagamentos de clientes + outras receitas), sem anulados. O histórico vem do Excel de cada
+        estúdio e os totais mensais coincidem com o &quot;Volume de Negócio&quot; e o &quot;Total de Gastos&quot; desse Excel — as diferenças face às linhas
+        individuais ficam em &quot;Ajuste de reconciliação (Excel)&quot;.
         {estudios.length < todosEstudios.length && ` Filtrado para ${estudios.map((e) => e.nome).join(', ')}.`}{' '}
       </p>
     </div>
@@ -881,9 +1017,9 @@ function Cartao({ children, className = '' }: { children: React.ReactNode; class
   return <div className={`rounded-2xl border border-border-subtle bg-surface p-4 shadow-card ${className}`}>{children}</div>
 }
 
-function ListaMix({ itens }: { itens: { nome: string; valor: number; cor: string }[] }) {
+function ListaMix({ itens, vazio = 'Sem receita no período.' }: { itens: { nome: string; valor: number; cor: string }[]; vazio?: string }) {
   const total = itens.reduce((s, x) => s + x.valor, 0)
-  if (total <= 0) return <p className="text-sm text-muted">Sem receita no período.</p>
+  if (total <= 0) return <p className="text-sm text-muted">{vazio}</p>
   return (
     <div className="flex flex-col gap-3">
       <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full">

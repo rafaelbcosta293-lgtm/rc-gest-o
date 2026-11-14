@@ -94,16 +94,22 @@ export async function carregarDespesas(supabase: SupabaseClient, idsEstudios: Se
     categoria: string
     subcategoria: string | null
     valor: number | string
+    pago: boolean
   }>(
     (de, ate) =>
       supabase
         .from('despesas')
-        .select('estudio_id, data, categoria, subcategoria, valor')
+        .select('estudio_id, data, categoria, subcategoria, valor, pago')
         .is('anulado_em', null)
         .order('id')
         .range(de, ate),
     { emParalelo: 2 }
   )
   if (error) throw new Error(error.message)
-  return data.filter((d) => idsEstudios.has(d.estudio_id)).map((d) => ({ ...d, valor: Number(d.valor) }))
+  // As ocorrências futuras das recorrentes (ainda por pagar) são só
+  // previsão para o balanço das Despesas — ainda não são gasto.
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
+  return data
+    .filter((d) => idsEstudios.has(d.estudio_id) && (d.pago || d.data <= hoje))
+    .map((d) => ({ estudio_id: d.estudio_id, data: d.data, categoria: d.categoria, subcategoria: d.subcategoria, valor: Number(d.valor) }))
 }

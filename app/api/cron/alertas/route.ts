@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudios } from '@/lib/data/estudios'
 import { somarDias } from '@/lib/data/horarios'
+import { gerarDespesasRecorrentes, hojeEmLisboa } from '@/lib/data/despesas'
 import {
   avaliarLeads,
   avaliarClientes,
@@ -42,6 +43,15 @@ export async function GET(request: Request) {
   }
 
   const admin = createAdminClient()
+
+  // Aproveita a mesma corrida horária para lançar as ocorrências das
+  // despesas recorrentes (independente das regras de alertas do CRM —
+  // uma falha aqui não as deve travar).
+  try {
+    await gerarDespesasRecorrentes(admin, hojeEmLisboa())
+  } catch (e) {
+    console.error('Despesas recorrentes não geradas:', e)
+  }
   const agoraISO = new Date().toISOString()
   const hojeISO = agoraISO.slice(0, 10)
   const limiteDesmarcacoes = somarDias(hojeISO, -JANELA_DESMARCACOES_DIAS)

@@ -9,7 +9,7 @@ import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
 import { disporBlocos } from '@/lib/data/agendaLayout'
 import { nomeCurto } from '@/lib/data/clientes'
-import { PALETA, ALERTAS } from '@/lib/data/constantes'
+import { ALERTAS } from '@/lib/data/constantes'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import {
   criarEventoRapido,
@@ -152,13 +152,20 @@ const EVENTO_TEXTO = '#FFFFFF'
 // Blocos ao estilo Google Calendar: cor sólida por tipo, texto branco,
 // cantos arredondados e um fio claro à volta (separa blocos vizinhos).
 const COR_BLOCO: Record<string, string> = {
-  Treino: '#A3978A',
-  'Sessão experimental': '#2E9E78',
-  Avaliação: '#3F7FBF',
-  Reunião: '#0B7A4B',
-  Outro: '#D9A520',
+  Treino: '#8C7E6D',
+  'Sessão experimental': '#1F8A63',
+  Avaliação: '#2F6FB5',
+  Reunião: '#0B6B43',
+  Outro: '#B8860B',
 }
-const COR_BLOCO_CANCELADO = '#E9D5D3'
+// Desmarcados: quase da cor do fundo, texto e contorno cinza-claro —
+// estão lá para consulta, sem competir com os treinos que aconteceram.
+const COR_BLOCO_CANCELADO = '#F5F3F0'
+const COR_TEXTO_CANCELADO = '#B9B1A8'
+const COR_CONTORNO_CANCELADO = '#E0DBD4'
+const COR_ABA_CANCELADO = '#D8B9B5'
+// Contorno vincado de cada bloco ativo.
+const COR_CONTORNO_BLOCO = '#2B2622'
 // Largura (px) da aba que cada desmarcado deixa à vista, à direita, por
 // trás dos eventos ativos.
 const ABA_CANCELADO = 12
@@ -922,10 +929,9 @@ function ColunaDia({
         const numerosSocio = numerosSocioEvento(grupo)
         const avisos = avisosEvento(grupo)
         const cancelado = evento.estado === 'Cancelado'
-        // "Terminado" só desvanece o aspeto — nunca line-through, que
-        // fica só para "Cancelado" (um já aconteceu, o outro não).
-        const terminado =
-          !cancelado && new Date(`${evento.data}T${horaFim(evento.hora_inicio, evento.duracao_min)}`).getTime() < agora
+        // Os treinos já passados ficam com a cor toda (são os que
+        // aconteceram — é a eles que se quer dar evidência); só os
+        // desmarcados ficam apagados.
         const altura = Math.max(evento.duracao_min * pxPorMinuto, ALTURA_MIN_BLOCO) - 2
         const fim = horaFim(evento.hora_inicio, evento.duracao_min)
         const rotulo = rotuloEvento(grupo, estudioId)
@@ -956,7 +962,7 @@ function ColunaDia({
             className={`group absolute rounded-md text-left transition-opacity select-none ${
               cancelado || somenteLeitura ? 'cursor-pointer' : emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
             } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${
-              cancelado ? 'opacity-70 hover:!z-30 hover:opacity-100 hover:shadow-lg' : terminado ? 'opacity-60' : ''
+              cancelado ? 'hover:!z-30 hover:!text-[#8A4A45] hover:shadow-lg' : ''
             }`}
             style={{
               // Pequeno espaço (calc) entre blocos vizinhos — horizontal
@@ -973,13 +979,13 @@ function ColunaDia({
               // Entre ativos, a coluna da direita fica por cima (escadinha).
               zIndex: cancelado ? nivel : 5 + coluna,
               background: cancelado ? COR_BLOCO_CANCELADO : (COR_BLOCO[evento.tipo] ?? COR_BLOCO.Treino),
-              color: cancelado ? PALETA.vermelho.tx : EVENTO_TEXTO,
-              // Fio claro à volta, como no Google Calendar: separa blocos
-              // encostados sem o peso de uma moldura escura. O desmarcado
-              // leva a margem direita a vermelho — é a aba que fica à
-              // vista por trás dos outros.
-              border: '1px solid rgba(255,255,255,.9)',
-              ...(cancelado ? { borderRight: `3px solid ${PALETA.vermelho.tx}` } : {}),
+              color: cancelado ? COR_TEXTO_CANCELADO : EVENTO_TEXTO,
+              // Contorno escuro a vincar cada bloco ativo; o desmarcado
+              // fica com um contorno quase invisível e só a margem
+              // direita num rosa suave — é a aba que fica à vista por
+              // trás dos outros.
+              border: `1px solid ${cancelado ? COR_CONTORNO_CANCELADO : COR_CONTORNO_BLOCO}`,
+              ...(cancelado ? { borderRight: `3px solid ${COR_ABA_CANCELADO}` } : {}),
             }}
           >
             {/* Conteúdo num wrapper à parte, só este com overflow-hidden
@@ -999,7 +1005,7 @@ function ColunaDia({
             >
               {altura >= 34 ? (
                 <>
-                  <span className="block truncate text-[12px] leading-[15px] font-semibold">{rotulo}</span>
+                  <span className="block truncate text-[12px] leading-[15px] font-medium">{rotulo}</span>
                   {/* Bloco estreito (vários ao mesmo tempo): só a hora de
                       início, em vez de um intervalo cortado a meio. */}
                   {/* A linha da hora fica só na parte do bloco que nunca é
@@ -1014,7 +1020,7 @@ function ColunaDia({
                 </>
               ) : (
                 <span
-                  className={`block truncate font-semibold ${
+                  className={`block truncate font-medium ${
                     altura >= 22 ? 'text-[12px] leading-[18px]' : 'text-[10px] leading-[14px]'
                   }`}
                 >
@@ -1065,7 +1071,7 @@ function ColunaDia({
                 emSelecionado && !somenteLeitura ? 'cursor-ns-resize' : 'pointer-events-none'
               }`}
             >
-              <span className="mt-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />
+              {!cancelado && <span className="mt-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />}
             </span>
             <span
               onMouseDown={
@@ -1075,14 +1081,14 @@ function ColunaDia({
                 emSelecionado && !somenteLeitura ? 'cursor-ns-resize' : 'pointer-events-none'
               }`}
             >
-              <span className="mb-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />
+              {!cancelado && <span className="mb-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />}
             </span>
           </button>
         )
       })}
       {/* Linha da hora atual, ao estilo Google Calendar — só na coluna
           de hoje, por cima dos eventos, a acompanhar "agora" (atualiza
-          ao minuto, tal como o desvanecer de eventos terminados acima). */}
+          ao minuto). */}
       {ehHoje && (
         <div
           className="pointer-events-none absolute inset-x-0 z-10 flex -translate-y-1/2 items-center"

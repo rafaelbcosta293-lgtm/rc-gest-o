@@ -64,6 +64,7 @@ export async function registarFechoCaixa(formData: FormData) {
     { data: pagamentosHoje, error: erroPagamentos },
     { data: saidasHoje, error: erroSaidas },
     { data: outrosHoje, error: erroOutros },
+    { data: vendasHoje, error: erroVendas },
   ] = await Promise.all([
     idsClientes.length
       ? supabase
@@ -74,16 +75,24 @@ export async function registarFechoCaixa(formData: FormData) {
       : Promise.resolve({ data: [], error: null }),
     supabase.from('saidas_caixa_ativas').select('valor').eq('estudio_id', estudioId).eq('data', hoje),
     supabase.from('outros_caixa_ativos').select('tipo, valor').eq('estudio_id', estudioId).eq('data', hoje),
+    // Vendas de produtos (bar, merchandising…) do dia.
+    supabase
+      .from('receitas_outras')
+      .select('valor, metodo')
+      .eq('estudio_id', estudioId)
+      .eq('origem', 'venda')
+      .eq('data', hoje)
+      .is('anulado_em', null),
   ])
 
-  if (erroPagamentos || erroSaidas || erroOutros) {
+  if (erroPagamentos || erroSaidas || erroOutros || erroVendas) {
     redirect(
-      `/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent((erroPagamentos ?? erroSaidas ?? erroOutros)!.message)}`
+      `/painel/${estudioSlug}/fecho-caixa?error=${encodeURIComponent((erroPagamentos ?? erroSaidas ?? erroOutros ?? erroVendas)!.message)}`
     )
   }
 
   const valorNumerarioDia = somarNumerario(
-    (pagamentosHoje ?? []).map((p) => ({ valor: Number(p.valor), metodo: p.metodo }))
+    [...(pagamentosHoje ?? []), ...(vendasHoje ?? [])].map((p) => ({ valor: Number(p.valor), metodo: p.metodo }))
   )
   const saidasCaixaDia = somarSaidas((saidasHoje ?? []).map((s) => ({ valor: Number(s.valor) })))
   const outrosEntradaDia = somarSaidas(

@@ -253,3 +253,77 @@ export async function anularPagamento(formData: FormData) {
   revalidatePath('/painel/admin', 'layout')
   redirect(`/painel/${estudioSlug}/pagamentos/${clienteId}`)
 }
+
+// ── Venda de produtos (bar, merchandising…) ──────────────────────────
+// Fica em receitas_outras com a categoria do produto: entra nas contas
+// em euros e no fecho de caixa, nunca como mensalidade nem como cliente.
+
+const METODOS_VENDA = ['Numerário', 'Multibanco', 'MB Way', 'Transferência']
+
+function voltarVendas(slug: string, params: Record<string, string> = {}): never {
+  const qs = new URLSearchParams(params).toString()
+  revalidatePath(`/painel/${slug}/pagamentos`)
+  revalidatePath(`/painel/${slug}/fecho-caixa`)
+  redirect(`/painel/${slug}/pagamentos${qs ? `?${qs}` : ''}#vendas`)
+}
+
+export async function registarVendaProduto(formData: FormData) {
+  const slug = formData.get('estudio_slug') as string
+  const estudioId = Number(formData.get('estudio_id'))
+  const produtoId = campoOuNull(formData, 'produto_id')
+  const quantidade = Math.floor(Number(formData.get('quantidade')))
+  const metodo = campoOuNull(formData, 'metodo')
+  const clienteId = campoOuNull(formData, 'cliente_id')
+  const valorTexto = campoOuNull(formData, 'valor')
+  if (!estudioId || !produtoId || !metodo || !(quantidade >= 1 && quantidade <= 999)) {
+    voltarVendas(slug, { erroVenda: 'Escolhe o produto, a quantidade e o método de pagamento.' })
+  }
+  if (!METODOS_VENDA.includes(metodo)) voltarVendas(slug, { erroVenda: 'Método de pagamento inválido.' })
+
+  const supabase = await createClient()
+  const { data: produto, error: erroProduto } = await supabase
+    .from('produtos')
+    .select('id, nome, valor, ativo, categoria:produto_categorias(nome)')
+    .eq('id', produtoId)
+    .maybeSingle()
+  if (erroProduto || !produto || !produto.ativo) voltarVendas(slug, { erroVenda: 'Produto não encontrado.' })
+
+  const precoTabela = Math.round(Number(produto.valor) * quantidade * 100) / 100
+  const valor = valorTexto ? Number(valorTexto.replace(/\s/g, '').replace(',', '.')) : precoTabela
+  if (!Number.isFinite(valor) || valor < 0) voltarVendas(slug, { erroVenda: 'O total não é um valor válido.' })
+
+  const categoria = produto.categoria as unknown as { nome: string } | { nome: string }[] | null
+  const nomeCategoria = (Array.isArray(categoria) ? categoria[0]?.nome : categoria?.nome) ?? 'Produtos'
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
+
+  const { error } = await supabase.from('receitas_outras').insert({
+    estudio_id: estudioId,
+    data: hoje,
+    categoria: nomeCategoria,
+    descricao: quantidade > 1 ? `${quantidade} × ${produto.nome}` : produto.nome,
+    valor: Math.round(valor * 100) / 100,
+    metodo,
+    origem: 'venda',
+    produto_id: produto.id,
+    quantidade,
+    cliente_id: clienteId,
+  })
+  if (error) voltarVendas(slug, { erroVenda: error.message })
+  voltarVendas(slug, { venda: 'ok' })
+}
+
+export async function anularVendaProduto(formData: FormData) {
+  const slug = formData.get('estudio_slug') as string
+  const id = formData.get('id') as string
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { error } = await supabase
+    .from('receitas_outras')
+    .update({ anulado_em: new Date().toISOString(), anulado_por: user?.id ?? null, motivo_anulacao: 'Venda anulada' })
+    .eq('id', id)
+    .eq('origem', 'venda')
+  if (error) voltarVendas(slug, { erroVenda: error.message })
+  voltarVendas(slug, { venda: 'anulada' })
+}

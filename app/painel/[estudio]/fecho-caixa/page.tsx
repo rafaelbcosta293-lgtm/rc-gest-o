@@ -191,15 +191,42 @@ export default async function FechoCaixaPage({
     plano: Array.isArray(p.plano) ? (p.plano[0] ?? null) : p.plano,
   }))
 
-  const valorNumerarioDia = somarNumerario(pagamentosHoje.map((p) => ({ valor: p.valor, metodo: p.metodo })))
+  // Vendas de produtos do dia (bar, merchandising…) — entram na caixa
+  // como os pagamentos.
+  const { data: vendasHojeData, error: erroVendas } = await supabase
+    .from('receitas_outras')
+    .select('valor, metodo, descricao, categoria, cliente:clientes(nome)')
+    .eq('estudio_id', estudio.id)
+    .eq('origem', 'venda')
+    .eq('data', hoje)
+    .is('anulado_em', null)
+  if (erroVendas) {
+    throw new Error(erroVendas.message)
+  }
+  const vendasHoje = (vendasHojeData ?? []).map((v) => {
+    const cliente = v.cliente as unknown as { nome: string } | { nome: string }[] | null
+    return {
+      valor: Number(v.valor),
+      metodo: (v.metodo as string | null) ?? 'Numerário',
+      descricao: `${v.categoria}: ${v.descricao ?? ''}`.trim(),
+      nome: (Array.isArray(cliente) ? cliente[0]?.nome : cliente?.nome) ?? 'Venda de produto',
+    }
+  })
+
+  const valorNumerarioDia = somarNumerario(
+    [...pagamentosHoje, ...vendasHoje].map((p) => ({ valor: p.valor, metodo: p.metodo }))
+  )
 
   // Uma única tabela de entradas, ordenada por método — em vez de 3
   // tabelas separadas, cada linha já diz o método, por isso chega.
-  const linhasEntradas: LinhaEntrada[] = pagamentosHoje.map((p) => ({
-    nome: p.cliente?.nome ?? '—',
-    metodo: p.metodo ?? 'Numerário',
-    descricao: descricaoPagamento(p),
-  }))
+  const linhasEntradas: LinhaEntrada[] = [
+    ...pagamentosHoje.map((p) => ({
+      nome: p.cliente?.nome ?? '—',
+      metodo: p.metodo ?? 'Numerário',
+      descricao: descricaoPagamento(p),
+    })),
+    ...vendasHoje.map((v) => ({ nome: v.nome, metodo: v.metodo, descricao: v.descricao })),
+  ]
 
   const saidasHoje: SaidaLista[] = ((saidasHojeData ?? []) as unknown as SaidaLista[]).map((s) => ({
     ...s,

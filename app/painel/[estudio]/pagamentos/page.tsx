@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import { segurosPorPagar } from '@/lib/data/clientes'
+import SubmitButton from '@/components/SubmitButton'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
+import VendaProdutoForm, { type ProdutoVenda } from './VendaProdutoForm'
+import { anularVendaProduto, registarVendaProduto } from './actions'
 import ListaPagamentos, { type LinhaPagamentoAtraso, type LinhaSeguro, type LinhaInativo } from './ListaPagamentos'
 import type { EstadoCliente } from '@/lib/supabase/database.types'
 
@@ -25,10 +29,13 @@ type ClientePagamento = {
 
 export default async function PagamentosPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ estudio: string }>
+  searchParams: Promise<{ venda?: string; erroVenda?: string }>
 }) {
   const { estudio: slug } = await params
+  const { venda, erroVenda } = await searchParams
 
   const supabase = await createClient()
   const estudio = await getEstudioPorSlug(supabase, slug)
@@ -51,6 +58,37 @@ export default async function PagamentosPage({
   }
 
   const clientesBase = data ?? []
+
+  // Produtos à venda e as vendas de hoje deste estúdio.
+  const hojeLisboa = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
+  const [{ data: produtosData }, { data: vendasData }] = await Promise.all([
+    supabase.from('produtos').select('id, nome, valor, categoria:produto_categorias(nome, ordem)').eq('ativo', true).order('nome'),
+    supabase
+      .from('receitas_outras')
+      .select('id, descricao, categoria, valor, metodo, quantidade, criado_em, cliente:clientes(nome)')
+      .eq('estudio_id', estudio.id)
+      .eq('origem', 'venda')
+      .eq('data', hojeLisboa)
+      .is('anulado_em', null)
+      .order('criado_em', { ascending: false }),
+  ])
+  const umDe = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v)
+  const produtos: ProdutoVenda[] = (produtosData ?? [])
+    .map((p) => {
+      const c = umDe(p.categoria as unknown as { nome: string; ordem: number } | { nome: string; ordem: number }[] | null)
+      return { id: p.id, nome: p.nome, valor: Number(p.valor), categoria: c?.nome ?? 'Produtos', ordem: c?.ordem ?? 99 }
+    })
+    .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt'))
+  const vendasHoje = (vendasData ?? []).map((v) => ({
+    id: v.id as string,
+    descricao: (v.descricao as string | null) ?? v.categoria,
+    categoria: v.categoria as string,
+    valor: Number(v.valor),
+    metodo: (v.metodo as string | null) ?? '—',
+    hora: new Date(v.criado_em).toLocaleTimeString('pt-PT', { timeZone: 'Europe/Lisbon', hour: '2-digit', minute: '2-digit' }),
+    cliente: umDe(v.cliente as unknown as { nome: string } | { nome: string }[] | null)?.nome ?? null,
+  }))
+  const totalVendasHoje = vendasHoje.reduce((s, v) => s + v.valor, 0)
   const idsClientes = clientesBase.map((c) => c.id)
   const hoje = new Date().toISOString().slice(0, 10)
 
@@ -204,6 +242,78 @@ export default async function PagamentosPage({
         segurosARenovar={linhasSeguros}
         inativos={linhasInativos}
       />
+
+      <section id="vendas" className="mt-10 scroll-mt-24">
+        <h2 className="text-lg font-bold text-foreground">Venda de produtos</h2>
+        <p className="mt-1 text-sm text-muted">
+          Bar, merchandising e outros produtos. Entra nas contas do dia e no fecho de caixa — não conta como mensalidade.
+        </p>
+        {erroVenda && <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{erroVenda}</p>}
+        {venda === 'ok' && <p className="mt-3 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700">Venda registada.</p>}
+        {venda === 'anulada' && <p className="mt-3 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700">Venda anulada.</p>}
+
+        <div className="mt-3">
+          {produtos.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border-subtle p-5 text-sm text-muted">
+              Ainda não há produtos. A administração cria-os em Administração → Serviços / Produtos.
+            </p>
+          ) : (
+            <VendaProdutoForm
+              slug={slug}
+              estudioId={estudio.id}
+              produtos={produtos}
+              clientes={clientesBase.map((c) => ({ id: c.id, nome: c.nome }))}
+              action={registarVendaProduto}
+            />
+          )}
+        </div>
+
+        {vendasHoje.length > 0 && (
+          <div className="mt-4 overflow-x-auto rounded-xl border border-border-subtle bg-surface">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wider text-muted">
+                  <th className="px-4 py-2 font-semibold">Vendas de hoje</th>
+                  <th className="px-4 py-2 font-semibold">Categoria</th>
+                  <th className="px-4 py-2 font-semibold">Cliente</th>
+                  <th className="px-4 py-2 font-semibold">Método</th>
+                  <th className="px-4 py-2 text-right font-semibold">Valor</th>
+                  <th className="px-4 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {vendasHoje.map((v) => (
+                  <tr key={v.id} className="border-b border-border-subtle/60 last:border-0">
+                    <td className="px-4 py-2 text-foreground">
+                      {v.descricao} <span className="text-xs text-muted">· {v.hora}</span>
+                    </td>
+                    <td className="px-4 py-2 text-muted">{v.categoria}</td>
+                    <td className="px-4 py-2 text-muted">{v.cliente ?? '—'}</td>
+                    <td className="px-4 py-2 text-muted">{v.metodo}</td>
+                    <td className="px-4 py-2 text-right font-mono font-semibold text-foreground">{v.valor.toFixed(2).replace('.', ',')} €</td>
+                    <td className="px-4 py-2 text-right">
+                      <ConfirmarAcao action={anularVendaProduto} confirmacao={`Anular a venda de ${v.descricao}?`}>
+                        <input type="hidden" name="estudio_slug" value={slug} />
+                        <input type="hidden" name="id" value={v.id} />
+                        <SubmitButton pendingText="…" className="rounded-full border border-border-strong px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-50">
+                          Anular
+                        </SubmitButton>
+                      </ConfirmarAcao>
+                    </td>
+                  </tr>
+                ))}
+                <tr className="bg-foreground/[.03] font-bold">
+                  <td className="px-4 py-2" colSpan={4}>
+                    Total de hoje
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono">{totalVendasHoje.toFixed(2).replace('.', ',')} €</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

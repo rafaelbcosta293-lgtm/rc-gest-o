@@ -207,7 +207,7 @@ export const MODULOS: Modulo[] = [
   { id: 'pagamentos', nome: 'Pagamentos', icone: CreditCard, cor: 'ambar', desc: 'Quem tem o pagamento em dia', pronto: true },
   { id: 'alertas', nome: 'Alertas', icone: BellRing, cor: 'vermelho', desc: 'Leads, clientes e pagamentos que precisam de atenção agora', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: AlarmClock, cor: 'vermelho', desc: 'Escala da semana e ausências da equipa', pronto: true },
-  { id: 'assiduidade', nome: 'Registo de Horas', curto: 'Horas', icone: Timer, cor: 'azul', desc: 'Entradas e saídas diárias, horas extra e fecho do mês', pronto: true },
+  { id: 'assiduidade', nome: 'Registo de Horas', curto: 'Horas', icone: Timer, cor: 'azul', desc: 'Entradas e saídas diárias, horas extra e fecho do mês', pronto: false },
   { id: 'ferias', nome: 'Férias', icone: Palmtree, cor: 'teal', desc: 'Mapa de férias anual, pedidos e aprovação', pronto: true },
   { id: 'objetivos', nome: 'Objetivos', icone: Target, cor: 'verde', desc: 'Metas do mês, progresso e a calculadora de funil inverso', pronto: true },
   { id: 'checklist', nome: 'Abertura / Fecho', curto: 'Checklist', icone: KeyRound, cor: 'neutro', desc: 'Checklist diária do estúdio', pronto: true },

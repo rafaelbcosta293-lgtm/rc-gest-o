@@ -14,6 +14,7 @@ import {
 import StatCard from '@/components/StatCard'
 import BarMeter from '@/components/BarMeter'
 import RadialProgress from '@/components/RadialProgress'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 export default async function OperacionalPage({
   params,
@@ -28,7 +29,7 @@ export default async function OperacionalPage({
     notFound()
   }
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const ano = Number(hoje.slice(0, 4))
   const mes = Number(hoje.slice(5, 7))
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)

@@ -21,6 +21,7 @@ import ApagarComConfirmacao from '@/components/ApagarComConfirmacao'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import type { Activity, LeadContacto } from '@/lib/supabase/database.types'
 import { ArrowLeft } from 'lucide-react'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 export default async function LeadPage({
   params,
@@ -156,7 +157,7 @@ export default async function LeadPage({
       {lead.cliente_id ? (
         <Link
           href={`/painel/${slug}/treinos/${lead.cliente_id}`}
-          className="mt-4 inline-block rounded-full bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
+          className="mt-4 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
         >
           ✓ Ganha — ver ficha de cliente
         </Link>
@@ -198,7 +199,7 @@ export default async function LeadPage({
             </div>
             <SubmitButton
               pendingText="A criar cliente…"
-              className="self-start rounded-full bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
+              className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
             >
               Criar cliente a partir deste lead
             </SubmitButton>
@@ -270,7 +271,7 @@ export default async function LeadPage({
           <input
             type="date"
             name="data"
-            defaultValue={new Date().toISOString().slice(0, 10)}
+            defaultValue={hojeEmLisboa()}
             className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
           />
         </div>

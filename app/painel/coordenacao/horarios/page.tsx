@@ -14,6 +14,7 @@ import PortaSenha from '@/components/PortaSenha'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import type { Estudio, Perfil } from '@/lib/supabase/database.types'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const inputCls =
   'rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-sm outline-none focus:border-brand'
@@ -109,7 +110,7 @@ async function PainelHorariosEstudio({
 }) {
   const slug = estudio.slug
   const pk = (nome: string) => `${slug}_${nome}`
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const semanaParam = sp[pk('semana')]
   const inicioSemana = inicioDaSemana(semanaParam ?? hoje)
   const diasSemana = diasDaSemana(inicioSemana)

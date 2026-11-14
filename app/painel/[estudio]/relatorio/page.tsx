@@ -10,6 +10,7 @@ import { progressoFluxo, progressoStock, type Semaforo } from '@/lib/data/objeti
 import StatCard from '@/components/StatCard'
 import ImprimirButton from '@/components/ImprimirButton'
 import type { Goal } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const COR_SEMAFORO: Record<Semaforo, { bg: string; tx: string }> = {
   verde: PALETA.verde,
@@ -33,7 +34,7 @@ export default async function RelatorioMensalPage({
     notFound()
   }
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const ano = Number(sp.ano) || Number(hoje.slice(0, 4))
   const mes = Number(sp.mes) || Number(hoje.slice(5, 7))
   const diaDoMes = `${ano}-${String(mes).padStart(2, '0')}` === hoje.slice(0, 7) ? Number(hoje.slice(8, 10)) : 31

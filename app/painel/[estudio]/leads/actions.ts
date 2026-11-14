@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { normalizarTelefoneSms } from '@/lib/sms/gateway'
 import type { EstadoLead } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -131,7 +132,7 @@ export async function atualizarLead(formData: FormData) {
   const visitaData = campoOuNull(formData, 'visita_data')
   const visitaMarcadaAtual = campoOuNull(formData, 'visita_marcada_em_atual')
   const moverParaSlug = campoOuNull(formData, 'mover_para_estudio_slug')
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const supabase = await createClient()
 
   // Permite enviar a lead para o outro estúdio no mesmo "Guardar" (ver
@@ -234,7 +235,7 @@ export async function moverEstadoLeadRapido(input: {
 }): Promise<ResultadoAcaoRapida> {
   if (input.estado === 'Ganha') return { error: 'Usa "Converter em cliente" para fechar esta etapa.' }
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -264,7 +265,7 @@ export async function agendarExperimental(formData: FormData) {
   const telefoneLead = campoOuNull(formData, 'telefone_lead')
   const data = formData.get('data') as string
   const horaInicio = formData.get('hora_inicio') as string
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   const sessao = await getSessaoAtual()
   const supabase = await createClient()
@@ -359,7 +360,7 @@ export async function adicionarContacto(formData: FormData) {
 
   const { error } = await supabase.from('lead_contactos').insert({
     lead_id: leadId,
-    data: (formData.get('data') as string) || new Date().toISOString().slice(0, 10),
+    data: (formData.get('data') as string) || hojeEmLisboa(),
     tipo: formData.get('tipo') as string,
     resultado: formData.get('resultado') as string,
     sucesso: formData.get('sucesso') === 'on',
@@ -441,7 +442,7 @@ export async function converterEmCliente(formData: FormData) {
   const telefone = campoOuNull(formData, 'telefone')
   const email = campoOuNull(formData, 'email')
   const objetivo = campoOuNull(formData, 'objetivo')
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const supabase = await createClient()
 
   const { data: cliente, error: erroCliente } = await supabase

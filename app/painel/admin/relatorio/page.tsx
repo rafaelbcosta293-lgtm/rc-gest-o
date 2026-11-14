@@ -12,6 +12,7 @@ import StatCard from '@/components/StatCard'
 import BarMeter from '@/components/BarMeter'
 import ImprimirButton from '@/components/ImprimirButton'
 import PortaSenha from '@/components/PortaSenha'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 export default async function RelatorioConsolidadoPage({
   searchParams,
@@ -35,7 +36,7 @@ export default async function RelatorioConsolidadoPage({
 
   const estudios = filtrarPorEstudio(await getEstudios(supabase), sp.estudio)
   const idsEstudios = new Set(estudios.map((e) => e.id))
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const ano = Number(sp.ano) || Number(hoje.slice(0, 4))
   const mes = Number(sp.mes) || Number(hoje.slice(5, 7))
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)

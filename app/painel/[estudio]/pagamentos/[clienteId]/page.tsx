@@ -9,6 +9,7 @@ import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import type { Pagamento, Plano } from '@/lib/supabase/database.types'
 import { ArrowLeft } from 'lucide-react'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 type PagamentoComExtras = Pagamento & {
   plano: { nome: string } | null
@@ -25,7 +26,7 @@ export default async function PagamentosClientePage({
 }) {
   const { estudio: slug, clienteId } = await params
   const { error } = await searchParams
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   const supabase = await createClient()
   const [

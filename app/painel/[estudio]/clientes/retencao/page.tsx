@@ -19,6 +19,7 @@ import {
 } from '@/lib/data/retencao'
 import StatCard from '@/components/StatCard'
 import BarMeter from '@/components/BarMeter'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const JANELA_DESMARCACOES_DIAS = 60
 
@@ -35,7 +36,7 @@ export default async function RetencaoPage({
     notFound()
   }
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const ano = Number(hoje.slice(0, 4))
   const mes = Number(hoje.slice(5, 7))
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)

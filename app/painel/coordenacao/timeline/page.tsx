@@ -13,6 +13,7 @@ import PortaSenha from '@/components/PortaSenha'
 import LineChart from '@/components/LineChart'
 import CriarMarcoForm from './CriarMarcoForm'
 import type { MarcoEmpresa, KpiSnapshotDiario } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const DIAS_HISTORICO = 60
 
@@ -37,7 +38,7 @@ export default async function TimelineEmpresaPage({
   }
 
   const estudios = await getEstudios(supabase)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const inicioHistorico = somarDias(hoje, -DIAS_HISTORICO)
 
   const [{ data: marcosData, error: erroMarcos }, { data: snapshotsData, error: erroSnapshots }] =

@@ -9,6 +9,7 @@ import { corEstudio, PALETA } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
 import StatCard from '@/components/StatCard'
 import type { Cliente, Estudio, Lead } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 type ClienteResumo = Pick<Cliente, 'estado'>
 type LeadResumo = Pick<Lead, 'estado' | 'visita_data'>
@@ -75,7 +76,7 @@ function EsqueletoEstudio() {
 }
 
 async function AgoraEstudio({ estudio }: { estudio: Pick<Estudio, 'id' | 'nome'> }) {
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const supabase = await createClient()
 
   const [{ data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }] = await Promise.all([

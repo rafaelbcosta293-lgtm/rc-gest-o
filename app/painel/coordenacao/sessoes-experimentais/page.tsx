@@ -10,6 +10,7 @@ import { desbloquearCoordenacao } from '../actions'
 import { corEstudio, ESTADOS_LEAD } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
 import type { Estudio, Lead } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 type LeadDoDia = Pick<Lead, 'id' | 'nome' | 'visita_hora' | 'estado'>
 type SP = Record<string, string | undefined>
@@ -91,7 +92,7 @@ function EsqueletoEstudio() {
 async function SessoesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | 'slug'>; sp: SP }) {
   const slug = estudio.slug
   const pk = (nome: string) => `${slug}_${nome}`
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   const diaSessoes = sp[pk('dia')] || hoje
   const diaSessoesEhHoje = diaSessoes === hoje

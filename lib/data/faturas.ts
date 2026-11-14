@@ -1,3 +1,4 @@
+import { hojeEmLisboa } from '@/lib/data/hoje'
 // Pedidos de fatura (ZS Go) — lógica pura, sem acesso à base de dados.
 //
 // Fluxo: o instrutor carrega em "Pedir fatura" no registo do pagamento →
@@ -241,7 +242,7 @@ export function rascunhoDoFormulario(fd: FormData): RascunhoFatura {
     },
     documento: {
       tipo: tipoDoc === 'FA' ? 'FA' : 'FR',
-      data: txt('documento_data') ?? new Date().toISOString().slice(0, 10),
+      data: txt('documento_data') ?? hojeEmLisboa(),
       metodo: txt('documento_metodo'),
       zsgo_metodo_id: txt('documento_zsgo_metodo_id'),
       notas: txt('documento_notas'),

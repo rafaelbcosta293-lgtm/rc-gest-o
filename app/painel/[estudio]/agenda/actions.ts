@@ -17,6 +17,7 @@ import {
   type Repeticao,
 } from '@/lib/data/agenda'
 import type { TipoEventoAgenda } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -101,7 +102,7 @@ async function sincronizarVisitaLead(
   horaInicio: string
 ) {
   if (!leadId) return null
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const { error } = await supabase
     .from('leads')
     .update({
@@ -487,7 +488,7 @@ export async function pararSerie(formData: FormData) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroSerie.message)}`)
   }
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const { error: erroCancelar } = await supabase
     .from('agenda_eventos')
     .update({ estado: 'Cancelado', motivo_cancelamento: 'Série interrompida' })
@@ -1058,7 +1059,7 @@ export async function pararSerieRapido(input: {
   const { error: erroSerie } = await supabase.from('agenda_series').update({ ativa: false }).eq('id', input.serieId)
   if (erroSerie) return { error: erroSerie.message }
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const { error: erroCancelar } = await supabase
     .from('agenda_eventos')
     .update({ estado: 'Cancelado', motivo_cancelamento: 'Série interrompida' })

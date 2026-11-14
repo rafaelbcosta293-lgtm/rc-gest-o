@@ -11,6 +11,7 @@ import VendaProdutoForm, { type ProdutoVenda } from './VendaProdutoForm'
 import { anularVendaProduto, registarVendaProduto } from './actions'
 import ListaPagamentos, { type LinhaPagamentoAtraso, type LinhaSeguro, type LinhaInativo } from './ListaPagamentos'
 import type { EstadoCliente } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 type PagamentoDetalhe = {
   cliente_id: string
@@ -90,7 +91,7 @@ export default async function PagamentosPage({
   }))
   const totalVendasHoje = vendasHoje.reduce((s, v) => s + v.valor, 0)
   const idsClientes = clientesBase.map((c) => c.id)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   // Estas quatro só precisam dos ids dos clientes, não dos resultados
   // umas das outras — correm todas ao mesmo tempo.

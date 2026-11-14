@@ -17,6 +17,7 @@ import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import FunilInversoForm from './FunilInversoForm'
 import type { Goal } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const ORDEM_FUNIL = Object.keys(ESTADOS_LEAD) as (keyof typeof ESTADOS_LEAD)[]
 const JANELA_FUNIL_DIAS = 90
@@ -61,7 +62,7 @@ export default async function ObjetivosPage({
   const estudioId = estudio.id
   const { ehAdmin } = papeisDaSessao(sessao)
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const ano = Number(hoje.slice(0, 4))
   const mes = Number(hoje.slice(5, 7))
   const diaDoMes = Number(hoje.slice(8, 10))

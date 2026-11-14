@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import ListaAvaliacoes, { type LinhaAvaliacao } from './ListaAvaliacoes'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 type ClienteComUltimaAvaliacao = {
   id: string
@@ -47,7 +48,7 @@ export default async function AvaliacoesPage({
   }
 
   const clientes = (clientesData ?? []) as unknown as ClienteComUltimaAvaliacao[]
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   const linhas: LinhaAvaliacao[] = clientes.map((c) => {
     const ultima = c.avaliacoes?.[0]

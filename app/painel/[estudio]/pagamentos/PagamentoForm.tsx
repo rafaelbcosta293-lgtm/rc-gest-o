@@ -5,6 +5,7 @@ import SubmitButton from '@/components/SubmitButton'
 import type { Plano } from '@/lib/supabase/database.types'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 import { fimDoMes, validadeSugerida } from '@/lib/data/validadePagamento'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const inputCls =
   'rounded-md border border-black bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900'
@@ -29,7 +30,7 @@ export default function PagamentoForm({
   clienteNif?: string | null
   validadeAtual?: string | null
 }) {
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const fimEsteMes = fimDoMes(hoje)
   const fimProximoMes = fimDoMes(hoje, 1)
   const [planoId, setPlanoId] = useState('')

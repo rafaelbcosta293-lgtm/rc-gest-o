@@ -13,6 +13,7 @@ import AgendaInterativa from './AgendaInterativa'
 import BuscaAgenda from './BuscaAgenda'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda, Estudio } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const VISTAS = ['dia', 'semana', 'mes'] as const
 type Vista = (typeof VISTAS)[number]
@@ -158,7 +159,7 @@ export default async function AgendaConteudo({
   const slug = estudio.slug
   const { vista: vistaParam, data: dataParam, pt: ptFiltro, error } = searchParams
   const vista: Vista = ehVista(vistaParam) ? vistaParam : 'semana'
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const dataSel = dataParam ?? hoje
 
   const supabase = await createClient()

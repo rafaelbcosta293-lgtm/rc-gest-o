@@ -21,6 +21,7 @@ import {
 import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import type { TipoSaidaCaixa, TipoMovimentoOutros } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const TIPOS_SAIDA: TipoSaidaCaixa[] = ['Sangria', 'Compra']
 const TIPOS_OUTROS: TipoMovimentoOutros[] = ['Entrada', 'Saída']
@@ -104,7 +105,7 @@ export default async function FechoCaixaPage({
 }) {
   const { estudio: slug } = await params
   const { error } = await searchParams
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const diaSemana = DIAS_SEMANA[new Date(`${hoje}T00:00:00`).getDay()]
 
   const supabase = await createClient()

@@ -10,6 +10,7 @@ import { corEstudio, PALETA } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
 import BarMeter from '@/components/BarMeter'
 import type { Estudio } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 type RegistoSemana = { horas: number; pt: { nome: string } | null }
 
@@ -72,7 +73,7 @@ function EsqueletoEstudio() {
 }
 
 async function HorasEstudio({ estudio }: { estudio: Pick<Estudio, 'id'> }) {
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const inicioSemana = inicioDaSemana(hoje)
   const fimSemanaExclusivo = somarDias(inicioSemana, 7)
 

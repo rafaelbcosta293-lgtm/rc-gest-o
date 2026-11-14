@@ -7,6 +7,7 @@ import { areaBloqueada } from '@/lib/data/gate'
 import { PALETA } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
 import StatCard from '@/components/StatCard'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 export default async function CoordenacaoPage({
   searchParams,
@@ -31,7 +32,7 @@ export default async function CoordenacaoPage({
 
   const estudios = await getEstudios(supabase)
   const idsEstudios = estudios.map((e) => e.id)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   const [{ data: checklistData, error: erroChecklist }, { data: leadsHojeData, error: erroLeadsHoje }] =
     await Promise.all([

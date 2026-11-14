@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { criarPedidoFatura } from '@/lib/data/pedidosFatura'
 import { normalizarNif, nifValido } from '@/lib/data/faturas'
 import { calcularTransicaoAutomatica } from '@/lib/data/estadoClientes'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -124,7 +125,7 @@ export async function registarPagamentoSeguro(formData: FormData) {
   const clienteId = formData.get('cliente_id') as string
   const valor = Number(formData.get('valor'))
   const dataPagamento =
-    campoOuNull(formData, 'data_pagamento') ?? new Date().toISOString().slice(0, 10)
+    campoOuNull(formData, 'data_pagamento') ?? hojeEmLisboa()
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
 
@@ -225,7 +226,7 @@ export async function anularPagamento(formData: FormData) {
         estadoAutomatico: cliente.estado_automatico,
         validoAte: ultimoAtivo?.valido_ate ?? null,
       },
-      new Date().toISOString().slice(0, 10)
+      hojeEmLisboa()
     )
     if (novoEstado) {
       await supabase.from('clientes').update({ estado: novoEstado }).eq('id', clienteId)

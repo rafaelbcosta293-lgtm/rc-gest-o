@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { calcularFechoCaixa, somarNumerario, somarSaidas } from '@/lib/data/fechoCaixa'
 import { fmt } from '@/lib/data/presencas'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const REGRA_DIFERENCA_FECHO = 'fecho_caixa_diferenca'
 
@@ -33,7 +34,7 @@ export async function registarFechoCaixa(formData: FormData) {
   const estudioId = Number(formData.get('estudio_id'))
   const valorContado = Number(formData.get('valor_contado'))
   const nota = (formData.get('nota') as string)?.trim() || null
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const supabase = await createClient()
 
   if (!Number.isFinite(valorContado)) {
@@ -185,7 +186,7 @@ export async function registarSaidaCaixa(formData: FormData) {
   const tipo = formData.get('tipo') as string
   const valor = Number(formData.get('valor'))
   const descricao = (formData.get('descricao') as string)?.trim() || null
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const supabase = await createClient()
 
   if (!Number.isFinite(valor) || valor <= 0) {
@@ -221,7 +222,7 @@ export async function registarOutroCaixa(formData: FormData) {
   const valor = Number(formData.get('valor'))
   const documento = (formData.get('documento') as string)?.trim() || null
   const descricao = (formData.get('descricao') as string)?.trim() || null
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const supabase = await createClient()
 
   if (!Number.isFinite(valor) || valor <= 0) {

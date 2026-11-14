@@ -8,6 +8,7 @@ import { PALETA } from '@/lib/data/constantes'
 import { marcarVisto, resolverAlerta, adiarAlerta } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import type { AlertaRegistado, SeveridadeAlerta } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const ORDEM_SEVERIDADE: SeveridadeAlerta[] = ['Crítico', 'Atenção', 'Info']
 const COR_SEVERIDADE: Record<SeveridadeAlerta, { bg: string; tx: string }> = {
@@ -171,7 +172,7 @@ export default async function AlertasPage({
                               type="date"
                               name="adiado_ate"
                               required
-                              min={new Date().toISOString().slice(0, 10)}
+                              min={hojeEmLisboa()}
                               className="rounded-lg border border-border-subtle bg-surface px-2 py-1 text-xs outline-none focus:border-brand"
                             />
                             <SubmitButton

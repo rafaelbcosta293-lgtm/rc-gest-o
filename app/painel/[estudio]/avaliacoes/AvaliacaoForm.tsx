@@ -3,6 +3,7 @@
 import type { Avaliacao, Perfil } from '@/lib/supabase/database.types'
 import SubmitButton from '@/components/SubmitButton'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const inputCls =
   'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
@@ -80,7 +81,7 @@ export default function AvaliacaoForm({
             name="data"
             type="date"
             required
-            defaultValue={avaliacao?.data ?? new Date().toISOString().slice(0, 10)}
+            defaultValue={avaliacao?.data ?? hojeEmLisboa()}
             className={inputCls}
           />
         </div>

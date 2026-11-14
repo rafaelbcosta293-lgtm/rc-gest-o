@@ -12,6 +12,7 @@ import BarMeter from '@/components/BarMeter'
 import LeadsKanban, { type LeadResumo } from './LeadsKanban'
 import ExportarCsvButton from '@/components/ExportarCsvButton'
 import type { QuadroDoDia } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const ORDEM_FUNIL = Object.keys(ESTADOS_LEAD) as (keyof typeof ESTADOS_LEAD)[]
 const JANELA_FUNIL_DIAS = 90
@@ -29,7 +30,7 @@ export default async function LeadsPage({
     notFound()
   }
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   const [{ data, error }, pts, sessao, { data: quadroData, error: erroQuadro }] = await Promise.all([
     supabase

@@ -7,6 +7,7 @@ import { fmt } from '@/lib/data/presencas'
 import { diasDesde } from '@/lib/data/leads'
 import { moverEstadoLeadRapido } from './actions'
 import type { Lead, TemperaturaLead } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const ORDEM_FUNIL = Object.keys(ESTADOS_LEAD) as (keyof typeof ESTADOS_LEAD)[]
 const TEMPERATURAS: TemperaturaLead[] = ['Fria', 'Morna', 'Quente']
@@ -66,7 +67,7 @@ export default function LeadsKanban({
     [leads]
   )
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()

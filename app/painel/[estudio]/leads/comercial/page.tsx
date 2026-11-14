@@ -15,6 +15,7 @@ import {
 import LineChart from '@/components/LineChart'
 import BarMeter from '@/components/BarMeter'
 import Heatmap from '@/components/Heatmap'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const SEMANAS = 8
 const HORA_INICIO = 7
@@ -35,7 +36,7 @@ export default async function PainelComercialPage({
 
   const [sessao, pts] = await Promise.all([getSessaoAtual(), getEquipaDoEstudio(supabase, estudio.id)])
   const { ehAdmin } = papeisDaSessao(sessao)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   const { data: leadsData, error: erroLeads } = await supabase
     .from('leads')

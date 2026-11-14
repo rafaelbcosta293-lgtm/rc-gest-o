@@ -6,6 +6,7 @@ import { getEstudioPorSlug, getEquipaDoEstudio, obterOutroEstudioEClientes } fro
 import { criarEvento } from '../actions'
 import NovoEventoForm from './NovoEventoForm'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 export default async function NovoEventoPage({
   params,
@@ -16,7 +17,7 @@ export default async function NovoEventoPage({
 }) {
   const { estudio: slug } = await params
   const { data: dataParam, error } = await searchParams
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const dataInicial = dataParam ?? hoje
 
   const supabase = await createClient()

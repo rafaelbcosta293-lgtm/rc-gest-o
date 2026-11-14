@@ -7,6 +7,7 @@ import { fmt } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
 import { coresInstrutores } from '@/lib/data/constantes'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 export default async function HorariosPage({
   params,
@@ -17,7 +18,7 @@ export default async function HorariosPage({
 }) {
   const { estudio: slug } = await params
   const { semana: semanaParam, error } = await searchParams
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
   const inicio = inicioDaSemana(semanaParam ?? hoje)
   const dias = diasDaSemana(inicio)
   const fimExclusivo = somarDias(inicio, 7)

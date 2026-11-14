@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { hojeEmLisboa } from './hoje'
 
 // Gestão de despesas (só Administração). As receitas vêm sempre dos
 // pagamentos registados pelos instrutores; aqui só se lançam os gastos.
@@ -301,6 +302,4 @@ export async function listarAvisosDespesas(supabase: SupabaseClient, hoje: strin
     .sort((a, b) => a.vencimento.localeCompare(b.vencimento))
 }
 
-export function hojeEmLisboa(agora: Date = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(agora)
-}
+export { hojeEmLisboa }

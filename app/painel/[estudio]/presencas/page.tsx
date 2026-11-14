@@ -6,6 +6,7 @@ import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { treinosPrevistos, intervaloMes, MESES, agruparDesmarcacoesPorCliente } from '@/lib/data/presencas'
 import ListaPresencas, { type LinhaPresenca, type LinhaDesmarcacao } from './ListaPresencas'
 import type { EstadoCliente } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 export default async function PresencasPage({
   params,
@@ -40,7 +41,7 @@ export default async function PresencasPage({
 
   const ids = (clientes ?? []).map((c) => c.id)
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   // Estas quatro só precisam dos ids dos clientes, não dos resultados
   // umas das outras — correm todas ao mesmo tempo.

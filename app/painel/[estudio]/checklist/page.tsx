@@ -12,6 +12,7 @@ import { iniciarChecklist, criarItemModelo, atualizarItemModelo, removerItemMode
 import SubmitButton from '@/components/SubmitButton'
 import ItemModeloForm from './ItemModeloForm'
 import type { ChecklistModelo, TipoOperacao } from '@/lib/supabase/database.types'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const TIPOS: TipoOperacao[] = ['Abertura', 'Fecho']
 
@@ -34,7 +35,7 @@ export default async function ChecklistPage({
 }) {
   const { estudio: slug } = await params
   const { error, ok, registado } = await searchParams
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeEmLisboa()
 
   const supabase = await createClient()
   const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])

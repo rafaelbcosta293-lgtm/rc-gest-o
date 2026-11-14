@@ -169,7 +169,7 @@ export function NavLinkClientesComSubmenu({
   )
 }
 
-// Horários (escalas), Registo de Horas e Férias vivem na mesma "pasta"
+// A pasta "Recursos Humanos": Escalas, Registo de Horas e Férias vivem na mesma "pasta"
 // da barra do computador/tablet: uma pílula só, que ao passar o rato
 // mostra as três. No telemóvel continuam separadas (não há "hover").
 const PASTA_HORARIOS: { id: string; rotulo: string }[] = [
@@ -218,7 +218,7 @@ export function NavLinkPastaHorarios({
       <Link
         ref={pillRef}
         href={principal.href}
-        title={soIcone ? 'Horários' : undefined}
+        title={soIcone ? 'Recursos Humanos' : undefined}
         aria-haspopup="menu"
         aria-expanded={aberto}
         className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-medium tracking-tight text-foreground transition-colors ${
@@ -230,7 +230,7 @@ export function NavLinkPastaHorarios({
         }}
       >
         <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
-        {!soIcone && 'Horários'}
+        {!soIcone && 'Recursos Humanos'}
         {!soIcone && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
       </Link>
 

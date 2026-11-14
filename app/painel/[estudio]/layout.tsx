@@ -20,7 +20,7 @@ import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPastaHorarios, NavLink
 // (ver NavLinkClientesComSubmenu). No telemóvel continuam como estavam.
 const SUBPASTAS_CLIENTES = new Set(['treinos', 'avaliacoes'])
 
-// Registo de Horas e Férias ficam dentro da pasta "Horários" na barra
+// Registo de Horas e Férias ficam dentro da pasta "Recursos Humanos" na barra
 // do computador/tablet (ver NavLinkPastaHorarios).
 const SUBPASTAS_HORARIOS = new Set(['assiduidade', 'ferias'])
 

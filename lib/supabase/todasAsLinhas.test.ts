@@ -33,4 +33,12 @@ describe('todasAsLinhas', () => {
     expect(error?.message).toBe('falhou')
     expect(data).toEqual([])
   })
+
+  it('em paralelo pede blocos de páginas e junta-as pela ordem certa', async () => {
+    const { pedir, pedidos } = fonte(2264)
+    const { data } = await todasAsLinhas(pedir, { emParalelo: 4 })
+    expect(data).toHaveLength(2264)
+    expect(data.slice(995, 1005)).toEqual([995, 996, 997, 998, 999, 1000, 1001, 1002, 1003, 1004])
+    expect(pedidos).toHaveLength(4)
+  })
 })

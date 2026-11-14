@@ -3,7 +3,7 @@ import { somarDias } from './horarios'
 import { getEstudios } from './estudios'
 import { primeiroNomeExibicao } from './clientes'
 import { obterEstadoGateway, registarFalhaGateway, registarSucessoGateway } from './smsGateway'
-import { enviarSms, prioridadePorOrdem } from '@/lib/sms/gateway'
+import { enviarSms, normalizarTelefoneSms, prioridadePorOrdem } from '@/lib/sms/gateway'
 import type { Estudio } from '@/lib/supabase/database.types'
 import type { ResultadoEstudio } from './smsGateway'
 
@@ -213,11 +213,22 @@ async function processarLembretesDoEstudio(
   let falhasPorNumero = 0
   let gatewayOffline = false
 
+  // Sem número de telemóvel válido na ficha não vale a pena tentar: o
+  // gateway recusaria sempre, e com três passagens por dia isso enchia
+  // os registos de erros repetidos. Ficam por enviar (e contam como
+  // falha) até alguém pôr o número — a página Lembretes SMS lista-os.
+  const semNumero = pendentes.filter((p) => !normalizarTelefoneSms(p.destino.telefone))
+  falhasPorNumero += semNumero.length
+  if (semNumero.length > 0) {
+    console.warn(`Lembretes SMS (${estudio.slug}): ${semNumero.length} sem número de telemóvel válido — não enviados.`)
+  }
+  const aEnviar = pendentes.filter((p) => normalizarTelefoneSms(p.destino.telefone))
+
   // Os lembretes saem pela ordem do horário do treino, do mais cedo para
   // o mais tarde: os eventos já vêm ordenados por hora e cada mensagem
   // leva uma prioridade abaixo da anterior, para o telemóvel as enviar
   // por essa mesma ordem (sem isto, a fila dele não a respeita).
-  for (const [indice, { evento, destino }] of pendentes.entries()) {
+  for (const [indice, { evento, destino }] of aEnviar.entries()) {
     const texto = preencherTemplateLembrete(templates.diario, {
       nome: destino.nome,
       data: evento.data,

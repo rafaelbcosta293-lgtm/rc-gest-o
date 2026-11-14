@@ -5,6 +5,7 @@ import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import { getEstudios } from '@/lib/data/estudios'
 import { desbloquearAdmin } from '../actions'
 import { somarDias } from '@/lib/data/horarios'
+import { normalizarTelefoneSms } from '@/lib/sms/gateway'
 import {
   CHAVE_TEMPLATE_LEMBRETE,
   CHAVE_TEMPLATE_LEMBRETE_SABADO,
@@ -24,7 +25,7 @@ import TesteSmsForm from './TesteSmsForm'
 import { reenviarLembretesPendentes } from './actions'
 import type { Estudio, EstadoSmsGateway } from '@/lib/supabase/database.types'
 
-type EstadoDoEstudio = { estudio: Estudio; estado: EstadoSmsGateway; pendentes: number }
+type EstadoDoEstudio = { estudio: Estudio; estado: EstadoSmsGateway; pendentes: number; semNumero: string[] }
 
 export default async function LembretesSmsPage({
   searchParams,
@@ -80,19 +81,35 @@ export default async function LembretesSmsPage({
         // O dia visado pode não ser "amanhã" — ver proximoDiaAlvoLembrete
         // (hoje só muda para o Fátima, à véspera de um domingo).
         const diaAlvo = proximoDiaAlvoLembrete(amanha, estudio.slug)
-        const [{ data: estadoData, error: erroEstado }, { count: pendentesCount }] = await Promise.all([
+        const [{ data: estadoData, error: erroEstado }, { data: pendentesData }] = await Promise.all([
           supabase.from('estado_sms_gateway').select('*').eq('estudio_id', estudio.id).single(),
           supabase
             .from('agenda_eventos')
-            .select('id', { count: 'exact', head: true })
+            .select('hora_inicio, titulo, telefone, cliente:clientes(nome, telefone)')
             .eq('estudio_id', estudio.id)
             .in('tipo', ['Treino', 'Sessão experimental'])
             .eq('estado', 'Agendado')
             .eq('data', diaAlvo)
-            .eq('lembrete_enviado', false),
+            .eq('lembrete_enviado', false)
+            .order('hora_inicio'),
         ])
         if (erroEstado) throw new Error(erroEstado.message)
-        return { estudio, estado: estadoData as EstadoSmsGateway, pendentes: pendentesCount ?? 0 }
+        type Pendente = {
+          hora_inicio: string
+          titulo: string | null
+          telefone: string | null
+          cliente: { nome: string; telefone: string | null } | { nome: string; telefone: string | null }[] | null
+        }
+        const pendentesLista = (pendentesData ?? []) as unknown as Pendente[]
+        // Quem não vai receber por não ter número válido na ficha.
+        const semNumero = pendentesLista
+          .map((p) => {
+            const c = Array.isArray(p.cliente) ? p.cliente[0] : p.cliente
+            return { nome: c?.nome ?? p.titulo ?? '—', telefone: c ? c.telefone : p.telefone, hora: p.hora_inicio.slice(0, 5) }
+          })
+          .filter((p) => !normalizarTelefoneSms(p.telefone))
+          .map((p) => `${p.nome} (${p.hora})`)
+        return { estudio, estado: estadoData as EstadoSmsGateway, pendentes: pendentesLista.length, semNumero }
       })
     ),
   ])
@@ -137,7 +154,7 @@ export default async function LembretesSmsPage({
 
       <TituloSeccao cor="teal">Estado do gateway, por estúdio</TituloSeccao>
       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {estadosPorEstudio.map(({ estudio, estado, pendentes }) => {
+        {estadosPorEstudio.map(({ estudio, estado, pendentes, semNumero }) => {
           const emCrise = estado.tentativas_falhadas >= 3 && estado.offline_desde !== null
           return (
             <div
@@ -153,6 +170,11 @@ export default async function LembretesSmsPage({
                 <strong>{pendentes}</strong> lembrete{pendentes === 1 ? '' : 's'} pendente
                 {pendentes === 1 ? '' : 's'} para amanhã.
               </p>
+              {semNumero.length > 0 && (
+                <p className="rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                  Sem número de telemóvel válido na ficha (não vão receber): {semNumero.join(', ')}.
+                </p>
+              )}
               {emCrise ? (
                 <p>
                   {estado.tentativas_falhadas} tentativa{estado.tentativas_falhadas === 1 ? '' : 's'} falhada

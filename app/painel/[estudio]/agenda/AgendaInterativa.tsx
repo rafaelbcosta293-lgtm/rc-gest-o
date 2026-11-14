@@ -171,16 +171,12 @@ const COR_CONTORNO_BLOCO = '#2B2622'
 const ABA_CANCELADO = 12
 const ALTURA_MIN_BLOCO = 18
 
-// Cruz de "criar evento" desenhada por nós: a cruz do sistema (Windows)
-// inverte as cores consoante o fundo e ficava branca, invisível sobre a
-// grelha clara. Esta é sempre preta, com um fio branco à volta para se
-// ver também por cima de um bloco escuro.
-const CURSOR_CRUZ = `url("data:image/svg+xml,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 25 25">' +
-    '<path d="M12.5 1v23M1 12.5h23" stroke="#fff" stroke-width="4" stroke-linecap="square"/>' +
-    '<path d="M12.5 1v23M1 12.5h23" stroke="#000" stroke-width="2" stroke-linecap="square"/>' +
-    '</svg>'
-)}") 12 12, crosshair`
+// A cruz de "criar evento" é desenhada pela própria página (ver
+// GrelhaInterativa), não é um cursor do sistema: a cruz do Windows muda
+// de cor consoante o fundo e as definições do ponteiro, e chegava a
+// ficar branca, invisível sobre a grelha clara. Assim é sempre preta.
+const CRUZ_TAMANHO = 21
+const CRUZ_ESPESSURA = 2
 
 export default function AgendaInterativa({
   slug,
@@ -555,7 +551,16 @@ function GrelhaInterativa({
   // Hora sob o rato — acompanha sempre o cursor (ao contrário da régua
   // antiga, fixa na coluna da esquerda), tanto em repouso como durante
   // qualquer arrasto, arredondada aos 10 minutos.
-  const [cursor, setCursor] = useState<{ x: number; y: number; minuto: number } | null>(null)
+  const [cursor, setCursor] = useState<{ x: number; y: number; minuto: number; cruz: boolean } | null>(null)
+
+  // A cruz só aparece onde um clique cria um evento: na grelha vazia (ou
+  // durante o arrasto de criação), nunca por cima de um bloco — aí o
+  // cursor é a mão de arrastar.
+  const mostraCruz = useCallback(
+    (alvo: EventTarget | null, aCriar: boolean) =>
+      !somenteLeitura && (aCriar || !(alvo instanceof Element && alvo.closest('button'))),
+    [somenteLeitura]
+  )
 
   function registarRef(dia: string) {
     return (el: HTMLDivElement | null) => {
@@ -591,7 +596,7 @@ function GrelhaInterativa({
       const loc = localizar(e.clientX, e.clientY)
       const arrasto = arrastoRef.current
       if (loc) {
-        setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto })
+        setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto, cruz: mostraCruz(e.target, arrasto?.tipo === 'criar') })
       } else if (!arrasto) {
         // Fora da grelha e sem nenhum arrasto em curso — a hora some,
         // em vez de ficar presa no sítio onde o rato saiu (ex.: por
@@ -684,12 +689,12 @@ function GrelhaInterativa({
       window.removeEventListener('mouseup', soltar)
       window.removeEventListener('keydown', aoPressionarTecla)
     }
-  }, [localizar, onClickVazio, onRedimensionar, onMover])
+  }, [localizar, onClickVazio, onRedimensionar, onMover, mostraCruz])
 
   function aoMoverRatoEmRepouso(e: React.MouseEvent) {
     if (arrastoRef.current) return
     const loc = localizar(e.clientX, e.clientY)
-    if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto })
+    if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto, cruz: mostraCruz(e.target, false) })
   }
 
   // Deslizar a grelha (roda do rato ou gesto) nunca dispara "mousemove"
@@ -864,6 +869,28 @@ function GrelhaInterativa({
 
       {/* A hora segue o cursor em qualquer sítio da grelha — posição
           fixa ao ecrã, por isso não é afetada pelo scroll interno. */}
+      {cursor?.cruz && (
+        <>
+          <span
+            className="pointer-events-none fixed z-30 bg-black"
+            style={{
+              left: cursor.x - (CRUZ_TAMANHO - 1) / 2,
+              top: cursor.y - CRUZ_ESPESSURA / 2,
+              width: CRUZ_TAMANHO,
+              height: CRUZ_ESPESSURA,
+            }}
+          />
+          <span
+            className="pointer-events-none fixed z-30 bg-black"
+            style={{
+              left: cursor.x - CRUZ_ESPESSURA / 2,
+              top: cursor.y - (CRUZ_TAMANHO - 1) / 2,
+              width: CRUZ_ESPESSURA,
+              height: CRUZ_TAMANHO,
+            }}
+          />
+        </>
+      )}
       {cursor && (
         <div
           className="pointer-events-none fixed z-30 text-[11px] font-semibold whitespace-nowrap text-black"
@@ -920,7 +947,9 @@ function ColunaDia({
       ref={registarRef}
       onMouseDown={somenteLeitura ? undefined : onIniciarCriacao}
       className="relative border-l border-border-subtle bg-surface transition-colors select-none"
-      style={somenteLeitura ? undefined : { cursor: CURSOR_CRUZ }}
+      // Sem cursor do sistema na grelha vazia: a cruz é desenhada pela
+      // página (sempre preta).
+      style={somenteLeitura ? undefined : { cursor: 'none' }}
     >
       {HORAS_GRADE.map((h) => (
         <div

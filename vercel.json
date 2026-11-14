@@ -3,6 +3,8 @@
   "regions": ["fra1"],
   "crons": [
     { "path": "/api/cron/lembretes-sms", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/lembretes-sms-meio-dia", "schedule": "0 11 * * *" },
+    { "path": "/api/cron/lembretes-sms-noite", "schedule": "0 19 * * *" },
     { "path": "/api/cron/aniversarios-sms", "schedule": "10 9 * * *" }
   ]
 }

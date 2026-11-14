@@ -124,8 +124,9 @@ export default async function LembretesSmsPage({
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Lembretes SMS</h1>
       <p className="mt-1 text-sm text-muted">
-        Todos os dias às 10:00, avisa por SMS quem tem treino agendado para o dia seguinte. Cada
-        estúdio envia pelo seu próprio telemóvel.
+        Todos os dias às 10:00, avisa por SMS quem tem treino agendado para o dia seguinte. Volta a passar pela
+        agenda perto do meio-dia e ao fim do dia (entre as 19h e as 21h) para enviar os lembretes das marcações feitas
+        entretanto — quem já recebeu não recebe outra vez. Cada estúdio envia pelo seu próprio telemóvel.
       </p>
 
       {error && (

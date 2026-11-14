@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudios } from '@/lib/data/estudios'
 import { somarDias } from '@/lib/data/horarios'
 import {
@@ -62,22 +63,50 @@ export async function GET(request: Request) {
     { data: regrasData, error: erroRegras },
     { data: alertasAbertosData, error: erroAlertasAbertos },
   ] = await Promise.all([
-    admin
-      .from('leads')
-      .select('id, estudio_id, nome, estado, proximo_contacto, visita_data, visita_hora')
-      .in('estudio_id', estudioIds),
-    admin.from('lead_stage_history').select('lead_id, criado_em'),
+    todasAsLinhas((de, ate) =>
+      admin
+        .from('leads')
+        .select('id, estudio_id, nome, estado, proximo_contacto, visita_data, visita_hora')
+        .in('estudio_id', estudioIds)
+        .order('id')
+        .range(de, ate)
+    ),
+    todasAsLinhas((de, ate) => admin.from('lead_stage_history').select('lead_id, criado_em').order('id').range(de, ate)),
     admin
       .from('clientes')
       .select('id, estudio_id, nome, nascimento, fim_experiencia')
       .eq('estado', 'Ativo')
       .in('estudio_id', estudioIds),
-    admin.from('agenda_eventos').select('cliente_id, data, estado, tipo').eq('tipo', 'Treino'),
-    admin.from('presencas').select('cliente_id, data, estado').order('data', { ascending: false }),
-    admin.from('avaliacoes').select('cliente_id, data, proxima_reavaliacao').order('data', { ascending: false }),
-    admin.from('pagamentos_ativos').select('cliente_id, valido_ate'),
+    todasAsLinhas((de, ate) =>
+      admin.from('agenda_eventos').select('cliente_id, data, estado, tipo').eq('tipo', 'Treino').order('id').range(de, ate)
+    ),
+    todasAsLinhas((de, ate) =>
+      admin
+        .from('presencas')
+        .select('cliente_id, data, estado')
+        .order('data', { ascending: false })
+        .order('id')
+        .range(de, ate)
+    ),
+    todasAsLinhas((de, ate) =>
+      admin
+        .from('avaliacoes')
+        .select('cliente_id, data, proxima_reavaliacao')
+        .order('data', { ascending: false })
+        .order('id')
+        .range(de, ate)
+    ),
+    todasAsLinhas((de, ate) =>
+      admin
+        .from('v_resumo_pagamentos_cliente')
+        .select('cliente_id, valido_ate:validade_maxima')
+        .order('cliente_id')
+        .range(de, ate)
+    ),
     admin.from('alert_rules').select('chave, ativo'),
-    admin.from('alerts').select('id, regra_chave, lead_id, cliente_id, estado, adiado_ate'),
+    todasAsLinhas((de, ate) =>
+      admin.from('alerts').select('id, regra_chave, lead_id, cliente_id, estado, adiado_ate').order('id').range(de, ate)
+    ),
   ])
 
   for (const [area, erro] of [

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudios } from '@/lib/data/estudios'
 import { calcularTransicaoAutomatica } from '@/lib/data/estadoClientes'
 import type { Cliente, EstadoCliente } from '@/lib/supabase/database.types'
@@ -38,16 +39,18 @@ export async function GET(request: Request) {
       .select('id, estado, estado_automatico')
       .not('estado', 'in', '(Suspenso,Inativo)')
       .in('estudio_id', estudioIds),
-    admin.from('pagamentos_ativos').select('cliente_id, valido_ate'),
+    todasAsLinhas<{ cliente_id: string; validade_maxima: string }>((de, ate) =>
+      admin
+        .from('v_resumo_pagamentos_cliente')
+        .select('cliente_id, validade_maxima')
+        .order('cliente_id')
+        .range(de, ate)
+    ),
   ])
   if (erroClientes) return Response.json({ error: erroClientes.message }, { status: 500 })
   if (erroPagamentos) return Response.json({ error: erroPagamentos.message }, { status: 500 })
 
-  const validoAtePorCliente = new Map<string, string>()
-  for (const p of pagamentosData ?? []) {
-    const atual = validoAtePorCliente.get(p.cliente_id)
-    if (!atual || p.valido_ate > atual) validoAtePorCliente.set(p.cliente_id, p.valido_ate)
-  }
+  const validoAtePorCliente = new Map(pagamentosData.map((p) => [p.cliente_id, p.validade_maxima]))
 
   const clientes = (clientesData ?? []) as Pick<Cliente, 'id' | 'estado' | 'estado_automatico'>[]
 

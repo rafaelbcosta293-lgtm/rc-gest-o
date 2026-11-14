@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { intervaloMes, treinosPrevistos, fmt } from '@/lib/data/presencas'
 import { somarDias } from '@/lib/data/horarios'
@@ -57,9 +58,31 @@ export default async function RetencaoPage({
       .select('tipo, criado_em, cliente_id')
       .eq('estudio_id', estudio.id)
       .in('tipo', ['Cancelamento', 'Suspensão', 'Reativação']),
-    supabase.from('presencas').select('cliente_id, data, estado'),
-    supabase.from('agenda_eventos').select('cliente_id, data, estado, tipo').eq('tipo', 'Treino'),
-    supabase.from('avaliacoes').select('cliente_id, data, proxima_reavaliacao').order('data', { ascending: false }),
+    todasAsLinhas((de, ate) =>
+      supabase
+        .from('presencas')
+        .select('cliente_id, data, estado, clientes!inner(estudio_id)')
+        .eq('clientes.estudio_id', estudio.id)
+        .order('id')
+        .range(de, ate)
+    ),
+    todasAsLinhas((de, ate) =>
+      supabase
+        .from('agenda_eventos')
+        .select('cliente_id, data, estado, tipo')
+        .eq('estudio_id', estudio.id)
+        .eq('tipo', 'Treino')
+        .order('id')
+        .range(de, ate)
+    ),
+    todasAsLinhas((de, ate) =>
+      supabase
+        .from('avaliacoes')
+        .select('cliente_id, data, proxima_reavaliacao')
+        .order('data', { ascending: false })
+        .order('id')
+        .range(de, ate)
+    ),
     supabase.from('v_estado_pagamento').select('cliente_id, em_dia').eq('estudio_id', estudio.id),
   ])
 

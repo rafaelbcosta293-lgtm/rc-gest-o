@@ -60,7 +60,10 @@ export default async function PresencasPage({
         // Só a validade mais distante de cada cliente interessa aqui —
         // é o que diz se está pago para hoje, independentemente de qual
         // pagamento a cobre.
-        supabase.from('pagamentos_ativos').select('cliente_id, valido_ate').in('cliente_id', ids),
+        supabase
+          .from('v_resumo_pagamentos_cliente')
+          .select('cliente_id, valido_ate:validade_maxima')
+          .eq('estudio_id', estudio.id),
         // Treinos desmarcados este mês — para detetar quem está a
         // desmarcar e se essas sessões já foram ou não remarcadas.
         supabase

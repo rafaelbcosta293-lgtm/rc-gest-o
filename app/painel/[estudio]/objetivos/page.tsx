@@ -144,16 +144,13 @@ export default async function ObjetivosPage({
 
   async function calcularMrr(): Promise<number | null> {
     const { data: pagamentosData } = await supabase
-      .from('pagamentos_ativos')
-      .select('cliente_id, valor, valido_ate')
-      .order('data_pagamento', { ascending: false })
-    const maisRecentePorCliente = new Map<string, { valor: number; valido_ate: string }>()
-    for (const p of pagamentosData ?? []) {
-      if (!maisRecentePorCliente.has(p.cliente_id)) {
-        maisRecentePorCliente.set(p.cliente_id, { valor: p.valor, valido_ate: p.valido_ate })
-      }
-    }
-    return mrrAtual(Array.from(maisRecentePorCliente.values()), hoje)
+      .from('v_resumo_pagamentos_cliente')
+      .select('valor:ultimo_valor, valido_ate:ultimo_valido_ate')
+      .eq('estudio_id', estudioId)
+    return mrrAtual(
+      (pagamentosData ?? []).map((p) => ({ valor: Number(p.valor), valido_ate: p.valido_ate })),
+      hoje
+    )
   }
 
   // --- Funil inverso: últimos 90 dias --- (não depende de metas nenhumas,

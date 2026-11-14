@@ -64,10 +64,9 @@ export default async function PagamentosPage({
   ] = idsClientes.length
     ? await Promise.all([
         supabase
-          .from('pagamentos_ativos')
-          .select('cliente_id, data_pagamento, valido_ate')
-          .in('cliente_id', idsClientes)
-          .order('data_pagamento', { ascending: false }),
+          .from('v_resumo_pagamentos_cliente')
+          .select('cliente_id, data_pagamento:ultimo_pagamento, valido_ate:ultimo_valido_ate')
+          .eq('estudio_id', estudio.id),
         supabase.from('clientes').select('id, inicio_contrato').in('id', idsClientes),
         supabase
           .from('pagamentos_ativos')
@@ -92,8 +91,6 @@ export default async function PagamentosPage({
     )
   }
 
-  // A consulta já vem ordenada por data decrescente, por isso a primeira
-  // ocorrência de cada cliente é o pagamento mais recente.
   const ultimoPagamentoPorCliente = new Map<string, PagamentoDetalhe>()
   for (const p of (pagamentosData ?? []) as unknown as PagamentoDetalhe[]) {
     if (!ultimoPagamentoPorCliente.has(p.cliente_id)) {

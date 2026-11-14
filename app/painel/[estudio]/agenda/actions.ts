@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { ehContaFixa } from '@/lib/data/acessos'
 import {
@@ -44,14 +45,18 @@ export type ResultadoPesquisaAgenda = {
 export async function pesquisarAgenda(estudioId: number, texto: string): Promise<ResultadoPesquisaAgenda[]> {
   if (texto.trim().length < 2) return []
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('agenda_eventos')
-    .select(
-      'id, data, hora_inicio, duracao_min, tipo, titulo, estado, nota, cliente:clientes(nome, nome_preferido, numero_socio), pt:perfis!pt_id(nome)'
-    )
-    .eq('estudio_id', estudioId)
-    .order('data', { ascending: false })
-    .order('hora_inicio', { ascending: false })
+  const { data, error } = await todasAsLinhas((de, ate) =>
+    supabase
+      .from('agenda_eventos')
+      .select(
+        'id, data, hora_inicio, duracao_min, tipo, titulo, estado, nota, cliente:clientes(nome, nome_preferido, numero_socio), pt:perfis!pt_id(nome)'
+      )
+      .eq('estudio_id', estudioId)
+      .order('data', { ascending: false })
+      .order('hora_inicio', { ascending: false })
+      .order('id')
+      .range(de, ate)
+  )
   if (error) throw new Error(error.message)
 
   const eventos = (data ?? []) as unknown as EventoPesquisavel[]

@@ -70,6 +70,55 @@ export async function guardarSemana(input: {
   return { ok: true }
 }
 
+// Copia a escala da semana anterior para a semana aberta (substitui o
+// que lá estiver), para depois só se fazerem os ajustes. Só copia quem
+// ainda tem acesso a este estúdio.
+export async function copiarSemanaAnterior(formData: FormData) {
+  const estudioSlug = String(formData.get('estudio_slug') ?? '')
+  const estudioId = Number(formData.get('estudio_id'))
+  const semana = String(formData.get('semana') ?? '')
+  const destino = new URL(String(formData.get('voltar') ?? '/painel/coordenacao/horarios'), 'http://x')
+  const voltar = (resultado: string): never => {
+    destino.searchParams.set(`${estudioSlug}_copia`, resultado)
+    // Obriga a grelha a recarregar com a escala copiada.
+    destino.searchParams.set(`${estudioSlug}_v`, String(Date.now()))
+    redirect(`${destino.pathname}${destino.search}#planeamento-${estudioSlug}`)
+  }
+  if (!estudioId || !/^\d{4}-\d{2}-\d{2}$/.test(semana)) voltar('erro')
+
+  const supabase = await createClient()
+  const semanaAnterior = somarDias(semana, -7)
+  const [{ data: anteriores, error }, { data: ligacoes }] = await Promise.all([
+    supabase
+      .from('escalas')
+      .select('data, hora, minuto, pt_id')
+      .eq('estudio_id', estudioId)
+      .gte('data', semanaAnterior)
+      .lt('data', semana),
+    supabase.from('perfis_estudios').select('perfil_id').eq('estudio_id', estudioId),
+  ])
+  if (error) voltar('erro')
+  const comAcesso = new Set((ligacoes ?? []).map((l) => l.perfil_id))
+  const linhas = (anteriores ?? [])
+    .filter((t) => comAcesso.has(t.pt_id))
+    .map((t) => ({ estudio_id: estudioId, data: somarDias(t.data, 7), hora: t.hora, minuto: t.minuto, pt_id: t.pt_id }))
+  if (linhas.length === 0) voltar('vazia')
+
+  const { error: erroApagar } = await supabase
+    .from('escalas')
+    .delete()
+    .eq('estudio_id', estudioId)
+    .gte('data', semana)
+    .lt('data', somarDias(semana, 7))
+  if (erroApagar) voltar('erro')
+  const { error: erroInserir } = await supabase.from('escalas').insert(linhas)
+  if (erroInserir) voltar('erro')
+
+  revalidatePath('/painel/coordenacao/horarios')
+  revalidatePath(`/painel/${estudioSlug}/horarios`)
+  voltar('ok')
+}
+
 // Cria a conta e a ficha do instrutor de uma vez (sem ele ter de se
 // registar sozinho) e já lhe dá acesso a este estúdio. Usa a chave de
 // administrador porque criar contas não é algo que uma conta normal

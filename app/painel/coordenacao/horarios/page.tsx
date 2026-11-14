@@ -3,11 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudios, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
-import { guardarSemana, criarInstrutor, desbloquearCoordenacao } from '../actions'
+import { guardarSemana, copiarSemanaAnterior, criarInstrutor, desbloquearCoordenacao } from '../actions'
 import { alternarAcesso } from '../../[estudio]/equipa/actions'
 import { coresInstrutores, corEstudio } from '@/lib/data/constantes'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import SubmitButton from '@/components/SubmitButton'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 import TituloSeccao from '@/components/TituloSeccao'
 import PortaSenha from '@/components/PortaSenha'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
@@ -175,7 +176,7 @@ async function PainelHorariosEstudio({
       </TituloSeccao>
       <div className="mt-2 flex items-center gap-3">
         <Link
-          href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaAnterior })}`}
+          href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaAnterior, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
           className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           ←
@@ -184,12 +185,51 @@ async function PainelHorariosEstudio({
           {fmt(diasSemana[0])} – {fmt(diasSemana[6])}
         </span>
         <Link
-          href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaSeguinte })}`}
+          href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaSeguinte, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
           className="rounded-md border border-border-subtle px-3 py-1.5 text-sm"
         >
           →
         </Link>
+        <ConfirmarAcao
+          action={copiarSemanaAnterior}
+          confirmacao={
+            escalaSemana.length > 0
+              ? `Copiar o horário de ${fmt(semanaAnterior)} – ${fmt(somarDias(semanaAnterior, 6))} para esta semana? Substitui o que já está marcado nesta semana.`
+              : `Copiar o horário de ${fmt(semanaAnterior)} – ${fmt(somarDias(semanaAnterior, 6))} para esta semana?`
+          }
+          className="ml-auto"
+        >
+          <input type="hidden" name="estudio_slug" value={slug} />
+          <input type="hidden" name="estudio_id" value={estudio.id} />
+          <input type="hidden" name="semana" value={inicioSemana} />
+          <input
+            type="hidden"
+            name="voltar"
+            value={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: inicioSemana, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
+          />
+          <SubmitButton
+            pendingText="A copiar…"
+            className="rounded-full border border-border-strong px-4 py-1.5 text-sm font-bold hover:bg-brand/[.08]"
+          >
+            Copiar horário da semana anterior
+          </SubmitButton>
+        </ConfirmarAcao>
       </div>
+      {sp[pk('copia')] === 'ok' && (
+        <p className="mt-2 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+          Horário da semana anterior copiado. Faz agora os ajustes que quiseres.
+        </p>
+      )}
+      {sp[pk('copia')] === 'vazia' && (
+        <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          A semana anterior não tem horário marcado — não há nada para copiar.
+        </p>
+      )}
+      {sp[pk('copia')] === 'erro' && (
+        <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          Não foi possível copiar o horário. Tenta de novo.
+        </p>
+      )}
       <p className="mt-2 text-xs text-zinc-500">
         Escolhe um instrutor em &quot;Pintar com&quot; e arrasta pelos blocos para marcar vários de
         uma vez (ex.: a semana toda de manhã). Sem ninguém escolhido, clica num bloco para
@@ -198,7 +238,7 @@ async function PainelHorariosEstudio({
       </p>
       <div className="mt-4">
         <GrelhaHorarios
-          key={`${slug}-${inicioSemana}`}
+          key={`${slug}-${inicioSemana}-${sp[pk('v')] ?? ''}`}
           editavel
           dias={diasSemana}
           slots={slots}

@@ -14,16 +14,23 @@ function corDoPt(corPorPt: Record<string, CorPt> | undefined, ptId: string): Cor
   return corPorPt?.[ptId] ?? CINZA_OMISSAO
 }
 
-function Insignia({ nome, cor }: { nome: string; cor: CorPt }) {
+// Com mais de uma pessoa no mesmo bloco, ficam lado a lado (em colunas
+// da mesma largura, sempre pela mesma ordem — alfabética — para cada
+// pessoa manter a sua coluna de linha para linha) e só com o primeiro
+// nome, para caber; o nome completo aparece ao passar o rato.
+function Insignia({ nome, cor, compacta = false }: { nome: string; cor: CorPt; compacta?: boolean }) {
   return (
     <span
-      className="truncate rounded px-1 py-px text-[9px] font-medium leading-tight"
+      title={nome}
+      className="min-w-0 flex-1 truncate rounded px-1 py-px text-center text-[9px] font-medium leading-tight"
       style={{ background: cor.bg, color: cor.tx }}
     >
-      {nome}
+      {compacta ? nome.trim().split(/\s+/)[0] : nome}
     </span>
   )
 }
+
+const porNome = (a: string, b: string) => a.localeCompare(b, 'pt')
 
 type PropsComuns = {
   dias: string[]
@@ -90,14 +97,16 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
               return (
                 <div
                   key={dia}
-                  className="flex min-h-[1.25rem] flex-col justify-center gap-px bg-surface p-0.5 text-[9px] leading-tight"
+                  className="flex min-h-[1.25rem] items-center justify-center gap-0.5 bg-surface p-0.5 text-[9px] leading-tight"
                 >
                   {atual.length === 0 ? (
                     <span className="text-center text-zinc-300 dark:text-zinc-700">—</span>
                   ) : (
-                    atual.map((s) => (
-                      <Insignia key={s.pt_id} nome={s.nome} cor={corDoPt(corPorPt, s.pt_id)} />
-                    ))
+                    [...atual]
+                      .sort((a, b) => porNome(a.nome, b.nome))
+                      .map((s) => (
+                        <Insignia key={s.pt_id} nome={s.nome} cor={corDoPt(corPorPt, s.pt_id)} compacta={atual.length > 1} />
+                      ))
                   )}
                 </div>
               )
@@ -289,7 +298,7 @@ function GrelhaEditavel({
                       ptAtivoId && arrastando ? () => aplicarPt(chave, ptAtivoId, arrastando.adicionar) : undefined
                     }
                     onClick={ptAtivoId ? undefined : () => setAbertaChave(chave)}
-                    className={`flex min-h-[1.25rem] flex-col justify-center gap-px p-0.5 text-[9px] leading-tight ${
+                    className={`flex min-h-[1.25rem] items-center justify-center gap-0.5 p-0.5 text-[9px] leading-tight ${
                       ptAtivoId
                         ? `cursor-pointer ${ptAtivoNesteSlot ? '' : 'bg-surface hover:bg-foreground/[.05]'}`
                         : 'bg-surface hover:bg-foreground/[.05]'
@@ -299,9 +308,16 @@ function GrelhaEditavel({
                     {ptIdsAtuais.length === 0 ? (
                       <span className="text-center text-zinc-300 dark:text-zinc-700">+</span>
                     ) : (
-                      ptIdsAtuais.map((id) => (
-                        <Insignia key={id} nome={ptsPorId.get(id) ?? '—'} cor={corDoPt(corPorPt, id)} />
-                      ))
+                      [...ptIdsAtuais]
+                        .sort((a, b) => porNome(ptsPorId.get(a) ?? '', ptsPorId.get(b) ?? ''))
+                        .map((id) => (
+                          <Insignia
+                            key={id}
+                            nome={ptsPorId.get(id) ?? '—'}
+                            cor={corDoPt(corPorPt, id)}
+                            compacta={ptIdsAtuais.length > 1}
+                          />
+                        ))
                     )}
                   </button>
                 )

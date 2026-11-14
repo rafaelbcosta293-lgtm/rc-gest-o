@@ -71,19 +71,19 @@ export default async function ChecklistRegistoPage({
   }))
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-4">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <Link href={`/painel/${slug}/checklist`} className="text-sm text-muted underline">
-          ← Abertura / Fecho
-        </Link>
-        <h1 className="text-xl font-semibold text-foreground">{registo.tipo}</h1>
+    <div className="mx-auto max-w-5xl px-4 py-3">
+      <Link href={`/painel/${slug}/checklist`} className="text-sm text-muted underline">
+        ← Abertura / Fecho
+      </Link>
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="text-2xl font-semibold text-foreground">{registo.tipo}</h1>
         <p className="text-sm text-muted">
           {fmt(registo.data)} · {registo.hora.slice(0, 5)}
           {responsavel ? ` · Responsável: ${responsavel}` : ''}
         </p>
       </div>
       {texto && (
-        <p className="mt-1.5 text-xs leading-snug text-muted">
+        <p className="mt-2 rounded-xl border border-border-subtle bg-surface px-4 py-2 text-xs leading-snug text-muted">
           {texto.intro} <span className="font-medium text-foreground">⚠️ {texto.nota}</span>
         </p>
       )}

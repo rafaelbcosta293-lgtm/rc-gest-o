@@ -26,13 +26,21 @@ const MENSAGEM_AVISO = 'Tens alterações por guardar. Se saíres agora, vais pe
 // vezes nesta sessão) — este hook só é chamado DENTRO de componentes já
 // marcados "use client", nunca recebido como prop, por isso não tem
 // esse risco.
-export function useAvisoSairSemGuardar() {
+// Com `aoTentarSair`, um clique num link não usa o confirm() do browser:
+// a navegação é travada e o componente mostra a sua própria janela
+// (ex.: "Guardar / Descartar"), navegando depois para `href` se quiser.
+export function useAvisoSairSemGuardar(opcoes: { aoTentarSair?: (href: string) => void } = {}) {
   const [sujo, setSujo] = useState(false)
   const sujoRef = useRef(false)
+  const aoTentarSairRef = useRef(opcoes.aoTentarSair)
 
   useEffect(() => {
     sujoRef.current = sujo
   }, [sujo])
+
+  useEffect(() => {
+    aoTentarSairRef.current = opcoes.aoTentarSair
+  })
 
   useEffect(() => {
     function aoFechar(e: BeforeUnloadEvent) {
@@ -53,6 +61,13 @@ export function useAvisoSairSemGuardar() {
         alvo.dataset.semAvisoSair !== undefined ||
         alvo.getAttribute('href')?.startsWith('#')
       ) {
+        return
+      }
+      const aoTentarSair = aoTentarSairRef.current
+      if (aoTentarSair) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        aoTentarSair(alvo.href)
         return
       }
       if (!window.confirm(MENSAGEM_AVISO)) {

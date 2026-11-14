@@ -12,6 +12,7 @@ import { listarContactosAgendados } from '@/lib/data/contactosAgendados'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import BarraAjustavel from '@/components/BarraAjustavel'
+import AvisosFerias from './ferias/AvisosFerias'
 import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPhone, NavLinkBloqueado } from './NavLink'
 
 // Na barra do computador/tablet, Treinos e Avaliações deixam de ter
@@ -20,11 +21,11 @@ import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPhone, NavLinkBloquead
 const SUBPASTAS_CLIENTES = new Set(['treinos', 'avaliacoes'])
 
 // Conta pessoal (instrutor registado em /registo, fora das 4 contas
-// fixas do negócio — ver ehContaFixa): só vê estes 3 módulos, Treinos
-// completo e Agenda/Horários só para ver (a escrita é bloqueada nas
+// fixas do negócio — ver ehContaFixa): só vê estes módulos: Treinos
+// completo, Agenda/Horários só para ver, e o seu Registo de Horas e Férias (a escrita é bloqueada nas
 // próprias ações, ver app/painel/[estudio]/agenda/actions.ts). Tudo o
 // resto fica de fora, mesmo do menu.
-const MODULOS_CONTA_INDIVIDUAL = new Set(['treinos', 'agenda', 'horarios'])
+const MODULOS_CONTA_INDIVIDUAL = new Set(['treinos', 'agenda', 'horarios', 'assiduidade', 'ferias'])
 
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
@@ -75,6 +76,16 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       <div className="sticky top-0 z-10 flex flex-col">
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} apenasEstudio={slug} />
         <AlertaContactosAgendados contactosIniciais={contactosAgendados} apenasEstudio={slug} />
+        {estudio && (
+          <AvisosFerias
+            supabase={supabase}
+            slug={slug}
+            estudioId={estudio.id}
+            userId={sessao.userId}
+            ehInstrutor={contaIndividual && !!sessao.userId}
+            ehGestao={ehGestao}
+          />
+        )}
 
         {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
             estúdio — os módulos ficam na barra de separadores do fundo,

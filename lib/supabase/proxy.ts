@@ -8,7 +8,7 @@ import { NOME_COOKIE, chaveAtivoDispositivo } from '@/lib/data/dispositivo'
 // estúdio — qualquer outro caminho redireciona para Treinos. Feito no
 // middleware (não só a esconder o link no menu, ver layout.tsx) para
 // um pedido direto a outro URL nunca passar.
-const MODULOS_CONTA_INDIVIDUAL = ['treinos', 'agenda', 'horarios']
+const MODULOS_CONTA_INDIVIDUAL = ['treinos', 'agenda', 'horarios', 'assiduidade', 'ferias']
 
 // Páginas que qualquer visitante pode ver sem ter sessão iniciada.
 // Tudo o resto (ex.: /painel) exige login.

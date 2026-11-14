@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, IdCardLanyard } from 'lucide-react'
 import { MODULOS, PALETA } from '@/lib/data/constantes'
 import { useModoIcone } from '@/components/BarraAjustavel'
 
@@ -191,7 +191,10 @@ export function NavLinkPastaHorarios({
   const itens = PASTA_HORARIOS.map((p) => ({ ...p, modulo: moduloPorId(p.id), href: `/painel/${slug}/${p.id}` }))
   const disponiveis = itens.filter((i) => !bloqueados[i.id])
   const principal = disponiveis[0] ?? itens[0]
-  const { icone: Icone, cor } = moduloPorId('horarios')
+  // Crachá de colaborador: identifica a pasta com a equipa (o
+  // despertador das Escalas não dizia "Recursos Humanos").
+  const Icone = IdCardLanyard
+  const { cor } = moduloPorId('horarios')
   const ativo = itens.some((i) => estaAtivo(pathname, i.href))
 
   const [aberto, setAberto] = useState(false)

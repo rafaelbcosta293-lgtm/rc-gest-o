@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["fra1"],
   "crons": [
-    { "path": "/api/cron/lembretes-sms", "schedule": "0 9 * * *" },
+    { "path": "/api/cron/lembretes-sms", "schedule": "0 10 * * *" },
     { "path": "/api/cron/aniversarios-sms", "schedule": "10 9 * * *" }
   ]
 }

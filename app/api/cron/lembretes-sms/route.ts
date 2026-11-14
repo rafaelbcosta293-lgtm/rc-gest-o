@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { processarLembretesSms } from '@/lib/data/lembretesSms'
 
-// Disparado todos os dias às 9h UTC pelo Cron do Vercel (ver
+// Disparado todos os dias às 10h UTC (10h em Lisboa no inverno) pelo Cron do Vercel (ver
 // vercel.json) — o GitHub Actions (.github/workflows/lembretes-sms.yml)
 // falhava em disparar à hora certa sem aviso, por isso deixou de ser o
 // agendador; fica só disponível para disparar à mão, com as tentativas

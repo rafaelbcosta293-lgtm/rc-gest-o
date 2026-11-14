@@ -5,6 +5,7 @@ import {
   preencherTemplateLembrete,
   proximoDiaAlvoLembrete,
   TEMPLATE_LEMBRETE_OMISSAO,
+  trocarAmanhaPorProximo,
 } from './lembretesSms'
 
 describe('nomeDiaSemana', () => {
@@ -69,8 +70,8 @@ describe('proximoDiaAlvoLembrete', () => {
     expect(proximoDiaAlvoLembrete('2026-11-09', 'fatima')).toBe('2026-11-09') // segunda
   })
 
-  it('não mexe em estúdios sem dias de fecho configurados (ex.: Leiria)', () => {
-    expect(proximoDiaAlvoLembrete('2026-11-08', 'leiria')).toBe('2026-11-08')
+  it('Leiria também fecha ao domingo — o lembrete de segunda sai no sábado', () => {
+    expect(proximoDiaAlvoLembrete('2026-11-15', 'leiria')).toBe('2026-11-16')
   })
 })
 
@@ -81,5 +82,35 @@ describe('dataDeAmanhaEmLisboa', () => {
     // data de Lisboa (15), o resultado ficaria um dia atrasado.
     const data = new Date('2026-06-14T23:30:00Z')
     expect(dataDeAmanhaEmLisboa(data)).toBe('2026-06-16')
+  })
+})
+
+describe('lembrete de sábado (para segunda-feira)', () => {
+  const template =
+    'Bom dia {nome}! Lembramos que amanhã, {dia_semana}, dia {dia_mes}, às {hora}, tem o seu treino no RC Private Fitness Studio.'
+
+  it('diz "na próxima segunda-feira" em vez de "amanhã"', () => {
+    const texto = preencherTemplateLembrete(template, {
+      nome: 'Ana Costa',
+      data: '2026-11-16',
+      horaInicio: '10:00:00',
+      naoEAmanha: true,
+    })
+    expect(texto).toBe(
+      'Bom dia Ana! Lembramos que na próxima segunda-feira, dia 16, às 10:00, tem o seu treino no RC Private Fitness Studio.'
+    )
+  })
+
+  it('nos outros dias mantém "amanhã"', () => {
+    const texto = preencherTemplateLembrete(template, { nome: 'Ana Costa', data: '2026-11-17', horaInicio: '07:30:00' })
+    expect(texto).toBe(
+      'Bom dia Ana! Lembramos que amanhã, terça-feira, dia 17, às 07:30, tem o seu treino no RC Private Fitness Studio.'
+    )
+  })
+
+  it('funciona também com "amanhã" sem o dia da semana a seguir', () => {
+    expect(trocarAmanhaPorProximo('O teu treino é amanhã às {hora}.', '2026-11-16')).toBe(
+      'O teu treino é na próxima segunda-feira às {hora}.'
+    )
   })
 })

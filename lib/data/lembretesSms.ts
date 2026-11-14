@@ -35,15 +35,25 @@ export function nomeDiaSemana(dataISO: string): string {
 
 export function preencherTemplateLembrete(
   template: string,
-  dados: { nome: string; data: string; horaInicio: string; nomePreferido?: string | null }
+  dados: { nome: string; data: string; horaInicio: string; nomePreferido?: string | null; naoEAmanha?: boolean }
 ): string {
   const diaMes = Number(dados.data.slice(8, 10))
   const hora = dados.horaInicio.slice(0, 5)
-  return template
+  const base = dados.naoEAmanha ? trocarAmanhaPorProximo(template, dados.data) : template
+  return base
     .replaceAll('{nome}', primeiroNomeExibicao(dados.nome, dados.nomePreferido))
     .replaceAll('{dia_semana}', nomeDiaSemana(dados.data))
     .replaceAll('{dia_mes}', String(diaMes))
     .replaceAll('{hora}', hora)
+}
+
+// Ao sábado, o lembrete é o de segunda-feira — "amanhã" seria domingo.
+// Troca "amanhã, {dia_semana}" (ou só "amanhã") por "na próxima
+// segunda-feira"; o resto da mensagem fica exatamente igual.
+export function trocarAmanhaPorProximo(template: string, dataISO: string): string {
+  const dia = nomeDiaSemana(dataISO)
+  const proximo = dia === 'sábado' || dia === 'domingo' ? `no próximo ${dia}` : `na próxima ${dia}`
+  return template.replace(/amanhã(\s*,\s*\{dia_semana\}|\s+\{dia_semana\})?/giu, () => proximo)
 }
 
 // "Amanhã" visto de Lisboa — o cron corre à hora local de Lisboa, mas o
@@ -54,14 +64,13 @@ export function dataDeAmanhaEmLisboa(agora: Date = new Date()): string {
   return somarDias(hojeLisboa, 1)
 }
 
-// Dias da semana em que cada estúdio está fechado (0 = domingo … 6 =
-// sábado, como Date.getDay()) — hoje só o Fátima, aos domingos. Nesse
-// dia nunca há lembrete a sair no dia anterior (o estúdio está
-// fechado, o telemóvel do gateway pode nem estar ligado), por isso o
-// lembrete de segunda-feira sai mais cedo, já no sábado.
-const DIAS_FECHO_POR_ESTUDIO: Record<string, number[]> = {
-  fatima: [0],
-}
+// Dias da semana em que os estúdios estão fechados (0 = domingo … 6 =
+// sábado, como Date.getDay()) — o domingo, em todos. Nesse dia nunca
+// há lembrete a sair (o telemóvel do gateway pode nem estar ligado),
+// por isso o lembrete de segunda-feira sai mais cedo, já no sábado, e
+// diz "na próxima segunda-feira" em vez de "amanhã".
+const DIAS_FECHO_OMISSAO = [0]
+const DIAS_FECHO_POR_ESTUDIO: Record<string, number[]> = {}
 
 function diaDaSemanaNumero(dataISO: string): number {
   return new Date(`${dataISO}T00:00:00Z`).getUTCDay()
@@ -72,7 +81,7 @@ function diaDaSemanaNumero(dataISO: string): number {
 // dias de fecho (ou em qualquer dia que não caia num deles) devolve a
 // mesma data recebida, sem alterar o comportamento de sempre.
 export function proximoDiaAlvoLembrete(amanha: string, estudioSlug: string): string {
-  const fechados = DIAS_FECHO_POR_ESTUDIO[estudioSlug] ?? []
+  const fechados = DIAS_FECHO_POR_ESTUDIO[estudioSlug] ?? DIAS_FECHO_OMISSAO
   let dia = amanha
   while (fechados.includes(diaDaSemanaNumero(dia))) {
     dia = somarDias(dia, 1)
@@ -176,6 +185,7 @@ async function processarLembretesDoEstudio(
       data: evento.data,
       horaInicio: evento.hora_inicio,
       nomePreferido: destino.nomePreferido,
+      naoEAmanha: diaAlvo !== amanha,
     })
     const resultado = await enviarSms(estudio.slug, destino.telefone ?? '', texto)
 

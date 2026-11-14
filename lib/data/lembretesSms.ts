@@ -3,7 +3,7 @@ import { somarDias } from './horarios'
 import { getEstudios } from './estudios'
 import { primeiroNomeExibicao } from './clientes'
 import { obterEstadoGateway, registarFalhaGateway, registarSucessoGateway } from './smsGateway'
-import { enviarSms } from '@/lib/sms/gateway'
+import { enviarSms, prioridadePorOrdem } from '@/lib/sms/gateway'
 import type { Estudio } from '@/lib/supabase/database.types'
 import type { ResultadoEstudio } from './smsGateway'
 
@@ -213,7 +213,11 @@ async function processarLembretesDoEstudio(
   let falhasPorNumero = 0
   let gatewayOffline = false
 
-  for (const { evento, destino } of pendentes) {
+  // Os lembretes saem pela ordem do horário do treino, do mais cedo para
+  // o mais tarde: os eventos já vêm ordenados por hora e cada mensagem
+  // leva uma prioridade abaixo da anterior, para o telemóvel as enviar
+  // por essa mesma ordem (sem isto, a fila dele não a respeita).
+  for (const [indice, { evento, destino }] of pendentes.entries()) {
     const texto = preencherTemplateLembrete(templates.diario, {
       nome: destino.nome,
       data: evento.data,
@@ -222,7 +226,7 @@ async function processarLembretesDoEstudio(
       naoEAmanha: diaAlvo !== amanha,
       templateSabado: templates.sabado,
     })
-    const resultado = await enviarSms(estudio.slug, destino.telefone ?? '', texto)
+    const resultado = await enviarSms(estudio.slug, destino.telefone ?? '', texto, { prioridade: prioridadePorOrdem(indice) })
 
     if (resultado.ok) {
       await admin

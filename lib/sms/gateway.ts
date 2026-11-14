@@ -45,10 +45,26 @@ function credenciaisDoEstudio(estudioSlug: string): {
   }
 }
 
+// Prioridades "normais" do SMS Gate vão de 0 a 99 (a partir de 100 a
+// mensagem salta os limites de envio do telemóvel — não é o que se
+// quer aqui) e as baixas de -128 a -1. O telemóvel envia primeiro as de
+// prioridade mais alta.
+const PRIORIDADE_MAX = 99
+const PRIORIDADE_MIN = -128
+
+// Prioridade para a mensagem nº `indice` (0 = primeira) de uma lista que
+// tem de sair por ordem: a primeira leva a mais alta e cada uma das
+// seguintes uma abaixo. É isto que garante a ordem no telemóvel — a
+// fila dele ordena por prioridade, não pela ordem de chegada.
+export function prioridadePorOrdem(indice: number): number {
+  return Math.max(PRIORIDADE_MIN, PRIORIDADE_MAX - Math.max(0, Math.floor(indice)))
+}
+
 export async function enviarSms(
   estudioSlug: string,
   telefoneDestino: string,
-  texto: string
+  texto: string,
+  opcoes: { prioridade?: number } = {}
 ): Promise<ResultadoEnvioSms> {
   const { url, utilizador, password } = credenciaisDoEstudio(estudioSlug)
   if (!url || !utilizador || !password) {
@@ -76,7 +92,11 @@ export async function enviarSms(
         Authorization: `Basic ${autenticacao}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: texto, phoneNumbers: [numero] }),
+      body: JSON.stringify({
+        message: texto,
+        phoneNumbers: [numero],
+        ...(opcoes.prioridade === undefined ? {} : { priority: opcoes.prioridade }),
+      }),
       signal: controlador.signal,
     })
 
@@ -85,6 +105,13 @@ export async function enviarSms(
     }
 
     const corpo = await resposta.text().catch(() => '')
+    // Uma instância mais antiga do gateway pode recusar o campo da
+    // prioridade (400/422): a mensagem tem de sair na mesma, por isso
+    // tenta-se de novo sem ele — perde-se a ordem, não o lembrete.
+    if (opcoes.prioridade !== undefined && (resposta.status === 400 || resposta.status === 422)) {
+      clearTimeout(temporizador)
+      return enviarSms(estudioSlug, telefoneDestino, texto)
+    }
     // 401/403 (credenciais erradas ou dispositivo não autorizado) e
     // 5xx (app no telemóvel em baixo/sem resposta) tratam-se como
     // "gateway offline" — o resto (ex.: 400 por número inválido) é um

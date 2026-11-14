@@ -7,7 +7,7 @@ import { traduzErroSupabase } from '@/lib/supabase/auth-errors'
 
 export async function signup(formData: FormData) {
   const nome = formData.get('nome') as string
-  const email = formData.get('email') as string
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = formData.get('password') as string
   const confirmPassword = formData.get('confirmPassword') as string
 

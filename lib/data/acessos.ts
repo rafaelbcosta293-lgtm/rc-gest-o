@@ -7,7 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 // maiúsculas/minúsculas, para não depender de como o email ficou
 // guardado no Supabase Auth.
 const EMAIL_DONO = 'rafaelbcosta293@gmail.com'
-const EMAIL_GERAL = 'rc.privatefitstudio@gmail.com'
+export const EMAIL_GERAL = 'rc.privatefitstudio@gmail.com'
 export const EMAIL_POR_ESTUDIO: Record<string, string> = {
   fatima: 'rc.privatefitstudio.fatima@gmail.com',
   leiria: 'rc.privatefitstudio.leiria@gmail.com',

@@ -163,7 +163,7 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
               </label>
               <label className={rotulo}>
                 Palavra-passe inicial (mín. 6)
-                <input type="text" name="password" autoComplete="off" minLength={6} className={campo} />
+                <input type="text" name="password" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} minLength={6} className={campo} />
               </label>
             </div>
             <div className="mt-3">
@@ -195,6 +195,9 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
                   {!p.ativo ? 'Desativado' : p.semConta ? 'Perfil (sem acesso)' : 'Conta'}
                 </span>
                 {!p.semConta && <span className="font-mono text-xs text-muted">{p.email}</span>}
+                {p.ativo && !p.semConta && !p.ultimoLogin && (
+                  <span className="rounded-full bg-amber-950 px-2 py-0.5 text-xs font-semibold text-amber-300">Nunca entrou</span>
+                )}
                 <span className="text-xs text-muted">{nomePapel.get(p.papel) ?? p.papel}</span>
                 <span className="ml-auto text-xs text-muted">
                   {p.estudios.length ? p.estudios.map((id) => nomeEstudio.get(id) ?? '?').join(' + ') : 'Sem estúdio'}
@@ -218,8 +221,10 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
                   </p>
                   {!p.semConta && (
                     <p className="mt-0.5 text-xs text-muted">
-                      Último login: {p.ultimoLogin ? new Date(p.ultimoLogin).toLocaleDateString('pt-PT') : 'nunca'}. Deixa em branco o que
-                      não quiseres mudar.
+                      Entra na app com o email <strong className="font-mono text-foreground">{p.email}</strong>, escrito exatamente
+                      assim. Último login: {p.ultimoLogin ? new Date(p.ultimoLogin).toLocaleDateString('pt-PT') : 'nunca'}.{' '}
+                      {!p.ultimoLogin && 'Se não consegue entrar, escreve aqui uma palavra-passe nova e dá-lha. '}
+                      Deixa em branco o que não quiseres mudar.
                     </p>
                   )}
                   <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
@@ -236,7 +241,7 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
                     </label>
                     <label className={rotulo}>
                       {p.semConta ? 'Palavra-passe inicial (mín. 6)' : 'Nova palavra-passe (mín. 6)'}
-                      <input type="text" name="password" autoComplete="off" minLength={6} required={p.semConta} className={campo} />
+                      <input type="text" name="password" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} minLength={6} required={p.semConta} className={campo} />
                     </label>
                     <SubmitButton
                       pendingText="A guardar…"

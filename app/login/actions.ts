@@ -20,7 +20,11 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(traduzErroSupabase(error.message))}`)
+    // Mostra o email tal como chegou: a causa mais comum de "credenciais
+    // inválidas" é um email diferente do que está registado na conta.
+    const mensagem = traduzErroSupabase(error.message)
+    const comEmail = error.message === 'Invalid login credentials' && email ? `${mensagem} Email usado: ${email}` : mensagem
+    redirect(`/login?error=${encodeURIComponent(comEmail)}`)
   }
 
   // Contas partilhadas dos estúdios (Fátima/Leiria): se o dono já

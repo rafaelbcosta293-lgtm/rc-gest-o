@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
-import { EMAIL_POR_ESTUDIO } from '@/lib/data/acessos'
+import { EMAIL_GERAL, EMAIL_POR_ESTUDIO } from '@/lib/data/acessos'
 import { resolverIdPorEmail } from './dados'
 import { definirPasswordEstudio, corrigirAcessoEstudio } from './actions'
 import SubmitButton from '@/components/SubmitButton'
@@ -56,6 +56,13 @@ export default async function ContasEstudiosPage({
   const estudios = filtrarPorEstudio(todosEstudios, estudioParam)
   const { ehAdmin } = papeisDaSessao(sessao)
 
+  // A conta da Coordenação é a mesma para os estúdios todos, por isso
+  // aparece sempre, com ou sem filtro de estúdio.
+  const idsTodosEstudios = todosEstudios.map((e) => e.id)
+  const coordenacao = await acessoAtual(supabase, EMAIL_GERAL)
+  const coordenacaoCompleta =
+    coordenacao.encontrada && idsTodosEstudios.every((id) => coordenacao.ligados.some((l) => l.id === id))
+
   const comAcesso = await Promise.all(
     estudios.map(async (estudio) => {
       const email = EMAIL_POR_ESTUDIO[estudio.slug]
@@ -78,17 +85,19 @@ export default async function ContasEstudiosPage({
         Contas
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Contas partilhadas dos estúdios (em cima) e instrutores e contas pessoais (em baixo).
+        Contas partilhadas do negócio (em cima) e instrutores e contas pessoais (em baixo).
       </p>
-      <h2 className="mt-6 text-xl font-bold tracking-tight text-foreground">Contas de login dos estúdios</h2>
+      <h2 className="mt-6 text-xl font-bold tracking-tight text-foreground">Contas partilhadas</h2>
       <p className="mt-1 text-sm text-muted">
-        Cada estúdio tem uma conta de email própria, partilhada pela equipa. Aqui vês a que estúdio cada conta está
-        ligada, e podes corrigir ou definir uma nova palavra-passe.
+        A Coordenação e cada estúdio têm uma conta de email própria, partilhada pela equipa. Quem define a palavra-passe
+        és tu, aqui — escreve uma nova e dá-a a quem precisa de entrar.
       </p>
 
       {sucesso && (
         <p className="mt-4 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
-          Palavra-passe atualizada.
+          {sucesso === 'criada'
+            ? 'Conta criada — já dá para entrar com esse email e a palavra-passe que escreveste.'
+            : 'Palavra-passe atualizada — já dá para entrar com ela.'}
         </p>
       )}
       {sucessoAcesso && (
@@ -108,6 +117,44 @@ export default async function ContasEstudiosPage({
       )}
 
       <div className="mt-6 flex flex-col gap-6">
+        <div className="rounded-xl border border-border-subtle bg-surface p-4">
+          <h2 className="font-semibold text-foreground">Coordenação</h2>
+          <p className="mt-0.5 font-mono text-xs text-zinc-500">{EMAIL_GERAL}</p>
+          <div className="mt-2">
+            {!coordenacao.encontrada ? (
+              <p className="text-xs text-red-700 dark:text-red-400">
+                Esta conta ainda não existe, por isso ninguém consegue entrar nem recuperar a palavra-passe com este email.
+                Escreve uma palavra-passe aqui em baixo para a criar.
+              </p>
+            ) : coordenacaoCompleta ? (
+              <p className="text-xs text-teal-700 dark:text-teal-400">
+                ✓ Vê a área de Coordenação e os estúdios todos ({coordenacao.ligados.map((l) => l.nome).join(' + ')}).
+              </p>
+            ) : (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                A conta existe mas não está ligada a todos os estúdios — guarda a palavra-passe outra vez para corrigir.
+              </p>
+            )}
+          </div>
+          <form action={definirPasswordEstudio} className="mt-4 flex flex-col gap-3">
+            <input type="hidden" name="email" value={EMAIL_GERAL} />
+            <PasswordInput id="password-coordenacao" name="password" label="Nova palavra-passe" autoComplete="new-password" minLength={6} />
+            <PasswordInput
+              id="confirmPassword-coordenacao"
+              name="confirmPassword"
+              label="Confirmar palavra-passe"
+              autoComplete="new-password"
+              minLength={6}
+            />
+            <SubmitButton
+              pendingText="A guardar…"
+              className="self-start rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+            >
+              {coordenacao.encontrada ? 'Guardar palavra-passe' : 'Criar conta da Coordenação'}
+            </SubmitButton>
+          </form>
+        </div>
+
         {comAcesso.map((item) => {
           if (!item) return null
           const { estudio, email, acesso } = item
@@ -125,7 +172,7 @@ export default async function ContasEstudiosPage({
               <div className="mt-2">
                 {!acesso.encontrada ? (
                   <p className="text-xs text-red-700 dark:text-red-400">
-                    Não encontrei nenhuma conta com este email.
+                    Esta conta ainda não existe. Escreve uma palavra-passe aqui em baixo para a criar.
                   </p>
                 ) : correto ? (
                   <p className="text-xs text-teal-700 dark:text-teal-400">

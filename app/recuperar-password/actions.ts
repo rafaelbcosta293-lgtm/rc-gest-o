@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
 export async function requestPasswordReset(formData: FormData) {
-  const email = formData.get('email') as string
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
 
   const supabase = await createClient()
   const origin = (await headers()).get('origin')

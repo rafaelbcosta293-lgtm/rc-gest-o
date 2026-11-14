@@ -11,8 +11,11 @@ import { loginBloqueadoPorDispositivo } from '@/lib/data/dispositivo'
 export async function login(formData: FormData) {
   const supabase = await createClient()
 
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
+  // O teclado do telemóvel (e o preenchimento automático) acrescenta
+  // muitas vezes um espaço no fim do email, ou põe a primeira letra em
+  // maiúscula — sem isto a conta "não existe" e o login falha.
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  const password = String(formData.get('password') ?? '')
 
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 

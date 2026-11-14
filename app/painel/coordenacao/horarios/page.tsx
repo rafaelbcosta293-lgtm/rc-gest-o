@@ -5,7 +5,7 @@ import { fmt } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
 import { guardarSemana, criarInstrutor, desbloquearCoordenacao } from '../actions'
 import { alternarAcesso } from '../../[estudio]/equipa/actions'
-import { corInstrutor, corEstudio } from '@/lib/data/constantes'
+import { coresInstrutores, corEstudio } from '@/lib/data/constantes'
 import { areaTemPassword, areaDesbloqueada } from '@/lib/data/gate'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
@@ -165,9 +165,8 @@ async function PainelHorariosEstudio({
   const idsComAcesso = new Set(listaPts.map((p) => p.id))
   // Uma cor por instrutor, pela ordem alfabética já devolvida por
   // getEquipaDoEstudio — usada na grelha e nos resumos ao lado dela.
-  const corPorPt: Record<string, CorPt> = Object.fromEntries(
-    listaPts.map((p, i) => [p.id, corInstrutor(i)])
-  )
+  const cores = coresInstrutores(listaPts.map((p) => p.nome))
+  const corPorPt: Record<string, CorPt> = Object.fromEntries(listaPts.map((p, i) => [p.id, cores[i]]))
 
   return (
     <>

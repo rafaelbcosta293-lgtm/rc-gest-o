@@ -149,22 +149,30 @@ export const OBJETIVOS_LEAD = [
   'Outro',
 ] as const
 
-// Uma cor por instrutor (por ordem alfabética, atribuída pela posição na
-// lista) — para se identificar quem trabalha quando só de olhar para a
-// grelha de horários, sem ter de ler cada nome.
-const PALETA_INSTRUTORES = [
-  PALETA.teal,
-  PALETA.roxo,
-  PALETA.azul,
-  PALETA.laranja,
-  PALETA.ambar,
-  PALETA.verde,
-  PALETA.vermelho,
-  PALETA.neutro,
-] as const
+// Uma cor por instrutor na grelha de horários, para se ver quem trabalha
+// só de olhar. As cores de quem já as tem definidas são fixas (pelo
+// primeiro nome); os restantes recebem, pela ordem da lista, as cores
+// que sobram — nunca uma das fixas.
+const CASTANHO_CLARO = { bg: '#F2E8DA', tx: '#9A7A52' } as const
+const CORES_FIXAS_INSTRUTOR: Record<string, { bg: string; tx: string }> = {
+  carolina: PALETA.laranja,
+  miguel: PALETA.azul,
+  rafael: CASTANHO_CLARO,
+}
+const PALETA_INSTRUTORES = [PALETA.teal, PALETA.roxo, PALETA.verde, PALETA.vermelho, PALETA.ambar, PALETA.neutro] as const
 
-export function corInstrutor(indice: number) {
-  return PALETA_INSTRUTORES[indice % PALETA_INSTRUTORES.length]
+const primeiroNome = (nome: string) =>
+  nome
+    .trim()
+    .split(/\s+/)[0]
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+// Cores de uma lista de instrutores, pela mesma ordem.
+export function coresInstrutores(nomes: string[]): { bg: string; tx: string }[] {
+  let livre = 0
+  return nomes.map((nome) => CORES_FIXAS_INSTRUTOR[primeiroNome(nome)] ?? PALETA_INSTRUTORES[livre++ % PALETA_INSTRUTORES.length])
 }
 
 export const BLOCOS = ['Aquecimento', 'Principal', 'Acessório', 'Final'] as const

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
-import { corInstrutor } from '@/lib/data/constantes'
+import { coresInstrutores } from '@/lib/data/constantes'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 
 export default async function HorariosPage({
@@ -45,11 +45,10 @@ export default async function HorariosPage({
     throw new Error(erroTurnos.message)
   }
 
-  // Mesma cor por instrutor que aparece em Coordenação (mesma ordem
-  // alfabética de getEquipaDoEstudio), para se reconhecer quem é quem.
-  const corPorPt: Record<string, CorPt> = Object.fromEntries(
-    listaPts.map((p, i) => [p.id, corInstrutor(i)])
-  )
+  // Mesma cor por instrutor que aparece em Coordenação (ver
+  // coresInstrutores), para se reconhecer quem é quem.
+  const cores = coresInstrutores(listaPts.map((p) => p.nome))
+  const corPorPt: Record<string, CorPt> = Object.fromEntries(listaPts.map((p, i) => [p.id, cores[i]]))
 
   // Objeto simples (não Map) porque isto atravessa a fronteira
   // servidor → cliente como propriedade de GrelhaHorarios.

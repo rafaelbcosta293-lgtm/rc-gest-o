@@ -106,10 +106,11 @@ export async function carregarDespesas(supabase: SupabaseClient, idsEstudios: Se
     { emParalelo: 2 }
   )
   if (error) throw new Error(error.message)
-  // As ocorrências futuras das recorrentes (ainda por pagar) são só
-  // previsão para o balanço das Despesas — ainda não são gasto.
+  // Tudo o que tem data futura (ocorrências das recorrentes, valores já
+  // lançados na tabela do ano para os próximos meses) é previsão para o
+  // balanço das Despesas — ainda não é gasto.
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
   return data
-    .filter((d) => idsEstudios.has(d.estudio_id) && (d.pago || d.data <= hoje))
+    .filter((d) => idsEstudios.has(d.estudio_id) && d.data <= hoje)
     .map((d) => ({ estudio_id: d.estudio_id, data: d.data, categoria: d.categoria, subcategoria: d.subcategoria, valor: Number(d.valor) }))
 }

@@ -39,6 +39,7 @@ export function EtiquetaEstado({ estado }: { estado: EstadoDespesa }) {
 
 const SEPARADORES = [
   { href: ROTA_DESPESAS, label: 'Despesas do mês' },
+  { href: `${ROTA_DESPESAS}/anual`, label: 'Vista anual (tabela)' },
   { href: `${ROTA_DESPESAS}/recorrentes`, label: 'Recorrentes e avisos' },
   { href: `${ROTA_DESPESAS}/categorias`, label: 'Categorias' },
 ]
@@ -68,6 +69,7 @@ export function Mensagens({ error, ok }: { error?: string; ok?: string }) {
     paga: 'Despesa marcada como paga.',
     'por-pagar': 'Despesa voltou a ficar por pagar.',
     anulada: 'Despesa anulada.',
+    grelha: 'Tabela guardada.',
     'recorrente-criada': 'Despesa recorrente criada — as próximas ocorrências já estão no balanço.',
     'recorrente-editada': 'Despesa recorrente atualizada.',
     'recorrente-ativa': 'Despesa recorrente reativada.',

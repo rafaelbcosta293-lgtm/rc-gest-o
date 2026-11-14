@@ -111,6 +111,87 @@ export async function anularDespesa(formData: FormData) {
   voltar(formData, { ok: 'anulada' })
 }
 
+// ── Vista anual (tabela) ─────────────────────────────────────────────
+
+// Grava as células alteradas na tabela do ano. Cada célula é o total de
+// uma subcategoria num mês:
+//  • sem lançamentos → cria um (no dia 1 desse mês);
+//  • com um lançamento → muda-lhe o valor (ou anula-o, se ficar a zero);
+//  • com vários → acerta a diferença no mais recente; se não chegar,
+//    junta-os num só com o novo total.
+export async function guardarGrelhaDespesas(formData: FormData) {
+  const supabase = await clienteAdmin()
+  const estudioId = numero(formData, 'estudio_id')
+  const ano = numero(formData, 'ano')
+  let alteracoes: { categoria: string; subcategoria: string | null; mes: number; valor: number }[] = []
+  try {
+    alteracoes = JSON.parse(String(formData.get('alteracoes') ?? '[]'))
+  } catch {
+    alteracoes = []
+  }
+  alteracoes = alteracoes.filter(
+    (a) =>
+      a && typeof a.categoria === 'string' && a.categoria && Number.isInteger(a.mes) && a.mes >= 1 && a.mes <= 12 &&
+      typeof a.valor === 'number' && Number.isFinite(a.valor) && a.valor >= 0
+  )
+  if (!estudioId || !ano || alteracoes.length === 0) voltar(formData)
+
+  const { data: existentes, error: erroLer } = await supabase
+    .from('despesas')
+    .select('id, data, categoria, subcategoria, valor, criado_em')
+    .eq('estudio_id', estudioId)
+    .is('anulado_em', null)
+    .gte('data', `${ano}-01-01`)
+    .lte('data', `${ano}-12-31`)
+    .order('data')
+    .order('criado_em')
+    .limit(5000)
+  if (erroLer) voltar(formData, { error: erroLer.message })
+
+  const anular = { anulado_em: new Date().toISOString(), motivo_anulacao: 'Alterado na vista anual' }
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  for (const a of alteracoes) {
+    const mes = `${ano}-${String(a.mes).padStart(2, '0')}`
+    const sub = a.subcategoria?.trim() || null
+    const linhas = (existentes ?? []).filter(
+      (d) => d.categoria === a.categoria && (d.subcategoria ?? null) === sub && d.data.startsWith(mes)
+    )
+    const atual = r2(linhas.reduce((s, d) => s + Number(d.valor), 0))
+    const novo = r2(a.valor)
+    if (novo === atual) continue
+    const ids = linhas.map((d) => d.id)
+    let erro: string | null = null
+    if (novo === 0) {
+      erro = (await supabase.from('despesas').update(anular).in('id', ids)).error?.message ?? null
+    } else if (linhas.length === 0) {
+      erro =
+        (
+          await supabase.from('despesas').insert({
+            estudio_id: estudioId,
+            categoria: a.categoria,
+            subcategoria: sub,
+            valor: novo,
+            data: `${mes}-01`,
+            origem: 'app',
+            pago: true,
+          })
+        ).error?.message ?? null
+    } else {
+      const ultima = linhas[linhas.length - 1]
+      const valorUltima = r2(Number(ultima.valor) + (novo - atual))
+      if (valorUltima > 0) {
+        erro = (await supabase.from('despesas').update({ valor: valorUltima }).eq('id', ultima.id)).error?.message ?? null
+      } else {
+        const outras = ids.filter((id) => id !== ultima.id)
+        erro = (await supabase.from('despesas').update(anular).in('id', outras)).error?.message ?? null
+        if (!erro) erro = (await supabase.from('despesas').update({ valor: novo }).eq('id', ultima.id)).error?.message ?? null
+      }
+    }
+    if (erro) voltar(formData, { error: `${a.subcategoria ?? a.categoria} (${mes}): ${erro}` })
+  }
+  voltar(formData, { ok: 'grelha' })
+}
+
 // ── Recorrentes ──────────────────────────────────────────────────────
 
 export async function guardarRecorrente(formData: FormData) {

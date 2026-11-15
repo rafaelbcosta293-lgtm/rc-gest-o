@@ -222,3 +222,60 @@ export function intervaloDias(dias: string[]): string {
   const ultimo = ordenados[ordenados.length - 1]
   return primeiro === ultimo ? fmt(primeiro) : `${fmt(primeiro)} a ${fmt(ultimo)}`
 }
+
+// Dias de férias de uma pessoa: os dos pedidos aprovados no mapa de
+// férias mais os que ela própria marcou ao preencher o Registo de Horas
+// (linhas com "ferias"). Sem repetidos e por ordem.
+export function juntarDiasFerias(
+  pedidos: { dias: unknown }[] | null | undefined,
+  registos: { data: string; ferias?: boolean | null }[] | null | undefined
+): string[] {
+  const dias = new Set<string>()
+  for (const p of pedidos ?? []) for (const d of (p.dias as string[] | null) ?? []) dias.add(d)
+  for (const r of registos ?? []) if (r.ferias) dias.add(r.data)
+  return [...dias].sort()
+}
+
+const MESES_PT = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+
+export function nomeDoMes(mes: number): string {
+  return MESES_PT[mes - 1] ?? ''
+}
+
+// "03, 04 e 07" — os dias de um mês, para listar as férias numa frase.
+export function listarDiasDoMes(dias: string[]): string {
+  const numeros = [...dias].sort().map((d) => d.slice(8, 10))
+  if (numeros.length <= 1) return numeros.join('')
+  return `${numeros.slice(0, -1).join(', ')} e ${numeros[numeros.length - 1]}`
+}
+
+export type LinhaParaContabilista = {
+  nome: string
+  estado: 'Rascunho' | 'Submetido' | 'Aprovado'
+  resumo: Pick<ResumoMes, 'horasRealizadas' | 'horasEsperadas' | 'horasExtra' | 'saldo' | 'diasTrabalhados' | 'diasFerias'>
+}
+
+// Texto simples com as horas de cada um no mês — para colar num email ao
+// contabilista (processamento dos recibos de vencimento).
+// "ateDia": com o mês ainda a decorrer, indica até que dia vão as contas
+// (e nesse caso não se fala em horas em falta — ainda há dias por fazer).
+export function textoParaContabilista(linhas: LinhaParaContabilista[], ano: number, mes: number, ateDia?: string): string {
+  const titulo =
+    `Horas da equipa — ${nomeDoMes(mes)} de ${ano}` +
+    (ateDia ? ` (mês ainda a decorrer: registos até ${ateDia.slice(8, 10)}/${ateDia.slice(5, 7)})` : '')
+  const corpo = linhas.map((l) => {
+    const r = l.resumo
+    const ferias = r.diasFerias.length
+      ? `${r.diasFerias.length} dia${r.diasFerias.length === 1 ? '' : 's'} (${listarDiasDoMes(r.diasFerias)})`
+      : 'nenhum'
+    const partes = [
+      `${l.nome}${l.estado === 'Rascunho' ? ' (ainda não submeteu o mês)' : ''}`,
+      `  Horas realizadas: ${formatarHoras(r.horasRealizadas)} (de ${formatarHoras(r.horasEsperadas)} do mês)`,
+      `  Horas extra: ${formatarHoras(r.horasExtra)}`,
+    ]
+    if (r.saldo < 0 && !ateDia) partes.push(`  Horas em falta: ${formatarHoras(-r.saldo)}`)
+    partes.push(`  Dias trabalhados: ${r.diasTrabalhados}`, `  Dias de férias: ${ferias}`)
+    return partes.join('\n')
+  })
+  return [titulo, ...corpo].join('\n\n')
+}

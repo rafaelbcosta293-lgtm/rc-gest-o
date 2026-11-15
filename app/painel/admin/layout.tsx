@@ -13,6 +13,7 @@ import AlertaDespesas from '@/components/AlertaDespesas'
 import { hojeEmLisboa, listarAvisosDespesas } from '@/lib/data/despesas'
 import AvisosHorario from '@/components/AvisosHorario'
 import { contarLembretesPorTratar } from '@/lib/data/lembretes'
+import { contarFechosPorAprovar } from '@/lib/data/horasEquipa'
 import AdminNav from './AdminNav'
 
 // Administração é só para o dono da app — verificado por email antes de
@@ -21,7 +22,7 @@ import AdminNav from './AdminNav'
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const hoje = hojeEmLisboa()
-  const [sessao, estadosBanner, contactosAgendados, avisosDespesas, { count: pendentesFaturas }, lembretesPorTratar] = await Promise.all([
+  const [sessao, estadosBanner, contactosAgendados, avisosDespesas, { count: pendentesFaturas }, lembretesPorTratar, horasPorAprovar] = await Promise.all([
     getSessaoAtual(),
     obterEstadosBanner(supabase),
     listarContactosAgendados(supabase),
@@ -31,6 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       .select('id', { count: 'exact', head: true })
       .in('estado', ['pendente', 'erro', 'a_emitir']),
     contarLembretesPorTratar(supabase, hoje),
+    contarFechosPorAprovar(supabase),
   ])
 
   if (!podeAcederAdmin(sessao.email)) {
@@ -59,7 +61,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-9 w-auto" priority />
           </Link>
-          <AdminNav pendentesFaturas={pendentesFaturas ?? 0} despesasAPagar={avisosDespesas.length} lembretesPorTratar={lembretesPorTratar} />
+          <AdminNav pendentesFaturas={pendentesFaturas ?? 0} despesasAPagar={avisosDespesas.length} lembretesPorTratar={lembretesPorTratar} horasPorAprovar={horasPorAprovar} />
         </header>
       </div>
       <div className="flex-1">{children}</div>

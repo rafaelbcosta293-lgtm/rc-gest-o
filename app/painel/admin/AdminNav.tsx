@@ -8,6 +8,7 @@ import {
   Home,
   CalendarRange,
   CalendarDays,
+  Clock,
   Activity,
   FileText,
   Wallet,
@@ -49,6 +50,7 @@ const GRUPOS: Grupo[] = [
       { href: '/painel/admin/este-mes', label: 'Este mês', icone: CalendarRange, filtravel: true },
       { href: '/painel/admin/agora', label: 'Agora', icone: Activity, filtravel: true },
       { href: '/painel/admin/relatorio', label: 'Relatório', icone: FileText, filtravel: true },
+      { href: '/painel/admin/horas', label: 'Horas da equipa', icone: Clock, filtravel: false },
     ],
   },
   {
@@ -220,18 +222,22 @@ function GrupoPill({ grupo, avisos }: { grupo: Grupo; avisos: Record<string, num
 // despesas por pagar com aviso ativo. Aparecem como número no grupo
 // ("Finanças (5)") e, lá dentro, na pasta a que dizem respeito.
 // lembretesPorTratar: lembretes do calendário em atraso ou para hoje.
+// horasPorAprovar: meses de horas submetidos pelos instrutores, à espera.
 export default function AdminNav({
   pendentesFaturas = 0,
   despesasAPagar = 0,
   lembretesPorTratar = 0,
+  horasPorAprovar = 0,
 }: {
   pendentesFaturas?: number
   despesasAPagar?: number
   lembretesPorTratar?: number
+  horasPorAprovar?: number
 }) {
   const avisos: Record<string, number> = {
     '/painel/admin/faturas': pendentesFaturas,
     '/painel/admin/despesas': despesasAPagar,
+    '/painel/admin/horas': horasPorAprovar,
   }
 
   return (

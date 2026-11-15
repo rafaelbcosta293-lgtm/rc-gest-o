@@ -14,6 +14,8 @@ import {
   feriadoNoEstudio,
   formatarHoras,
   hojeLisboa,
+  juntarDiasFerias,
+  listarDiasDoMes,
 } from '@/lib/data/assiduidade'
 import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
@@ -32,6 +34,7 @@ type Registo = {
   entrada_2: string | null
   saida_2: string | null
   horas: number
+  ferias: boolean
   nota: string | null
 }
 type Fecho = {
@@ -39,6 +42,8 @@ type Fecho = {
   estado: 'Rascunho' | 'Submetido' | 'Aprovado'
   horas_realizadas: number
   horas_esperadas: number
+  horas_extra: number
+  dias_ferias: number
   saldo: number
   submetido_em: string | null
   aprovado_em: string | null
@@ -52,8 +57,9 @@ const inputCls =
 
 const MENSAGENS: Record<string, string> = {
   registado: 'Horas registadas.',
+  ferias: 'Dia registado como férias.',
   apagado: 'Registo apagado.',
-  submetido: 'Mês submetido. Fica fechado até a administração o aprovar ou reabrir.',
+  submetido: 'Horas do mês submetidas à administração. O mês fica fechado até ela o aprovar ou reabrir.',
   aprovado: 'Mês aprovado.',
   reaberto: 'Mês reaberto para correções.',
   contrato: 'Contrato atualizado.',
@@ -102,6 +108,10 @@ export default async function RegistoHorasPage({
   // pedido na mesma volta à base de dados que o resto da página.
   const idsEquipa = modo === 'gestao' ? equipa.map((m) => m.id) : []
   const verEquipa = idsEquipa.length > 0
+  const mesAnteriorISO = somarMes(-1)
+  const [anoAnterior, mesAnterior] = mesAnteriorISO.split('-').map(Number)
+  const diasAnterior = diasDoMesISO(anoAnterior, mesAnterior)
+  const verMesAnterior = !!pessoaId && mesISO === hoje.slice(0, 7)
   const [
     config,
     { data: registosData, error: erroRegistos },
@@ -111,12 +121,14 @@ export default async function RegistoHorasPage({
     { data: todosRegistos },
     { data: todasFerias },
     { data: todosFechos },
+    { data: fechoAnterior },
+    { count: registosMesAnterior },
   ] = await Promise.all([
     pessoaId ? configPara(acesso, pessoaId) : Promise.resolve(null),
     pessoaId
       ? db
           .from('registos_horario')
-          .select('data, entrada_1, saida_1, entrada_2, saida_2, horas, nota')
+          .select('data, entrada_1, saida_1, entrada_2, saida_2, horas, ferias, nota')
           .eq('perfil_id', pessoaId)
           .gte('data', dias[0])
           .lte('data', dias[dias.length - 1])
@@ -129,7 +141,7 @@ export default async function RegistoHorasPage({
       : Promise.resolve({ data: null }),
     getEstudios(db),
     verEquipa
-      ? db.from('registos_horario').select('perfil_id, data, horas').in('perfil_id', idsEquipa).gte('data', dias[0]).lte('data', dias[dias.length - 1])
+      ? db.from('registos_horario').select('perfil_id, data, horas, ferias').in('perfil_id', idsEquipa).gte('data', dias[0]).lte('data', dias[dias.length - 1])
       : Promise.resolve({ data: [] }),
     verEquipa
       ? db.from('pedidos_ferias').select('perfil_id, dias').in('perfil_id', idsEquipa).eq('estado', 'Aprovado').eq('ano', ano)
@@ -137,12 +149,29 @@ export default async function RegistoHorasPage({
     verEquipa
       ? db.from('fechos_horario').select('*').in('perfil_id', idsEquipa).eq('ano', ano).eq('mes', mes)
       : Promise.resolve({ data: [] }),
+    // No mês corrente: o mês anterior ficou por submeter? (Nos primeiros
+    // dias do mês ainda se acabam de preencher as horas do anterior.)
+    verMesAnterior
+      ? db.from('fechos_horario').select('estado').eq('perfil_id', pessoaId).eq('ano', anoAnterior).eq('mes', mesAnterior).maybeSingle()
+      : Promise.resolve({ data: null }),
+    verMesAnterior
+      ? db
+          .from('registos_horario')
+          .select('id', { count: 'exact', head: true })
+          .eq('perfil_id', pessoaId)
+          .gte('data', diasAnterior[0])
+          .lte('data', diasAnterior[diasAnterior.length - 1])
+      : Promise.resolve({ count: 0 }),
   ])
+  const mesAnteriorPorSubmeter =
+    verMesAnterior && (registosMesAnterior ?? 0) > 0 && (!fechoAnterior || fechoAnterior.estado === 'Rascunho')
   if (erroRegistos) throw new Error(erroRegistos.message)
 
   const registos = ((registosData ?? []) as Registo[]).map((r) => ({ ...r, horas: Number(r.horas) }))
   const porDia = new Map(registos.map((r) => [r.data, r]))
-  const diasFerias = (feriasData ?? []).flatMap((f) => f.dias as string[])
+  // Férias: as aprovadas no mapa de férias mais as que a própria pessoa
+  // marcou aqui, ao preencher as horas.
+  const diasFerias = juntarDiasFerias(feriasData, registos)
   const feriasSet = new Set(diasFerias)
   const fecho = (fechoData as Fecho | null) ?? null
   const fechado = !!fecho && fecho.estado !== 'Rascunho'
@@ -154,9 +183,12 @@ export default async function RegistoHorasPage({
 
   // Dia em edição no formulário: o pedido no link, senão hoje (se for
   // deste mês), senão o último dia do mês.
-  const diaForm = sp.dia && dias.includes(sp.dia) && sp.dia <= hoje ? sp.dia : dias.includes(hoje) ? hoje : dias[dias.length - 1]
+  // (Um dia que ainda não chegou também se pode escolher — para o marcar
+  // como férias com antecedência.)
+  const diaForm = sp.dia && dias.includes(sp.dia) ? sp.dia : dias.includes(hoje) ? hoje : dias[dias.length - 1]
   const regForm = porDia.get(diaForm)
   const mesFuturo = dias[0] > hoje
+  const mesEmCurso = hoje <= dias[dias.length - 1]
 
   // Gestão: resumo da equipa no mês.
   let linhasEquipa: { id: string; nome: string; realizadas: number; esperadas: number; saldo: number; semRegisto: number; fecho: Fecho | null }[] = []
@@ -168,7 +200,10 @@ export default async function RegistoHorasPage({
         slug: (estudiosData ?? []).find((e) => e.id === m.config.estudio_id)?.slug ?? slug,
         horasDiarias: m.config.horas_diarias,
         registos: (todosRegistos ?? []).filter((x) => x.perfil_id === m.id).map((x) => ({ data: x.data, horas: Number(x.horas) })),
-        diasFerias: (todasFerias ?? []).filter((x) => x.perfil_id === m.id).flatMap((x) => x.dias as string[]),
+        diasFerias: juntarDiasFerias(
+          (todasFerias ?? []).filter((x) => x.perfil_id === m.id),
+          (todosRegistos ?? []).filter((x) => x.perfil_id === m.id)
+        ),
         ateDia: hoje,
       })
       return {
@@ -245,16 +280,48 @@ export default async function RegistoHorasPage({
 
       {pessoaId && config && resumo && (
         <>
-          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+          {mesAnteriorPorSubmeter && (
+            <p className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <span>
+                As horas de <strong>{MESES[mesAnterior - 1].toLowerCase()}</strong> ainda não foram submetidas à administração. Confirma os dias e
+                submete o mês.
+              </span>
+              <Link
+                href={link({ mes: mesAnteriorISO, dia: undefined })}
+                className="rounded-full bg-amber-900 px-4 py-1.5 text-sm font-bold text-amber-50 hover:bg-amber-800"
+              >
+                Abrir {MESES[mesAnterior - 1].toLowerCase()}
+              </Link>
+            </p>
+          )}
+
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <Numero label="Horas feitas" valor={formatarHoras(resumo.horasRealizadas)} />
             <Numero label="Horas do mês" valor={formatarHoras(resumo.horasEsperadas)} nota={`${resumo.diasUteis - resumo.diasFerias.length} dias × ${formatarHoras(config.horas_diarias)}`} />
+            {resumo.saldo >= 0 ? (
+              <Numero
+                label="Horas extra"
+                valor={formatarHoras(resumo.horasExtra)}
+                cor={resumo.horasExtra > 0 ? 'text-emerald-700' : undefined}
+                nota={resumo.horasExtra > 0 ? 'acima das horas do mês' : 'sem horas a mais'}
+              />
+            ) : (
+              // Com o mês ainda a decorrer, o que falta são horas por fazer —
+              // só é "em falta" (a vermelho) quando o mês já acabou.
+              <Numero
+                label={mesEmCurso ? 'Horas por fazer' : 'Horas em falta'}
+                valor={formatarHoras(-resumo.saldo)}
+                cor={mesEmCurso ? undefined : 'text-red-700'}
+                nota={mesEmCurso ? 'até ao fim do mês' : 'abaixo das horas do mês'}
+              />
+            )}
             <Numero
-              label="Saldo"
-              valor={formatarHoras(resumo.saldo, true)}
-              cor={resumo.saldo > 0 ? 'text-emerald-700' : resumo.saldo < 0 ? 'text-red-700' : undefined}
-              nota={resumo.saldo > 0 ? 'horas extra' : resumo.saldo < 0 ? 'em falta até ao fim do mês' : undefined}
+              label="Dias de férias"
+              valor={String(resumo.diasFerias.length)}
+              cor={resumo.diasFerias.length ? 'text-emerald-700' : undefined}
+              nota={resumo.diasFerias.length ? `dia${resumo.diasFerias.length === 1 ? '' : 's'} ${listarDiasDoMes(resumo.diasFerias)}` : 'nenhum este mês'}
             />
-            <Numero label="Dias trabalhados" valor={`${resumo.diasTrabalhados} de ${resumo.diasUteis}`} nota={resumo.diasFerias.length ? `${resumo.diasFerias.length} de férias` : undefined} />
+            <Numero label="Dias trabalhados" valor={`${resumo.diasTrabalhados} de ${resumo.diasUteis - resumo.diasFerias.length}`} />
             <Numero
               label="Dias sem registo"
               valor={String(resumo.diasSemRegisto.length)}
@@ -266,10 +333,15 @@ export default async function RegistoHorasPage({
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[340px_1fr]">
             <div className="flex flex-col gap-4">
               {/* Registar um dia */}
-              <form key={`${pessoaId}-${diaForm}`} action={guardarRegistoHoras} className="rounded-xl border border-border-subtle bg-surface p-4">
+              <form
+                id="registar"
+                key={`${pessoaId}-${diaForm}`}
+                action={guardarRegistoHoras}
+                className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4"
+              >
                 {ocultos}
                 <h2 className="text-sm font-bold text-foreground">
-                  {regForm ? 'Corrigir registo' : 'Registar horas'}
+                  {regForm ? 'Corrigir registo' : 'Registar o dia'}
                   {pessoa ? ` · ${pessoa.nome}` : ''}
                 </h2>
                 {bloqueado || mesFuturo ? (
@@ -281,8 +353,13 @@ export default async function RegistoHorasPage({
                   <>
                     <label className="mt-3 flex flex-col gap-1 text-xs font-medium text-muted">
                       Dia
-                      <input type="date" name="data" required defaultValue={diaForm} min={dias[0]} max={hoje < dias[dias.length - 1] ? hoje : dias[dias.length - 1]} className={inputCls} />
+                      <input type="date" name="data" required defaultValue={diaForm} min={dias[0]} max={dias[dias.length - 1]} className={inputCls} />
                     </label>
+                    {regForm?.ferias && (
+                      <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                        Este dia está registado como férias. Para o trocar por horas, preenche a entrada e a saída e carrega em “Guardar horas”.
+                      </p>
+                    )}
                     <div className="mt-3 grid grid-cols-2 gap-3">
                       <label className="flex flex-col gap-1 text-xs font-medium text-muted">
                         Entrada
@@ -307,8 +384,24 @@ export default async function RegistoHorasPage({
                     </label>
                     <p className="mt-2 text-xs text-muted">Usa a 2.ª entrada/saída quando o dia tem dois turnos (manhã e tarde).</p>
                     <SubmitButton pendingText="A guardar…" className="mt-3 w-full rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black hover:bg-brand-strong">
-                      {regForm ? 'Guardar alterações' : 'Registar'}
+                      {regForm && !regForm.ferias ? 'Guardar alterações' : regForm ? 'Guardar horas' : 'Registar horas'}
                     </SubmitButton>
+                    {/* formNoValidate: num dia de férias não há entrada nem saída
+                        para preencher (são campos obrigatórios para as horas). */}
+                    {!regForm?.ferias && (
+                      <button
+                        type="submit"
+                        name="ferias"
+                        value="1"
+                        formNoValidate
+                        className="mt-2 w-full rounded-full border border-emerald-600 px-5 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-50"
+                      >
+                        Dia de férias
+                      </button>
+                    )}
+                    <p className="mt-2 text-xs text-muted">
+                      “Dia de férias” regista o dia escolhido como férias (sem horas): desconta às horas do mês e segue no resumo para a administração.
+                    </p>
                   </>
                 )}
               </form>
@@ -316,32 +409,42 @@ export default async function RegistoHorasPage({
               {/* Fecho do mês */}
               <div className="rounded-xl border border-border-subtle bg-surface p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-bold text-foreground">Fecho de {MESES[mes - 1].toLowerCase()}</h2>
+                  <h2 className="text-sm font-bold text-foreground">Submeter {MESES[mes - 1].toLowerCase()}</h2>
                   <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${COR_FECHO[fecho?.estado ?? 'Rascunho']}`}>
-                    {fecho?.estado === 'Submetido' ? 'Aguarda aprovação' : fecho?.estado === 'Aprovado' ? 'Aprovado' : 'Em aberto'}
+                    {fecho?.estado === 'Submetido' ? 'Aguarda aprovação' : fecho?.estado === 'Aprovado' ? 'Aprovado' : 'Por submeter'}
                   </span>
                 </div>
                 {fechado && fecho ? (
                   <p className="mt-2 text-sm text-muted">
-                    Submetido com {formatarHoras(Number(fecho.horas_realizadas))} feitas de {formatarHoras(Number(fecho.horas_esperadas))} (saldo{' '}
-                    {formatarHoras(Number(fecho.saldo), true)}).
+                    Comunicado à administração
+                    {fecho.submetido_em ? ` a ${dataCurta(hojeLisboa(new Date(fecho.submetido_em)))}` : ''}:{' '}
+                    <strong className="text-foreground">{formatarHoras(Number(fecho.horas_realizadas))}</strong> feitas de{' '}
+                    {formatarHoras(Number(fecho.horas_esperadas))}, <strong className="text-foreground">{formatarHoras(Number(fecho.horas_extra))}</strong> extra
+                    e <strong className="text-foreground">{fecho.dias_ferias}</strong> dia{fecho.dias_ferias === 1 ? '' : 's'} de férias.
                   </p>
                 ) : (
                   <p className="mt-2 text-sm text-muted">
                     {fechoDisponivel(hoje, ano, mes)
-                      ? 'Confirma que os dias estão todos registados e submete o mês. Depois de submetido, só a administração o pode reabrir.'
-                      : 'O fecho abre a partir do dia 25. Até lá, vai registando os dias.'}
+                      ? 'Quando os dias estiverem todos registados, submete as horas do mês: seguem para a administração, para o processamento do vencimento. Depois de submetido, só a administração o pode reabrir.'
+                      : 'O botão de submeter aparece a partir do dia 25. Se no fim do mês ainda faltarem dias, podes acabar de os registar e submeter nos primeiros dias do mês seguinte.'}
+                  </p>
+                )}
+                {!fechado && fechoDisponivel(hoje, ano, mes) && resumo.diasSemRegisto.length > 0 && (
+                  <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                    Ainda há {resumo.diasSemRegisto.length} dia{resumo.diasSemRegisto.length === 1 ? '' : 's'} sem registo (
+                    {resumo.diasSemRegisto.slice(0, 6).map(dataCurta).join(', ')}
+                    {resumo.diasSemRegisto.length > 6 ? '…' : ''}). Regista as horas ou marca-os como férias antes de submeter.
                   </p>
                 )}
                 {!fechado && fechoDisponivel(hoje, ano, mes) && (
                   <ConfirmarAcao
                     action={submeterFechoHoras}
-                    confirmacao={`Submeter ${MESES[mes - 1].toLowerCase()} com ${formatarHoras(resumo.horasRealizadas)} feitas (saldo ${formatarHoras(resumo.saldo, true)})? Depois só a administração pode reabrir.`}
+                    confirmacao={`Submeter ${MESES[mes - 1].toLowerCase()} à administração com ${formatarHoras(resumo.horasRealizadas)} feitas, ${formatarHoras(resumo.horasExtra)} extra e ${resumo.diasFerias.length} dia${resumo.diasFerias.length === 1 ? '' : 's'} de férias${resumo.diasSemRegisto.length ? ` (atenção: ${resumo.diasSemRegisto.length} dia${resumo.diasSemRegisto.length === 1 ? '' : 's'} sem registo)` : ''}? Depois só a administração pode reabrir.`}
                     className="mt-3"
                   >
                     {ocultos}
-                    <button type="submit" className="w-full rounded-full border border-border-strong px-5 py-2 text-sm font-bold text-foreground hover:bg-brand/[.08]">
-                      Submeter o mês
+                    <button type="submit" className="w-full rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-background hover:opacity-90">
+                      Submeter as horas do mês
                     </button>
                   </ConfirmarAcao>
                 )}
@@ -418,9 +521,11 @@ export default async function RegistoHorasPage({
                 </thead>
                 <tbody>
                   {dias.map((d) => {
-                    const r = porDia.get(d)
                     const util = ehDiaUtil(d, slugContrato)
                     const feriado = feriadoNoEstudio(d, slugContrato)
+                    const registo = porDia.get(d)
+                    // Uma linha de férias não tem turnos: mostra-se como férias.
+                    const r = registo && !registo.ferias ? registo : undefined
                     const ferias = feriasSet.has(d) && util
                     const futuro = d > hoje
                     const emFalta = util && !r && !ferias && !futuro
@@ -432,7 +537,15 @@ export default async function RegistoHorasPage({
                         }`}
                       >
                         <td className="px-3 py-1.5 whitespace-nowrap">
-                          <span className="font-mono text-xs">{dataCurta(d)}</span>{' '}
+                          {/* No telemóvel a coluna das ações fica fora do ecrã:
+                              tocar no dia leva ao formulário desse dia. */}
+                          {!bloqueado && (!futuro || util) ? (
+                            <Link href={`${link({ dia: d })}#registar`} className="font-mono text-xs underline decoration-border-strong underline-offset-2">
+                              {dataCurta(d)}
+                            </Link>
+                          ) : (
+                            <span className="font-mono text-xs">{dataCurta(d)}</span>
+                          )}{' '}
                           <span className="text-xs text-muted">{DIAS[diaDaSemana(d)]}</span>
                           {d === hoje && <span className="ml-1.5 rounded-full bg-brand px-1.5 py-px text-[10px] font-bold text-black">hoje</span>}
                         </td>
@@ -463,17 +576,21 @@ export default async function RegistoHorasPage({
                           {r?.nota && <span className="block font-sans font-normal text-muted">{r.nota}</span>}
                         </td>
                         <td className="px-3 py-1.5 text-right whitespace-nowrap">
-                          {!futuro && !bloqueado && (
+                          {!bloqueado && (!futuro || util) && (
                             <span className="inline-flex items-center gap-2">
-                              <Link href={link({ dia: d })} className="text-xs font-semibold text-foreground underline">
-                                {r ? 'Corrigir' : 'Registar'}
+                              <Link href={`${link({ dia: d })}#registar`} className="text-xs font-semibold text-foreground underline">
+                                {r ? 'Corrigir' : registo?.ferias ? 'Trocar' : futuro ? 'Férias' : 'Registar'}
                               </Link>
-                              {r && (
-                                <ConfirmarAcao action={apagarRegistoHoras} confirmacao={`Apagar o registo de ${dataCurta(d)}?`} className="inline">
+                              {registo && (
+                                <ConfirmarAcao
+                                  action={apagarRegistoHoras}
+                                  confirmacao={registo.ferias ? `Tirar as férias de ${dataCurta(d)}?` : `Apagar o registo de ${dataCurta(d)}?`}
+                                  className="inline"
+                                >
                                   {ocultos}
                                   <input type="hidden" name="data" value={d} />
                                   <button type="submit" className="text-xs font-semibold text-red-700 underline">
-                                    Apagar
+                                    {registo.ferias ? 'Tirar férias' : 'Apagar'}
                                   </button>
                                 </ConfirmarAcao>
                               )}

@@ -142,3 +142,77 @@ describe('utilitários', () => {
     expect(intervaloDias(['2027-08-10'])).toBe('10/08')
   })
 })
+
+describe('férias marcadas no registo de horas', () => {
+  it('junta os pedidos aprovados com os dias marcados no registo, sem repetir', async () => {
+    const { juntarDiasFerias } = await import('./assiduidade')
+    expect(
+      juntarDiasFerias(
+        [{ dias: ['2026-11-05', '2026-11-04'] }, { dias: ['2026-11-05'] }],
+        [
+          { data: '2026-11-06', ferias: true },
+          { data: '2026-11-04', ferias: true },
+          { data: '2026-11-09', ferias: false },
+        ]
+      )
+    ).toEqual(['2026-11-04', '2026-11-05', '2026-11-06'])
+    expect(juntarDiasFerias(null, null)).toEqual([])
+  })
+
+  it('um dia de férias desconta à meta do mês e não conta como dia sem registo', async () => {
+    const { calcularResumoMes, juntarDiasFerias } = await import('./assiduidade')
+    const registos = [
+      { data: '2026-11-02', horas: 8, ferias: false },
+      { data: '2026-11-03', horas: 0, ferias: true },
+    ]
+    const resumo = calcularResumoMes({
+      ano: 2026,
+      mes: 11,
+      slug: 'fatima',
+      horasDiarias: 8,
+      registos,
+      diasFerias: juntarDiasFerias([], registos),
+      ateDia: '2026-11-04',
+    })
+    expect(resumo.diasFerias).toEqual(['2026-11-03'])
+    expect(resumo.diasTrabalhados).toBe(1)
+    expect(resumo.horasRealizadas).toBe(8)
+    expect(resumo.horasEsperadas).toBe((resumo.diasUteis - 1) * 8)
+    expect(resumo.diasSemRegisto).toEqual(['2026-11-04'])
+  })
+
+  it('escreve o resumo para o contabilista com horas, extra e dias de férias', async () => {
+    const { textoParaContabilista } = await import('./assiduidade')
+    const texto = textoParaContabilista(
+      [
+        {
+          nome: 'Ana',
+          estado: 'Submetido',
+          resumo: { horasRealizadas: 170.5, horasEsperadas: 160, horasExtra: 10.5, saldo: 10.5, diasTrabalhados: 20, diasFerias: ['2026-11-03', '2026-11-04'] },
+        },
+        {
+          nome: 'Rui',
+          estado: 'Rascunho',
+          resumo: { horasRealizadas: 150, horasEsperadas: 168, horasExtra: 0, saldo: -18, diasTrabalhados: 19, diasFerias: [] },
+        },
+      ],
+      2026,
+      11
+    )
+    expect(texto).toContain('Horas da equipa — novembro de 2026')
+    expect(texto).toContain('Ana\n  Horas realizadas: 170h30 (de 160h00 do mês)\n  Horas extra: 10h30')
+    expect(texto).toContain('Dias de férias: 2 dias (03 e 04)')
+    expect(texto).toContain('Rui (ainda não submeteu o mês)')
+    expect(texto).toContain('Horas em falta: 18h00')
+    expect(texto).toContain('Dias de férias: nenhum')
+
+    const aMeio = textoParaContabilista(
+      [{ nome: 'Rui', estado: 'Rascunho', resumo: { horasRealizadas: 60, horasEsperadas: 168, horasExtra: 0, saldo: -108, diasTrabalhados: 8, diasFerias: [] } }],
+      2026,
+      11,
+      '2026-11-15'
+    )
+    expect(aMeio).toContain('(mês ainda a decorrer: registos até 15/11)')
+    expect(aMeio).not.toContain('Horas em falta')
+  })
+})

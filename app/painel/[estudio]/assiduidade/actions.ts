@@ -3,7 +3,17 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { configPara, obterAcessoHoras, type AcessoHoras } from '@/lib/data/acessoHoras'
-import { calcularResumoMes, erroTurnos, fechoDisponivel, hojeLisboa, type TurnosDia } from '@/lib/data/assiduidade'
+import {
+  calcularResumoMes,
+  diasDoMesISO,
+  ehDiaUtil,
+  erroTurnos,
+  fechoDisponivel,
+  feriadoNoEstudio,
+  hojeLisboa,
+  juntarDiasFerias,
+  type TurnosDia,
+} from '@/lib/data/assiduidade'
 
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/
 const HORA = /^\d{2}:\d{2}$/
@@ -37,11 +47,45 @@ const hora = (formData: FormData, nome: string) => {
 
 const mensagem = (texto: string) => (texto.includes('já foi submetido') ? 'Este mês já foi submetido — só a administração o pode reabrir.' : texto)
 
+// Estúdio do contrato da pessoa — é ele que decide o feriado municipal.
+async function slugDoContrato(acesso: AcessoHoras, perfilId: string): Promise<string> {
+  const config = await configPara(acesso, perfilId)
+  if (config.estudio_id === acesso.estudio.id) return acesso.estudio.slug
+  const { data } = await acesso.db.from('estudios').select('slug').eq('id', config.estudio_id).maybeSingle()
+  return data?.slug ?? acesso.estudio.slug
+}
+
 export async function guardarRegistoHoras(formData: FormData) {
   const { acesso, perfilId } = await exigir(formData)
   const data = String(formData.get('data') ?? '')
   if (!DATA_ISO.test(data)) voltar(formData, { error: 'Indica o dia.' })
-  if (data > hojeLisboa()) voltar(formData, { error: 'Só se registam dias que já aconteceram.' })
+  const nota = String(formData.get('nota') ?? '').trim() || null
+
+  // Dia de férias: fica sem turnos e desconta à meta de horas do mês.
+  // Pode marcar-se com antecedência, mas só dentro do mês que está aberto
+  // no ecrã e só em dias úteis (um sábado ou um feriado não gasta férias).
+  if (formData.get('ferias') === '1') {
+    const mes = String(formData.get('mes') ?? '')
+    if (mes && !data.startsWith(`${mes}-`)) voltar(formData, { error: 'Escolhe um dia deste mês.', dia: data })
+    const slug = await slugDoContrato(acesso, perfilId)
+    if (!ehDiaUtil(data, slug)) {
+      const feriado = feriadoNoEstudio(data, slug)
+      voltar(formData, {
+        error: feriado ? `${feriado.nome} — um feriado não conta como dia de férias.` : 'Sábados e domingos não contam como dias de férias.',
+        dia: data,
+      })
+    }
+    const { error } = await acesso.db
+      .from('registos_horario')
+      .upsert(
+        { perfil_id: perfilId, data, ferias: true, entrada_1: null, saida_1: null, entrada_2: null, saida_2: null, nota },
+        { onConflict: 'perfil_id,data' }
+      )
+    if (error) voltar(formData, { error: mensagem(error.message), dia: data })
+    voltar(formData, { ok: 'ferias' })
+  }
+
+  if (data > hojeLisboa()) voltar(formData, { error: 'Só se registam horas de dias que já aconteceram.', dia: data })
   const turnos: TurnosDia = {
     entrada_1: hora(formData, 'entrada_1'),
     saida_1: hora(formData, 'saida_1'),
@@ -57,11 +101,10 @@ export async function guardarRegistoHoras(formData: FormData) {
   }
   const erro = erroTurnos(turnos)
   if (erro) voltar(formData, { error: erro, dia: data })
-  const nota = String(formData.get('nota') ?? '').trim() || null
 
   const { error } = await acesso.db
     .from('registos_horario')
-    .upsert({ perfil_id: perfilId, data, ...turnos, nota }, { onConflict: 'perfil_id,data' })
+    .upsert({ perfil_id: perfilId, data, ...turnos, ferias: false, nota }, { onConflict: 'perfil_id,data' })
   if (error) voltar(formData, { error: mensagem(error.message), dia: data })
   voltar(formData, { ok: 'registado' })
 }
@@ -75,8 +118,9 @@ export async function apagarRegistoHoras(formData: FormData) {
   voltar(formData, { ok: 'apagado' })
 }
 
-// Submeter o mês: fica a fotografia das contas (dias, horas, saldo) e o
-// mês fecha-se aos registos até a administração o aprovar ou reabrir.
+// Submeter o mês: fica a fotografia das contas (dias, horas, férias,
+// horas extra) comunicada à administração, e o mês fecha-se aos registos
+// até a administração o aprovar ou reabrir.
 export async function submeterFechoHoras(formData: FormData) {
   const { acesso, perfilId } = await exigir(formData)
   const [ano, mes] = String(formData.get('mes') ?? '').split('-').map(Number)
@@ -86,9 +130,13 @@ export async function submeterFechoHoras(formData: FormData) {
 
   const config = await configPara(acesso, perfilId)
   const horasDiarias = config.horas_diarias
-  const prefixo = `${ano}-${String(mes).padStart(2, '0')}`
+  // Primeiro e último dia reais do mês ("2026-11-31" não existe — a
+  // base de dados recusava a consulta nos meses de 30 dias e em fevereiro).
+  const diasDoMes = diasDoMesISO(ano, mes)
+  const primeiroDia = diasDoMes[0]
+  const ultimoDia = diasDoMes[diasDoMes.length - 1]
   const [{ data: registos, error: erroRegistos }, { data: ferias }, { data: estudioConfig }] = await Promise.all([
-    acesso.db.from('registos_horario').select('data, horas').eq('perfil_id', perfilId).gte('data', `${prefixo}-01`).lte('data', `${prefixo}-31`),
+    acesso.db.from('registos_horario').select('data, horas, ferias').eq('perfil_id', perfilId).gte('data', primeiroDia).lte('data', ultimoDia),
     acesso.db.from('pedidos_ferias').select('dias').eq('perfil_id', perfilId).eq('estado', 'Aprovado').eq('ano', ano),
     acesso.db.from('estudios').select('slug').eq('id', config.estudio_id).maybeSingle(),
   ])
@@ -99,7 +147,7 @@ export async function submeterFechoHoras(formData: FormData) {
     slug: estudioConfig?.slug ?? acesso.estudio.slug,
     horasDiarias,
     registos: (registos ?? []).map((r) => ({ data: r.data, horas: Number(r.horas) })),
-    diasFerias: (ferias ?? []).flatMap((f) => f.dias as string[]),
+    diasFerias: juntarDiasFerias(ferias, registos),
   })
 
   const { error } = await acesso.db.from('fechos_horario').upsert(
@@ -123,6 +171,8 @@ export async function submeterFechoHoras(formData: FormData) {
     { onConflict: 'perfil_id,ano,mes' }
   )
   if (error) voltar(formData, { error: mensagem(error.message) })
+  // O número de meses por aprovar aparece no menu da Administração.
+  revalidatePath('/painel/admin', 'layout')
   voltar(formData, { ok: 'submetido' })
 }
 
@@ -143,6 +193,7 @@ export async function reverFechoHoras(formData: FormData) {
     .eq('ano', ano)
     .eq('mes', mes)
   if (error) voltar(formData, { error: error.message })
+  revalidatePath('/painel/admin', 'layout')
   voltar(formData, { ok: aprovar ? 'aprovado' : 'reaberto' })
 }
 

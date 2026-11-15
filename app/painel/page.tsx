@@ -1,8 +1,10 @@
-import Link from 'next/link'
+import { Suspense } from 'react'
+import Link from '@/components/LinkRapido'
 import { ArrowRight, ArrowLeft, Network, ShieldCheck, Church, Castle, Landmark, type LucideIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
+import { getSessaoAtual } from '@/lib/data/sessao'
 import { corEstudio } from '@/lib/data/constantes'
 import { podeAcederAdmin, podeAcederCoordenacao, podeAcederEstudio } from '@/lib/data/acessos'
 import AvisosHorario from '@/components/AvisosHorario'
@@ -27,25 +29,27 @@ export default async function PainelPage({
   const { erro } = await searchParams
   const supabase = await createClient()
 
-  const [{ data: userData }, estudios, { data: clientes }] = await Promise.all([
-    supabase.auth.getUser(),
+  // Tudo de uma vez: a sessão, os estúdios, a contagem de clientes e as
+  // aprovações de acesso a estúdios (filtradas mais abaixo para ficarem
+  // só as desta conta).
+  const [sessao, estudios, { data: clientes }, { data: acessosAprovados }] = await Promise.all([
+    getSessaoAtual(),
     getEstudios(supabase),
     supabase.from('clientes').select('estudio_id, estado'),
+    supabase.from('perfis_estudios').select('perfil_id, estudio_id'),
   ])
 
-  if (!userData.user) {
+  if (!sessao.userId) {
     redirect('/login')
   }
 
-  const email = userData.user.email ?? null
+  const email = sessao.email
   // Além das contas fixas (podeAcederEstudio), uma conta pessoal
   // já aprovada em Equipa ("Dar acesso") também vê o seu estúdio aqui —
   // ver podeAcederEstudioAprovado em lib/data/acessos.ts.
-  const { data: acessosAprovados } = await supabase
-    .from('perfis_estudios')
-    .select('estudio_id')
-    .eq('perfil_id', userData.user.id)
-  const idsAprovados = new Set((acessosAprovados ?? []).map((a) => a.estudio_id))
+  const idsAprovados = new Set(
+    (acessosAprovados ?? []).filter((a) => a.perfil_id === sessao.userId).map((a) => a.estudio_id)
+  )
   const estudiosVisiveis = estudios.filter((e) => podeAcederEstudio(email, e.slug) || idsAprovados.has(e.id))
   const temCoordenacao = podeAcederCoordenacao(email)
   const temAdmin = podeAcederAdmin(email)
@@ -60,12 +64,17 @@ export default async function PainelPage({
           Em que estúdio estás?
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Sessão iniciada como {userData.user.email}
+          Sessão iniciada como {email}
         </p>
       </div>
 
       <div className="w-full max-w-2xl overflow-hidden rounded-xl empty:hidden">
-        <AvisosHorario supabase={supabase} userId={userData.user.id} email={email} />
+        {/* Em Suspense: o aviso tem a sua própria consulta e, sem isto, a
+            página inteira só era enviada depois de ela responder. Assim a
+            página sai logo e o aviso entra quando chegar. */}
+        <Suspense fallback={null}>
+          <AvisosHorario supabase={supabase} userId={sessao.userId} email={email} />
+        </Suspense>
       </div>
 
       {erro === 'sem-acesso' && (

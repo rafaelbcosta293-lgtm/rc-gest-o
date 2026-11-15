@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'

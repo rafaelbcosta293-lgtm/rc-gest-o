@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import { Suspense } from 'react'
+import Link from '@/components/LinkRapido'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -48,7 +49,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} />
         <AlertaContactosAgendados contactosIniciais={contactosAgendados} />
         <AlertaDespesas avisos={avisosDespesas} />
-        <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
+        {/* Em Suspense: o aviso tem a sua própria consulta e, sem isto, a
+            página inteira só era enviada depois de ela responder. Assim a
+            página sai logo e o aviso entra quando chegar. */}
+        <Suspense fallback={null}>
+          <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
+        </Suspense>
         <header className="shadow-deep flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-3 backdrop-blur-xl">
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-9 w-auto" priority />

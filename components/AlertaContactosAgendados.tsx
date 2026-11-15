@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { PhoneCall } from 'lucide-react'
 import { marcarContactoFeito } from '@/app/painel/[estudio]/leads/actions'
 import { avaliarContactoAgendado } from '@/lib/data/contactosAgendados'

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'

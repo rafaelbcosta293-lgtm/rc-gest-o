@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Lock, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'

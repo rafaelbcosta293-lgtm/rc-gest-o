@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -44,25 +44,25 @@ export default async function PagamentosPage({
     notFound()
   }
 
-  // Todos os clientes do estúdio, independentemente do estado — um
-  // cliente inativo ou suspenso pode voltar a treinar, e é preciso
-  // conseguir encontrá-lo aqui para lhe registar um pagamento (o que,
-  // por si só, já o reativa).
-  const { data, error } = await supabase
-    .from('clientes')
-    .select('id, nome, estado')
-    .eq('estudio_id', estudio.id)
-    .order('nome')
-
-  if (error) {
-    throw new Error(error.message)
-  }
-
-  const clientesBase = data ?? []
-
-  // Produtos à venda e as vendas de hoje deste estúdio.
-  const hojeLisboa = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
-  const [{ data: produtosData }, { data: vendasData }] = await Promise.all([
+  // Tudo o que a página precisa sai de uma só volta à base de dados —
+  // nenhuma destas consultas depende do resultado de outra:
+  // · todos os clientes do estúdio, independentemente do estado (um
+  //   cliente inativo ou suspenso pode voltar a treinar, e é preciso
+  //   conseguir encontrá-lo aqui para lhe registar um pagamento, o que,
+  //   por si só, já o reativa);
+  // · os produtos à venda e as vendas de hoje deste estúdio;
+  // · o último pagamento de cada cliente;
+  // · os pagamentos com seguro e com reativação (para o seguro a renovar).
+  const hojeLisboa = hojeEmLisboa()
+  const [
+    { data, error },
+    { data: produtosData },
+    { data: vendasData },
+    { data: pagamentosData, error: erroPagamentosDetalhe },
+    { data: segurosPagosData, error: erroSegurosPagos },
+    { data: reativacoesData, error: erroReativacoesSeguro },
+  ] = await Promise.all([
+    supabase.from('clientes').select('id, nome, estado, inicio_contrato').eq('estudio_id', estudio.id).order('nome'),
     supabase.from('produtos').select('id, nome, valor, categoria:produto_categorias(nome, ordem)').eq('ativo', true).order('nome'),
     supabase
       .from('receitas_outras')
@@ -72,7 +72,27 @@ export default async function PagamentosPage({
       .eq('data', hojeLisboa)
       .is('anulado_em', null)
       .order('criado_em', { ascending: false }),
+    supabase
+      .from('v_resumo_pagamentos_cliente')
+      .select('cliente_id, data_pagamento:ultimo_pagamento, valido_ate:ultimo_valido_ate')
+      .eq('estudio_id', estudio.id),
+    supabase
+      .from('pagamentos_ativos')
+      .select('cliente_id, data_pagamento, clientes!inner(estudio_id)')
+      .eq('clientes.estudio_id', estudio.id)
+      .eq('inclui_seguro', true),
+    supabase
+      .from('pagamentos_ativos')
+      .select('cliente_id, data_pagamento, clientes!inner(estudio_id)')
+      .eq('clientes.estudio_id', estudio.id)
+      .eq('inclui_reativacao', true),
   ])
+
+  if (error || erroPagamentosDetalhe || erroSegurosPagos || erroReativacoesSeguro) {
+    throw new Error((error ?? erroPagamentosDetalhe ?? erroSegurosPagos ?? erroReativacoesSeguro)!.message)
+  }
+
+  const clientesBase = data ?? []
   const umDe = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v)
   const produtos: ProdutoVenda[] = (produtosData ?? [])
     .map((p) => {
@@ -90,45 +110,7 @@ export default async function PagamentosPage({
     cliente: umDe(v.cliente as unknown as { nome: string } | { nome: string }[] | null)?.nome ?? null,
   }))
   const totalVendasHoje = vendasHoje.reduce((s, v) => s + v.valor, 0)
-  const idsClientes = clientesBase.map((c) => c.id)
-  const hoje = hojeEmLisboa()
-
-  // Estas quatro só precisam dos ids dos clientes, não dos resultados
-  // umas das outras — correm todas ao mesmo tempo.
-  const [
-    { data: pagamentosData, error: erroPagamentosDetalhe },
-    { data: clientesInicioData, error: erroClientesInicio },
-    { data: segurosPagosData, error: erroSegurosPagos },
-    { data: reativacoesData, error: erroReativacoesSeguro },
-  ] = idsClientes.length
-    ? await Promise.all([
-        supabase
-          .from('v_resumo_pagamentos_cliente')
-          .select('cliente_id, data_pagamento:ultimo_pagamento, valido_ate:ultimo_valido_ate')
-          .eq('estudio_id', estudio.id),
-        supabase.from('clientes').select('id, inicio_contrato').in('id', idsClientes),
-        supabase
-          .from('pagamentos_ativos')
-          .select('cliente_id, data_pagamento')
-          .in('cliente_id', idsClientes)
-          .eq('inclui_seguro', true),
-        supabase
-          .from('pagamentos_ativos')
-          .select('cliente_id, data_pagamento')
-          .in('cliente_id', idsClientes)
-          .eq('inclui_reativacao', true),
-      ])
-    : [
-        { data: [], error: null },
-        { data: [], error: null },
-        { data: [], error: null },
-        { data: [], error: null },
-      ]
-  if (erroPagamentosDetalhe || erroClientesInicio || erroSegurosPagos || erroReativacoesSeguro) {
-    throw new Error(
-      (erroPagamentosDetalhe ?? erroClientesInicio ?? erroSegurosPagos ?? erroReativacoesSeguro)!.message
-    )
-  }
+  const hoje = hojeLisboa
 
   const ultimoPagamentoPorCliente = new Map<string, PagamentoDetalhe>()
   for (const p of (pagamentosData ?? []) as unknown as PagamentoDetalhe[]) {
@@ -169,9 +151,7 @@ export default async function PagamentosPage({
   const atrasados = clientesComResumo.filter((c) => !c.em_dia && c.estado !== 'Inativo')
   const inativos = clientesComResumo.filter((c) => !c.em_dia && c.estado === 'Inativo')
 
-  const inicioContratoPorCliente = new Map(
-    (clientesInicioData ?? []).map((c) => [c.id, c.inicio_contrato])
-  )
+  const inicioContratoPorCliente = new Map(clientesBase.map((c) => [c.id, c.inicio_contrato]))
   const clientesParaSeguro = clientesBase
     .filter((c) => c.estado !== 'Inativo')
     .map((c) => ({

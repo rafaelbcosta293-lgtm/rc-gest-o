@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import Image from 'next/image'
 import { logout } from './login/actions'
 import { getSessaoAtual } from '@/lib/data/sessao'

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { createClient } from '@/lib/supabase/server'
 import { areaBloqueada, chaveConfigSenha } from '@/lib/data/gate'
 import { ESTUDIOS_COM_CONTA_PARTILHADA, chaveAtivoDispositivo, dispositivoAutorizado } from '@/lib/data/dispositivo'

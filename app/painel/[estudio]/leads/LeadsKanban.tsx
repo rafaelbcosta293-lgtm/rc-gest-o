@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { ESTADOS_LEAD, PALETA } from '@/lib/data/constantes'
 import { fmt } from '@/lib/data/presencas'
 import { diasDesde } from '@/lib/data/leads'

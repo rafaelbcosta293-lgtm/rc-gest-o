@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { ReceiptText } from 'lucide-react'
 import type { AvisoDespesa } from '@/lib/data/despesas'
 

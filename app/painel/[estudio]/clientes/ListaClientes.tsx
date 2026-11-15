@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { Search } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
 import EditarClienteModal, { type ClienteEdicao } from './EditarClienteModal'

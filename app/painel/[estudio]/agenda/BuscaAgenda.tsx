@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { Search, X } from 'lucide-react'
 import { fmt } from '@/lib/data/presencas'
 import { corTipoEvento, rotuloTipoEvento } from '@/lib/data/agenda'

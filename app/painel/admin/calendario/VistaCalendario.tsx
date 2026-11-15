@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
 import { dataNoMes, somarMesesISO, ROTULO_ESTADO } from '@/lib/data/despesas'
 import {

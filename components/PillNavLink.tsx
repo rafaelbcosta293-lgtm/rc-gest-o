@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { usePathname } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import { formaPilula, useModoBarra } from './BarraAjustavel'

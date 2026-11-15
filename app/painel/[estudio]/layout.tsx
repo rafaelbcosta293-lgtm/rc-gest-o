@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import { Suspense } from 'react'
+import Link from '@/components/LinkRapido'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { ArrowLeftRight, Search } from 'lucide-react'
@@ -80,17 +81,22 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       <div className="sticky top-0 z-10 flex flex-col">
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} apenasEstudio={slug} />
         <AlertaContactosAgendados contactosIniciais={contactosAgendados} apenasEstudio={slug} />
-        <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
-        {estudio && (
-          <AvisosFerias
-            supabase={supabase}
-            slug={slug}
-            estudioId={estudio.id}
-            userId={sessao.userId}
-            ehInstrutor={contaIndividual && !!sessao.userId}
-            ehGestao={ehGestao}
-          />
-        )}
+        {/* Em Suspense: o aviso tem a sua própria consulta e, sem isto, a
+            página inteira só era enviada depois de ela responder. Assim a
+            página sai logo e o aviso entra quando chegar. */}
+        <Suspense fallback={null}>
+          <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
+          {estudio && (
+            <AvisosFerias
+              supabase={supabase}
+              slug={slug}
+              estudioId={estudio.id}
+              userId={sessao.userId}
+              ehInstrutor={contaIndividual && !!sessao.userId}
+              ehGestao={ehGestao}
+            />
+          )}
+        </Suspense>
 
         {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
             estúdio — os módulos ficam na barra de separadores do fundo,

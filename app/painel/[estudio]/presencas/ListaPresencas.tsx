@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, type ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { TriangleAlert, CalendarX, UsersRound, CalendarOff, Repeat, Ban, type LucideIcon } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
 import AnelProgresso from '@/components/AnelProgresso'

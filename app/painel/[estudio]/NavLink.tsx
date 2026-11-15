@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, BriefcaseBusiness } from 'lucide-react'
 import { MODULOS, PALETA } from '@/lib/data/constantes'

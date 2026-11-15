@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
 import { UsersRound, AlertTriangle, BellRing, Cake, CreditCard, Megaphone } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'

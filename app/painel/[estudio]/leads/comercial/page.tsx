@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -34,14 +34,18 @@ export default async function PainelComercialPage({
     notFound()
   }
 
-  const [sessao, pts] = await Promise.all([getSessaoAtual(), getEquipaDoEstudio(supabase, estudio.id)])
+  // A sessão, a equipa e as leads não dependem umas das outras: saem
+  // da mesma volta à base de dados.
+  const [sessao, pts, { data: leadsData, error: erroLeads }] = await Promise.all([
+    getSessaoAtual(),
+    getEquipaDoEstudio(supabase, estudio.id),
+    supabase
+      .from('leads')
+      .select('id, estado, origem, responsavel_id, visita_marcada_em, valor_potencial, entrada, criado_em')
+      .eq('estudio_id', estudio.id),
+  ])
   const { ehAdmin } = papeisDaSessao(sessao)
   const hoje = hojeEmLisboa()
-
-  const { data: leadsData, error: erroLeads } = await supabase
-    .from('leads')
-    .select('id, estado, origem, responsavel_id, visita_marcada_em, valor_potencial, entrada, criado_em')
-    .eq('estudio_id', estudio.id)
 
   if (erroLeads) {
     throw new Error(erroLeads.message)

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { CATEGORIA_AJUSTE, type EstadoDespesa, ROTULO_ESTADO } from '@/lib/data/despesas'
 import type { CategoriaOpcao } from './CamposCategoria'

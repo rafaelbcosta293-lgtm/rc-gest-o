@@ -10,8 +10,13 @@ const nextConfig: NextConfig = {
     // cache do próprio browser em vez de esperar por um pedido novo ao
     // servidor — sente-se instantâneo. 30s é o valor que o próprio
     // Next.js já usava por omissão antes da v15 mudar para 0.
+    // "static" é o tempo que uma página já carregada por antecipação
+    // (o rato pousou no link — ver components/LinkRapido.tsx) pode ser
+    // mostrada sem novo pedido. Fica igual ao "dynamic": o que se vê
+    // nunca tem mais de 30 segundos (o valor por omissão eram 5 minutos).
     staleTimes: {
       dynamic: 30,
+      static: 30,
     },
   },
 };

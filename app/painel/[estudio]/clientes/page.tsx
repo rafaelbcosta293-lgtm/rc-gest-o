@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Cake, Plus, ArrowUp, ArrowDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'

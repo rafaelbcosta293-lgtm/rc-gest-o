@@ -3,18 +3,34 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Estudio, Perfil } from '@/lib/supabase/database.types'
 import { idsContasPartilhadas } from './contasPartilhadas'
+import { chaveDaSessao, criarMemoria } from './memoria'
 
-// Em cache() por pedido: o layout e a página (e às vezes componentes
-// dentro dela) pedem os mesmos estúdios — assim a consulta corre uma
-// vez só por pedido em vez de duas ou três. O cliente Supabase também
-// é o mesmo objeto durante o pedido (ver lib/supabase/server.ts).
+// Os estúdios quase nunca mudam, mas todas as páginas precisam deles
+// antes de mais nada ("que estúdio é este slug?") — era uma ida à base
+// de dados sozinha, à frente de todas as outras, em cada página aberta.
+// Ficam 5 minutos na memória do servidor, por sessão (ver
+// lib/data/memoria.ts): cada conta continua a ver só os estúdios que a
+// base de dados lhe mostrou a ela. Dentro do mesmo pedido, cache()
+// garante que o layout e a página partilham a mesma resposta.
+const VALIDADE_ESTUDIOS_MS = 5 * 60_000
+const memoriaEstudios = criarMemoria<Estudio[]>(VALIDADE_ESTUDIOS_MS)
+
 export const getEstudios = cache(async (supabase: SupabaseClient): Promise<Estudio[]> => {
-  const { data } = await supabase
-    .from('estudios')
-    .select('*')
-    .eq('ativo', true)
-    .order('nome')
-  return (data as Estudio[] | null) ?? []
+  const chave = await chaveDaSessao(supabase)
+  try {
+    return await memoriaEstudios.obter(
+      chave,
+      async () => {
+        const { data, error } = await supabase.from('estudios').select('*').eq('ativo', true).order('nome')
+        // Uma falha nunca fica guardada: volta a tentar no pedido seguinte.
+        if (error) throw new Error(error.message)
+        return (data as Estudio[] | null) ?? []
+      },
+      (estudios) => estudios.length > 0
+    )
+  } catch {
+    return []
+  }
 })
 
 // Usado pelas pastas "filtráveis" da Administração (submenu "só
@@ -26,14 +42,10 @@ export function filtrarPorEstudio<T extends { slug: string }>(estudios: T[], slu
   return filtrado.length > 0 ? filtrado : estudios
 }
 
+// Sai da mesma lista (em memória) — sem consulta própria.
 export const getEstudioPorSlug = cache(async (supabase: SupabaseClient, slug: string): Promise<Estudio | null> => {
-  const { data } = await supabase
-    .from('estudios')
-    .select('*')
-    .eq('slug', slug)
-    .eq('ativo', true)
-    .maybeSingle()
-  return data as Estudio | null
+  const estudios = await getEstudios(supabase)
+  return estudios.find((e) => e.slug === slug) ?? null
 })
 
 // Só quem o admin autorizou (em "Equipa") aparece para escolher como PT

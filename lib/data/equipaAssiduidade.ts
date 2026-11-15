@@ -37,14 +37,18 @@ function configPorOmissao(perfilId: string, estudioId: number): ConfigAssiduidad
 // Instrutores ativos de um estúdio, com a sua configuração (ou a de
 // omissão: 8h/dia, contrato, este estúdio).
 export async function equipaAssiduidade(supabase: SupabaseClient, estudioId: number): Promise<MembroEquipa[]> {
-  const [{ data: ligacoes, error }, { data: semEstudio }, fixas] = await Promise.all([
+  // As configurações vêm na mesma volta que as pessoas (a tabela tem uma
+  // linha por instrutor) — antes eram pedidas só depois, numa segunda ida.
+  const [{ data: ligacoes, error }, { data: semEstudio }, fixas, { data: configs, error: erroConfig }] = await Promise.all([
     supabase.from('perfis_estudios').select('perfil:perfis!perfil_id(id, nome, ativo)').eq('estudio_id', estudioId),
     // Um perfil de instrutor criado sem estúdio atribuído conta para
     // todos os estúdios — senão não aparecia em lado nenhum.
     supabase.from('perfis').select('id, nome, ativo, ligacoes:perfis_estudios(estudio_id)').eq('ativo', true),
     idsContasFixas(),
+    supabase.from('config_assiduidade').select('perfil_id, estudio_id, horas_diarias, tipo_contrato'),
   ])
   if (error) throw new Error(error.message)
+  if (erroConfig) throw new Error(erroConfig.message)
   type Pessoa = { id: string; nome: string; ativo: boolean }
   const doEstudio = (ligacoes ?? []).map((l) => l.perfil as unknown as Pessoa | null)
   const soltos = ((semEstudio ?? []) as unknown as (Pessoa & { ligacoes: unknown[] | null })[]).filter(
@@ -57,11 +61,6 @@ export async function equipaAssiduidade(supabase: SupabaseClient, estudioId: num
     return true
   })
   if (pessoas.length === 0) return []
-  const { data: configs, error: erroConfig } = await supabase
-    .from('config_assiduidade')
-    .select('perfil_id, estudio_id, horas_diarias, tipo_contrato')
-    .in('perfil_id', pessoas.map((p) => p.id))
-  if (erroConfig) throw new Error(erroConfig.message)
   const porPerfil = new Map((configs ?? []).map((c) => [c.perfil_id, { ...c, horas_diarias: Number(c.horas_diarias) }]))
   return pessoas
     .map((p) => ({ id: p.id, nome: p.nome.trim(), config: porPerfil.get(p.id) ?? configPorOmissao(p.id, estudioId) }))

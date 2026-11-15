@@ -1,7 +1,8 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { MESES } from '@/lib/data/presencas'
+import { getEstudios } from '@/lib/data/estudios'
 import { configPara, obterAcessoHoras } from '@/lib/data/acessoHoras'
 import { TIPOS_CONTRATO } from '@/lib/data/equipaAssiduidade'
 import {
@@ -97,25 +98,46 @@ export default async function RegistoHorasPage({
   }
 
   const dias = diasDoMesISO(ano, mes)
-  const [config, { data: registosData, error: erroRegistos }, { data: feriasData }, { data: fechoData }, { data: estudiosData }] =
-    await Promise.all([
-      pessoaId ? configPara(acesso, pessoaId) : Promise.resolve(null),
-      pessoaId
-        ? db
-            .from('registos_horario')
-            .select('data, entrada_1, saida_1, entrada_2, saida_2, horas, nota')
-            .eq('perfil_id', pessoaId)
-            .gte('data', dias[0])
-            .lte('data', dias[dias.length - 1])
-        : Promise.resolve({ data: [], error: null }),
-      pessoaId
-        ? db.from('pedidos_ferias').select('dias').eq('perfil_id', pessoaId).eq('estado', 'Aprovado').eq('ano', ano)
-        : Promise.resolve({ data: [] }),
-      pessoaId
-        ? db.from('fechos_horario').select('*').eq('perfil_id', pessoaId).eq('ano', ano).eq('mes', mes).maybeSingle()
-        : Promise.resolve({ data: null }),
-      db.from('estudios').select('id, slug, nome'),
-    ])
+  // Gestão: além da pessoa escolhida, o resumo da equipa toda no mês —
+  // pedido na mesma volta à base de dados que o resto da página.
+  const idsEquipa = modo === 'gestao' ? equipa.map((m) => m.id) : []
+  const verEquipa = idsEquipa.length > 0
+  const [
+    config,
+    { data: registosData, error: erroRegistos },
+    { data: feriasData },
+    { data: fechoData },
+    estudiosData,
+    { data: todosRegistos },
+    { data: todasFerias },
+    { data: todosFechos },
+  ] = await Promise.all([
+    pessoaId ? configPara(acesso, pessoaId) : Promise.resolve(null),
+    pessoaId
+      ? db
+          .from('registos_horario')
+          .select('data, entrada_1, saida_1, entrada_2, saida_2, horas, nota')
+          .eq('perfil_id', pessoaId)
+          .gte('data', dias[0])
+          .lte('data', dias[dias.length - 1])
+      : Promise.resolve({ data: [], error: null }),
+    pessoaId
+      ? db.from('pedidos_ferias').select('dias').eq('perfil_id', pessoaId).eq('estado', 'Aprovado').eq('ano', ano)
+      : Promise.resolve({ data: [] }),
+    pessoaId
+      ? db.from('fechos_horario').select('*').eq('perfil_id', pessoaId).eq('ano', ano).eq('mes', mes).maybeSingle()
+      : Promise.resolve({ data: null }),
+    getEstudios(db),
+    verEquipa
+      ? db.from('registos_horario').select('perfil_id, data, horas').in('perfil_id', idsEquipa).gte('data', dias[0]).lte('data', dias[dias.length - 1])
+      : Promise.resolve({ data: [] }),
+    verEquipa
+      ? db.from('pedidos_ferias').select('perfil_id, dias').in('perfil_id', idsEquipa).eq('estado', 'Aprovado').eq('ano', ano)
+      : Promise.resolve({ data: [] }),
+    verEquipa
+      ? db.from('fechos_horario').select('*').in('perfil_id', idsEquipa).eq('ano', ano).eq('mes', mes)
+      : Promise.resolve({ data: [] }),
+  ])
   if (erroRegistos) throw new Error(erroRegistos.message)
 
   const registos = ((registosData ?? []) as Registo[]).map((r) => ({ ...r, horas: Number(r.horas) }))
@@ -138,13 +160,7 @@ export default async function RegistoHorasPage({
 
   // Gestão: resumo da equipa no mês.
   let linhasEquipa: { id: string; nome: string; realizadas: number; esperadas: number; saldo: number; semRegisto: number; fecho: Fecho | null }[] = []
-  if (modo === 'gestao' && equipa.length > 0) {
-    const ids = equipa.map((m) => m.id)
-    const [{ data: todosRegistos }, { data: todasFerias }, { data: todosFechos }] = await Promise.all([
-      db.from('registos_horario').select('perfil_id, data, horas').in('perfil_id', ids).gte('data', dias[0]).lte('data', dias[dias.length - 1]),
-      db.from('pedidos_ferias').select('perfil_id, dias').in('perfil_id', ids).eq('estado', 'Aprovado').eq('ano', ano),
-      db.from('fechos_horario').select('*').in('perfil_id', ids).eq('ano', ano).eq('mes', mes),
-    ])
+  if (verEquipa) {
     linhasEquipa = equipa.map((m) => {
       const r = calcularResumoMes({
         ano,

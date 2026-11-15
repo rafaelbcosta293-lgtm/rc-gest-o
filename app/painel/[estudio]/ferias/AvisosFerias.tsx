@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import BotaoAvisoVisto from './BotaoAvisoVisto'
 

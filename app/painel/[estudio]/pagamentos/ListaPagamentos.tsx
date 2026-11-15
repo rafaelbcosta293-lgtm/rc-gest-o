@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { useRouter } from 'next/navigation'
 import {
   ArrowDownAZ,

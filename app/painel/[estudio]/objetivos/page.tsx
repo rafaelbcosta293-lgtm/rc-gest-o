@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/LinkRapido'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -69,24 +69,21 @@ export default async function ObjetivosPage({
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)
   const diasDoMes = new Date(ano, mes, 0).getDate()
 
-  const { data: goalsData, error: erroGoals } = await supabase
-    .from('goals')
-    .select('*')
-    .eq('estudio_id', estudio.id)
-    .eq('ano', ano)
-    .eq('mes', mes)
+  // As metas e os dados do mês não dependem uns dos outros: saem todos
+  // da mesma volta à base de dados.
+  const [
+    { data: goalsData, error: erroGoals },
+    { data: leadsDoMes, error: erroLeadsMes },
+    { data: clientesData, error: erroClientes },
+  ] = await Promise.all([
+    supabase.from('goals').select('*').eq('estudio_id', estudio.id).eq('ano', ano).eq('mes', mes),
+    supabase.from('leads').select('estado, entrada, fecho_em').eq('estudio_id', estudio.id),
+    supabase.from('clientes').select('id, estado').eq('estudio_id', estudio.id),
+  ])
   if (erroGoals) throw new Error(erroGoals.message)
   const goals = (goalsData ?? []) as Goal[]
   const metaPorChave = new Map(goals.map((g) => [g.metrica, g]))
 
-  // --- Dados do mês, só o necessário para as métricas com meta definida ---
-  const [
-    { data: leadsDoMes, error: erroLeadsMes },
-    { data: clientesData, error: erroClientes },
-  ] = await Promise.all([
-    supabase.from('leads').select('estado, entrada, fecho_em').eq('estudio_id', estudio.id),
-    supabase.from('clientes').select('id, estado').eq('estudio_id', estudio.id),
-  ])
   if (erroLeadsMes) throw new Error(erroLeadsMes.message)
   if (erroClientes) throw new Error(erroClientes.message)
 

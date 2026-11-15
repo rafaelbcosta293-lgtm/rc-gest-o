@@ -356,6 +356,8 @@ export default function AgendaInterativa({
   }
 
   function abrirParaEditar(evento: EventoComNomes) {
+    // Conta só de leitura: a Agenda é para ver, nada se abre nem edita.
+    if (somenteLeitura) return
     const grupo = evento.grupo_id ? eventos.filter((e) => e.grupo_id === evento.grupo_id) : [evento]
     setModal({ aberto: true, modo: 'editar', evento, grupo })
   }
@@ -993,23 +995,34 @@ function ColunaDia({
             type="button"
             draggable={false}
             title={
-              cancelado
-                ? `Desmarcado · ${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim} · clica para ver`
-                : somenteLeitura
-                  ? `${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim} · botão direito para ver`
+              somenteLeitura
+                ? `${cancelado ? 'Desmarcado · ' : ''}${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}`
+                : cancelado
+                  ? `Desmarcado · ${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim} · clica para ver`
                   : emSelecionado
                     ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar'
                     : `${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${numerosSocio ? ` · sócio ${numerosSocio}` : ''} · arrasta para mover · botão direito para editar`
             }
-            // Desmarcado: um clique abre logo os dados (não se arrasta);
-            // o mousedown não passa à coluna, para não criar um evento.
+            // Conta só de leitura: o bloco é só para ver — sem clique,
+            // sem botão direito, sem arrastar (o nome e as horas aparecem
+            // ao passar o rato). Nas outras contas, um desmarcado abre
+            // logo os dados com um clique (não se arrasta); o mousedown
+            // não passa à coluna, para não criar um evento.
+            tabIndex={somenteLeitura ? -1 : undefined}
+            aria-disabled={somenteLeitura || undefined}
             onMouseDown={
-              cancelado ? (e) => e.stopPropagation() : somenteLeitura ? undefined : onIniciarMovimento(evento)
+              somenteLeitura ? undefined : cancelado ? (e) => e.stopPropagation() : onIniciarMovimento(evento)
             }
-            onClick={cancelado ? onAbrirContexto(evento) : undefined}
-            onContextMenu={onAbrirContexto(evento)}
+            onClick={somenteLeitura ? undefined : cancelado ? onAbrirContexto(evento) : undefined}
+            onContextMenu={somenteLeitura ? undefined : onAbrirContexto(evento)}
             className={`group absolute rounded-md text-left transition-opacity select-none ${
-              cancelado || somenteLeitura ? 'cursor-pointer' : emArrasto ? 'cursor-grabbing opacity-30' : 'cursor-grab'
+              somenteLeitura
+                ? '!cursor-default'
+                : cancelado
+                  ? 'cursor-pointer'
+                  : emArrasto
+                    ? 'cursor-grabbing opacity-30'
+                    : 'cursor-grab'
             } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${
               cancelado ? 'hover:!z-30 hover:!text-[#8A4A45] hover:shadow-lg' : ''
             }`}

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio, obterOutroEstudioEClientes } from '@/lib/data/estudios'
 import { corTipoEvento } from '@/lib/data/agenda'
@@ -19,6 +19,8 @@ import ConfirmarAcao from '@/components/ConfirmarAcao'
 import EditarEventoForm from './EditarEventoForm'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda } from '@/lib/supabase/database.types'
+import { ehContaFixa } from '@/lib/data/acessos'
+import { getSessaoAtual } from '@/lib/data/sessao'
 
 type EventoComCliente = EventoAgenda & { cliente: { id: string; nome: string; estudio_id: number } | null }
 
@@ -34,6 +36,13 @@ export default async function EventoAgendaPage({
 }) {
   const { estudio: slug, id } = await params
   const { error } = await searchParams
+
+  // Conta só de leitura: a Agenda é para ver. A página de um evento (e a
+  // de criar um) não abre — nem escrevendo o endereço à mão.
+  const sessao = await getSessaoAtual()
+  if (!ehContaFixa(sessao.email) && !sessao.agendaEscrita) {
+    redirect(`/painel/${slug}/agenda`)
+  }
 
   const supabase = await createClient()
   const estudio = await getEstudioPorSlug(supabase, slug)

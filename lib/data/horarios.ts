@@ -1,9 +1,10 @@
 export const DIAS_SEMANA = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
 
-// Blocos de meia em meia hora. Cada bloco guarda-se pela hora a que
-// COMEÇA ("label"), mas mostra-se sempre como intervalo ("intervalo",
-// ex.: "20:30–21:00"): só com a hora de início, a última linha de um
-// turno até às 21:00 lia-se "20:30" e parecia que o horário acabava aí.
+// Blocos de meia em meia hora, das 7h às 21h (o estúdio fecha às 21h:
+// o último bloco é o das 20:30–21:00). Cada bloco guarda-se pela hora a
+// que COMEÇA ("label"), mas mostra-se sempre como intervalo
+// ("intervalo", ex.: "20:30–21:00"): só com a hora de início, a última
+// linha lia-se "20:30" e parecia que o horário acabava aí.
 const HORA_INICIO = 7
 const HORA_FIM = 21
 
@@ -11,7 +12,7 @@ const hhmm = (totalMin: number) =>
   `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`
 
 export const BLOCOS_HORARIO: { hora: number; minuto: number; label: string; intervalo: string }[] = Array.from(
-  { length: (HORA_FIM - HORA_INICIO) * 2 + 1 },
+  { length: (HORA_FIM - HORA_INICIO) * 2 },
   (_, i) => {
     const hora = HORA_INICIO + Math.floor(i / 2)
     const minuto = i % 2 === 0 ? 0 : 30
@@ -19,6 +20,20 @@ export const BLOCOS_HORARIO: { hora: number; minuto: number; label: string; inte
     return { hora, minuto, label: hhmm(inicio), intervalo: `${hhmm(inicio)}–${hhmm(inicio + 30)}` }
   }
 )
+
+// Hora a que a grelha acaba — desenhada como uma última linha "21:00",
+// para o fim do dia se ver de relance.
+export const FIM_DA_GRELHA = hhmm(HORA_FIM * 60)
+
+const CHAVES_DE_BLOCO = new Set(BLOCOS_HORARIO.map((b) => `${b.hora}_${b.minuto}`))
+
+// true se a chave de um slot ("AAAA-MM-DD_hora_minuto") corresponde a um
+// bloco que a grelha mostra. Um turno gravado fora da grelha (ex.: às
+// 21:00, de quando havia essa linha a mais) não se mostra nem se volta a
+// gravar.
+export function slotDentroDaGrelha(chave: string): boolean {
+  return CHAVES_DE_BLOCO.has(chave.slice(chave.indexOf('_') + 1))
+}
 
 export function chaveBloco(hora: number, minuto: number) {
   return `${hora}-${minuto}`

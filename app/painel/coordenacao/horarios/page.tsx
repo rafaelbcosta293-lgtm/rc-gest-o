@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { fmt } from '@/lib/data/presencas'
-import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
+import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot, slotDentroDaGrelha } from '@/lib/data/horarios'
 import { guardarSemana, copiarSemanaAnterior, criarInstrutor, desbloquearCoordenacao } from '../actions'
 import { alternarAcesso } from '../../[estudio]/equipa/actions'
 import { coresInstrutores, corEstudio } from '@/lib/data/constantes'
@@ -140,7 +140,11 @@ async function PainelHorariosEstudio({
     throw new Error(erroEscala.message)
   }
 
-  const escalaSemana = (escalaSemanaData ?? []) as unknown as TurnoSemana[]
+  // Turnos gravados fora da grelha (ex.: às 21:00, de quando havia essa
+  // linha a mais) não contam: o estúdio fecha às 21:00.
+  const escalaSemana = ((escalaSemanaData ?? []) as unknown as TurnoSemana[]).filter((t) =>
+    slotDentroDaGrelha(chaveSlot(t.data, t.hora, t.minuto))
+  )
 
   // Objeto simples (não Map) porque isto atravessa a fronteira
   // servidor → cliente como propriedade de GrelhaHorarios.

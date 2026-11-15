@@ -184,8 +184,8 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
         <Cabecalho dias={dias} />
         {BLOCOS_HORARIO.map((bloco) => (
           <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-            <div className="flex items-center bg-surface px-1 py-0.5 text-[9px] text-muted">
-              {bloco.label}
+            <div className="flex items-center whitespace-nowrap bg-surface px-1 py-0.5 text-[9px] text-muted">
+              {bloco.intervalo}
             </div>
             {dias.map((dia) => {
               const atual = slots[chaveSlot(dia, bloco.hora, bloco.minuto)] ?? []
@@ -344,8 +344,8 @@ function GrelhaEditavel({
           <Cabecalho dias={dias} />
           {BLOCOS_HORARIO.map((bloco) => (
             <Fragment key={`${bloco.hora}-${bloco.minuto}`}>
-              <div className="flex items-center bg-surface px-1 py-0.5 text-[9px] text-muted">
-                {bloco.label}
+              <div className="flex items-center whitespace-nowrap bg-surface px-1 py-0.5 text-[9px] text-muted">
+                {bloco.intervalo}
               </div>
               {dias.map((dia) => {
                 const chave = chaveSlot(dia, bloco.hora, bloco.minuto)

@@ -1,15 +1,22 @@
 export const DIAS_SEMANA = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
 
-// Blocos de meia em meia hora, das 7h às 21h (horário do estúdio).
+// Blocos de meia em meia hora. Cada bloco guarda-se pela hora a que
+// COMEÇA ("label"), mas mostra-se sempre como intervalo ("intervalo",
+// ex.: "20:30–21:00"): só com a hora de início, a última linha de um
+// turno até às 21:00 lia-se "20:30" e parecia que o horário acabava aí.
 const HORA_INICIO = 7
 const HORA_FIM = 21
 
-export const BLOCOS_HORARIO: { hora: number; minuto: number; label: string }[] = Array.from(
+const hhmm = (totalMin: number) =>
+  `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`
+
+export const BLOCOS_HORARIO: { hora: number; minuto: number; label: string; intervalo: string }[] = Array.from(
   { length: (HORA_FIM - HORA_INICIO) * 2 + 1 },
   (_, i) => {
     const hora = HORA_INICIO + Math.floor(i / 2)
     const minuto = i % 2 === 0 ? 0 : 30
-    return { hora, minuto, label: `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}` }
+    const inicio = hora * 60 + minuto
+    return { hora, minuto, label: hhmm(inicio), intervalo: `${hhmm(inicio)}–${hhmm(inicio + 30)}` }
   }
 )
 

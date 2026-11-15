@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useState, useTransition } from 'react'
+import { Fragment, useEffect, useState, useSyncExternalStore, useTransition } from 'react'
 import { BLOCOS_HORARIO, DIAS_SEMANA, chaveSlot } from '@/lib/data/horarios'
 import { fmt } from '@/lib/data/presencas'
 import type { Perfil } from '@/lib/supabase/database.types'
@@ -227,7 +227,51 @@ function estadoInicialDeSlots(slots: Record<string, SlotPt[]>): Record<string, s
   return estado
 }
 
-function GrelhaEditavel({
+// Texto estável do que uma escala contém — serve para saber se o que
+// está gravado no servidor ainda é o mesmo de quando um rascunho foi
+// começado.
+function assinaturaEscala(estado: Record<string, string[]>): string {
+  return Object.keys(estado)
+    .filter((k) => estado[k].length > 0)
+    .sort()
+    .map((k) => `${k}=${[...estado[k]].sort().join(',')}`)
+    .join(';')
+}
+
+type RascunhoEscala = { base: string; atribuicoes: Record<string, string[]> }
+
+// Lê um rascunho guardado no browser, se foi feito sobre a escala que
+// está gravada agora e ainda acrescenta alguma coisa a ela.
+function lerRascunhoValido(chave: string, baseServidor: string): Record<string, string[]> | null {
+  try {
+    const bruto = window.sessionStorage.getItem(chave)
+    if (!bruto) return null
+    const rascunho = JSON.parse(bruto) as RascunhoEscala
+    if (rascunho.base !== baseServidor) return null
+    if (assinaturaEscala(rascunho.atribuicoes) === baseServidor) return null
+    return rascunho.atribuicoes
+  } catch {
+    // Sem acesso ao armazenamento do browser (modo privado, etc.): a
+    // grelha funciona na mesma, só não recupera rascunhos.
+    return null
+  }
+}
+
+const semSubscricao = () => () => {}
+
+// O rascunho só existe no browser, por isso a grelha é montada duas
+// vezes: primeiro tal como o servidor a desenhou (para o HTML bater
+// certo) e, logo a seguir, já no browser, a ler o rascunho.
+function GrelhaEditavel(props: PropsEditavel) {
+  const noBrowser = useSyncExternalStore(
+    semSubscricao,
+    () => true,
+    () => false
+  )
+  return <GrelhaEditavelInterior key={noBrowser ? 'browser' : 'servidor'} {...props} lerRascunho={noBrowser} />
+}
+
+function GrelhaEditavelInterior({
   dias,
   slots,
   corPorPt,
@@ -236,15 +280,54 @@ function GrelhaEditavel({
   estudioId,
   semana,
   guardar,
-}: PropsEditavel) {
-  const [atribuicoes, setAtribuicoes] = useState<Record<string, string[]>>(() =>
-    estadoInicialDeSlots(slots)
+  lerRascunho,
+}: PropsEditavel & { lerRascunho: boolean }) {
+  // Rascunho: o que ainda não foi guardado fica também no browser
+  // (sessionStorage, por estúdio e semana). A página pode recarregar a
+  // meio — ao guardar o outro estúdio depois de sair uma versão nova da
+  // app, ou com um F5 sem querer — e sem isto a escala por guardar
+  // perdia-se. Só se recupera um rascunho feito sobre a mesma escala que
+  // está gravada agora; se entretanto o servidor mudou, ignora-se.
+  const chaveRascunho = `rc-escala-rascunho:${estudioSlug}:${semana}`
+  const baseServidor = assinaturaEscala(estadoInicialDeSlots(slots))
+  const [rascunhoInicial] = useState(() => (lerRascunho ? lerRascunhoValido(chaveRascunho, baseServidor) : null))
+
+  const [atribuicoes, setAtribuicoes] = useState<Record<string, string[]>>(
+    () => rascunhoInicial ?? estadoInicialDeSlots(slots)
   )
   const [abertaChave, setAbertaChave] = useState<string | null>(null)
-  const [alterado, setAlterado] = useState(false)
+  const [alterado, setAlterado] = useState(rascunhoInicial !== null)
+  const [recuperado, setRecuperado] = useState(rascunhoInicial !== null)
   const [estadoGuardar, setEstadoGuardar] = useState<'idle' | 'guardado' | 'erro'>('idle')
   const [aGuardar, iniciarGuardar] = useTransition()
   const ptsPorId = new Map(pts.map((p) => [p.id, p.nome]))
+
+  useEffect(() => {
+    if (!alterado) return
+    try {
+      const rascunho: RascunhoEscala = { base: baseServidor, atribuicoes }
+      window.sessionStorage.setItem(chaveRascunho, JSON.stringify(rascunho))
+    } catch {
+      // Ver nota acima.
+    }
+  }, [alterado, atribuicoes, baseServidor, chaveRascunho])
+
+  const esquecerRascunho = () => {
+    try {
+      window.sessionStorage.removeItem(chaveRascunho)
+    } catch {
+      // Ver nota acima.
+    }
+  }
+
+  // Volta ao que está gravado, deitando fora o que não foi guardado.
+  const descartarAlteracoes = () => {
+    esquecerRascunho()
+    setAtribuicoes(estadoInicialDeSlots(slots))
+    setAlterado(false)
+    setRecuperado(false)
+    setEstadoGuardar('idle')
+  }
 
   // Modo "pintar": com um instrutor escolhido aqui, arrastar o rato por
   // cima de vários blocos marca-os todos de uma vez (o primeiro bloco
@@ -300,7 +383,11 @@ function GrelhaEditavel({
         atribuicoes: atribuicoesParaEnviar,
       })
       setEstadoGuardar('error' in resultado ? 'erro' : 'guardado')
-      if (!('error' in resultado)) setAlterado(false)
+      if (!('error' in resultado)) {
+        setAlterado(false)
+        setRecuperado(false)
+        esquecerRascunho()
+      }
     })
   }
 
@@ -450,7 +537,16 @@ function GrelhaEditavel({
           <span className="text-xs text-red-600">Não foi possível guardar — tenta outra vez.</span>
         )}
         {estadoGuardar === 'idle' && alterado && (
-          <span className="text-xs text-amber-600">Há alterações por guardar.</span>
+          <span className="text-xs text-amber-600">
+            {recuperado
+              ? 'Recuperei alterações que não tinham sido guardadas — confirma e guarda.'
+              : 'Há alterações por guardar.'}
+          </span>
+        )}
+        {alterado && !aGuardar && (
+          <button type="button" onClick={descartarAlteracoes} className="text-xs text-muted underline hover:text-foreground">
+            Descartar
+          </button>
         )}
       </div>
     </div>

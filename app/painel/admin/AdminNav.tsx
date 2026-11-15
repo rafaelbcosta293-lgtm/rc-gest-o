@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import {
   Home,
   CalendarRange,
+  CalendarDays,
   Activity,
   FileText,
   Wallet,
@@ -218,12 +219,15 @@ function GrupoPill({ grupo, avisos }: { grupo: Grupo; avisos: Record<string, num
 // pendentesFaturas: pedidos de fatura por validar; despesasAPagar:
 // despesas por pagar com aviso ativo. Aparecem como número no grupo
 // ("Finanças (5)") e, lá dentro, na pasta a que dizem respeito.
+// lembretesPorTratar: lembretes do calendário em atraso ou para hoje.
 export default function AdminNav({
   pendentesFaturas = 0,
   despesasAPagar = 0,
+  lembretesPorTratar = 0,
 }: {
   pendentesFaturas?: number
   despesasAPagar?: number
+  lembretesPorTratar?: number
 }) {
   const avisos: Record<string, number> = {
     '/painel/admin/faturas': pendentesFaturas,
@@ -233,6 +237,7 @@ export default function AdminNav({
   return (
     <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
       <PillNavLink href="/painel/admin" label="Resumo" icone={Home} exato />
+      <PillNavLink href="/painel/admin/calendario" label="Calendário" icone={CalendarDays} aviso={lembretesPorTratar} />
       {GRUPOS.map((g) => (
         <GrupoPill key={g.id} grupo={g} avisos={avisos} />
       ))}

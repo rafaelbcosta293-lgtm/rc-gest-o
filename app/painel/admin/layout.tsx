@@ -11,6 +11,7 @@ import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import AlertaDespesas from '@/components/AlertaDespesas'
 import { hojeEmLisboa, listarAvisosDespesas } from '@/lib/data/despesas'
 import AvisosHorario from '@/components/AvisosHorario'
+import { contarLembretesPorTratar } from '@/lib/data/lembretes'
 import AdminNav from './AdminNav'
 
 // Administração é só para o dono da app — verificado por email antes de
@@ -18,15 +19,17 @@ import AdminNav from './AdminNav'
 // camada opcional, esta é obrigatória).
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const [sessao, estadosBanner, contactosAgendados, avisosDespesas, { count: pendentesFaturas }] = await Promise.all([
+  const hoje = hojeEmLisboa()
+  const [sessao, estadosBanner, contactosAgendados, avisosDespesas, { count: pendentesFaturas }, lembretesPorTratar] = await Promise.all([
     getSessaoAtual(),
     obterEstadosBanner(supabase),
     listarContactosAgendados(supabase),
-    listarAvisosDespesas(supabase, hojeEmLisboa()),
+    listarAvisosDespesas(supabase, hoje),
     supabase
       .from('pedidos_fatura')
       .select('id', { count: 'exact', head: true })
       .in('estado', ['pendente', 'erro', 'a_emitir']),
+    contarLembretesPorTratar(supabase, hoje),
   ])
 
   if (!podeAcederAdmin(sessao.email)) {
@@ -50,7 +53,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-9 w-auto" priority />
           </Link>
-          <AdminNav pendentesFaturas={pendentesFaturas ?? 0} despesasAPagar={avisosDespesas.length} />
+          <AdminNav pendentesFaturas={pendentesFaturas ?? 0} despesasAPagar={avisosDespesas.length} lembretesPorTratar={lembretesPorTratar} />
         </header>
       </div>
       <div className="flex-1">{children}</div>

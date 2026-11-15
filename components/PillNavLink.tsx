@@ -19,24 +19,28 @@ export default function PillNavLink({
   label,
   icone: Icone,
   exato = false,
+  aviso = 0,
 }: {
   href: string
   label: string
   icone: LucideIcon
   exato?: boolean
+  // Número a mostrar junto ao nome ("Calendário (3)"), como nos grupos.
+  aviso?: number
 }) {
   const ativo = estaAtivoPill(usePathname(), href, exato)
   const modo = useModoBarra()
+  const nome = aviso > 0 ? `${label} (${aviso})` : label
   return (
     <Link
       href={href}
-      title={modo === 'icones' ? label : undefined}
+      title={modo === 'icones' ? nome : undefined}
       className={`flex shrink-0 whitespace-nowrap font-medium tracking-tight transition-colors hover:bg-brand/[.08] ${formaPilula(modo)} ${
         ativo ? 'bg-brand/20 text-brand' : 'text-foreground'
       }`}
     >
       <Icone className={modo === 'empilhado' ? 'h-4 w-4' : 'h-3.5 w-3.5'} strokeWidth={ativo ? 2.5 : 2.25} />
-      {modo !== 'icones' && label}
+      {modo !== 'icones' && nome}
     </Link>
   )
 }

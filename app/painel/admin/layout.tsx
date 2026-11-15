@@ -36,7 +36,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     // "dark" fica só aqui — a Administração é a única zona da app com o
     // tema escuro/"tech"; o resto continua no modelo claro/vidro.
-    <div className="dark tema-proprio flex min-h-full flex-col">
+    // "campos-claros": todas as caixas de texto da área ficam brancas,
+    // para se destacarem do fundo preto (ver app/globals.css).
+    <div className="dark tema-proprio campos-claros flex min-h-full flex-col">
       {/* Faixa + barra num único wrapper sticky — ver nota equivalente
           em app/painel/[estudio]/layout.tsx. */}
       <div className="sticky top-0 z-10 flex flex-col">

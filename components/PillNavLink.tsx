@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
-import { useModoIcone } from './BarraAjustavel'
+import { formaPilula, useModoBarra } from './BarraAjustavel'
 
 // Item do menu horizontal de "pastas" (Administração/Coordenação) —
 // cada área tem o seu próprio conjunto fixo, por isso recebe os dados
@@ -26,17 +26,17 @@ export default function PillNavLink({
   exato?: boolean
 }) {
   const ativo = estaAtivoPill(usePathname(), href, exato)
-  const soIcone = useModoIcone()
+  const modo = useModoBarra()
   return (
     <Link
       href={href}
-      title={soIcone ? label : undefined}
-      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full transition-colors hover:bg-brand/[.08] ${
-        soIcone ? 'p-2' : 'px-3 py-1.5'
-      } text-[13px] font-medium tracking-tight ${ativo ? 'bg-brand/20 text-brand' : 'text-foreground'}`}
+      title={modo === 'icones' ? label : undefined}
+      className={`flex shrink-0 whitespace-nowrap font-medium tracking-tight transition-colors hover:bg-brand/[.08] ${formaPilula(modo)} ${
+        ativo ? 'bg-brand/20 text-brand' : 'text-foreground'
+      }`}
     >
-      <Icone className="h-3.5 w-3.5" strokeWidth={ativo ? 2.5 : 2.25} />
-      {!soIcone && label}
+      <Icone className={modo === 'empilhado' ? 'h-4 w-4' : 'h-3.5 w-3.5'} strokeWidth={ativo ? 2.5 : 2.25} />
+      {modo !== 'icones' && label}
     </Link>
   )
 }

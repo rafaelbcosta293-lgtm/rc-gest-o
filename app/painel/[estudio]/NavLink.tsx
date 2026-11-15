@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, BriefcaseBusiness } from 'lucide-react'
 import { MODULOS, PALETA } from '@/lib/data/constantes'
-import { useModoIcone } from '@/components/BarraAjustavel'
+import { formaPilula, useModoBarra } from '@/components/BarraAjustavel'
 
 // Destaca o módulo atual no menu — sem isto, a navegação não dava
 // nenhuma pista de "estás aqui".
@@ -27,14 +27,13 @@ function moduloPorId(id: string) {
 export function NavLinkTopBar({ href, id }: { href: string; id: string }) {
   const { icone: Icone, cor, nome } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
-  const soIcone = useModoIcone()
+  const modo = useModoBarra()
+  const soIcone = modo === 'icones'
   return (
     <Link
       href={href}
       title={soIcone ? nome : undefined}
-      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-medium tracking-tight text-foreground transition-colors ${
-        soIcone ? 'p-2' : 'px-3 py-1.5'
-      } ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
+      className={`flex shrink-0 whitespace-nowrap font-medium tracking-tight text-foreground transition-colors ${formaPilula(modo)} ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
       style={{
         background: ativo ? PALETA[cor].bg : undefined,
         color: ativo ? PALETA[cor].tx : undefined,
@@ -66,7 +65,8 @@ export function NavLinkClientesComSubmenu({
   const clientesHref = `/painel/${slug}/clientes`
   const { icone: Icone, cor } = moduloPorId('clientes')
   const subModulos = SUBPASTAS_CLIENTES.map((id) => moduloPorId(id))
-  const soIcone = useModoIcone()
+  const modo = useModoBarra()
+  const soIcone = modo === 'icones'
 
   function podeAceder(m: ReturnType<typeof moduloPorId>) {
     return m.pronto && (!m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao))
@@ -105,9 +105,7 @@ export function NavLinkClientesComSubmenu({
         ref={pillRef}
         href={clientesHref}
         title={soIcone ? 'Clientes' : undefined}
-        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-medium tracking-tight text-foreground transition-colors ${
-          soIcone ? 'p-2' : 'px-3 py-1.5'
-        } ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
+        className={`flex shrink-0 whitespace-nowrap font-medium tracking-tight text-foreground transition-colors ${formaPilula(modo)} ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
         style={{
           background: ativo ? PALETA[cor].bg : undefined,
           color: ativo ? PALETA[cor].tx : undefined,
@@ -115,7 +113,7 @@ export function NavLinkClientesComSubmenu({
       >
         <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
         {!soIcone && 'Clientes'}
-        {!soIcone && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
+        {modo === 'nomes' && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
       </Link>
 
       {aberto &&
@@ -187,7 +185,8 @@ export function NavLinkPastaHorarios({
   bloqueados: Record<string, string>
 }) {
   const pathname = usePathname()
-  const soIcone = useModoIcone()
+  const modo = useModoBarra()
+  const soIcone = modo === 'icones'
   const itens = PASTA_HORARIOS.map((p) => ({ ...p, modulo: moduloPorId(p.id), href: `/painel/${slug}/${p.id}` }))
   const disponiveis = itens.filter((i) => !bloqueados[i.id])
   const principal = disponiveis[0] ?? itens[0]
@@ -224,9 +223,7 @@ export function NavLinkPastaHorarios({
         title={soIcone ? 'Recursos Humanos' : undefined}
         aria-haspopup="menu"
         aria-expanded={aberto}
-        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-medium tracking-tight text-foreground transition-colors ${
-          soIcone ? 'p-2' : 'px-3 py-1.5'
-        } ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
+        className={`flex shrink-0 whitespace-nowrap font-medium tracking-tight text-foreground transition-colors ${formaPilula(modo)} ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
         style={{
           background: ativo ? PALETA[cor].bg : undefined,
           color: ativo ? PALETA[cor].tx : undefined,
@@ -234,7 +231,7 @@ export function NavLinkPastaHorarios({
       >
         <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
         {!soIcone && 'Recursos Humanos'}
-        {!soIcone && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
+        {modo === 'nomes' && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
       </Link>
 
       {aberto &&
@@ -283,13 +280,12 @@ export function NavLinkPastaHorarios({
 // outros, mas desativada, e também reage ao modo só-ícone.
 export function NavLinkBloqueado({ id, titulo }: { id: string; titulo: string }) {
   const { icone: Icone, nome } = moduloPorId(id)
-  const soIcone = useModoIcone()
+  const modo = useModoBarra()
+  const soIcone = modo === 'icones'
   return (
     <span
       title={titulo}
-      className={`flex shrink-0 cursor-not-allowed items-center gap-1.5 whitespace-nowrap rounded-full border border-border-subtle text-[13px] font-medium tracking-tight text-muted opacity-40 ${
-        soIcone ? 'p-2' : 'px-3 py-1.5'
-      }`}
+      className={`flex shrink-0 cursor-not-allowed whitespace-nowrap border border-border-subtle font-medium tracking-tight text-muted opacity-40 ${formaPilula(modo)}`}
     >
       <Icone className="h-3.5 w-3.5" strokeWidth={2.5} />
       {!soIcone && nome}

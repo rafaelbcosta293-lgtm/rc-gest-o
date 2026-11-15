@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useState, useSyncExternalStore, useTransition } from 'react'
-import { BLOCOS_HORARIO, DIAS_SEMANA, FIM_DA_GRELHA, chaveSlot, slotDentroDaGrelha } from '@/lib/data/horarios'
+import { BLOCOS_HORARIO, DIAS_SEMANA, chaveSlot, slotDentroDaGrelha } from '@/lib/data/horarios'
 import { fmt } from '@/lib/data/presencas'
 import type { Perfil } from '@/lib/supabase/database.types'
 
@@ -174,22 +174,6 @@ function Cabecalho({ dias }: { dias: string[] }) {
   )
 }
 
-// Última linha da grelha: a hora a que o dia acaba. As linhas mostram
-// intervalos (20:30–21:00), mas é esta marca que faz ver de relance que
-// o horário vai até às 21:00.
-function LinhaDeFecho() {
-  return (
-    <>
-      <div className="flex items-center whitespace-nowrap bg-zinc-50 px-1 py-0.5 text-[9px] font-semibold text-foreground dark:bg-zinc-900">
-        {FIM_DA_GRELHA}
-      </div>
-      <div className="col-span-7 flex items-center bg-zinc-50 px-2 py-0.5 text-[9px] text-muted dark:bg-zinc-900">
-        Fecho
-      </div>
-    </>
-  )
-}
-
 // O que a equipa vê em "Horários": a mesma grelha da Coordenação, com
 // os nomes de quem está em cada bloco, mas sem a tabela de horas por
 // instrutor — essa é uma ferramenta de quem planeia a escala.
@@ -227,7 +211,6 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
             })}
           </Fragment>
         ))}
-        <LinhaDeFecho />
       </div>
     </div>
   )
@@ -236,8 +219,8 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
 function estadoInicialDeSlots(slots: Record<string, SlotPt[]>): Record<string, string[]> {
   const estado: Record<string, string[]> = {}
   for (const [chave, lista] of Object.entries(slots)) {
-    // Um turno gravado fora da grelha (ex.: às 21:00, de quando havia
-    // essa linha a mais) não entra: assim não se vê nem se volta a gravar.
+    // Um turno gravado fora da grelha não entra: assim não se vê nem se
+    // volta a gravar.
     if (!slotDentroDaGrelha(chave)) continue
     estado[chave] = lista.map((s) => s.pt_id)
   }
@@ -529,7 +512,6 @@ function GrelhaEditavelInterior({
               })}
             </Fragment>
           ))}
-          <LinhaDeFecho />
         </div>
         <ResumoHoras
           dias={dias}

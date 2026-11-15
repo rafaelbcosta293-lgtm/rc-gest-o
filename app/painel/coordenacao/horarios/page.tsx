@@ -140,8 +140,7 @@ async function PainelHorariosEstudio({
     throw new Error(erroEscala.message)
   }
 
-  // Turnos gravados fora da grelha (ex.: às 21:00, de quando havia essa
-  // linha a mais) não contam: o estúdio fecha às 21:00.
+  // Turnos gravados fora das horas que a grelha mostra não contam.
   const escalaSemana = ((escalaSemanaData ?? []) as unknown as TurnoSemana[]).filter((t) =>
     slotDentroDaGrelha(chaveSlot(t.data, t.hora, t.minuto))
   )

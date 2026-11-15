@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BLOCOS_HORARIO, FIM_DA_GRELHA, slotDentroDaGrelha } from './horarios'
+import { BLOCOS_HORARIO, slotDentroDaGrelha } from './horarios'
 
 describe('blocos da grelha de escalas', () => {
   it('cada bloco mostra-se como intervalo de meia hora, para a hora de fim nunca ficar implícita', () => {
@@ -11,11 +11,12 @@ describe('blocos da grelha de escalas', () => {
     }
   })
 
-  it('a grelha acaba às 21:00: o último bloco é o das 20:30–21:00 e não há linha das 21:00', () => {
-    expect(BLOCOS_HORARIO.at(-1)?.intervalo).toBe('20:30–21:00')
-    expect(BLOCOS_HORARIO.some((b) => b.hora === 21)).toBe(false)
-    expect(FIM_DA_GRELHA).toBe('21:00')
-    expect(slotDentroDaGrelha('2026-11-17_20_30')).toBe(true)
-    expect(slotDentroDaGrelha('2026-11-17_21_0')).toBe(false)
+  it('a grelha vai das 7:00 às 22:00: o último bloco é o das 21:30–22:00', () => {
+    expect(BLOCOS_HORARIO.at(-1)?.intervalo).toBe('21:30–22:00')
+    expect(BLOCOS_HORARIO).toHaveLength(30)
+    expect(slotDentroDaGrelha('2026-11-17_21_0')).toBe(true)
+    expect(slotDentroDaGrelha('2026-11-17_21_30')).toBe(true)
+    expect(slotDentroDaGrelha('2026-11-17_22_0')).toBe(false)
+    expect(slotDentroDaGrelha('2026-11-17_6_30')).toBe(false)
   })
 })

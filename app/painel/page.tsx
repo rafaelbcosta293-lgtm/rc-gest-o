@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { corEstudio } from '@/lib/data/constantes'
 import { podeAcederAdmin, podeAcederCoordenacao, podeAcederEstudio } from '@/lib/data/acessos'
+import AvisosHorario from '@/components/AvisosHorario'
 
 // Um símbolo do estúdio em vez de uma letra solta — o marco que
 // identifica cada cidade (Santuário de Fátima / Castelo de Leiria).
@@ -61,6 +62,10 @@ export default async function PainelPage({
         <p className="mt-1 text-sm text-muted">
           Sessão iniciada como {userData.user.email}
         </p>
+      </div>
+
+      <div className="w-full max-w-2xl overflow-hidden rounded-xl empty:hidden">
+        <AvisosHorario supabase={supabase} userId={userData.user.id} email={email} />
       </div>
 
       {erro === 'sem-acesso' && (

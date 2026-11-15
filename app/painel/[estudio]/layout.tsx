@@ -13,6 +13,7 @@ import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import BarraAjustavel from '@/components/BarraAjustavel'
 import AvisosFerias from './ferias/AvisosFerias'
+import AvisosHorario from '@/components/AvisosHorario'
 import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado } from './NavLink'
 
 // Na barra do computador/tablet, Treinos e Avaliações deixam de ter
@@ -79,6 +80,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       <div className="sticky top-0 z-10 flex flex-col">
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} apenasEstudio={slug} />
         <AlertaContactosAgendados contactosIniciais={contactosAgendados} apenasEstudio={slug} />
+        <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
         {estudio && (
           <AvisosFerias
             supabase={supabase}

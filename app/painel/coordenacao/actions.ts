@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { somarDias } from '@/lib/data/horarios'
 import { tentarDesbloquear } from '@/lib/data/gate'
+import { getSessaoAtual } from '@/lib/data/sessao'
+import { avisarEquipaDeHorarioNovo } from '@/lib/data/avisosHorario'
 import { redirect } from 'next/navigation'
 
 function campoOuNull(formData: FormData, nome: string) {
@@ -35,20 +37,20 @@ type LinhaEscala = { estudio_id: number; data: string; hora: number; minuto: num
 // inteira e voltava-se a inserir tudo: se a inserção falhasse (foi o que
 // aconteceu com um turno às 21:00), a semana ficava vazia na base de
 // dados. Assim, uma falha deixa a escala tal como estava. Devolve a
-// mensagem de erro, ou null se correu bem.
+// mensagem de erro (ou null) e se a escala ficou diferente do que estava.
 async function substituirSemana(
   supabase: Awaited<ReturnType<typeof createClient>>,
   estudioId: number,
   semana: string,
   linhas: LinhaEscala[]
-): Promise<string | null> {
+): Promise<{ erro: string | null; mudou: boolean }> {
   const { data: existentes, error: erroLer } = await supabase
     .from('escalas')
     .select('id, data, hora, minuto, pt_id')
     .eq('estudio_id', estudioId)
     .gte('data', semana)
     .lt('data', somarDias(semana, 7))
-  if (erroLer) return erroLer.message
+  if (erroLer) return { erro: erroLer.message, mudou: false }
 
   const chave = (l: { data: string; hora: number; minuto: number; pt_id: string }) =>
     `${l.data}|${l.hora}|${l.minuto}|${l.pt_id}`
@@ -67,13 +69,27 @@ async function substituirSemana(
 
   if (aInserir.length > 0) {
     const { error } = await supabase.from('escalas').insert(aInserir)
-    if (error) return error.message
+    if (error) return { erro: error.message, mudou: false }
   }
   if (aRemover.length > 0) {
     const { error } = await supabase.from('escalas').delete().in('id', aRemover)
-    if (error) return error.message
+    if (error) return { erro: error.message, mudou: aInserir.length > 0 }
   }
-  return null
+  return { erro: null, mudou: aInserir.length > 0 || aRemover.length > 0 }
+}
+
+// Depois de a escala mudar, avisa a equipa do estúdio (cada um na sua
+// conta) de que há horário novo para consultar.
+async function avisarSeMudou(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  estudioId: number,
+  semana: string,
+  mudou: boolean
+) {
+  if (!mudou) return
+  const sessao = await getSessaoAtual()
+  await avisarEquipaDeHorarioNovo(supabase, { estudioId, semana, autorId: sessao.userId })
+  revalidatePath('/painel', 'layout')
 }
 
 // Chamado diretamente da grelha (sem <form>/redirect): substitui a
@@ -97,7 +113,8 @@ export async function guardarSemana(input: {
       pt_id,
     }))
   )
-  const erro = await substituirSemana(supabase, input.estudioId, input.semana, linhas)
+  const { erro, mudou } = await substituirSemana(supabase, input.estudioId, input.semana, linhas)
+  await avisarSeMudou(supabase, input.estudioId, input.semana, mudou)
   if (erro) return { error: erro }
 
   revalidatePath('/painel/coordenacao/horarios')
@@ -139,7 +156,9 @@ export async function copiarSemanaAnterior(formData: FormData) {
     .map((t) => ({ estudio_id: estudioId, data: somarDias(t.data, 7), hora: t.hora, minuto: t.minuto, pt_id: t.pt_id }))
   if (linhas.length === 0) voltar('vazia')
 
-  if (await substituirSemana(supabase, estudioId, semana, linhas)) voltar('erro')
+  const copia = await substituirSemana(supabase, estudioId, semana, linhas)
+  await avisarSeMudou(supabase, estudioId, semana, copia.mudou)
+  if (copia.erro) voltar('erro')
 
   revalidatePath('/painel/coordenacao/horarios')
   revalidatePath(`/painel/${estudioSlug}/horarios`)

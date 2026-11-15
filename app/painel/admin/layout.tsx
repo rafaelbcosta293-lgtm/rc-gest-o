@@ -10,6 +10,7 @@ import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import AlertaDespesas from '@/components/AlertaDespesas'
 import { hojeEmLisboa, listarAvisosDespesas } from '@/lib/data/despesas'
+import AvisosHorario from '@/components/AvisosHorario'
 import AdminNav from './AdminNav'
 
 // Administração é só para o dono da app — verificado por email antes de
@@ -42,6 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} />
         <AlertaContactosAgendados contactosIniciais={contactosAgendados} />
         <AlertaDespesas avisos={avisosDespesas} />
+        <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
         <header className="shadow-deep flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-3 backdrop-blur-xl">
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-9 w-auto" priority />

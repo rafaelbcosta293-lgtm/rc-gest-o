@@ -8,6 +8,7 @@ import { obterEstadosBanner } from '@/lib/data/smsGateway'
 import { listarContactosAgendados } from '@/lib/data/contactosAgendados'
 import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
+import AvisosHorario from '@/components/AvisosHorario'
 import CoordenacaoNav from './CoordenacaoNav'
 
 // Coordenação é só para o dono e para a conta geral do negócio —
@@ -32,6 +33,7 @@ export default async function CoordenacaoLayout({ children }: { children: React.
       <div className="sticky top-0 z-10 flex flex-col">
         <BarraSmsGatewayOffline estadosIniciais={estadosBanner} />
         <AlertaContactosAgendados contactosIniciais={contactosAgendados} />
+        <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
         <header className="dark tema-proprio shadow-deep flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl">
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />

@@ -28,6 +28,54 @@ export async function desbloquearCoordenacao(formData: FormData) {
 
 type AtribuicaoSlot = { data: string; hora: number; minuto: number; pt_ids: string[] }
 
+type LinhaEscala = { estudio_id: number; data: string; hora: number; minuto: number; pt_id: string }
+
+// Deixa a escala de uma semana igual a "linhas". Primeiro acrescenta-se
+// o que é novo e só depois se tira o que saiu. Antes apagava-se a semana
+// inteira e voltava-se a inserir tudo: se a inserção falhasse (foi o que
+// aconteceu com um turno às 21:00), a semana ficava vazia na base de
+// dados. Assim, uma falha deixa a escala tal como estava. Devolve a
+// mensagem de erro, ou null se correu bem.
+async function substituirSemana(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  estudioId: number,
+  semana: string,
+  linhas: LinhaEscala[]
+): Promise<string | null> {
+  const { data: existentes, error: erroLer } = await supabase
+    .from('escalas')
+    .select('id, data, hora, minuto, pt_id')
+    .eq('estudio_id', estudioId)
+    .gte('data', semana)
+    .lt('data', somarDias(semana, 7))
+  if (erroLer) return erroLer.message
+
+  const chave = (l: { data: string; hora: number; minuto: number; pt_id: string }) =>
+    `${l.data}|${l.hora}|${l.minuto}|${l.pt_id}`
+  const pretendidas = new Set(linhas.map(chave))
+  const jaGravadas = new Set((existentes ?? []).map(chave))
+  // Sem repetidos: o mesmo instrutor duas vezes no mesmo bloco violaria
+  // a regra de unicidade da tabela.
+  const vistas = new Set<string>()
+  const aInserir = linhas.filter((l) => {
+    const k = chave(l)
+    if (jaGravadas.has(k) || vistas.has(k)) return false
+    vistas.add(k)
+    return true
+  })
+  const aRemover = (existentes ?? []).filter((l) => !pretendidas.has(chave(l))).map((l) => l.id as string)
+
+  if (aInserir.length > 0) {
+    const { error } = await supabase.from('escalas').insert(aInserir)
+    if (error) return error.message
+  }
+  if (aRemover.length > 0) {
+    const { error } = await supabase.from('escalas').delete().in('id', aRemover)
+    if (error) return error.message
+  }
+  return null
+}
+
 // Chamado diretamente da grelha (sem <form>/redirect): substitui a
 // escala inteira dessa semana pelo que foi montado no ecrã, de uma só
 // vez — em vez de gravar bloco a bloco (o que obrigava a recarregar a
@@ -39,16 +87,6 @@ export async function guardarSemana(input: {
   atribuicoes: AtribuicaoSlot[]
 }): Promise<{ ok: true } | { error: string }> {
   const supabase = await createClient()
-  const fimExclusivo = somarDias(input.semana, 7)
-
-  const { error: erroApagar } = await supabase
-    .from('escalas')
-    .delete()
-    .eq('estudio_id', input.estudioId)
-    .gte('data', input.semana)
-    .lt('data', fimExclusivo)
-
-  if (erroApagar) return { error: erroApagar.message }
 
   const linhas = input.atribuicoes.flatMap((s) =>
     s.pt_ids.map((pt_id) => ({
@@ -59,11 +97,8 @@ export async function guardarSemana(input: {
       pt_id,
     }))
   )
-
-  if (linhas.length > 0) {
-    const { error: erroInserir } = await supabase.from('escalas').insert(linhas)
-    if (erroInserir) return { error: erroInserir.message }
-  }
+  const erro = await substituirSemana(supabase, input.estudioId, input.semana, linhas)
+  if (erro) return { error: erro }
 
   revalidatePath('/painel/coordenacao/horarios')
   revalidatePath(`/painel/${input.estudioSlug}/horarios`)
@@ -104,15 +139,7 @@ export async function copiarSemanaAnterior(formData: FormData) {
     .map((t) => ({ estudio_id: estudioId, data: somarDias(t.data, 7), hora: t.hora, minuto: t.minuto, pt_id: t.pt_id }))
   if (linhas.length === 0) voltar('vazia')
 
-  const { error: erroApagar } = await supabase
-    .from('escalas')
-    .delete()
-    .eq('estudio_id', estudioId)
-    .gte('data', semana)
-    .lt('data', somarDias(semana, 7))
-  if (erroApagar) voltar('erro')
-  const { error: erroInserir } = await supabase.from('escalas').insert(linhas)
-  if (erroInserir) voltar('erro')
+  if (await substituirSemana(supabase, estudioId, semana, linhas)) voltar('erro')
 
   revalidatePath('/painel/coordenacao/horarios')
   revalidatePath(`/painel/${estudioSlug}/horarios`)

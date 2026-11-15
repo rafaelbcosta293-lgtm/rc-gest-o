@@ -2,10 +2,12 @@ import Link from 'next/link'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getEstudioPorSlug, getEstudios, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getSessaoAtual } from '@/lib/data/sessao'
+import { podeAcederEstudio } from '@/lib/data/acessos'
 import { fmt } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
-import { coresInstrutores } from '@/lib/data/constantes'
+import { coresInstrutores, corEstudio } from '@/lib/data/constantes'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 
@@ -26,20 +28,40 @@ export default async function HorariosPage({
   const semanaSeguinte = somarDias(inicio, 7)
 
   const supabase = await createClient()
-  const estudio = await getEstudioPorSlug(supabase, slug)
+  const [estudio, sessao, todosEstudios] = await Promise.all([
+    getEstudioPorSlug(supabase, slug),
+    getSessaoAtual(),
+    getEstudios(supabase),
+  ])
   if (!estudio) {
     notFound()
   }
 
-  const [{ data: turnosData, error: erroTurnos }, listaPts] = await Promise.all([
+  // Horário comum: além do estúdio aberto, mostram-se os outros estúdios
+  // a que esta conta tem acesso — quem trabalha em Fátima e em Leiria vê
+  // as duas escalas na mesma página, tal como a Coordenação. Uma conta
+  // de estúdio (RC Fátima, RC Leiria) continua a ver só o seu.
+  const { data: ligacoes } = sessao.userId
+    ? await supabase.from('perfis_estudios').select('estudio_id').eq('perfil_id', sessao.userId)
+    : { data: [] as { estudio_id: number }[] }
+  const ligados = new Set((ligacoes ?? []).map((l) => l.estudio_id))
+  const estudios = [
+    estudio,
+    ...todosEstudios.filter((e) => e.id !== estudio.id && (podeAcederEstudio(sessao.email, e.slug) || ligados.has(e.id))),
+  ]
+
+  const [{ data: turnosData, error: erroTurnos }, ...equipas] = await Promise.all([
     supabase
       .from('escalas')
-      .select('data, hora, minuto, pt:perfis!pt_id(id, nome)')
-      .eq('estudio_id', estudio.id)
+      .select('estudio_id, data, hora, minuto, pt:perfis!pt_id(id, nome)')
+      .in(
+        'estudio_id',
+        estudios.map((e) => e.id)
+      )
       .gte('data', inicio)
       .lt('data', fimExclusivo)
       .order('criado_em'),
-    getEquipaDoEstudio(supabase, estudio.id),
+    ...estudios.map((e) => getEquipaDoEstudio(supabase, e.id)),
   ])
 
   if (erroTurnos) {
@@ -47,20 +69,24 @@ export default async function HorariosPage({
   }
 
   // Mesma cor por instrutor que aparece em Coordenação (ver
-  // coresInstrutores), para se reconhecer quem é quem.
-  const cores = coresInstrutores(listaPts.map((p) => p.nome))
-  const corPorPt: Record<string, CorPt> = Object.fromEntries(listaPts.map((p, i) => [p.id, cores[i]]))
+  // coresInstrutores), igual nos dois estúdios, para se reconhecer quem
+  // é quem.
+  const pessoas = [...new Map(equipas.flat().map((p) => [p.id, p])).values()].sort((a, b) => a.nome.localeCompare(b.nome))
+  const cores = coresInstrutores(pessoas.map((p) => p.nome))
+  const corPorPt: Record<string, CorPt> = Object.fromEntries(pessoas.map((p, i) => [p.id, cores[i]]))
 
   // Objeto simples (não Map) porque isto atravessa a fronteira
   // servidor → cliente como propriedade de GrelhaHorarios.
-  const slots: Record<string, SlotPt[]> = {}
+  const slotsPorEstudio = new Map<number, Record<string, SlotPt[]>>(estudios.map((e) => [e.id, {}]))
   for (const t of (turnosData ?? []) as unknown as {
+    estudio_id: number
     data: string
     hora: number
     minuto: number
     pt: { id: string; nome: string } | null
   }[]) {
-    if (!t.pt) continue
+    const slots = slotsPorEstudio.get(t.estudio_id)
+    if (!t.pt || !slots) continue
     const chave = chaveSlot(t.data, t.hora, t.minuto)
     const lista = slots[chave] ?? []
     lista.push({ pt_id: t.pt.id, nome: t.pt.nome })
@@ -68,7 +94,7 @@ export default async function HorariosPage({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
+    <div className="mx-auto max-w-7xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
         className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
@@ -78,7 +104,7 @@ export default async function HorariosPage({
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Horários</h1>
       <p className="mt-1 text-sm text-muted">
-        {estudio.nome} · escala da semana.
+        {estudios.map((e) => e.nome).join(' e ')} · quem está em cada estúdio, a cada hora da semana.
       </p>
 
       {error && (
@@ -110,8 +136,18 @@ export default async function HorariosPage({
         Só para consulta — a escala é planeada em Coordenação.
       </p>
 
-      <div className="mt-4">
-        <GrelhaHorarios dias={dias} slots={slots} corPorPt={corPorPt} />
+      <div className="mt-4 flex flex-col gap-y-8">
+        {estudios.map((e) => (
+          <section key={e.id}>
+            {estudios.length > 1 && (
+              <div className="mb-2 flex items-center gap-2">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: corEstudio(e.slug).cor }} />
+                <h2 className="text-lg font-semibold text-foreground">{e.nome}</h2>
+              </div>
+            )}
+            <GrelhaHorarios dias={dias} slots={slotsPorEstudio.get(e.id) ?? {}} corPorPt={corPorPt} />
+          </section>
+        ))}
       </div>
     </div>
   )

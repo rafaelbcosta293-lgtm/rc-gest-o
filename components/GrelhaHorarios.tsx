@@ -174,12 +174,15 @@ function Cabecalho({ dias }: { dias: string[] }) {
   )
 }
 
+// O que a equipa vê em "Horários": a mesma grelha da Coordenação, com
+// os nomes de quem está em cada bloco, mas sem a tabela de horas por
+// instrutor — essa é uma ferramenta de quem planeia a escala.
 function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
   return (
     <div className="overflow-x-auto">
       <div
         className="grid min-w-[620px] gap-px overflow-hidden rounded-lg border border-border-subtle bg-black/10 text-[10px] dark:bg-white/10"
-        style={{ gridTemplateColumns: COLUNAS_GRELHA, marginRight: LARGURA_TOTAL + 1 }}
+        style={{ gridTemplateColumns: COLUNAS_GRELHA }}
       >
         <Cabecalho dias={dias} />
         {BLOCOS_HORARIO.map((bloco) => (
@@ -209,12 +212,6 @@ function GrelhaSoLeitura({ dias, slots, corPorPt }: PropsSoLeitura) {
           </Fragment>
         ))}
       </div>
-      <ResumoHoras
-        dias={dias}
-        blocosPorPt={contarBlocos(dias, (chave) => (slots[chave] ?? []).map((x) => x.pt_id))}
-        nomes={new Map(Object.values(slots).flatMap((lista) => lista.map((x) => [x.pt_id, x.nome] as const)))}
-        corPorPt={corPorPt}
-      />
     </div>
   )
 }

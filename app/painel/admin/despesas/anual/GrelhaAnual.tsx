@@ -220,23 +220,18 @@ export default function GrelhaAnual({
                                   onChange={(e) => alterar(k, e.target.value)}
                                   onFocus={(e) => e.currentTarget.select()}
                                   onKeyDown={aoTeclar}
-                                  // Em linha: o tema da Administração dá
-                                  // cor própria aos campos e ganhava às
-                                  // classes.
+                                  // Caixa branca com texto escuro, para se
+                                  // destacar do fundo preto da Administração.
+                                  // Em linha: o tema da Administração dá cor
+                                  // própria aos campos e ganhava às classes.
                                   style={
                                     invalido
-                                      ? { borderColor: '#ef4444', background: 'rgba(239,68,68,.12)' }
+                                      ? { background: '#fee2e2', borderColor: '#ef4444', color: '#b91c1c' }
                                       : mudou
-                                        ? { borderColor: '#fbbf24', background: 'rgba(251,191,36,.16)' }
-                                        : undefined
+                                        ? { background: '#fef3c7', borderColor: '#f59e0b', color: '#18181b' }
+                                        : { background: '#ffffff', borderColor: '#d4d4d8', color: l.porPagar[i] ? '#b45309' : '#18181b' }
                                   }
-                                  className={`w-full min-w-[68px] rounded border bg-transparent px-1 py-1 text-right font-mono outline-none focus:border-brand focus:bg-background ${
-                                    invalido
-                                      ? 'border-red-500 text-red-300'
-                                      : mudou
-                                        ? 'border-amber-400/70 bg-amber-400/10 text-foreground'
-                                        : `border-transparent hover:border-border-subtle ${l.porPagar[i] ? 'text-amber-300' : 'text-foreground'}`
-                                  }`}
+                                  className="w-full min-w-[68px] rounded border px-1 py-1 text-right font-mono outline-none focus:ring-2 focus:ring-brand"
                                 />
                               )}
                             </td>

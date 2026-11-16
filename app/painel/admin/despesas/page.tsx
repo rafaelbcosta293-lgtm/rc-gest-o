@@ -1,3 +1,4 @@
+import { carregarCustosPorLead, custoPorLeadDoMes, explicarCustoPorLead, MIN_LEADS_CUSTO_POR_LEAD } from '@/lib/data/custoPorLead'
 import { IrComBotaoDireito, JanelaServidor } from '@/components/janela/Janela'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -86,6 +87,10 @@ export default async function DespesasPage({
       : Promise.resolve({ data: null }),
   ])
   if (error) throw new Error(error.message)
+
+  // Custo por lead de cada estúdio, calculado agora a partir dos
+  // anúncios lançados (muda logo que se altera uma despesa).
+  const custosPorLead = await carregarCustosPorLead(supabase, ids, hoje, { mesFinal: mes })
 
   const linhas = ((linhasData ?? []) as DespesaLinha[]).map((d) => ({ ...d, valor: Number(d.valor) }))
   const emEdicao = emEdicaoData ? ({ ...emEdicaoData, valor: Number(emEdicaoData.valor) } as DespesaLinha) : null
@@ -309,6 +314,51 @@ export default async function DespesasPage({
           </div>
         ))}
       </div>
+
+      {/* Custo por lead: depende sempre do que está lançado em "MKT - Anúncios". */}
+      <TituloSeccao cor="teal">Custo por lead — anúncios ÷ leads</TituloSeccao>
+      <p className="mt-1 text-sm text-muted">
+        Calculado na hora, por estúdio: o que está lançado em &quot;MKT - Anúncios&quot; nesse estúdio a dividir pelas leads que lá entraram. Se
+        alterares o valor de um anúncio, este número muda logo — aqui, na página de Leads, nos Objetivos e no Simulador.
+      </p>
+      <div className="mt-2 overflow-x-auto rounded-xl border border-border-subtle bg-surface">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border-subtle text-left text-[11px] uppercase tracking-wider text-muted">
+              <th className="px-4 py-2.5 font-semibold">Estúdio</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Anúncios de {nomeMes(mes)}</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Leads do mês</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Custo por lead do mês</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Média (até 6 meses)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {estudios.map((e) => {
+              const c = custosPorLead.porEstudio.get(e.id)
+              const doMes = c?.todosOsMeses.find((m) => m.mes === mes)
+              const valorDoMes = custoPorLeadDoMes(doMes)
+              return (
+                <tr key={e.id} className="border-b border-border-subtle/60 last:border-0">
+                  <td className="px-4 py-2.5 font-semibold text-foreground">{e.nome}</td>
+                  <td className="px-4 py-2.5 text-right font-mono text-foreground">{doMes && doMes.anuncios > 0 ? eur(doMes.anuncios) : '—'}</td>
+                  <td className="px-4 py-2.5 text-right font-mono text-foreground">{doMes?.leads ?? 0}</td>
+                  <td className="px-4 py-2.5 text-right font-mono font-bold text-foreground">
+                    {valorDoMes != null && doMes!.anuncios > 0 ? eur(valorDoMes) : '—'}
+                    {doMes?.aDecorrer && valorDoMes != null && doMes.anuncios > 0 && <span className="ml-1.5 text-[11px] font-normal text-muted">mês a decorrer</span>}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-mono text-muted" title={c ? explicarCustoPorLead(c) : undefined}>
+                    {c?.valor != null ? eur(c.valor) : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-1.5 text-xs text-muted">
+        Sem valor (&quot;—&quot;) quando falta uma das duas coisas no mês: o anúncio lançado nesse estúdio ou leads registadas. A média junta só os
+        meses que têm as duas e precisa de pelo menos {MIN_LEADS_CUSTO_POR_LEAD} leads.
+      </p>
     </div>
   )
 }

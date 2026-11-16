@@ -1,3 +1,4 @@
+import { carregarCustoPorLead, custoPorLeadDoMes, explicarCustoPorLead } from '@/lib/data/custoPorLead'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft, TrendingUp, Clock3, UserCheck, Phone, Handshake } from 'lucide-react'
 import { notFound } from 'next/navigation'
@@ -55,6 +56,10 @@ export default async function LeadsPage({
   }
 
   const { ehAdmin } = papeisDaSessao(sessao)
+  // Custo por lead deste estúdio (anúncios das Despesas ÷ leads) — só a
+  // administração vê valores em euros.
+  const custoPorLead = ehAdmin ? await carregarCustoPorLead(supabase, [estudio.id], hoje) : null
+  const custoDesteMes = custoPorLead?.todosOsMeses.find((m) => m.mes === hoje.slice(0, 7))
   const quadro = ((quadroData as QuadroDoDia[] | null) ?? [])[0] ?? null
   const leads = (data ?? []) as unknown as LeadResumo[]
 
@@ -160,6 +165,31 @@ export default async function LeadsPage({
               valor={quadro.vendas}
               sufixo={ehAdmin && quadro.vendas > 0 ? `· €${quadro.valor_vendas}` : undefined}
             />
+          </div>
+        </div>
+      )}
+
+      {custoPorLead && (
+        <div className="mt-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Custo por lead · anúncios ÷ leads</h2>
+          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <StatCard
+              label="Este mês"
+              valor={custoDesteMes && custoDesteMes.anuncios > 0 && custoDesteMes.leads > 0 ? custoPorLeadDoMes(custoDesteMes)!.toLocaleString('pt-PT', { minimumFractionDigits: 2 }) : '—'}
+              sufixo={custoDesteMes && custoDesteMes.anuncios > 0 && custoDesteMes.leads > 0 ? '€' : undefined}
+              formula={
+                custoDesteMes && custoDesteMes.anuncios > 0
+                  ? `${custoDesteMes.anuncios.toLocaleString('pt-PT', { minimumFractionDigits: 2 })} € de anúncios (Despesas → MKT - Anúncios) ÷ ${custoDesteMes.leads} leads este mês. Muda quando alteras a despesa.`
+                  : 'Ainda não há despesa de "MKT - Anúncios" lançada neste estúdio este mês.'
+              }
+            />
+            <StatCard
+              label="Média (até 6 meses)"
+              valor={custoPorLead.valor != null ? custoPorLead.valor.toLocaleString('pt-PT', { minimumFractionDigits: 2 }) : '—'}
+              sufixo={custoPorLead.valor != null ? '€' : undefined}
+              formula={explicarCustoPorLead(custoPorLead)}
+            />
+            <StatCard label="Leads este mês" valor={custoDesteMes?.leads ?? 0} formula="Leads que entraram neste estúdio no mês em curso." />
           </div>
         </div>
       )}

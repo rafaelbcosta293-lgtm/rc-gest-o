@@ -29,6 +29,8 @@ function voltar(formData: FormData, extra: Record<string, string> = {}): never {
   for (const [k, v] of Object.entries(extra)) url.searchParams.set(k, v)
   url.searchParams.delete(extra.error ? 'ok' : 'error')
   revalidatePath(ROTA, 'layout')
+  // O custo por lead (Leads, Objetivos, Simulador) depende dos anúncios lançados aqui.
+  revalidatePath('/painel', 'layout')
   redirect(`${url.pathname}${url.search}`)
 }
 

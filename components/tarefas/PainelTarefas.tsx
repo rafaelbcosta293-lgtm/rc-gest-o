@@ -65,6 +65,9 @@ export default function PainelTarefas({
   const pctNoPrazo = est.comPrazo30 > 0 ? Math.round((est.noPrazo30 / est.comPrazo30) * 100) : null
   const maxPessoa = Math.max(1, ...est.porPessoa.map((p) => p.abertas))
   const maxLista = Math.max(1, ...est.porLista.map((l) => l.abertas))
+  const maxQuemFez = Math.max(1, ...est.porQuemFez.map((p) => p.feitas30))
+  // Por norma as tarefas não têm responsável: "Por pessoa" só interessa quando alguma tem.
+  const haResponsaveis = est.porPessoa.some((p) => p.id !== null)
 
   return (
     <div className="viz-tarefas mt-6 flex flex-col gap-5">
@@ -81,6 +84,29 @@ export default function PainelTarefas({
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* Quem fez */}
+        <section className="rounded-xl border border-border-subtle bg-surface p-4 lg:col-span-2">
+          <h2 className="text-sm font-bold text-foreground">Quem realizou as tarefas</h2>
+          <p className="text-xs text-muted">
+            Tarefas concluídas por cada pessoa nos últimos 30 dias (o nome indicado ao concluir). Ao lado: as dos últimos 7 dias.
+          </p>
+          {est.porQuemFez.length === 0 ? (
+            <p className="mt-4 text-sm text-muted">Ainda não há tarefas concluídas neste período.</p>
+          ) : (
+            <ul className="mt-3">
+              {est.porQuemFez.map((p) => (
+                <LinhaDeBarra
+                  key={p.id ?? 'sem'}
+                  nome={p.id ? (ctx.nomePessoa.get(p.id) ?? '—') : 'Sem nome indicado'}
+                  valor={p.feitas30}
+                  maximo={maxQuemFez}
+                  detalhe={`${est.feitas30 > 0 ? Math.round((p.feitas30 / est.feitas30) * 100) : 0}% do total · ${p.feitas7} nos últimos 7 dias`}
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+
         {/* Concluídas por semana */}
         <section className="rounded-xl border border-border-subtle bg-surface p-4">
           <h2 className="text-sm font-bold text-foreground">Tarefas concluídas por semana</h2>
@@ -97,11 +123,17 @@ export default function PainelTarefas({
                 >
                   {rotulada && <span className="mb-1 text-xs font-semibold text-foreground">{s.total}</span>}
                   {!rotulada && (
-                    <span className="mb-1 hidden rounded bg-foreground px-1.5 py-0.5 text-[11px] font-semibold text-background group-hover:block">{s.total}</span>
+                    <span className="mb-1 hidden rounded bg-foreground px-1.5 py-0.5 text-[11px] font-semibold text-background group-hover:block">
+                      {s.total}
+                    </span>
                   )}
                   <div
                     className={`w-full max-w-6 ${ultima ? 'bg-[var(--viz-serie)]' : 'bg-[color-mix(in_srgb,var(--viz-serie)_55%,transparent)]'} group-hover:bg-[var(--viz-serie)]`}
-                    style={{ height: `${(s.total / maxSemana) * 78}%`, minHeight: s.total > 0 ? 3 : 0, borderRadius: '4px 4px 0 0' }}
+                    style={{
+                      height: `${(s.total / maxSemana) * 78}%`,
+                      minHeight: s.total > 0 ? 3 : 0,
+                      borderRadius: '4px 4px 0 0',
+                    }}
                   />
                 </div>
               )
@@ -149,8 +181,8 @@ export default function PainelTarefas({
                     {t.titulo}
                   </Link>
                   <span className="shrink-0 text-xs text-muted">
-                    {t.responsavel_id ? (ctx.nomePessoa.get(t.responsavel_id)?.split(' ')[0] ?? '—') : 'sem responsável'} · criada{' '}
-                    {haQuantoTempo(idadeEmDias(t.criado_em, ctx.hoje))}
+                    {t.responsavel_id ? `${ctx.nomePessoa.get(t.responsavel_id)?.split(' ')[0] ?? '—'} · ` : ''}
+                    criada {haQuantoTempo(idadeEmDias(t.criado_em, ctx.hoje))}
                   </span>
                 </li>
               ))}
@@ -158,27 +190,29 @@ export default function PainelTarefas({
           )}
         </section>
 
-        {/* Por pessoa */}
-        <section className="rounded-xl border border-border-subtle bg-surface p-4">
-          <h2 className="text-sm font-bold text-foreground">Por pessoa</h2>
-          <p className="text-xs text-muted">Tarefas abertas de cada um. Ao lado: as que estão em atraso e as concluídas em 30 dias.</p>
-          {est.porPessoa.length === 0 ? (
-            <p className="mt-4 text-sm text-muted">Ainda não há tarefas.</p>
-          ) : (
-            <ul className="mt-3">
-              {est.porPessoa.map((p) => (
-                <LinhaDeBarra
-                  key={p.id ?? 'sem'}
-                  nome={p.id ? (ctx.nomePessoa.get(p.id) ?? '—') : 'Sem responsável'}
-                  valor={p.abertas}
-                  maximo={maxPessoa}
-                  detalhe={`${p.emAtraso} em atraso · ${p.feitas30} concluída${p.feitas30 === 1 ? '' : 's'}`}
-                  href={linkPessoa(p.id)}
-                />
-              ))}
-            </ul>
-          )}
-        </section>
+        {/* Por responsável */}
+        {haResponsaveis && (
+          <section className="rounded-xl border border-border-subtle bg-surface p-4">
+            <h2 className="text-sm font-bold text-foreground">Por responsável</h2>
+            <p className="text-xs text-muted">Tarefas abertas atribuídas a cada um. Ao lado: as que estão em atraso e as concluídas em 30 dias.</p>
+            {est.porPessoa.length === 0 ? (
+              <p className="mt-4 text-sm text-muted">Ainda não há tarefas.</p>
+            ) : (
+              <ul className="mt-3">
+                {est.porPessoa.map((p) => (
+                  <LinhaDeBarra
+                    key={p.id ?? 'sem'}
+                    nome={p.id ? (ctx.nomePessoa.get(p.id) ?? '—') : 'Sem responsável'}
+                    valor={p.abertas}
+                    maximo={maxPessoa}
+                    detalhe={`${p.emAtraso} em atraso · ${p.feitas30} concluída${p.feitas30 === 1 ? '' : 's'}`}
+                    href={linkPessoa(p.id)}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         {/* Por lista */}
         <section className="rounded-xl border border-border-subtle bg-surface p-4">

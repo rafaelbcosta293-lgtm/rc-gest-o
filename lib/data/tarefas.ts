@@ -23,16 +23,41 @@ export type Tarefa = {
   estado: EstadoTarefa
   foco_semana: string | null
   reservada: boolean
+  // Hora do prazo ("HH:MM:SS") e data de início, ambas opcionais.
+  hora: string | null
+  inicio: string | null
+  prioridade: Prioridade | null
+  etiquetas: string[]
+  // Subtarefa de outra tarefa.
+  tarefa_mae_id: string | null
   // Dias da semana em que se repete (1 = segunda … 7 = domingo).
   repete_dias: number[] | null
-  // Repete todos os meses, no dia do prazo.
+  // Repete todos os meses, no dia do prazo (ou no mesmo dia da semana,
+  // ex.: 1.ª segunda-feira, com repete_mensal_dia_semana).
   repete_mensal: boolean
+  repete_mensal_dia_semana: boolean
+  repete_anual: boolean
+  // "Periodicamente": N dias depois de ser concluída.
+  repete_apos_dias: number | null
+  // De quantas em quantas semanas/meses/anos (1 = todas).
+  repete_intervalo: number
+  // A repetição acaba nesta data.
+  repete_ate: string | null
   concluida_em: string | null
+  // Quem executou a tarefa (indicado ao concluir).
+  feita_por: string | null
   criado_em: string
 }
 
+export type Prioridade = 'baixa' | 'media' | 'alta'
+export const PRIORIDADES: { valor: Prioridade; rotulo: string }[] = [
+  { valor: 'alta', rotulo: 'Alta' },
+  { valor: 'media', rotulo: 'Média' },
+  { valor: 'baixa', rotulo: 'Baixa' },
+]
+
 export const COLUNAS_TAREFA =
-  'id, titulo, descricao, lista, estudio_id, responsavel_id, prazo, estado, foco_semana, reservada, repete_dias, repete_mensal, concluida_em, criado_em'
+  'id, titulo, descricao, lista, estudio_id, responsavel_id, prazo, hora, inicio, prioridade, etiquetas, tarefa_mae_id, estado, foco_semana, reservada, repete_dias, repete_mensal, repete_mensal_dia_semana, repete_anual, repete_apos_dias, repete_intervalo, repete_ate, concluida_em, feita_por, criado_em'
 
 // Cada pessoa escolhe no máximo estas tarefas para a semana — a ideia do
 // foco é obrigar a escolher, não fazer uma segunda lista de tudo.
@@ -63,35 +88,77 @@ export const REPETICOES_TAREFA: { valor: string; rotulo: string; dias?: number[]
   { valor: 'uteis', rotulo: 'Dias úteis (seg a sex)', dias: [1, 2, 3, 4, 5] },
   { valor: 'seg-sab', rotulo: 'Segunda a sábado', dias: [1, 2, 3, 4, 5, 6] },
   { valor: 'todos', rotulo: 'Todos os dias', dias: [1, 2, 3, 4, 5, 6, 7] },
-  { valor: 'dias', rotulo: 'Nos dias da semana escolhidos' },
-  { valor: 'mensal', rotulo: 'Todos os meses' },
+  { valor: 'dias', rotulo: 'Semanal — dias à escolha' },
+  { valor: 'mensal', rotulo: 'Mensal — no dia do prazo' },
+  { valor: 'mensal-semana', rotulo: 'Mensal — no mesmo dia da semana' },
+  { valor: 'anual', rotulo: 'Anual' },
+  { valor: 'apos', rotulo: 'Periódica — dias depois de concluir' },
 ]
 
-type Repeticao = Pick<Tarefa, 'repete_dias' | 'repete_mensal'>
+export type Repeticao = Pick<
+  Tarefa,
+  'repete_dias' | 'repete_mensal' | 'repete_mensal_dia_semana' | 'repete_anual' | 'repete_apos_dias' | 'repete_intervalo' | 'repete_ate'
+>
 
-export function repeteSe(t: Repeticao): boolean {
-  return t.repete_mensal || (t.repete_dias?.length ?? 0) > 0
+export const SEM_REPETICAO: Repeticao = {
+  repete_dias: null,
+  repete_mensal: false,
+  repete_mensal_dia_semana: false,
+  repete_anual: false,
+  repete_apos_dias: null,
+  repete_intervalo: 1,
+  repete_ate: null,
+}
+
+export function repeteSe(t: Partial<Repeticao>): boolean {
+  return !!t.repete_mensal || !!t.repete_anual || !!t.repete_apos_dias || (t.repete_dias?.length ?? 0) > 0
 }
 
 // Que escolha do formulário corresponde a esta tarefa.
-export function escolhaDeRepeticao(t: Repeticao): string {
-  if (t.repete_mensal) return 'mensal'
+export function escolhaDeRepeticao(t: Partial<Repeticao>): string {
+  if (t.repete_mensal) return t.repete_mensal_dia_semana ? 'mensal-semana' : 'mensal'
+  if (t.repete_anual) return 'anual'
+  if (t.repete_apos_dias) return 'apos'
   const dias = [...(t.repete_dias ?? [])].sort().join(',')
   if (!dias) return 'nao'
+  if ((t.repete_intervalo ?? 1) > 1) return 'dias'
   return REPETICOES_TAREFA.find((r) => r.dias?.join(',') === dias)?.valor ?? 'dias'
 }
 
-// "dias úteis", "seg a sáb", "seg e sex", "todos os meses"…
-export function descricaoRepeticao(t: Repeticao): string | null {
-  if (t.repete_mensal) return 'todos os meses'
-  const dias = [...(t.repete_dias ?? [])].sort()
-  if (dias.length === 0) return null
-  const chave = dias.join(',')
-  if (chave === '1,2,3,4,5') return 'dias úteis'
-  if (chave === '1,2,3,4,5,6') return 'seg a sáb'
-  if (chave === '1,2,3,4,5,6,7') return 'todos os dias'
-  const nomes = dias.map((d) => DIAS_DA_SEMANA[d - 1].curto)
-  return nomes.length === 1 ? `${nomes[0]}, todas as semanas` : `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`
+const dataPt = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+
+// "dias úteis", "seg e sex", "de 2 em 2 semanas: seg", "todos os meses",
+// "na 1.ª seg do mês", "todos os anos", "7 dias depois de concluir"…
+export function descricaoRepeticao(t: Partial<Repeticao> & { prazo?: string | null }): string | null {
+  const n = t.repete_intervalo ?? 1
+  let texto: string | null = null
+  if (t.repete_apos_dias) texto = `${t.repete_apos_dias} dia${t.repete_apos_dias === 1 ? '' : 's'} depois de concluir`
+  else if (t.repete_anual) texto = n > 1 ? `de ${n} em ${n} anos` : 'todos os anos'
+  else if (t.repete_mensal) {
+    const cada = n > 1 ? `de ${n} em ${n} meses` : 'todos os meses'
+    if (t.repete_mensal_dia_semana && t.prazo) {
+      const ordem = Math.ceil(Number(t.prazo.slice(8, 10)) / 7)
+      const dia = DIAS_DA_SEMANA[diaDaSemanaISO(t.prazo) - 1].curto
+      texto = `${ordem >= 5 ? 'último' : `${ordem}.º`} ${dia} do mês${n > 1 ? `, ${cada}` : ''}`
+    } else texto = cada
+  } else {
+    const dias = [...(t.repete_dias ?? [])].sort()
+    if (dias.length === 0) return null
+    const chave = dias.join(',')
+    const nomes = dias.map((d) => DIAS_DA_SEMANA[d - 1].curto)
+    const quais =
+      chave === '1,2,3,4,5'
+        ? 'dias úteis'
+        : chave === '1,2,3,4,5,6'
+          ? 'seg a sáb'
+          : chave === '1,2,3,4,5,6,7'
+            ? 'todos os dias'
+            : nomes.length === 1
+              ? nomes[0]
+              : `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`
+    texto = n > 1 ? `de ${n} em ${n} semanas: ${quais}` : nomes.length === 1 && chave.length === 1 ? `${quais}, todas as semanas` : quais
+  }
+  return t.repete_ate ? `${texto}, até ${dataPt(t.repete_ate)}` : texto
 }
 
 const UM_DIA_MS = 86_400_000
@@ -111,29 +178,68 @@ export function primeiroDiaEm(dias: number[], desde: string): string {
   return paraISO(ms)
 }
 
-// O mesmo dia do mês seguinte; um prazo no último dia do mês passa para
-// o último dia do mês seguinte (31/01 → 28/02 → 31/03).
-function mesSeguinte(iso: string): string {
+const segundaDe = (iso: string) => deISO(iso) - (diaDaSemanaISO(iso) - 1) * UM_DIA_MS
+const ultimoDia = (ano: number, mes: number) => new Date(Date.UTC(ano, mes, 0)).getUTCDate()
+
+// O mesmo dia, N meses à frente; um prazo no último dia do mês passa
+// para o último dia do mês de destino (31/01 → 28/02 → 31/03).
+function somarMeses(iso: string, n: number): string {
   const [ano, mes, dia] = iso.split('-').map(Number)
-  const ultimoDeste = new Date(Date.UTC(ano, mes, 0)).getUTCDate()
-  const ultimoDoSeguinte = new Date(Date.UTC(ano, mes + 1, 0)).getUTCDate()
-  const novoDia = dia === ultimoDeste ? ultimoDoSeguinte : Math.min(dia, ultimoDoSeguinte)
-  return paraISO(Date.UTC(ano, mes, novoDia))
+  const total = ano * 12 + (mes - 1) + n
+  const novoAno = Math.floor(total / 12)
+  const novoMes = (total % 12) + 1
+  const ultimoDestino = ultimoDia(novoAno, novoMes)
+  const novoDia = dia === ultimoDia(ano, mes) ? ultimoDestino : Math.min(dia, ultimoDestino)
+  return paraISO(Date.UTC(novoAno, novoMes - 1, novoDia))
+}
+
+// O mesmo "n-ésimo dia da semana" (ex.: 2.ª terça), N meses à frente; a
+// 5.ª vez de um mês conta como "a última".
+function somarMesesPeloDiaDaSemana(iso: string, n: number): string {
+  const [ano, mes, dia] = iso.split('-').map(Number)
+  const ordem = Math.ceil(dia / 7)
+  const total = ano * 12 + (mes - 1) + n
+  const novoAno = Math.floor(total / 12)
+  const novoMes = (total % 12) + 1
+  const primeiro = primeiroDiaEm([diaDaSemanaISO(iso)], paraISO(Date.UTC(novoAno, novoMes - 1, 1)))
+  let alvo = Number(primeiro.slice(8, 10)) + (ordem - 1) * 7
+  while (alvo > ultimoDia(novoAno, novoMes)) alvo -= 7
+  return paraISO(Date.UTC(novoAno, novoMes - 1, alvo))
+}
+
+// A vez a seguir a "data" no calendário de uma tarefa que se repete —
+// sem olhar para o dia de hoje. (Na repetição "N dias depois de
+// concluir" conta-se a partir da data dada.)
+function vezSeguinte(t: Repeticao, data: string): string {
+  const n = Math.max(1, t.repete_intervalo ?? 1)
+  if (t.repete_apos_dias) return paraISO(deISO(data) + t.repete_apos_dias * UM_DIA_MS)
+  if (t.repete_anual) return somarMeses(data, 12 * n)
+  if (t.repete_mensal) return t.repete_mensal_dia_semana ? somarMesesPeloDiaDaSemana(data, n) : somarMeses(data, n)
+  // Dias da semana, de N em N semanas: na mesma semana ainda valem os
+  // dias que faltam; depois salta-se N semanas.
+  const dias = t.repete_dias ?? []
+  const semana = segundaDe(data)
+  for (let k = 1; k <= 7 * (n + 1); k++) {
+    const candidata = paraISO(deISO(data) + k * UM_DIA_MS)
+    const semanasDepois = Math.round((segundaDe(candidata) - semana) / (7 * UM_DIA_MS))
+    if (dias.includes(diaDaSemanaISO(candidata)) && semanasDepois % n === 0) return candidata
+  }
+  return paraISO(deISO(data) + 7 * n * UM_DIA_MS)
 }
 
 // O prazo da vez seguinte de uma tarefa que se repete, ou null se não
-// se repete. É sempre depois de hoje: concluir com atraso uma tarefa
-// diária não cria uma fila de dias que já passaram.
+// se repete (ou se a repetição já acabou). É sempre depois de hoje:
+// concluir com atraso uma tarefa diária não cria uma fila de dias que já
+// passaram.
 export function proximaOcorrencia(t: Repeticao & Pick<Tarefa, 'prazo'>, hoje: string): string | null {
   if (!repeteSe(t)) return null
-  const prazo = t.prazo ?? hoje
-  if (t.repete_mensal) {
-    let seguinte = mesSeguinte(prazo)
-    while (seguinte <= hoje) seguinte = mesSeguinte(seguinte)
-    return seguinte
+  let seguinte: string
+  if (t.repete_apos_dias) seguinte = vezSeguinte(t, hoje)
+  else {
+    seguinte = vezSeguinte(t, t.prazo ?? hoje)
+    for (let i = 0; i < 5000 && seguinte <= hoje; i++) seguinte = vezSeguinte(t, seguinte)
   }
-  const base = prazo > hoje ? prazo : hoje
-  return primeiroDiaEm(t.repete_dias!, paraISO(deISO(base) + UM_DIA_MS))
+  return t.repete_ate && seguinte > t.repete_ate ? null : seguinte
 }
 
 // As vezes seguintes de uma tarefa que se repete, entre duas datas — as
@@ -141,11 +247,12 @@ export function proximaOcorrencia(t: Repeticao & Pick<Tarefa, 'prazo'>, hoje: st
 // o calendário as poder mostrar como previstas.
 export function ocorrenciasPrevistas(t: Repeticao & Pick<Tarefa, 'prazo'>, de: string, ate: string): string[] {
   if (!repeteSe(t) || !t.prazo) return []
+  const fim = t.repete_ate && t.repete_ate < ate ? t.repete_ate : ate
   const datas: string[] = []
   let atual = t.prazo
   for (let i = 0; i < 800; i++) {
-    atual = t.repete_mensal ? mesSeguinte(atual) : primeiroDiaEm(t.repete_dias!, paraISO(deISO(atual) + UM_DIA_MS))
-    if (atual > ate) break
+    atual = vezSeguinte(t, atual)
+    if (atual > fim) break
     if (atual >= de) datas.push(atual)
   }
   return datas
@@ -153,7 +260,10 @@ export function ocorrenciasPrevistas(t: Repeticao & Pick<Tarefa, 'prazo'>, de: s
 
 // ── Estatísticas (painel) ────────────────────────────────────────────
 
-export type TarefaFeita = Pick<Tarefa, 'id' | 'titulo' | 'lista' | 'estudio_id' | 'responsavel_id' | 'prazo' | 'concluida_em' | 'criado_em'>
+export type TarefaFeita = Pick<
+  Tarefa,
+  'id' | 'titulo' | 'lista' | 'estudio_id' | 'responsavel_id' | 'prazo' | 'concluida_em' | 'feita_por' | 'criado_em'
+>
 
 const SEMANAS_NO_PAINEL = 8
 
@@ -175,6 +285,8 @@ export type EstatisticasTarefas = {
   // Concluídas por semana (segunda a domingo), da mais antiga para a atual.
   porSemana: { inicio: string; total: number }[]
   porPessoa: { id: string | null; abertas: number; emAtraso: number; feitas30: number }[]
+  // Quem executou as tarefas concluídas (o nome indicado ao concluir).
+  porQuemFez: { id: string | null; feitas7: number; feitas30: number }[]
   porLista: { lista: string | null; abertas: number; feitas30: number }[]
   // As tarefas abertas há mais tempo (sem contar as rotinas que se repetem).
   maisAntigas: Tarefa[]
@@ -202,9 +314,13 @@ export function estatisticasTarefas(abertas: Tarefa[], feitas: TarefaFeita[], ho
     if (t.prazo && t.prazo < hoje) daPessoa(t.responsavel_id).emAtraso++
     daLista(t.lista).abertas++
   }
+  const quemFez = new Map<string | null, { feitas7: number; feitas30: number }>()
   for (const f of feitas30) {
     daPessoa(f.responsavel_id).feitas30++
     daLista(f.lista).feitas30++
+    const linha = quemFez.get(f.feita_por) ?? quemFez.set(f.feita_por, { feitas7: 0, feitas30: 0 }).get(f.feita_por)!
+    linha.feitas30++
+    if (f.dia > ha(7)) linha.feitas7++
   }
 
   return {
@@ -218,6 +334,7 @@ export function estatisticasTarefas(abertas: Tarefa[], feitas: TarefaFeita[], ho
     noPrazo30: comPrazo30.filter((f) => f.dia <= f.prazo!).length,
     porSemana,
     porPessoa: [...pessoas.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.abertas - a.abertas || b.feitas30 - a.feitas30),
+    porQuemFez: [...quemFez.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.feitas30 - a.feitas30),
     porLista: [...listas.entries()].map(([lista, v]) => ({ lista, ...v })).sort((a, b) => b.abertas - a.abertas || b.feitas30 - a.feitas30),
     maisAntigas: abertas
       .filter((t) => !repeteSe(t))
@@ -232,8 +349,9 @@ export async function carregarTarefasFeitas(supabase: SupabaseClient, hoje: stri
   const desde = new Date(deISO(inicioDaSemana(hoje)) - (SEMANAS_NO_PAINEL - 1) * 7 * UM_DIA_MS).toISOString()
   const { data, error } = await supabase
     .from('tarefas')
-    .select('id, titulo, lista, estudio_id, responsavel_id, prazo, concluida_em, criado_em')
+    .select('id, titulo, lista, estudio_id, responsavel_id, prazo, concluida_em, feita_por, criado_em')
     .eq('estado', 'feito')
+    .is('tarefa_mae_id', null)
     .gte('concluida_em', desde)
     .limit(5000)
   if (error) throw new Error(error.message)
@@ -285,7 +403,8 @@ export function agruparTarefas(tarefas: Tarefa[], hoje: string): GruposDeTarefas
     else if (t.prazo <= hoje) grupos.urgentes.push(t)
     else grupos.proximas.push(t)
   }
-  const porPrazo = (a: Tarefa, b: Tarefa) => (a.prazo ?? '9999').localeCompare(b.prazo ?? '9999') || a.criado_em.localeCompare(b.criado_em)
+  const porPrazo = (a: Tarefa, b: Tarefa) =>
+    (a.prazo ?? '9999').localeCompare(b.prazo ?? '9999') || (a.hora ?? '99').localeCompare(b.hora ?? '99') || a.criado_em.localeCompare(b.criado_em)
   grupos.foco.sort(porPrazo)
   grupos.urgentes.sort(porPrazo)
   grupos.proximas.sort(porPrazo)
@@ -294,13 +413,16 @@ export function agruparTarefas(tarefas: Tarefa[], hoje: string): GruposDeTarefas
   return grupos
 }
 
-export type FiltroTarefas = { pessoa?: string; estudioId?: number | 'geral'; lista?: string }
+// "doEstudio": as tarefas desse estúdio e as da empresa toda — é o que
+// se vê dentro de cada estúdio (as do outro estúdio ficam de fora).
+export type FiltroTarefas = { pessoa?: string; estudioId?: number | 'geral'; doEstudio?: number; lista?: string }
 
 // "pessoa": id de um perfil, ou "sem" para as que não têm responsável.
 export function filtrarTarefas(tarefas: Tarefa[], filtro: FiltroTarefas): Tarefa[] {
   return tarefas.filter((t) => {
     if (filtro.pessoa === 'sem' ? t.responsavel_id !== null : filtro.pessoa ? t.responsavel_id !== filtro.pessoa : false) return false
     if (filtro.estudioId === 'geral' ? t.estudio_id !== null : filtro.estudioId != null ? t.estudio_id !== filtro.estudioId : false) return false
+    if (filtro.doEstudio != null && t.estudio_id !== null && t.estudio_id !== filtro.doEstudio) return false
     if (filtro.lista && (t.lista ?? '') !== filtro.lista) return false
     return true
   })
@@ -324,10 +446,31 @@ export async function carregarTarefas(supabase: SupabaseClient, hoje: string): P
   return (data ?? []) as Tarefa[]
 }
 
+export type ComentarioTarefa = { id: string; autor_id: string | null; autor_nome: string | null; texto: string; criado_em: string }
+
+// Os passos (subtarefas) e os comentários de uma tarefa, para quando
+// está aberta. Nunca parte a página.
+export async function carregarDetalheTarefa(supabase: SupabaseClient, id: string): Promise<{ passos: Tarefa[]; comentarios: ComentarioTarefa[] }> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { passos: [], comentarios: [] }
+  const [passos, comentarios] = await Promise.all([
+    supabase.from('tarefas').select(COLUNAS_TAREFA).eq('tarefa_mae_id', id).order('criado_em'),
+    supabase.from('tarefas_comentarios').select('id, autor_id, autor_nome, texto, criado_em').eq('tarefa_id', id).order('criado_em'),
+  ])
+  return { passos: (passos.data ?? []) as Tarefa[], comentarios: (comentarios.data ?? []) as ComentarioTarefa[] }
+}
+
 // O número que aparece no menu: tarefas com o prazo passado ou para
 // hoje. Nunca parte a página.
-export async function contarTarefasUrgentes(supabase: SupabaseClient, hoje: string): Promise<number> {
-  const { count, error } = await supabase.from('tarefas').select('id', { count: 'exact', head: true }).neq('estado', 'feito').lte('prazo', hoje)
+// Com "estudioId": só as desse estúdio e as da empresa toda.
+export async function contarTarefasUrgentes(supabase: SupabaseClient, hoje: string, estudioId?: number): Promise<number> {
+  let consulta = supabase
+    .from('tarefas')
+    .select('id', { count: 'exact', head: true })
+    .neq('estado', 'feito')
+    .lte('prazo', hoje)
+    .is('tarefa_mae_id', null)
+  if (estudioId != null) consulta = consulta.or(`estudio_id.eq.${estudioId},estudio_id.is.null`)
+  const { count, error } = await consulta
   return error ? 0 : (count ?? 0)
 }
 

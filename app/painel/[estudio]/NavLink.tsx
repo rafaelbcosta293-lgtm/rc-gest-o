@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from '@/components/LinkRapido'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, BriefcaseBusiness } from 'lucide-react'
+import { ChevronDown, BriefcaseBusiness, Home } from 'lucide-react'
 import { MODULOS, PALETA } from '@/lib/data/constantes'
 import { formaPilula, useModoBarra } from '@/components/BarraAjustavel'
 
@@ -25,6 +25,28 @@ function moduloPorId(id: string) {
 // a largura toda é gerida pelo BarraAjustavel (espalha quando há
 // espaço, encolhe sem esconder nada quando não há).
 // "aviso": número a mostrar junto ao nome (ex.: tarefas em atraso).
+// O botão "Início": volta ao menu inicial deste estúdio (não à página
+// de escolha do estúdio). Fica sempre à vista — ao lado do logótipo no
+// computador, na faixa de cima no telemóvel.
+export function NavLinkInicio({ slug, comTexto = false }: { slug: string; comTexto?: boolean }) {
+  const href = `/painel/${slug}`
+  const ativo = usePathname() === href
+  return (
+    <Link
+      href={href}
+      title="Início — menu inicial do estúdio"
+      aria-label="Início"
+      aria-current={ativo ? 'page' : undefined}
+      className={`flex shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition-colors ${comTexto ? 'px-3 py-1.5' : 'p-2'} ${
+        ativo ? 'bg-brand text-black' : 'border border-border-subtle text-foreground hover:border-border-strong hover:bg-foreground/[.05]'
+      }`}
+    >
+      <Home className="h-[18px] w-[18px]" strokeWidth={2.25} />
+      {comTexto && 'Início'}
+    </Link>
+  )
+}
+
 export function NavLinkTopBar({ href, id, aviso = 0 }: { href: string; id: string; aviso?: number }) {
   const { icone: Icone, cor, nome } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
@@ -79,9 +101,7 @@ export function NavLinkComSubpastas({
 
   // A pílula acende-se tanto na pasta principal como em qualquer uma das
   // subpastas — todas partilham a mesma "casa" na navegação.
-  const ativo =
-    estaAtivo(pathname, clientesHref) ||
-    subModulos.some((m) => estaAtivo(pathname, `/painel/${slug}/${m.id}`))
+  const ativo = estaAtivo(pathname, clientesHref) || subModulos.some((m) => estaAtivo(pathname, `/painel/${slug}/${m.id}`))
 
   const [aberto, setAberto] = useState(false)
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
@@ -124,12 +144,7 @@ export function NavLinkComSubpastas({
       {aberto &&
         pos &&
         createPortal(
-          <div
-            onMouseEnter={manterAberto}
-            onMouseLeave={agendarFechar}
-            className="fixed z-50"
-            style={{ left: pos.left, top: pos.top }}
-          >
+          <div onMouseEnter={manterAberto} onMouseLeave={agendarFechar} className="fixed z-50" style={{ left: pos.left, top: pos.top }}>
             <div className="flex flex-col gap-0.5 rounded-xl border border-border-subtle bg-surface p-1 shadow-pop">
               {subModulos.map((m) => {
                 const href = `/painel/${slug}/${m.id}`
@@ -146,11 +161,7 @@ export function NavLinkComSubpastas({
                       color: subAtivo ? PALETA[m.cor].tx : undefined,
                     }}
                   >
-                    <m.icone
-                      className="h-3.5 w-3.5 shrink-0"
-                      strokeWidth={2.5}
-                      style={{ color: subAtivo ? undefined : PALETA[m.cor].tx }}
-                    />
+                    <m.icone className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} style={{ color: subAtivo ? undefined : PALETA[m.cor].tx }} />
                     {m.nome}
                   </Link>
                 ) : (
@@ -166,7 +177,7 @@ export function NavLinkComSubpastas({
               })}
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   )
@@ -275,7 +286,7 @@ export function NavLinkPastaHorarios({
               })}
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   )
@@ -311,9 +322,7 @@ export function NavLinkPhone({ href, id, aviso = 0 }: { href: string; id: string
       style={{ color: ativo ? PALETA[cor].tx : 'var(--muted)' }}
     >
       <Icone className="h-[22px] w-[22px]" strokeWidth={ativo ? 2.75 : 2.25} />
-      {aviso > 0 && (
-        <span className="absolute right-1.5 top-0 rounded-full bg-brand px-1.5 text-[10px] font-bold leading-4 text-black">{aviso}</span>
-      )}
+      {aviso > 0 && <span className="absolute right-1.5 top-0 rounded-full bg-brand px-1.5 text-[10px] font-bold leading-4 text-black">{aviso}</span>}
       <span className={`text-[10px] ${ativo ? 'font-semibold' : 'font-medium'}`}>{curto ?? nome}</span>
     </Link>
   )

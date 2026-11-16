@@ -1,13 +1,17 @@
 import Link from '@/components/LinkRapido'
-import { Check, ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
 import { inicioDaSemana } from '@/lib/data/horarios'
 import { DIAS_DA_SEMANA, diaDaSemanaISO, ocorrenciasPrevistas, repeteSe, type Tarefa } from '@/lib/data/tarefas'
-import { EstadoForm, LinhaTarefa, type Contexto } from './partes'
+import ConcluirTarefa from './ConcluirTarefa'
+import EditarComBotaoDireito from './EditarComBotaoDireito'
+import { horaCurta, LinhaTarefa, type Contexto } from './partes'
 
 // O calendário das Tarefas, em quatro escalas: dia, semana, mês e ano.
-// Cada tarefa aparece no dia do seu prazo; as rotinas que se repetem
-// mostram também as vezes seguintes como "previstas" (a tracejado) —
-// essas ainda não existem, nascem quando a anterior é concluída.
+// Cada tarefa aparece no dia do seu prazo (e, se tem data de início,
+// nos dias entre o início e o prazo); as rotinas que se repetem mostram
+// também as vezes seguintes como "previstas" (a tracejado) — essas
+// ainda não existem, nascem quando a anterior é concluída.
+// Clicar numa tarefa com o botão direito do rato abre-a para editar.
 
 export const ESCALAS = [
   { id: 'dia', rotulo: 'Dia' },
@@ -40,15 +44,36 @@ function mudarMes(data: string, n: number): string {
 // O intervalo que cada escala mostra, e as datas para "anterior"/"seguinte".
 function intervalo(escala: Escala, data: string) {
   const [ano, mes] = data.split('-').map(Number)
-  if (escala === 'dia') return { de: data, ate: data, antes: somar(data, -1), depois: somar(data, 1) }
+  if (escala === 'dia')
+    return {
+      de: data,
+      ate: data,
+      antes: somar(data, -1),
+      depois: somar(data, 1),
+    }
   if (escala === 'semana') {
     const de = inicioDaSemana(data)
-    return { de, ate: somar(de, 6), antes: somar(data, -7), depois: somar(data, 7) }
+    return {
+      de,
+      ate: somar(de, 6),
+      antes: somar(data, -7),
+      depois: somar(data, 7),
+    }
   }
   if (escala === 'mes') {
-    return { de: `${ano}-${pad(mes)}-01`, ate: `${ano}-${pad(mes)}-${pad(ultimoDiaDoMes(ano, mes))}`, antes: mudarMes(data, -1), depois: mudarMes(data, 1) }
+    return {
+      de: `${ano}-${pad(mes)}-01`,
+      ate: `${ano}-${pad(mes)}-${pad(ultimoDiaDoMes(ano, mes))}`,
+      antes: mudarMes(data, -1),
+      depois: mudarMes(data, 1),
+    }
   }
-  return { de: `${ano}-01-01`, ate: `${ano}-12-31`, antes: mudarMes(data, -12), depois: mudarMes(data, 12) }
+  return {
+    de: `${ano}-01-01`,
+    ate: `${ano}-12-31`,
+    antes: mudarMes(data, -12),
+    depois: mudarMes(data, 12),
+  }
 }
 
 function titulo(escala: Escala, data: string, de: string, ate: string): string {
@@ -57,20 +82,30 @@ function titulo(escala: Escala, data: string, de: string, ate: string): string {
   if (escala === 'semana') {
     const mesDe = MESES[Number(de.slice(5, 7)) - 1]
     const mesAte = MESES[Number(ate.slice(5, 7)) - 1]
-    return mesDe === mesAte ? `${dia(de)} a ${dia(ate)} de ${mesAte} de ${ate.slice(0, 4)}` : `${dia(de)} de ${mesDe} a ${dia(ate)} de ${mesAte} de ${ate.slice(0, 4)}`
+    return mesDe === mesAte
+      ? `${dia(de)} a ${dia(ate)} de ${mesAte} de ${ate.slice(0, 4)}`
+      : `${dia(de)} de ${mesDe} a ${dia(ate)} de ${mesAte} de ${ate.slice(0, 4)}`
   }
   if (escala === 'mes') return `${MESES[mes - 1]} de ${ano}`
   return String(ano)
 }
 
-type Item = { tarefa: Tarefa; prevista: boolean }
+// "decorre": dia entre o início e o prazo de uma tarefa de vários dias.
+type Item = { tarefa: Tarefa; prevista: boolean; decorre?: boolean }
+const chave = (i: Item) => `${i.tarefa.id}-${i.prevista ? 'p' : i.decorre ? 'd' : 'r'}`
+const MAX_DIAS_A_DECORRER = 60
 
 function itensPorDia(tarefas: Tarefa[], de: string, ate: string, comRotinas: boolean): Map<string, Item[]> {
   const mapa = new Map<string, Item[]>()
   const por = (data: string, item: Item) => mapa.set(data, [...(mapa.get(data) ?? []), item])
-  for (const t of tarefas) {
+  const ordenadas = [...tarefas].sort((a, b) => (a.hora ?? '99').localeCompare(b.hora ?? '99'))
+  for (const t of ordenadas) {
     if (!t.prazo || (!comRotinas && repeteSe(t))) continue
     if (t.prazo >= de && t.prazo <= ate) por(t.prazo, { tarefa: t, prevista: false })
+    if (t.inicio && t.inicio < t.prazo && t.estado !== 'feito') {
+      const primeiro = Math.max(ms(t.inicio), ms(de), ms(t.prazo) - MAX_DIAS_A_DECORRER * UM_DIA)
+      for (let d = primeiro; d < ms(t.prazo) && d <= ms(ate); d += UM_DIA) por(iso(d), { tarefa: t, prevista: false, decorre: true })
+    }
     if (t.estado !== 'feito') for (const data of ocorrenciasPrevistas(t, de, ate)) por(data, { tarefa: t, prevista: true })
   }
   return mapa
@@ -78,8 +113,9 @@ function itensPorDia(tarefas: Tarefa[], de: string, ate: string, comRotinas: boo
 
 // Cor de uma tarefa no calendário: vermelho se o prazo já passou, âmbar
 // se é para hoje; as previstas ficam a tracejado e as feitas apagadas.
-function estiloItem({ tarefa: t, prevista }: Item, data: string, hoje: string): string {
+function estiloItem({ tarefa: t, prevista, decorre }: Item, data: string, hoje: string): string {
   if (prevista) return 'border border-dashed border-border-strong text-muted'
+  if (decorre) return 'bg-foreground/[.04] text-muted'
   if (t.estado === 'feito') return 'bg-foreground/[.05] text-muted line-through'
   if (data < hoje) return 'bg-red-500/15 text-red-800 dark:text-red-200'
   if (data === hoje) return 'bg-amber-500/20 text-amber-900 dark:text-amber-100'
@@ -97,23 +133,28 @@ function tomDoDia(n: number): string {
 
 function CartaoDaSemana({ item, data, ctx }: { item: Item; data: string; ctx: Contexto }) {
   const t = item.tarefa
-  const responsavel = t.responsavel_id ? ctx.nomePessoa.get(t.responsavel_id)?.split(' ')[0] : null
+  const quem =
+    t.estado === 'feito'
+      ? t.feita_por
+        ? `feita por ${ctx.nomePessoa.get(t.feita_por)?.split(' ')[0] ?? '—'}`
+        : null
+      : t.responsavel_id
+        ? ctx.nomePessoa.get(t.responsavel_id)?.split(' ')[0]
+        : null
   return (
-    <li className={`flex items-start gap-1.5 rounded-md px-2 py-1.5 text-xs ${estiloItem(item, data, ctx.hoje)}`}>
-      {!item.prevista && t.estado !== 'feito' && (
-        <EstadoForm id={t.id} estado="feito" voltar={ctx.voltar} className="mt-px shrink-0">
-          <button
-            type="submit"
-            title="Concluir"
-            aria-label={`Concluir: ${t.titulo}`}
-            className="flex h-4 w-4 items-center justify-center rounded-full border border-current text-transparent hover:text-current"
-          >
-            <Check className="h-2.5 w-2.5" strokeWidth={3} />
-          </button>
-        </EstadoForm>
+    <EditarComBotaoDireito
+      href={ctx.linkEditar(t.id)}
+      title="Botão direito do rato: editar"
+      className={`flex items-start gap-1.5 rounded-md px-2 py-1.5 text-xs ${estiloItem(item, data, ctx.hoje)}`}
+    >
+      {!item.prevista && !item.decorre && t.estado !== 'feito' && (
+        <span className="mt-px">
+          <ConcluirTarefa id={t.id} titulo={t.titulo} voltar={ctx.voltar} feita={false} pessoas={ctx.pessoas} euId={ctx.euId} variante="mini" />
+        </span>
       )}
       {item.prevista && <Repeat className="mt-0.5 h-3 w-3 shrink-0" />}
       <span className="min-w-0 flex-1">
+        {t.hora && <span className="mr-1 font-mono text-[10px] opacity-80">{horaCurta(t.hora)}</span>}
         {item.prevista ? (
           <span className="font-medium">{t.titulo}</span>
         ) : (
@@ -121,9 +162,14 @@ function CartaoDaSemana({ item, data, ctx }: { item: Item; data: string; ctx: Co
             {t.titulo}
           </Link>
         )}
-        {responsavel && <span className="block opacity-70">{responsavel}</span>}
+        {item.decorre && (
+          <span className="block opacity-70">
+            até {t.prazo!.slice(8, 10)}/{t.prazo!.slice(5, 7)}
+          </span>
+        )}
+        {quem && <span className="block opacity-70">{quem}</span>}
       </span>
-    </li>
+    </EditarComBotaoDireito>
   )
 }
 
@@ -146,6 +192,8 @@ export default function CalendarioTarefas({
   const { hoje } = ctx
   const { de, ate, antes, depois } = intervalo(escala, data)
   const porDia = itensPorDia(tarefas, de, ate, comRotinas)
+  // Na vista do ano conta-se cada tarefa uma vez (no dia do prazo).
+  const quantas = (d: string) => (porDia.get(d) ?? []).filter((i) => !i.decorre).length
   const semPrazo = tarefas.filter((t) => !t.prazo && t.estado !== 'feito').length
   const ano = Number(data.slice(0, 4))
 
@@ -158,7 +206,7 @@ export default function CalendarioTarefas({
           {ESCALAS.map((e) => (
             <Link
               key={e.id}
-              href={link({ cal: e.id === 'mes' ? undefined : e.id })}
+              href={link({ cal: e.id === 'semana' ? undefined : e.id })}
               className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${e.id === escala ? 'bg-brand text-black' : 'text-muted hover:text-foreground'}`}
             >
               {e.rotulo}
@@ -181,17 +229,18 @@ export default function CalendarioTarefas({
           {comRotinas ? 'Esconder as que se repetem' : 'Mostrar as que se repetem'}
         </Link>
       </div>
-      {semPrazo > 0 && (
-        <p className="mt-2 text-xs text-muted">
-          {semPrazo} tarefa{semPrazo === 1 ? '' : 's'} sem prazo não aparece{semPrazo === 1 ? '' : 'm'} no calendário — estão na Lista, em “Para ir fazendo”.
-        </p>
-      )}
+      <p className="mt-2 text-xs text-muted">
+        Para editar uma tarefa, clica nela com o botão direito do rato (no telemóvel, toca e mantém).
+        {semPrazo > 0 &&
+          ` ${semPrazo} tarefa${semPrazo === 1 ? '' : 's'} sem prazo não aparece${semPrazo === 1 ? '' : 'm'} no calendário — ${semPrazo === 1 ? 'está' : 'estão'} na Lista, em “Para ir fazendo”.`}
+      </p>
 
       {/* Dia */}
       {escala === 'dia' &&
         (() => {
           const itens = porDia.get(data) ?? []
-          const reais = itens.filter((i) => !i.prevista)
+          const reais = itens.filter((i) => !i.prevista && !i.decorre)
+          const aDecorrer = itens.filter((i) => i.decorre)
           const previstas = itens.filter((i) => i.prevista)
           return (
             <div className="mt-4 flex flex-col gap-4">
@@ -204,6 +253,16 @@ export default function CalendarioTarefas({
                     <LinhaTarefa key={i.tarefa.id} t={i.tarefa} ctx={ctx} />
                   ))}
                 </ul>
+              )}
+              {aDecorrer.length > 0 && (
+                <section>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">A decorrer ({aDecorrer.length})</h3>
+                  <ul className="mt-2 flex flex-col gap-1.5">
+                    {aDecorrer.map((i) => (
+                      <CartaoDaSemana key={i.tarefa.id} item={i} data={data} ctx={ctx} />
+                    ))}
+                  </ul>
+                </section>
               )}
               {previstas.length > 0 && (
                 <section>
@@ -235,7 +294,7 @@ export default function CalendarioTarefas({
                 ) : (
                   <ul className="flex flex-col gap-1">
                     {itens.map((i) => (
-                      <CartaoDaSemana key={`${i.tarefa.id}-${i.prevista}`} item={i} data={d} ctx={ctx} />
+                      <CartaoDaSemana key={chave(i)} item={i} data={d} ctx={ctx} />
                     ))}
                   </ul>
                 )}
@@ -273,13 +332,16 @@ export default function CalendarioTarefas({
                     {dia(d)}
                   </span>
                   {itens.slice(0, MAX_NO_MES).map((i) => (
-                    <span
-                      key={`${i.tarefa.id}-${i.prevista}`}
-                      title={`${i.tarefa.titulo}${i.prevista ? ' (prevista)' : ''}`}
+                    <EditarComBotaoDireito
+                      key={chave(i)}
+                      como="span"
+                      href={ctx.linkEditar(i.tarefa.id)}
+                      title={`${i.tarefa.titulo}${i.prevista ? ' (prevista)' : ''} — botão direito: editar`}
                       className={`truncate rounded px-1 py-px text-[10px] font-medium leading-tight ${estiloItem(i, d, hoje)}`}
                     >
+                      {i.tarefa.hora && `${horaCurta(i.tarefa.hora)} `}
                       {i.tarefa.titulo}
-                    </span>
+                    </EditarComBotaoDireito>
                   ))}
                   {itens.length > MAX_NO_MES && <span className="px-1 text-[10px] text-muted">+{itens.length - MAX_NO_MES}</span>}
                 </Link>
@@ -296,10 +358,10 @@ export default function CalendarioTarefas({
             {MESES.map((nome, m) => {
               const primeiro = `${ano}-${pad(m + 1)}-01`
               const dias = ultimoDiaDoMes(ano, m + 1)
-              const totalDoMes = Array.from({ length: dias }, (_, i) => (porDia.get(somar(primeiro, i)) ?? []).length).reduce((a, b) => a + b, 0)
+              const totalDoMes = Array.from({ length: dias }, (_, i) => quantas(somar(primeiro, i))).reduce((a, b) => a + b, 0)
               return (
                 <section key={nome} className="rounded-xl border border-border-subtle bg-surface p-3">
-                  <Link href={link({ cal: undefined, data: primeiro })} className="flex items-baseline justify-between gap-2 hover:underline">
+                  <Link href={link({ cal: 'mes', data: primeiro })} className="flex items-baseline justify-between gap-2 hover:underline">
                     <span className="text-sm font-bold text-foreground first-letter:uppercase">{nome}</span>
                     <span className="text-xs text-muted">{totalDoMes}</span>
                   </Link>
@@ -308,7 +370,7 @@ export default function CalendarioTarefas({
                       <span key={`v${i}`} />
                     ))}
                     {Array.from({ length: dias }, (_, i) => somar(primeiro, i)).map((d) => {
-                      const n = (porDia.get(d) ?? []).length
+                      const n = quantas(d)
                       return (
                         <Link
                           key={d}

@@ -18,7 +18,7 @@ import AvisosHorario from '@/components/AvisosHorario'
 import { contarTarefasUrgentes } from '@/lib/data/tarefas'
 import { contarAlertasAbertos } from '@/lib/data/alertasAbertos'
 import { hojeEmLisboa } from '@/lib/data/hoje'
-import { NavLinkTopBar, NavLinkComSubpastas, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado } from './NavLink'
+import { NavLinkTopBar, NavLinkComSubpastas, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado, NavLinkInicio } from './NavLink'
 
 // Na barra do computador/tablet, Treinos, Avaliações e Presenças não têm
 // pílula própria — aparecem dentro de Clientes; e Objetivos dentro de
@@ -43,7 +43,8 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
     listarContactosAgendados(supabase),
     getEstudioPorSlug(supabase, slug),
     // Tarefas com o prazo passado ou para hoje — o número no menu.
-    contarTarefasUrgentes(supabase, hojeEmLisboa()),
+    // (só as deste estúdio e as da empresa toda).
+    getEstudioPorSlug(supabase, slug).then((e) => contarTarefasUrgentes(supabase, hojeEmLisboa(), e?.id)),
     // Alertas por resolver deste estúdio — o número no menu.
     Promise.all([getSessaoAtual(), getEstudioPorSlug(supabase, slug)]).then(([s, e]) =>
       e ? contarAlertasAbertos(supabase, e.id, s.perfil?.papel ?? null) : 0
@@ -115,6 +116,10 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             estúdio — os módulos ficam na barra de separadores do fundo,
             sempre ao alcance do polegar, ao estilo iOS. */}
         <div className="shadow-deep flex items-center justify-end gap-1 border-b border-border-subtle bg-background/90 px-4 py-2 backdrop-blur-xl md:hidden">
+          {/* Sempre à vista: volta ao menu inicial deste estúdio. */}
+          <span className="mr-auto">
+            <NavLinkInicio slug={slug} comTexto />
+          </span>
           {!contaIndividual && (
             <Link
               href={`/painel/${slug}/pesquisa`}
@@ -142,9 +147,12 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             da página continua no modelo claro, ao contrário da
             Administração, onde o escuro é a área toda. */}
         <header className="dark tema-proprio shadow-deep hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl md:flex">
-          <Link href="/painel" className="flex shrink-0 items-center">
+          {/* O logótipo e o botão "Início" voltam ao menu inicial deste
+              estúdio; para trocar de estúdio há o botão à direita. */}
+          <Link href={`/painel/${slug}`} title="Início do estúdio" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
+          <NavLinkInicio slug={slug} />
           <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
             {MODULOS.filter((m) => !subpastasParaFiltrar.has(m.id) && !SUBPASTAS_HORARIOS.has(m.id)).map((m) =>
               m.id === 'horarios' ? (

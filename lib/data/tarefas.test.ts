@@ -13,6 +13,7 @@ import {
   ocorrenciasPrevistas,
   primeiroDiaEm,
   proximaOcorrencia,
+  SEM_REPETICAO,
   type Tarefa,
 } from './tarefas'
 
@@ -29,9 +30,14 @@ function tarefa(extra: Partial<Tarefa> & { id: string }): Tarefa {
     estado: 'por_fazer',
     foco_semana: null,
     reservada: false,
-    repete_dias: null,
-    repete_mensal: false,
+    hora: null,
+    inicio: null,
+    prioridade: null,
+    etiquetas: [],
+    tarefa_mae_id: null,
+    ...SEM_REPETICAO,
     concluida_em: null,
+    feita_por: null,
     criado_em: '2026-11-01T10:00:00Z',
     ...extra,
   }
@@ -137,19 +143,19 @@ describe('tarefas que se repetem', () => {
   })
 
   it('a vez seguinte é o próximo dia escolhido depois de hoje', () => {
-    const uteis = { repete_dias: [1, 2, 3, 4, 5], repete_mensal: false }
+    const uteis = { ...SEM_REPETICAO, repete_dias: [1, 2, 3, 4, 5], repete_mensal: false }
     expect(proximaOcorrencia({ ...uteis, prazo: HOJE }, HOJE)).toBe('2026-11-19')
     // À sexta, a seguinte é segunda.
     expect(proximaOcorrencia({ ...uteis, prazo: '2026-11-20' }, '2026-11-20')).toBe('2026-11-23')
     // Concluída com atraso: não cria os dias que já passaram.
     expect(proximaOcorrencia({ ...uteis, prazo: '2026-11-02' }, HOJE)).toBe('2026-11-19')
     // Concluída antes do prazo: a seguinte é depois desse prazo.
-    expect(proximaOcorrencia({ repete_dias: [1, 5], repete_mensal: false, prazo: '2026-11-20' }, HOJE)).toBe('2026-11-23')
-    expect(proximaOcorrencia({ repete_dias: [6], repete_mensal: false, prazo: '2026-11-14' }, HOJE)).toBe('2026-11-21')
+    expect(proximaOcorrencia({ ...SEM_REPETICAO, repete_dias: [1, 5], repete_mensal: false, prazo: '2026-11-20' }, HOJE)).toBe('2026-11-23')
+    expect(proximaOcorrencia({ ...SEM_REPETICAO, repete_dias: [6], repete_mensal: false, prazo: '2026-11-14' }, HOJE)).toBe('2026-11-21')
   })
 
   it('mensal: mesmo dia do mês seguinte, e o último dia fica último dia', () => {
-    const mensal = { repete_dias: null, repete_mensal: true }
+    const mensal = { ...SEM_REPETICAO, repete_dias: null, repete_mensal: true }
     expect(proximaOcorrencia({ ...mensal, prazo: '2026-11-10' }, HOJE)).toBe('2026-12-10')
     expect(proximaOcorrencia({ ...mensal, prazo: '2026-11-30' }, HOJE)).toBe('2026-12-31')
     expect(proximaOcorrencia({ ...mensal, prazo: '2027-01-31' }, '2027-01-31')).toBe('2027-02-28')
@@ -158,37 +164,37 @@ describe('tarefas que se repetem', () => {
   })
 
   it('uma tarefa que não se repete não tem vez seguinte', () => {
-    expect(proximaOcorrencia({ repete_dias: null, repete_mensal: false, prazo: HOJE }, HOJE)).toBeNull()
+    expect(proximaOcorrencia({ ...SEM_REPETICAO, repete_dias: null, repete_mensal: false, prazo: HOJE }, HOJE)).toBeNull()
   })
 
   it('descreve a repetição e reconhece as escolhas do formulário', () => {
-    expect(descricaoRepeticao({ repete_dias: [1, 2, 3, 4, 5], repete_mensal: false })).toBe('dias úteis')
-    expect(descricaoRepeticao({ repete_dias: [1, 2, 3, 4, 5, 6], repete_mensal: false })).toBe('seg a sáb')
-    expect(descricaoRepeticao({ repete_dias: [5, 1], repete_mensal: false })).toBe('seg e sex')
-    expect(descricaoRepeticao({ repete_dias: [3], repete_mensal: false })).toBe('qua, todas as semanas')
-    expect(descricaoRepeticao({ repete_dias: null, repete_mensal: true })).toBe('todos os meses')
-    expect(descricaoRepeticao({ repete_dias: null, repete_mensal: false })).toBeNull()
-    expect(escolhaDeRepeticao({ repete_dias: [1, 2, 3, 4, 5], repete_mensal: false })).toBe('uteis')
-    expect(escolhaDeRepeticao({ repete_dias: [1, 5], repete_mensal: false })).toBe('dias')
-    expect(escolhaDeRepeticao({ repete_dias: null, repete_mensal: true })).toBe('mensal')
-    expect(escolhaDeRepeticao({ repete_dias: null, repete_mensal: false })).toBe('nao')
+    expect(descricaoRepeticao({ ...SEM_REPETICAO, repete_dias: [1, 2, 3, 4, 5], repete_mensal: false })).toBe('dias úteis')
+    expect(descricaoRepeticao({ ...SEM_REPETICAO, repete_dias: [1, 2, 3, 4, 5, 6], repete_mensal: false })).toBe('seg a sáb')
+    expect(descricaoRepeticao({ ...SEM_REPETICAO, repete_dias: [5, 1], repete_mensal: false })).toBe('seg e sex')
+    expect(descricaoRepeticao({ ...SEM_REPETICAO, repete_dias: [3], repete_mensal: false })).toBe('qua, todas as semanas')
+    expect(descricaoRepeticao({ ...SEM_REPETICAO, repete_dias: null, repete_mensal: true })).toBe('todos os meses')
+    expect(descricaoRepeticao({ ...SEM_REPETICAO, repete_dias: null, repete_mensal: false })).toBeNull()
+    expect(escolhaDeRepeticao({ ...SEM_REPETICAO, repete_dias: [1, 2, 3, 4, 5], repete_mensal: false })).toBe('uteis')
+    expect(escolhaDeRepeticao({ ...SEM_REPETICAO, repete_dias: [1, 5], repete_mensal: false })).toBe('dias')
+    expect(escolhaDeRepeticao({ ...SEM_REPETICAO, repete_dias: null, repete_mensal: true })).toBe('mensal')
+    expect(escolhaDeRepeticao({ ...SEM_REPETICAO, repete_dias: null, repete_mensal: false })).toBe('nao')
   })
 })
 
 describe('calendário: vezes previstas de uma rotina', () => {
   it('lista as vezes seguintes dentro do intervalo, sem a que já existe', () => {
-    expect(ocorrenciasPrevistas({ repete_dias: [1, 5], repete_mensal: false, prazo: '2026-11-16' }, '2026-11-16', '2026-11-30')).toEqual([
+    expect(ocorrenciasPrevistas({ ...SEM_REPETICAO, repete_dias: [1, 5], repete_mensal: false, prazo: '2026-11-16' }, '2026-11-16', '2026-11-30')).toEqual([
       '2026-11-20',
       '2026-11-23',
       '2026-11-27',
       '2026-11-30',
     ])
-    expect(ocorrenciasPrevistas({ repete_dias: null, repete_mensal: true, prazo: '2026-11-30' }, '2026-12-01', '2027-02-28')).toEqual([
+    expect(ocorrenciasPrevistas({ ...SEM_REPETICAO, repete_dias: null, repete_mensal: true, prazo: '2026-11-30' }, '2026-12-01', '2027-02-28')).toEqual([
       '2026-12-31',
       '2027-01-31',
       '2027-02-28',
     ])
-    expect(ocorrenciasPrevistas({ repete_dias: null, repete_mensal: false, prazo: '2026-11-16' }, '2026-11-01', '2026-12-31')).toEqual([])
+    expect(ocorrenciasPrevistas({ ...SEM_REPETICAO, repete_dias: null, repete_mensal: false, prazo: '2026-11-16' }, '2026-11-01', '2026-12-31')).toEqual([])
   })
 })
 
@@ -218,5 +224,56 @@ describe('estatísticas do painel', () => {
     expect(e.porLista.find((l) => l.lista === 'Marketing')).toEqual({ lista: 'Marketing', abertas: 1, feitas30: 1 })
     // As rotinas que se repetem não entram nas "abertas há mais tempo".
     expect(e.maisAntigas.map((t) => t.id)).toEqual(['c', 'a', 'b'])
+  })
+})
+
+describe('repetição personalizada', () => {
+  // HOJE = quarta-feira, 2026-11-18
+  it('de 2 em 2 semanas, nos dias escolhidos', () => {
+    const t = { ...SEM_REPETICAO, repete_dias: [1, 4], repete_intervalo: 2 }
+    // Segunda 16 → ainda há a quinta da mesma semana; depois salta uma semana.
+    expect(proximaOcorrencia({ ...t, prazo: '2026-11-16' }, '2026-11-16')).toBe('2026-11-19')
+    expect(proximaOcorrencia({ ...t, prazo: '2026-11-19' }, '2026-11-19')).toBe('2026-11-30')
+    expect(descricaoRepeticao(t)).toBe('de 2 em 2 semanas: seg e qui')
+    expect(escolhaDeRepeticao(t)).toBe('dias')
+  })
+
+  it('de 3 em 3 meses e todos os anos', () => {
+    expect(proximaOcorrencia({ ...SEM_REPETICAO, repete_mensal: true, repete_intervalo: 3, prazo: '2026-11-10' }, HOJE)).toBe('2027-02-10')
+    expect(proximaOcorrencia({ ...SEM_REPETICAO, repete_anual: true, prazo: '2026-03-15' }, HOJE)).toBe('2027-03-15')
+    expect(descricaoRepeticao({ ...SEM_REPETICAO, repete_anual: true })).toBe('todos os anos')
+    expect(descricaoRepeticao({ ...SEM_REPETICAO, repete_mensal: true, repete_intervalo: 3 })).toBe('de 3 em 3 meses')
+  })
+
+  it('mensal no mesmo dia da semana (ex.: 2.ª terça-feira)', () => {
+    const t = { ...SEM_REPETICAO, repete_mensal: true, repete_mensal_dia_semana: true }
+    // 10/11/2026 é a 2.ª terça de novembro → 2.ª terça de dezembro é dia 8.
+    expect(proximaOcorrencia({ ...t, prazo: '2026-11-10' }, '2026-11-10')).toBe('2026-12-08')
+    // 30/11/2026 é a 5.ª (última) segunda → última segunda de dezembro é 28.
+    expect(proximaOcorrencia({ ...t, prazo: '2026-11-30' }, '2026-11-30')).toBe('2026-12-28')
+    expect(descricaoRepeticao({ ...t, prazo: '2026-11-10' })).toBe('2.º ter do mês')
+  })
+
+  it('periódica: N dias depois de concluir', () => {
+    const t = { ...SEM_REPETICAO, repete_apos_dias: 10 }
+    expect(proximaOcorrencia({ ...t, prazo: '2026-11-01' }, HOJE)).toBe('2026-11-28')
+    expect(descricaoRepeticao(t)).toBe('10 dias depois de concluir')
+    expect(escolhaDeRepeticao(t)).toBe('apos')
+  })
+
+  it('a repetição acaba na data indicada', () => {
+    const t = { ...SEM_REPETICAO, repete_dias: [1, 2, 3, 4, 5], repete_ate: '2026-11-19' }
+    expect(proximaOcorrencia({ ...t, prazo: HOJE }, HOJE)).toBe('2026-11-19')
+    expect(proximaOcorrencia({ ...t, prazo: '2026-11-19' }, '2026-11-19')).toBeNull()
+    expect(ocorrenciasPrevistas({ ...t, prazo: '2026-11-16' }, '2026-11-16', '2026-11-30')).toEqual(['2026-11-17', '2026-11-18', '2026-11-19'])
+    expect(descricaoRepeticao(t)).toBe('dias úteis, até 19/11/2026')
+  })
+})
+
+describe('tarefas por estúdio', () => {
+  it('dentro de um estúdio veem-se as dele e as da empresa toda', () => {
+    const lista = [tarefa({ id: 'fatima', estudio_id: 1 }), tarefa({ id: 'leiria', estudio_id: 2 }), tarefa({ id: 'empresa' })]
+    expect(filtrarTarefas(lista, { doEstudio: 2 }).map((t) => t.id)).toEqual(['leiria', 'empresa'])
+    expect(filtrarTarefas(lista, { doEstudio: 1 }).map((t) => t.id)).toEqual(['fatima', 'empresa'])
   })
 })

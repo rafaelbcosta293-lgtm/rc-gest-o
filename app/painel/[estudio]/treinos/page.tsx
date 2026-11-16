@@ -1,3 +1,5 @@
+import JanelaClientes from '@/app/painel/[estudio]/treinos/JanelaClientes'
+import { BotaoAbrirJanela } from '@/components/janela/Janela'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
@@ -66,6 +68,7 @@ export default async function TreinosPage({
   })
 
   return (
+    <JanelaClientes slug={slug}>
     <div className="mx-auto max-w-6xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
@@ -83,15 +86,13 @@ export default async function TreinosPage({
             {estudio.nome} · {clientes.length} clientes ativos
           </p>
         </div>
-        <Link
-          href={`/painel/${slug}/treinos/novo`}
-          className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-        >
+        <BotaoAbrirJanela className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover">
           + Cliente
-        </Link>
+        </BotaoAbrirJanela>
       </div>
 
       <ListaTreinos linhas={linhas} slug={slug} />
     </div>
+    </JanelaClientes>
   )
 }

@@ -40,6 +40,7 @@ export function ProvedorJanela<D>({
   titulo,
   conteudo,
   largura = 'max-w-2xl',
+  seguirAoCriar = false,
 }: {
   children: React.ReactNode
   // Vai buscar o que o formulário precisa (alvo null = criar de novo).
@@ -50,6 +51,10 @@ export function ProvedorJanela<D>({
   // O formulário, com os dados carregados.
   conteudo: (dados: D, alvo: string | null) => React.ReactNode
   largura?: string
+  // Depois de criar (alvo null), ir para onde a ação queria ir — por
+  // exemplo, a página do cliente acabado de criar. Editar fica sempre
+  // no sítio.
+  seguirAoCriar?: boolean
 }) {
   const router = useRouter()
   const [aberta, setAberta] = useState<Abertura | null>(null)
@@ -93,12 +98,14 @@ export function ProvedorJanela<D>({
     const botao = (e.nativeEvent as SubmitEvent).submitter
     const formData = botao instanceof HTMLElement ? new FormData(form, botao) : new FormData(form)
     setErro(null)
+    const aCriar = aberta?.alvo == null
     iniciarGuarda(async () => {
       const r = await guardar(formData)
       if (r.erro) setErro(r.erro)
       else {
         fechar()
-        router.refresh()
+        if (seguirAoCriar && aCriar && r.destino) router.push(r.destino)
+        else router.refresh()
       }
     })
   }

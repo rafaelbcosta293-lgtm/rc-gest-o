@@ -1,3 +1,5 @@
+import JanelaClientes from '@/app/painel/[estudio]/treinos/JanelaClientes'
+import { BotaoAbrirJanela } from '@/components/janela/Janela'
 import AtalhosDoCliente from '@/components/AtalhosDoCliente'
 import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
@@ -66,6 +68,7 @@ export default async function FichaClientePage({
   const temAlertaNaFicha = !!cliente.alerta && cliente.alerta !== 'Nenhum'
 
   return (
+    <JanelaClientes slug={slug}>
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/treinos`}
@@ -87,12 +90,9 @@ export default async function FichaClientePage({
           )}
         </div>
         <div className="flex gap-2">
-          <Link
-            href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=treinos`}
-            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
-          >
+          <BotaoAbrirJanela alvo={clienteId} className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]">
             Editar ficha
-          </Link>
+          </BotaoAbrirJanela>
           <form action={iniciarTreino}>
             <input type="hidden" name="estudio_slug" value={slug} />
             <input type="hidden" name="estudio_id" value={estudio.id} />
@@ -238,5 +238,6 @@ export default async function FichaClientePage({
         })}
       </div>
     </div>
+    </JanelaClientes>
   )
 }

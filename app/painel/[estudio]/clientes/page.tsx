@@ -1,3 +1,5 @@
+import JanelaClientes from '@/app/painel/[estudio]/treinos/JanelaClientes'
+import { BotaoAbrirJanela } from '@/components/janela/Janela'
 import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Cake, Plus, ArrowUp, ArrowDown } from 'lucide-react'
@@ -237,6 +239,7 @@ export default async function ClientesPage({
   })
 
   return (
+    <JanelaClientes slug={slug}>
     <div className="mx-auto max-w-6xl px-4 py-10">
       <Link
         href={`/painel/${slug}`}
@@ -280,12 +283,9 @@ export default async function ClientesPage({
           >
             <Cake className="h-4 w-4" /> Aniversários
           </Link>
-          <Link
-            href={`/painel/${slug}/treinos/novo`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-          >
+          <BotaoAbrirJanela className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover">
             <Plus className="h-4 w-4" /> Cliente
-          </Link>
+          </BotaoAbrirJanela>
         </div>
       </div>
 
@@ -348,5 +348,6 @@ export default async function ClientesPage({
 
       <ListaClientes linhas={linhas} slug={slug} />
     </div>
+    </JanelaClientes>
   )
 }

@@ -3,6 +3,9 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getEquipaDoEstudio, getEstudioPorSlug } from '@/lib/data/estudios'
+import { semSair, type ResultadoSemSair } from '@/lib/acoes/semSair'
+import type { Avaliacao, Perfil } from '@/lib/supabase/database.types'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -102,4 +105,40 @@ export async function apagarAvaliacao(formData: FormData) {
   revalidatePath(`/painel/${estudioSlug}/avaliacoes`)
   revalidatePath(`/painel/${estudioSlug}/avaliacoes/${clienteId}`)
   redirect(`/painel/${estudioSlug}/avaliacoes/${clienteId}`)
+}
+
+// ── Janela de edição (sem sair da página do cliente) ─────────────────
+
+// Guarda uma avaliação (nova ou existente) a partir da janela — a mesma
+// lógica de criarAvaliacao/atualizarAvaliacao, sem mudar de página.
+export async function guardarAvaliacaoNaJanela(formData: FormData): Promise<ResultadoSemSair> {
+  return semSair(formData.get('id') ? atualizarAvaliacao : criarAvaliacao, formData)
+}
+
+export type DadosJanelaAvaliacao = {
+  pts: Pick<Perfil, 'id' | 'nome'>[]
+  avaliacao: Avaliacao | null
+  // A altura da última avaliação (raramente muda): já vem preenchida numa nova.
+  alturaSugerida: number | null
+}
+
+// O que o formulário de uma avaliação precisa (avaliacaoId null = nova).
+export async function dadosDaJanelaAvaliacao(
+  estudioSlug: string,
+  clienteId: string,
+  avaliacaoId: string | null
+): Promise<DadosJanelaAvaliacao | { erro: string }> {
+  const supabase = await createClient()
+  const [estudio, { data: cliente }, { data: avaliacao }, { data: ultima }] = await Promise.all([
+    getEstudioPorSlug(supabase, estudioSlug),
+    supabase.from('clientes').select('id, estudio_id').eq('id', clienteId).maybeSingle(),
+    avaliacaoId
+      ? supabase.from('avaliacoes').select('*').eq('id', avaliacaoId).eq('cliente_id', clienteId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.from('avaliacoes').select('altura_cm').eq('cliente_id', clienteId).order('data', { ascending: false }).limit(1).maybeSingle(),
+  ])
+  if (!estudio || !cliente || cliente.estudio_id !== estudio.id) return { erro: 'Cliente não encontrado.' }
+  if (avaliacaoId && !avaliacao) return { erro: 'Avaliação não encontrada.' }
+  const pts = await getEquipaDoEstudio(supabase, estudio.id, (avaliacao as Avaliacao | null)?.pt_id ?? undefined)
+  return { pts, avaliacao: (avaliacao as Avaliacao | null) ?? null, alturaSugerida: ultima?.altura_cm ?? null }
 }

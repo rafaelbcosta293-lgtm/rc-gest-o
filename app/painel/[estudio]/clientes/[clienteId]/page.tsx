@@ -1,3 +1,5 @@
+import JanelaClientes from '@/app/painel/[estudio]/treinos/JanelaClientes'
+import { BotaoAbrirJanela } from '@/components/janela/Janela'
 import AtalhosDoCliente from '@/components/AtalhosDoCliente'
 import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
@@ -104,6 +106,7 @@ export default async function FichaCompletaClientePage({
   const estadoPagamento = pagamento?.data as EstadoPagamento | null | undefined
 
   return (
+    <JanelaClientes slug={slug}>
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/clientes`}
@@ -132,12 +135,9 @@ export default async function FichaCompletaClientePage({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Link
-            href={`/painel/${slug}/treinos/${clienteId}/editar?voltar=clientes`}
-            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
-          >
+          <BotaoAbrirJanela alvo={clienteId} className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]">
             Editar ficha
-          </Link>
+          </BotaoAbrirJanela>
           {ehGestao && (
             <ApagarClienteModal
               slug={slug}
@@ -307,5 +307,6 @@ export default async function FichaCompletaClientePage({
         )}
       </section>
     </div>
+    </JanelaClientes>
   )
 }

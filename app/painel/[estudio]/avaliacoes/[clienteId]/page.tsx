@@ -1,3 +1,5 @@
+import JanelaAvaliacoes from '../JanelaAvaliacoes'
+import { AbrirComBotaoDireito, BotaoAbrirJanela } from '@/components/janela/Janela'
 import AtalhosDoCliente from '@/components/AtalhosDoCliente'
 import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
@@ -51,6 +53,7 @@ export default async function AvaliacoesClientePage({
   const [atual, anterior] = lista
 
   return (
+    <JanelaAvaliacoes slug={slug} clienteId={clienteId}>
     <div className="mx-auto max-w-4xl px-4 py-10">
       <Link
         href={`/painel/${slug}/avaliacoes`}
@@ -64,12 +67,9 @@ export default async function AvaliacoesClientePage({
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
           {cliente.nome}
         </h1>
-        <Link
-          href={`/painel/${slug}/avaliacoes/${clienteId}/nova`}
-          className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-        >
+        <BotaoAbrirJanela className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover">
           + Avaliação
-        </Link>
+        </BotaoAbrirJanela>
       </div>
 
       {error && (
@@ -161,8 +161,9 @@ export default async function AvaliacoesClientePage({
 
       <div className="mt-3 flex flex-col gap-2">
         {lista.map((a) => (
-          <div
+          <AbrirComBotaoDireito
             key={a.id}
+            alvo={a.id}
             className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface p-3"
           >
             <span className="w-20 text-xs text-muted">{fmt(a.data)}</span>
@@ -171,12 +172,9 @@ export default async function AvaliacoesClientePage({
               {a.massa_gorda_pct ? ` · ${a.massa_gorda_pct}% gordura` : ''}
               {a.pt ? ` · ${a.pt.nome}` : ''}
             </span>
-            <Link
-              href={`/painel/${slug}/avaliacoes/${clienteId}/${a.id}/editar`}
-              className="text-xs font-medium text-muted underline"
-            >
+            <BotaoAbrirJanela alvo={a.id} className="text-xs font-medium text-muted underline">
               Editar
-            </Link>
+            </BotaoAbrirJanela>
             <ApagarComConfirmacao
               action={apagarAvaliacao}
               confirmacao={`Tens a certeza que queres apagar a avaliação de ${fmt(a.data)}? Esta ação não pode ser desfeita.`}
@@ -186,9 +184,10 @@ export default async function AvaliacoesClientePage({
             >
               ×
             </ApagarComConfirmacao>
-          </div>
+          </AbrirComBotaoDireito>
         ))}
       </div>
     </div>
+    </JanelaAvaliacoes>
   )
 }

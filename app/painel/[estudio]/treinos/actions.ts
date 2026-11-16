@@ -4,6 +4,9 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { normalizarNif, nifValido } from '@/lib/data/faturas'
+import { getEquipaDoEstudio, getEstudioPorSlug } from '@/lib/data/estudios'
+import { semSair, type ResultadoSemSair } from '@/lib/acoes/semSair'
+import type { Cliente, Perfil } from '@/lib/supabase/database.types'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -186,4 +189,27 @@ export async function eliminarExercicioRapido(
   }
 
   return { ok: true }
+}
+
+// ── Janela de edição (sem sair da página) ────────────────────────────
+
+// Guarda a ficha de um cliente (novo ou existente) a partir da janela —
+// a mesma lógica de criarCliente/atualizarCliente, sem mudar de página.
+export async function guardarClienteNaJanela(formData: FormData): Promise<ResultadoSemSair> {
+  return semSair(formData.get('id') ? atualizarCliente : criarCliente, formData)
+}
+
+export type DadosJanelaCliente = { estudioId: number; pts: Pick<Perfil, 'id' | 'nome'>[]; cliente: Cliente | null }
+
+// O que o formulário da ficha precisa (clienteId null = cliente novo).
+export async function dadosDaJanelaCliente(estudioSlug: string, clienteId: string | null): Promise<DadosJanelaCliente | { erro: string }> {
+  const supabase = await createClient()
+  const [estudio, { data: cliente }] = await Promise.all([
+    getEstudioPorSlug(supabase, estudioSlug),
+    clienteId ? supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle() : Promise.resolve({ data: null }),
+  ])
+  if (!estudio) return { erro: 'Estúdio não encontrado.' }
+  if (clienteId && (!cliente || cliente.estudio_id !== estudio.id)) return { erro: 'Cliente não encontrado.' }
+  const pts = await getEquipaDoEstudio(supabase, estudio.id, (cliente as Cliente | null)?.pt_principal_id ?? undefined)
+  return { estudioId: estudio.id, pts, cliente: (cliente as Cliente | null) ?? null }
 }

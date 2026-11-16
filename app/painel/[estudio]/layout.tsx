@@ -16,15 +16,20 @@ import BarraAjustavel from '@/components/BarraAjustavel'
 import AvisosFerias from './ferias/AvisosFerias'
 import AvisosHorario from '@/components/AvisosHorario'
 import { contarTarefasUrgentes } from '@/lib/data/tarefas'
+import { contarAlertasAbertos } from '@/lib/data/alertasAbertos'
 import { hojeEmLisboa } from '@/lib/data/hoje'
-import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado } from './NavLink'
+import { NavLinkTopBar, NavLinkComSubpastas, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado } from './NavLink'
 
-// Na barra do computador/tablet, Treinos e Avaliações deixam de ter
-// pílula própria — passam a aparecer só dentro do submenu de Clientes
-// (ver NavLinkClientesComSubmenu). No telemóvel continuam como estavam.
-const SUBPASTAS_CLIENTES = new Set(['treinos', 'avaliacoes'])
+// Na barra do computador/tablet, Treinos, Avaliações e Presenças não têm
+// pílula própria — aparecem dentro de Clientes; e Objetivos dentro de
+// Leads (ver NavLinkComSubpastas). No telemóvel aparecem todas seguidas.
+const SUBPASTAS: Record<string, string[]> = {
+  clientes: ['treinos', 'avaliacoes', 'presencas'],
+  leads: ['objetivos'],
+}
+const TODAS_AS_SUBPASTAS = new Set(Object.values(SUBPASTAS).flat())
 
-// Registo de Horas e Férias ficam dentro da pasta "Recursos Humanos" na barra
+// Registo de Horas e Férias ficam dentro da pasta "Instrutores" na barra
 // do computador/tablet (ver NavLinkPastaHorarios).
 const SUBPASTAS_HORARIOS = new Set(['assiduidade', 'ferias'])
 
@@ -32,13 +37,17 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   const { estudio: slug } = await params
 
   const supabase = await createClient()
-  const [sessao, estadosBanner, contactosAgendados, estudio, tarefasUrgentes] = await Promise.all([
+  const [sessao, estadosBanner, contactosAgendados, estudio, tarefasUrgentes, alertasAbertos] = await Promise.all([
     getSessaoAtual(),
     obterEstadosBanner(supabase),
     listarContactosAgendados(supabase),
     getEstudioPorSlug(supabase, slug),
     // Tarefas com o prazo passado ou para hoje — o número no menu.
     contarTarefasUrgentes(supabase, hojeEmLisboa()),
+    // Alertas por resolver deste estúdio — o número no menu.
+    Promise.all([getSessaoAtual(), getEstudioPorSlug(supabase, slug)]).then(([s, e]) =>
+      e ? contarAlertasAbertos(supabase, e.id, s.perfil?.papel ?? null) : 0
+    ),
   ])
 
   // Entra-se num estúdio de duas formas: a conta partilhada fixa desse
@@ -70,11 +79,11 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
     if (contaIndividual) return `${m.nome} — sem acesso para esta conta`
     return `${m.nome} — só para ${m.restrito === 'admin' ? 'administradores' : 'gestão'}`
   }
-  // Treinos (e Avaliações, que fica bloqueado) ganham pílula própria em
-  // vez de ficarem escondidos dentro do submenu de Clientes — senão uma
-  // conta individual, sem acesso a Clientes, nem via teria como chegar
-  // a Treinos no computador/tablet.
-  const subpastasClientesParaFiltrar = contaIndividual ? new Set<string>() : SUBPASTAS_CLIENTES
+  // Numa conta individual não há pastas com subpastas: cada módulo a que
+  // tem acesso ganha pílula própria — senão, sem acesso a Clientes, nem
+  // via teria como chegar a Treinos no computador/tablet.
+  const subpastasParaFiltrar = contaIndividual ? new Set<string>() : TODAS_AS_SUBPASTAS
+  const avisoDe = (id: string) => (id === 'tarefas' ? tarefasUrgentes : id === 'alertas' ? alertasAbertos : 0)
 
   return (
     <div className="flex min-h-full flex-col">
@@ -137,7 +146,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
           <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
-            {MODULOS.filter((m) => !subpastasClientesParaFiltrar.has(m.id) && !SUBPASTAS_HORARIOS.has(m.id)).map((m) =>
+            {MODULOS.filter((m) => !subpastasParaFiltrar.has(m.id) && !SUBPASTAS_HORARIOS.has(m.id)).map((m) =>
               m.id === 'horarios' ? (
                 <NavLinkPastaHorarios
                   key={m.id}
@@ -149,10 +158,10 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
                     ])
                   )}
                 />
-              ) : m.id === 'clientes' && !contaIndividual ? (
-                <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />
+              ) : SUBPASTAS[m.id] && !contaIndividual && podeAceder(m) ? (
+                <NavLinkComSubpastas key={m.id} slug={slug} id={m.id} subpastas={SUBPASTAS[m.id]} ehAdmin={ehAdmin} ehGestao={ehGestao} />
               ) : podeAceder(m) ? (
-                <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} aviso={m.id === 'tarefas' ? tarefasUrgentes : 0} />
+                <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} aviso={avisoDe(m.id)} />
               ) : (
                 <NavLinkBloqueado key={m.id} id={m.id} titulo={tituloBloqueado(m)} />
               )
@@ -187,7 +196,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around overflow-x-auto border-t border-border-subtle bg-background/90 px-1 py-1 shadow-[0_-2px_2px_rgba(24,24,27,0.05),0_-16px_32px_-8px_rgba(24,24,27,0.16)] backdrop-blur-xl md:hidden">
         {MODULOS.map((m) =>
           podeAceder(m) ? (
-            <NavLinkPhone key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} aviso={m.id === 'tarefas' ? tarefasUrgentes : 0} />
+            <NavLinkPhone key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} aviso={avisoDe(m.id)} />
           ) : (
             <span
               key={m.id}

@@ -47,26 +47,29 @@ export function NavLinkTopBar({ href, id, aviso = 0 }: { href: string; id: strin
   )
 }
 
-// Treinos e Avaliações deixam de ter pílula própria na barra do
-// computador/tablet — passam a aparecer como subpastas de Clientes, só
-// ao passar o rato por cima (tal como o submenu "só Fátima/só Leiria"
-// já existente na Administração). No telemóvel ficam tal como estavam
+// Uma pasta com subpastas: a pílula abre a pasta principal e, ao passar
+// o rato, mostra as subpastas (Clientes → Treinos, Avaliações e
+// Presenças; Leads → Objetivos) — tal como o submenu "só Fátima/só
+// Leiria" da Administração. No telemóvel ficam todas seguidas
 // (NavLinkPhone, mais abaixo) — não há "hover" num ecrã tátil.
-const SUBPASTAS_CLIENTES = ['treinos', 'avaliacoes']
-
-export function NavLinkClientesComSubmenu({
+export function NavLinkComSubpastas({
   slug,
+  id,
+  subpastas,
   ehAdmin,
   ehGestao,
 }: {
   slug: string
+  // A pasta principal e as que ficam lá dentro (ids dos módulos).
+  id: string
+  subpastas: string[]
   ehAdmin: boolean
   ehGestao: boolean
 }) {
   const pathname = usePathname()
-  const clientesHref = `/painel/${slug}/clientes`
-  const { icone: Icone, cor } = moduloPorId('clientes')
-  const subModulos = SUBPASTAS_CLIENTES.map((id) => moduloPorId(id))
+  const clientesHref = `/painel/${slug}/${id}`
+  const { icone: Icone, cor, nome } = moduloPorId(id)
+  const subModulos = subpastas.map((sub) => moduloPorId(sub))
   const modo = useModoBarra()
   const soIcone = modo === 'icones'
 
@@ -74,8 +77,8 @@ export function NavLinkClientesComSubmenu({
     return m.pronto && (!m.restrito || (m.restrito === 'admin' ? ehAdmin : ehGestao))
   }
 
-  // A pílula "Clientes" acende-se tanto em Clientes como em qualquer uma
-  // das subpastas — todas partilham a mesma "casa" na navegação.
+  // A pílula acende-se tanto na pasta principal como em qualquer uma das
+  // subpastas — todas partilham a mesma "casa" na navegação.
   const ativo =
     estaAtivo(pathname, clientesHref) ||
     subModulos.some((m) => estaAtivo(pathname, `/painel/${slug}/${m.id}`))
@@ -106,7 +109,7 @@ export function NavLinkClientesComSubmenu({
       <Link
         ref={pillRef}
         href={clientesHref}
-        title={soIcone ? 'Clientes' : undefined}
+        title={soIcone ? nome : undefined}
         className={`flex shrink-0 whitespace-nowrap font-medium tracking-tight text-foreground transition-colors ${formaPilula(modo)} ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
         style={{
           background: ativo ? PALETA[cor].bg : undefined,
@@ -114,7 +117,7 @@ export function NavLinkClientesComSubmenu({
         }}
       >
         <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
-        {!soIcone && 'Clientes'}
+        {!soIcone && nome}
         {modo === 'nomes' && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
       </Link>
 
@@ -169,7 +172,7 @@ export function NavLinkClientesComSubmenu({
   )
 }
 
-// A pasta "Recursos Humanos": Escalas, Registo de Horas e Férias vivem na mesma "pasta"
+// A pasta "Instrutores": Escalas, Registo de Horas e Férias vivem na mesma "pasta"
 // da barra do computador/tablet: uma pílula só, que ao passar o rato
 // mostra as três. No telemóvel continuam separadas (não há "hover").
 const PASTA_HORARIOS: { id: string; rotulo: string }[] = [
@@ -193,7 +196,7 @@ export function NavLinkPastaHorarios({
   const disponiveis = itens.filter((i) => !bloqueados[i.id])
   const principal = disponiveis[0] ?? itens[0]
   // Mala de trabalho: lê-se bem em tamanho pequeno e identifica a pasta com a equipa (o
-  // despertador das Escalas não dizia "Recursos Humanos").
+  // despertador das Escalas não dizia "Instrutores").
   const Icone = BriefcaseBusiness
   const { cor } = moduloPorId('horarios')
   const ativo = itens.some((i) => estaAtivo(pathname, i.href))
@@ -222,7 +225,7 @@ export function NavLinkPastaHorarios({
       <Link
         ref={pillRef}
         href={principal.href}
-        title={soIcone ? 'Recursos Humanos' : undefined}
+        title={soIcone ? 'Instrutores' : undefined}
         aria-haspopup="menu"
         aria-expanded={aberto}
         className={`flex shrink-0 whitespace-nowrap font-medium tracking-tight text-foreground transition-colors ${formaPilula(modo)} ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
@@ -232,7 +235,7 @@ export function NavLinkPastaHorarios({
         }}
       >
         <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
-        {!soIcone && 'Recursos Humanos'}
+        {!soIcone && 'Instrutores'}
         {modo === 'nomes' && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
       </Link>
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { mudarEstadoTarefa } from '@/app/painel/tarefasActions'
+import { comLembradoPrimeiro, lembrarQuemFez, useQuemLembrado } from '@/components/quemLembrado'
 
 // O botão de concluir uma tarefa. Para concluir é obrigatório dizer quem
 // a fez: ao clicar abre uma pequena lista com os nomes da equipa, e é
@@ -31,6 +32,8 @@ export default function ConcluirTarefa({
 }) {
   const [aberto, setAberto] = useState(false)
   const caixa = useRef<HTMLDivElement>(null)
+  // O último nome escolhido neste aparelho aparece em cima.
+  const lembrado = useQuemLembrado()
 
   useEffect(() => {
     if (!aberto) return
@@ -103,14 +106,15 @@ export default function ConcluirTarefa({
               >
                 <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Quem fez?</p>
                 {pessoas.length === 0 && <p className="px-2 py-1.5 text-xs text-muted">Ainda não há pessoas na equipa.</p>}
-                {pessoas.map((p) => (
+                {comLembradoPrimeiro(pessoas, lembrado).map((p) => (
                   <button
                     key={p.id}
                     type="submit"
                     name="feita_por"
                     value={p.id}
                     role="menuitem"
-                    className="block w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-foreground hover:bg-brand/[.12]"
+                    onClick={() => lembrarQuemFez(p.id)}
+                    className={`block w-full rounded-lg px-2 py-1.5 text-left text-sm text-foreground hover:bg-brand/[.12] ${p.id === lembrado ? 'bg-brand/[.10] font-bold' : 'font-medium'}`}
                   >
                     {p.nome}
                   </button>

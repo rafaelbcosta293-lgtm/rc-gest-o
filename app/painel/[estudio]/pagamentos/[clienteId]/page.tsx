@@ -1,3 +1,6 @@
+import QuemFez from '@/components/QuemFez'
+import { dadosQuemFez } from '@/lib/data/quemFez'
+import AtalhosDoCliente from '@/components/AtalhosDoCliente'
 import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -14,6 +17,8 @@ import { hojeEmLisboa } from '@/lib/data/hoje'
 type PagamentoComExtras = Pagamento & {
   plano: { nome: string } | null
   registado: { nome: string } | null
+  // A pessoa que recebeu o pagamento (escolhida no formulário).
+  quem: { nome: string } | null
   anulado: { nome: string } | null
 }
 
@@ -29,6 +34,7 @@ export default async function PagamentosClientePage({
   const hoje = hojeEmLisboa()
 
   const supabase = await createClient()
+  const quemFezAVir = dadosQuemFez()
   const [
     estudio,
     { data: cliente },
@@ -39,11 +45,12 @@ export default async function PagamentosClientePage({
     supabase.from('clientes').select('id, nome, estudio_id, nif').eq('id', clienteId).maybeSingle(),
     supabase
       .from('pagamentos')
-      .select('*, plano:planos(nome), registado:perfis!registado_por(nome), anulado:perfis!anulado_por(nome)')
+      .select('*, plano:planos(nome), registado:perfis!registado_por(nome), quem:perfis!quem_fez(nome), anulado:perfis!anulado_por(nome)')
       .eq('cliente_id', clienteId)
       .order('data_pagamento', { ascending: false }),
     supabase.from('planos').select('*').eq('ativo', true).order('valor'),
   ])
+  const { pessoas, euId } = await quemFezAVir
 
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
@@ -71,6 +78,7 @@ export default async function PagamentosClientePage({
       >
         <ArrowLeft className="h-4 w-4" /> Pagamentos
       </Link>
+      <AtalhosDoCliente slug={slug} clienteId={clienteId} atual="pagamentos" />
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         {cliente.nome}
@@ -101,6 +109,8 @@ export default async function PagamentosClientePage({
         action={criarPagamento}
         clienteNif={cliente.nif}
         validadeAtual={validoAte}
+        pessoas={pessoas}
+        euId={euId}
       />
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">
@@ -133,6 +143,7 @@ export default async function PagamentosClientePage({
             className="rounded-md border border-black bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900"
           />
         </div>
+        <QuemFez pessoas={pessoas} euId={euId} rotulo="Recebido por" />
         <SubmitButton
           pendingText="A guardar…"
           className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
@@ -173,8 +184,8 @@ export default async function PagamentosClientePage({
                   .join(', ')}
               </span>
             )}
-            {p.registado && (
-              <span className="text-xs text-zinc-400">· {p.registado.nome}</span>
+            {(p.quem ?? p.registado) && (
+              <span className="text-xs text-zinc-400">· {p.quem ? `recebido por ${p.quem.nome}` : p.registado!.nome}</span>
             )}
             {p.nota && (
               <span className="w-full text-xs text-muted">{p.nota}</span>

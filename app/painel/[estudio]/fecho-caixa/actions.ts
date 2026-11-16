@@ -1,5 +1,6 @@
 'use server'
 
+import { lerQuemFez } from '@/lib/data/quemFez'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -124,6 +125,8 @@ export async function registarFechoCaixa(formData: FormData) {
       valor_contado: valorContado,
       nota,
       registado_por: userData.user?.id ?? null,
+      // Quem fez o fecho (a pessoa, não a conta do estúdio).
+      quem_fez: await lerQuemFez(formData),
       atualizado_em: new Date().toISOString(),
     },
     { onConflict: 'estudio_id,data' }

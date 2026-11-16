@@ -1,3 +1,5 @@
+import QuemFez from '@/components/QuemFez'
+import { dadosQuemFez } from '@/lib/data/quemFez'
 import Link from '@/components/LinkRapido'
 import type { ReactNode } from 'react'
 import { notFound } from 'next/navigation'
@@ -34,6 +36,7 @@ export default async function LeadPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
+  const quemFezAVir = dadosQuemFez()
   const [
     estudio,
     { data: lead },
@@ -46,7 +49,7 @@ export default async function LeadPage({
     supabase.from('leads').select('*').eq('id', leadId).maybeSingle(),
     supabase
       .from('lead_contactos')
-      .select('*, feito:perfis!feito_por(nome)')
+      .select('*, feito:perfis!feito_por(nome), quem:perfis!quem_fez(nome)')
       .eq('lead_id', leadId)
       .order('data', { ascending: false })
       .order('criado_em', { ascending: false }),
@@ -58,6 +61,7 @@ export default async function LeadPage({
     getEstudios(supabase),
     getSessaoAtual(),
   ])
+  const { pessoas, euId } = await quemFezAVir
 
   if (!estudio || !lead || lead.estudio_id !== estudio.id) {
     notFound()
@@ -76,6 +80,7 @@ export default async function LeadPage({
 
   const contactos = (contactosData ?? []) as unknown as (LeadContacto & {
     feito: { nome: string } | null
+    quem: { nome: string } | null
   })[]
   const atividades = (atividadesData ?? []) as Activity[]
   const cor = ESTADOS_LEAD[lead.estado as keyof typeof ESTADOS_LEAD]
@@ -97,7 +102,7 @@ export default async function LeadPage({
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
             <span>{fmt(c.data)}</span>
             <span>· {c.tipo}</span>
-            {c.feito && <span>· {c.feito.nome}</span>}
+            {(c.quem ?? c.feito) && <span>· {(c.quem ?? c.feito)!.nome}</span>}
           </div>
           <p className="mt-1 text-foreground">{c.resultado}</p>
           {c.nota && <p className="mt-1 text-xs text-muted">{c.nota}</p>}
@@ -289,6 +294,13 @@ export default async function LeadPage({
             ))}
           </select>
         </div>
+        <QuemFez
+          pessoas={pessoas}
+          euId={euId}
+          rotulo="Quem contactou"
+          className="flex flex-col gap-1.5 text-xs font-medium text-foreground/80"
+          campoCls="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+        />
         <div className="flex flex-col justify-end gap-1.5 pb-2.5">
           <label className="flex items-center gap-2 text-sm text-foreground/80">
             <input type="checkbox" name="sucesso" defaultChecked />

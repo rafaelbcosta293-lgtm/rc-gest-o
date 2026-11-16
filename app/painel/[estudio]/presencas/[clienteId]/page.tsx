@@ -1,3 +1,4 @@
+import AtalhosDoCliente from '@/components/AtalhosDoCliente'
 import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -85,6 +86,7 @@ export default async function PresencasClientePage({
       >
         <ArrowLeft className="h-4 w-4" /> Presenças
       </Link>
+      <AtalhosDoCliente slug={slug} clienteId={clienteId} atual="presencas" />
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         {cliente.nome}

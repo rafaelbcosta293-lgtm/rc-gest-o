@@ -1,3 +1,5 @@
+import QuemFez from '@/components/QuemFez'
+import { dadosQuemFez } from '@/lib/data/quemFez'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
@@ -109,7 +111,7 @@ export default async function FechoCaixaPage({
   const diaSemana = DIAS_SEMANA[new Date(`${hoje}T00:00:00`).getDay()]
 
   const supabase = await createClient()
-  const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
+  const [estudio, sessao, { pessoas, euId }] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual(), dadosQuemFez()])
   if (!estudio) {
     notFound()
   }
@@ -351,6 +353,9 @@ export default async function FechoCaixaPage({
               </span>
             </div>
             {fechoHoje.nota && <p className="px-4 pt-1 text-xs text-muted">Nota: {fechoHoje.nota}</p>}
+            {fechoHoje.quem_fez && pessoas.some((x) => x.id === fechoHoje.quem_fez) && (
+              <p className="px-4 pt-1 text-xs text-muted">Fecho feito por {pessoas.find((x) => x.id === fechoHoje.quem_fez)!.nome}</p>
+            )}
             <details className="px-4 pt-2">
               <summary className="cursor-pointer text-xs text-muted hover:text-foreground">
                 Corrigir valor contado
@@ -373,6 +378,7 @@ export default async function FechoCaixaPage({
                   placeholder="Nota (opcional)"
                   className={`${inputCls} flex-1 basis-40`}
                 />
+                <QuemFez pessoas={pessoas} euId={euId} rotulo="Quem corrige" className="flex flex-col gap-1 text-xs text-muted" campoCls={inputCls} />
                 <SubmitButton
                   pendingText="…"
                   className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]"
@@ -402,6 +408,7 @@ export default async function FechoCaixaPage({
               <label className="text-xs text-muted">Nota (opcional)</label>
               <input name="nota" placeholder="Ex.: faltam 5€" className={`${inputCls} w-full`} />
             </div>
+            <QuemFez pessoas={pessoas} euId={euId} rotulo="Quem faz o fecho" className="flex flex-col gap-1 text-xs text-muted" campoCls={inputCls} />
             <SubmitButton
               pendingText="A guardar…"
               className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-black shadow-pop hover:bg-brand-strong"

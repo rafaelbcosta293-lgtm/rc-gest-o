@@ -223,6 +223,34 @@ export default function EventoModalOverlay({
                   ))}
                 </div>
               )}
+              {/* Atalhos para o resto do que há sobre cada pessoa do treino. */}
+              {participantes.length > 0 && (
+                <ul className="flex flex-col gap-0.5">
+                  {participantes.map((c) => {
+                    // Só para clientes deste estúdio (os do outro têm a ficha lá).
+                    if (clientesOutroEstudio.some((x) => x.id === c.id) && !clientes.some((x) => x.id === c.id)) return null
+                    const s = slug
+                    const atalho = 'text-muted underline hover:text-foreground'
+                    return (
+                      <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
+                        {participantes.length > 1 && <span className="font-medium text-foreground">{c.nome}:</span>}
+                        <Link href={`/painel/${s}/clientes/${c.id}`} className={atalho}>
+                          Ficha do cliente
+                        </Link>
+                        <Link href={`/painel/${s}/treinos/${c.id}`} className={atalho}>
+                          Plano de treino
+                        </Link>
+                        <Link href={`/painel/${s}/pagamentos/${c.id}`} className={atalho}>
+                          Pagamentos
+                        </Link>
+                        <Link href={`/painel/${s}/presencas/${c.id}`} className={atalho}>
+                          Presenças
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
               <ClienteCombobox
                 clientes={clienteDeFora ? clientesOutroEstudio : clientes}
                 excluirIds={participantes.map((c) => c.id)}
@@ -637,6 +665,12 @@ export default function EventoModalOverlay({
               </button>
             </div>
           </div>
+        )}
+
+        {editar && evento?.lead_id && (
+          <Link href={`/painel/${slug}/leads/${evento.lead_id}`} className="mt-3 block text-center text-xs text-muted underline hover:text-foreground">
+            Ver a lead desta sessão experimental
+          </Link>
         )}
 
         {editar && evento && (

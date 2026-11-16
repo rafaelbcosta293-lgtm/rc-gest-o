@@ -1,5 +1,6 @@
 'use server'
 
+import { lerQuemFez } from '@/lib/data/quemFez'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -47,6 +48,8 @@ export async function criarPagamento(formData: FormData) {
 
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
+  // Quem recebeu (a pessoa, não a conta do estúdio).
+  const quemFez = await lerQuemFez(formData)
 
   const [{ data: inserido, error }, { data: plano }] = await Promise.all([
     supabase.from('pagamentos').insert({
@@ -62,6 +65,7 @@ export async function criarPagamento(formData: FormData) {
       inclui_reativacao: formData.get('inclui_reativacao') === 'on',
       nota: campoOuNull(formData, 'nota'),
       registado_por: userData.user?.id ?? null,
+      quem_fez: quemFez,
     }).select('id').single(),
     supabase.from('planos').select('sessoes_por_semana').eq('id', planoId).maybeSingle(),
   ])
@@ -128,6 +132,7 @@ export async function registarPagamentoSeguro(formData: FormData) {
     campoOuNull(formData, 'data_pagamento') ?? hojeEmLisboa()
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
+  const quemFez = await lerQuemFez(formData)
 
   const { data: ultimoPagamento, error: erroUltimo } = await supabase
     .from('pagamentos_ativos')
@@ -154,6 +159,7 @@ export async function registarPagamentoSeguro(formData: FormData) {
     mensalidade: false,
     nota: 'Pagamento do seguro',
     registado_por: userData.user?.id ?? null,
+    quem_fez: quemFez,
   })
 
   if (error) {

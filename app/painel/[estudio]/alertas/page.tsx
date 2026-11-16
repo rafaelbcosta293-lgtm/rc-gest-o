@@ -6,6 +6,8 @@ import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { PALETA } from '@/lib/data/constantes'
 import { marcarVisto, resolverAlerta, adiarAlerta } from './actions'
+import BotaoQuemFez from '@/components/BotaoQuemFez'
+import { dadosQuemFez } from '@/lib/data/quemFez'
 import SubmitButton from '@/components/SubmitButton'
 import type { AlertaRegistado, SeveridadeAlerta } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
@@ -34,7 +36,7 @@ export default async function AlertasPage({
   const { error } = await searchParams
 
   const supabase = await createClient()
-  const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
+  const [estudio, sessao, { pessoas, euId }] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual(), dadosQuemFez()])
   if (!estudio) {
     notFound()
   }
@@ -148,16 +150,17 @@ export default async function AlertasPage({
                             </SubmitButton>
                           </form>
                         )}
-                        <form action={resolverAlerta}>
-                          <input type="hidden" name="estudio_slug" value={slug} />
-                          <input type="hidden" name="id" value={a.id} />
-                          <SubmitButton
-                            pendingText="…"
-                            className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]"
-                          >
-                            Resolver
-                          </SubmitButton>
-                        </form>
+                        <BotaoQuemFez
+                          action={resolverAlerta}
+                          ocultos={{ estudio_slug: slug, id: a.id }}
+                          pessoas={pessoas}
+                          euId={euId}
+                          pergunta="Quem resolveu?"
+                          title="Resolver — indica quem resolveu"
+                          className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]"
+                        >
+                          Resolver
+                        </BotaoQuemFez>
                         <details className="group">
                           <summary className="cursor-pointer list-none rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]">
                             Adiar…

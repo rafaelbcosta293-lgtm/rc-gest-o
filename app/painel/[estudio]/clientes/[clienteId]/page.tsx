@@ -1,3 +1,4 @@
+import AtalhosDoCliente from '@/components/AtalhosDoCliente'
 import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -110,6 +111,7 @@ export default async function FichaCompletaClientePage({
       >
         <ArrowLeft className="h-4 w-4" /> Clientes
       </Link>
+      <AtalhosDoCliente slug={slug} clienteId={clienteId} atual="clientes" />
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div>

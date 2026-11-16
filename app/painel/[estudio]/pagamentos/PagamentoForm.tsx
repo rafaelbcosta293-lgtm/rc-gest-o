@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import SubmitButton from '@/components/SubmitButton'
+import QuemFez from '@/components/QuemFez'
 import type { Plano } from '@/lib/supabase/database.types'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 import { fimDoMes, validadeSugerida } from '@/lib/data/validadePagamento'
@@ -21,6 +22,8 @@ export default function PagamentoForm({
   error,
   clienteNif = null,
   validadeAtual = null,
+  pessoas = [],
+  euId = null,
 }: {
   estudioSlug: string
   clienteId: string
@@ -29,6 +32,9 @@ export default function PagamentoForm({
   error?: string
   clienteNif?: string | null
   validadeAtual?: string | null
+  // Para o campo "Recebido por" (quem recebeu o pagamento).
+  pessoas?: { id: string; nome: string }[]
+  euId?: string | null
 }) {
   const hoje = hojeEmLisboa()
   const fimEsteMes = fimDoMes(hoje)
@@ -256,6 +262,8 @@ export default function PagamentoForm({
           </div>
         )}
       </div>
+
+      <QuemFez pessoas={pessoas} euId={euId} rotulo="Recebido por" className="flex max-w-xs flex-col gap-1 text-xs font-medium text-muted" />
 
       <SubmitButton
         pendingText="A guardar…"

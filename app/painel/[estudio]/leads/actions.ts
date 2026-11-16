@@ -1,5 +1,6 @@
 'use server'
 
+import { lerQuemFez } from '@/lib/data/quemFez'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -366,6 +367,8 @@ export async function adicionarContacto(formData: FormData) {
     sucesso: formData.get('sucesso') === 'on',
     nota: campoOuNull(formData, 'nota'),
     feito_por: userData.user?.id ?? null,
+    // Quem fez o contacto (a pessoa, não a conta do estúdio).
+    quem_fez: await lerQuemFez(formData),
   })
 
   if (error) {

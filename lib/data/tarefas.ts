@@ -258,32 +258,68 @@ export function ocorrenciasPrevistas(t: Repeticao & Pick<Tarefa, 'prazo'>, de: s
   return datas
 }
 
-// ── Ordem dentro de um dia (calendário) ──────────────────────────────
-// O que está por fazer fica em cima, do mais urgente para o menos: pela
-// hora marcada (as que não têm hora vêm depois), a seguir as que já
-// existem antes das previstas (rotinas que ainda vão nascer) e, em
-// igualdade, pela prioridade. Depois, as tarefas de vários dias que
-// ainda estão a decorrer. As concluídas vão para o fundo, pela ordem em
-// que foram feitas — para não ocuparem o topo.
-export type ItemDoDia = {
-  tarefa: Pick<Tarefa, 'estado' | 'hora' | 'prioridade' | 'concluida_em' | 'criado_em'>
+// ── Calendário ───────────────────────────────────────────────────────
+// O que aparece em cada dia do calendário, e por que ordem.
+//
+// Cada tarefa aparece no dia do seu prazo. As que estão atrasadas (prazo
+// já passado, por concluir) passam para o topo do dia de hoje — é hoje
+// que se vão fazendo e repondo —, com a data de quando eram. As de
+// vários dias (com início) aparecem também nos dias entre o início e o
+// prazo. As rotinas que se repetem mostram as vezes seguintes como
+// "previstas": ainda não existem, nascem quando a anterior é concluída
+// (e sempre para depois de hoje, por isso não há previstas para trás).
+//
+// Dentro de um dia: primeiro as atrasadas (a mais antiga em cima);
+// depois o que está por fazer, pela hora marcada (as que não têm hora
+// vêm a seguir; as que já existem antes das previstas; a prioridade
+// desempata); depois as de vários dias a decorrer; e as concluídas no
+// fundo, pela ordem em que foram feitas — para não ocuparem o topo.
+export type ItemDoDia<T = Pick<Tarefa, 'estado' | 'prazo' | 'hora' | 'prioridade' | 'concluida_em' | 'criado_em'>> = {
+  tarefa: T
   prevista: boolean
+  // Dia entre o início e o prazo de uma tarefa de vários dias.
   decorre?: boolean
+  // Atrasada, trazida para o dia de hoje.
+  atrasada?: boolean
 }
 
 const PESO_PRIORIDADE: Record<Prioridade, number> = { alta: 0, media: 1, baixa: 2 }
 
 export function compararNoDia(a: ItemDoDia, b: ItemDoDia): number {
-  const grupo = (i: ItemDoDia) => (!i.prevista && i.tarefa.estado === 'feito' ? 2 : i.decorre ? 1 : 0)
+  const grupo = (i: ItemDoDia) => (!i.prevista && i.tarefa.estado === 'feito' ? 3 : i.decorre ? 2 : i.atrasada ? 0 : 1)
   const peso = (i: ItemDoDia) => (i.tarefa.prioridade ? PESO_PRIORIDADE[i.tarefa.prioridade] : 3)
   if (grupo(a) !== grupo(b)) return grupo(a) - grupo(b)
-  if (grupo(a) === 2) return (a.tarefa.concluida_em ?? '').localeCompare(b.tarefa.concluida_em ?? '')
+  if (grupo(a) === 3) return (a.tarefa.concluida_em ?? '').localeCompare(b.tarefa.concluida_em ?? '')
   return (
+    (grupo(a) === 0 ? (a.tarefa.prazo ?? '').localeCompare(b.tarefa.prazo ?? '') : 0) ||
     (a.tarefa.hora ?? '99').localeCompare(b.tarefa.hora ?? '99') ||
     Number(a.prevista) - Number(b.prevista) ||
     peso(a) - peso(b) ||
     a.tarefa.criado_em.localeCompare(b.tarefa.criado_em)
   )
+}
+
+const MAX_DIAS_A_DECORRER = 60
+
+// As tarefas de cada dia entre "de" e "ate", já pela ordem certa.
+// "comRotinas" a false esconde as tarefas que se repetem.
+export function itensDoCalendario(tarefas: Tarefa[], de: string, ate: string, hoje: string, comRotinas = true): Map<string, ItemDoDia<Tarefa>[]> {
+  const mapa = new Map<string, ItemDoDia<Tarefa>[]>()
+  const por = (data: string, item: ItemDoDia<Tarefa>) => mapa.set(data, [...(mapa.get(data) ?? []), item])
+  const hojeAVista = hoje >= de && hoje <= ate
+  for (const t of tarefas) {
+    if (!t.prazo || (!comRotinas && repeteSe(t))) continue
+    const aberta = t.estado !== 'feito'
+    if (aberta && t.prazo < hoje && hojeAVista) por(hoje, { tarefa: t, prevista: false, atrasada: true })
+    else if (t.prazo >= de && t.prazo <= ate) por(t.prazo, { tarefa: t, prevista: false })
+    if (aberta && t.inicio && t.inicio < t.prazo) {
+      const primeiro = Math.max(deISO(t.inicio), deISO(de), deISO(t.prazo) - MAX_DIAS_A_DECORRER * UM_DIA_MS)
+      for (let d = primeiro; d < deISO(t.prazo) && d <= deISO(ate); d += UM_DIA_MS) por(paraISO(d), { tarefa: t, prevista: false, decorre: true })
+    }
+    if (aberta) for (const data of ocorrenciasPrevistas(t, de, ate)) if (data > hoje) por(data, { tarefa: t, prevista: true })
+  }
+  for (const itens of mapa.values()) itens.sort(compararNoDia)
+  return mapa
 }
 
 // ── Estatísticas (painel) ────────────────────────────────────────────

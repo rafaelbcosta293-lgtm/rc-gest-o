@@ -1,12 +1,13 @@
 import Link from '@/components/LinkRapido'
 import { ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
 import { inicioDaSemana } from '@/lib/data/horarios'
-import { compararNoDia, DIAS_DA_SEMANA, diaDaSemanaISO, ocorrenciasPrevistas, repeteSe, type Tarefa } from '@/lib/data/tarefas'
+import { DIAS_DA_SEMANA, diaDaSemanaISO, itensDoCalendario, type ItemDoDia, type Tarefa } from '@/lib/data/tarefas'
 import ConcluirTarefa from './ConcluirTarefa'
 import { AbrirTarefa, EditarComBotaoDireito, MaisNoDia } from './JanelaTarefas'
 import { horaCurta, LinhaTarefa, type Contexto } from './partes'
 
 // O calendário das Tarefas, em quatro escalas: dia, semana, mês e ano.
+// As atrasadas passam para o topo do dia de hoje (ver itensDoCalendario).
 // Cada tarefa aparece no dia do seu prazo (e, se tem data de início,
 // nos dias entre o início e o prazo); as rotinas que se repetem mostram
 // também as vezes seguintes como "previstas" (a tracejado) — essas
@@ -93,32 +94,14 @@ function titulo(escala: Escala, data: string, de: string, ate: string): string {
   return String(ano)
 }
 
-// "decorre": dia entre o início e o prazo de uma tarefa de vários dias.
-type Item = { tarefa: Tarefa; prevista: boolean; decorre?: boolean }
+type Item = ItemDoDia<Tarefa>
 const chave = (i: Item) => `${i.tarefa.id}-${i.prevista ? 'p' : i.decorre ? 'd' : 'r'}`
-const MAX_DIAS_A_DECORRER = 60
-
-function itensPorDia(tarefas: Tarefa[], de: string, ate: string, comRotinas: boolean): Map<string, Item[]> {
-  const mapa = new Map<string, Item[]>()
-  const por = (data: string, item: Item) => mapa.set(data, [...(mapa.get(data) ?? []), item])
-  for (const t of tarefas) {
-    if (!t.prazo || (!comRotinas && repeteSe(t))) continue
-    if (t.prazo >= de && t.prazo <= ate) por(t.prazo, { tarefa: t, prevista: false })
-    if (t.inicio && t.inicio < t.prazo && t.estado !== 'feito') {
-      const primeiro = Math.max(ms(t.inicio), ms(de), ms(t.prazo) - MAX_DIAS_A_DECORRER * UM_DIA)
-      for (let d = primeiro; d < ms(t.prazo) && d <= ms(ate); d += UM_DIA) por(iso(d), { tarefa: t, prevista: false, decorre: true })
-    }
-    if (t.estado !== 'feito') for (const data of ocorrenciasPrevistas(t, de, ate)) por(data, { tarefa: t, prevista: true })
-  }
-  // Em cada dia: por fazer em cima (da mais urgente para a menos), feitas no fundo.
-  for (const itens of mapa.values()) itens.sort(compararNoDia)
-  return mapa
-}
 
 // Cor de uma tarefa no calendário: vermelho se o prazo já passou, âmbar
 // se é para hoje; as previstas ficam a tracejado e as feitas apagadas.
-function estiloItem({ tarefa: t, prevista, decorre }: Item, data: string, hoje: string): string {
+function estiloItem({ tarefa: t, prevista, decorre, atrasada }: Item, data: string, hoje: string): string {
   if (prevista) return 'border border-dashed border-border-strong text-muted'
+  if (atrasada) return 'bg-red-500/15 text-red-800 dark:text-red-200'
   if (decorre) return 'bg-foreground/[.04] text-muted'
   if (t.estado === 'feito') return 'bg-foreground/[.05] text-muted line-through'
   if (data < hoje) return 'bg-red-500/15 text-red-800 dark:text-red-200'
@@ -166,6 +149,11 @@ function CartaoDaSemana({ item, data, ctx }: { item: Item; data: string; ctx: Co
             {t.titulo}
           </AbrirTarefa>
         )}
+        {item.atrasada && (
+          <span className="block text-[10px] font-medium uppercase tracking-wide opacity-80">
+            atrasada desde {t.prazo!.slice(8, 10)}/{t.prazo!.slice(5, 7)}
+          </span>
+        )}
         {item.decorre && (
           <span className="block opacity-70">
             até {t.prazo!.slice(8, 10)}/{t.prazo!.slice(5, 7)}
@@ -195,7 +183,7 @@ export default function CalendarioTarefas({
 }) {
   const { hoje } = ctx
   const { de, ate, antes, depois } = intervalo(escala, data)
-  const porDia = itensPorDia(tarefas, de, ate, comRotinas)
+  const porDia = itensDoCalendario(tarefas, de, ate, hoje, comRotinas)
   // Na vista do ano conta-se cada tarefa uma vez (no dia do prazo).
   const quantas = (d: string) => (porDia.get(d) ?? []).filter((i) => !i.decorre).length
   const semPrazo = tarefas.filter((t) => !t.prazo && t.estado !== 'feito').length
@@ -234,7 +222,7 @@ export default function CalendarioTarefas({
         </Link>
       </div>
       <p className="mt-2 text-xs text-muted">
-        Para editar uma tarefa, clica nela com o botão direito do rato (no telemóvel, toca e mantém): abre numa janela, sem sair daqui.
+        Para editar uma tarefa, clica nela com o botão direito do rato (no telemóvel, toca e mantém): abre numa janela, sem sair daqui. As atrasadas aparecem no topo do dia de hoje.
         {semPrazo > 0 &&
           ` ${semPrazo} tarefa${semPrazo === 1 ? '' : 's'} sem prazo não aparece${semPrazo === 1 ? '' : 'm'} no calendário — ${semPrazo === 1 ? 'está' : 'estão'} na Lista, em “Para ir fazendo”.`}
       </p>

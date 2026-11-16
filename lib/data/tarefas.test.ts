@@ -16,6 +16,7 @@ import {
   SEM_REPETICAO,
   type Tarefa,
   compararNoDia,
+  itensDoCalendario,
   type ItemDoDia,
 } from './tarefas'
 
@@ -283,7 +284,7 @@ describe('tarefas por estúdio', () => {
 describe('compararNoDia', () => {
   const item = (nome: string, extra: Partial<ItemDoDia['tarefa']> = {}, tipo: Partial<Pick<ItemDoDia, 'prevista' | 'decorre'>> = {}) => ({
     nome,
-    tarefa: { estado: 'por_fazer' as const, hora: null, prioridade: null, concluida_em: null, criado_em: '2026-11-01T10:00:00Z', ...extra },
+    tarefa: { estado: 'por_fazer' as const, prazo: '2026-11-16', hora: null, prioridade: null, concluida_em: null, criado_em: '2026-11-01T10:00:00Z', ...extra },
     prevista: false,
     ...tipo,
   })
@@ -314,5 +315,63 @@ describe('compararNoDia', () => {
         item('prevista às 8h', { hora: '08:00:00' }, { prevista: true }),
       ])
     ).toEqual(['prevista às 8h', 'alta', 'normal', 'prevista', 'a decorrer'])
+  })
+})
+
+describe('itensDoCalendario', () => {
+  const tarefa = (titulo: string, extra: Partial<Tarefa> = {}): Tarefa => ({
+    id: titulo,
+    titulo,
+    descricao: null,
+    lista: null,
+    estudio_id: 1,
+    responsavel_id: null,
+    prazo: '2026-11-16',
+    estado: 'por_fazer',
+    foco_semana: null,
+    reservada: false,
+    hora: null,
+    inicio: null,
+    prioridade: null,
+    etiquetas: [],
+    tarefa_mae_id: null,
+    repete_dias: null,
+    repete_mensal: false,
+    repete_mensal_dia_semana: false,
+    repete_anual: false,
+    repete_apos_dias: null,
+    repete_intervalo: 1,
+    repete_ate: null,
+    concluida_em: null,
+    feita_por: null,
+    criado_em: '2026-11-01T10:00:00Z',
+    ...extra,
+  })
+  const HOJE = '2026-11-18' // quarta-feira
+  const semana = (tarefas: Tarefa[], hoje = HOJE) => itensDoCalendario(tarefas, '2026-11-16', '2026-11-22', hoje)
+  const nomes = (itens: ItemDoDia<Tarefa>[] | undefined) => (itens ?? []).map((i) => `${i.tarefa.titulo}${i.atrasada ? ' (atrasada)' : i.prevista ? ' (prevista)' : ''}`)
+
+  it('traz as atrasadas para o topo de hoje, a mais antiga primeiro — mesmo as de semanas anteriores', () => {
+    const dias = semana([
+      tarefa('de hoje às 9h', { prazo: HOJE, hora: '09:00:00' }),
+      tarefa('de segunda', { prazo: '2026-11-16' }),
+      tarefa('da semana passada', { prazo: '2026-11-10' }),
+      tarefa('feita na segunda', { prazo: '2026-11-16', estado: 'feito', concluida_em: '2026-11-16T10:00:00Z' }),
+    ])
+    expect(nomes(dias.get(HOJE))).toEqual(['da semana passada (atrasada)', 'de segunda (atrasada)', 'de hoje às 9h'])
+    // No dia original só fica o que foi feito.
+    expect(nomes(dias.get('2026-11-16'))).toEqual(['feita na segunda'])
+  })
+
+  it('uma rotina atrasada não aparece outra vez como prevista para hoje nem para trás', () => {
+    const dias = semana([tarefa('rotina diária', { prazo: '2026-11-16', repete_dias: [1, 2, 3, 4, 5] })])
+    expect(nomes(dias.get('2026-11-17'))).toEqual([])
+    expect(nomes(dias.get(HOJE))).toEqual(['rotina diária (atrasada)'])
+    expect(nomes(dias.get('2026-11-19'))).toEqual(['rotina diária (prevista)'])
+  })
+
+  it('a ver uma semana que não tem o dia de hoje, as atrasadas ficam no dia do prazo', () => {
+    const dias = semana([tarefa('de segunda', { prazo: '2026-11-16' })], '2026-11-25')
+    expect(nomes(dias.get('2026-11-16'))).toEqual(['de segunda'])
   })
 })

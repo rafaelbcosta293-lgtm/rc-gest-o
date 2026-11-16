@@ -241,8 +241,3 @@ export function mesAnterior(hoje: string): { ano: number; mes: number } {
 }
 
 export const chaveDoMes = (ano: number, mes: number) => `${ano}-${String(mes).padStart(2, '0')}`
-
-// Onde fica o PDF de um mês no arquivo (Vercel Blob, privado).
-export const PASTA_ARQUIVO = 'registos-instrutores/'
-export const caminhoNoArquivo = (ano: number, mes: number) => `${PASTA_ARQUIVO}${chaveDoMes(ano, mes)}.pdf`
-export const nomeDoFicheiro = (ano: number, mes: number) => `registos-instrutores-${chaveDoMes(ano, mes)}.pdf`

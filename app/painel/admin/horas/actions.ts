@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { podeAcederAdmin } from '@/lib/data/acessos'
 import { hojeEmLisboa } from '@/lib/data/hoje'
-import { arquivarRegistosDoMes } from '@/lib/data/arquivoRegistos'
+import { arquivarDoMes } from '@/lib/data/arquivoRegistos'
 
 const ROTA = '/painel/admin/horas'
 
@@ -56,7 +56,7 @@ export async function arquivarMes(formData: FormData) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mesISO)) voltar(mesISO, { error: 'Pedido inválido.' })
   const [ano, mes] = mesISO.split('-').map(Number)
   try {
-    await arquivarRegistosDoMes(ano, mes, hojeEmLisboa())
+    await arquivarDoMes('registos-instrutores', ano, mes, hojeEmLisboa())
   } catch (e) {
     voltar(mesISO, { error: `Não foi possível guardar o PDF no arquivo: ${(e as Error).message}` })
   }

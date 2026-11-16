@@ -1,3 +1,4 @@
+import ArquivoMensal from '@/components/ArquivoMensal'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -75,7 +76,16 @@ function resolverPeriodo(vista: Vista, sp: { dia?: string; mes?: string; ano?: s
 export default async function AdminPagamentosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erroSenha?: string; estudio?: string; mes?: string; dia?: string; ano?: string; vista?: string }>
+  searchParams: Promise<{
+    erroSenha?: string
+    estudio?: string
+    mes?: string
+    dia?: string
+    ano?: string
+    vista?: string
+    arquivo?: string
+    erroArquivo?: string
+  }>
 }) {
   const sp = await searchParams
 
@@ -219,6 +229,18 @@ export default async function AdminPagamentosPage({
         linhas={linhas}
         periodo={vista === 'mes' ? 'mês' : vista}
         mostrarEstudio={estudios.length > 1}
+      />
+
+      {/* O documento mensal é sempre do mês (do período que se está a ver). */}
+      <ArquivoMensal
+        tipo="pagamentos-caixa"
+        mesISO={periodo.inicio.slice(0, 7)}
+        voltar={`/painel/admin/pagamentos?${new URLSearchParams(
+          Object.entries({ estudio: sp.estudio, vista: sp.vista, mes: sp.mes, dia: sp.dia, ano: sp.ano }).filter((par): par is [string, string] => !!par[1])
+        ).toString()}`}
+        descricao="Um documento por mês com os pagamentos, as vendas e o fecho de caixa de cada estúdio — quem pagou o quê, por que método, quem recebeu e as diferenças de caixa — para guardar fora da aplicação."
+        mensagem={sp.arquivo}
+        erro={sp.erroArquivo}
       />
     </div>
   )

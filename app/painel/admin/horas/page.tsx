@@ -54,7 +54,7 @@ export default async function HorasDaEquipaPage({
   const hoje = hojeEmLisboa()
   const mesISO = /^\d{4}-\d{2}$/.test(sp.mes ?? '') ? sp.mes! : hoje.slice(0, 7)
   const [ano, mes] = mesISO.split('-').map(Number)
-  const [linhas, arquivo] = await Promise.all([carregarHorasDoMes(supabase, ano, mes, hoje), listarArquivo()])
+  const [linhas, arquivo] = await Promise.all([carregarHorasDoMes(supabase, ano, mes, hoje), listarArquivo('registos-instrutores')])
   const noArquivo = arquivo.find((a) => a.mes === mesISO)
 
   const porAprovar = linhas.filter((l) => l.estado === 'Submetido').length

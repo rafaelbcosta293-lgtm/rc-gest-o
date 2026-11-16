@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { writeFileSync } from 'node:fs'
 import { PDFDocument } from 'pdf-lib'
-import { caminhoNoArquivo, mesAnterior, montarRegistosDoMes, nomeDoFicheiro, type DadosDoMes } from './registosInstrutores'
+import { mesAnterior, montarRegistosDoMes, type DadosDoMes } from './registosInstrutores'
+import { caminhoNoArquivo, nomeDoFicheiro } from './arquivoRegistos'
 import { gerarPdfRegistos } from '@/lib/pdf/registosInstrutoresPdf'
 
 const base: DadosDoMes = {
@@ -83,8 +84,9 @@ describe('arquivo mensal', () => {
     expect(mesAnterior('2027-01-01')).toEqual({ ano: 2026, mes: 12 })
   })
   it('nomes dos ficheiros', () => {
-    expect(caminhoNoArquivo(2026, 3)).toBe('registos-instrutores/2026-03.pdf')
-    expect(nomeDoFicheiro(2026, 3)).toBe('registos-instrutores-2026-03.pdf')
+    expect(caminhoNoArquivo('registos-instrutores', 2026, 3)).toBe('registos-instrutores/2026-03.pdf')
+    expect(caminhoNoArquivo('pagamentos-caixa', 2026, 12)).toBe('pagamentos-caixa/2026-12.pdf')
+    expect(nomeDoFicheiro('registos-instrutores', 2026, 3)).toBe('registos-instrutores-2026-03.pdf')
   })
 })
 

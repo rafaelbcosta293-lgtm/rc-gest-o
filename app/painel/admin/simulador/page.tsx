@@ -1,3 +1,4 @@
+import { calcularCustoPorLead, ehAnuncio, explicarCustoPorLead } from '@/lib/data/custoPorLead'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -105,21 +106,29 @@ export default async function SimuladorPage({
   const ultimoMesPts = [...ptsPorMes.keys()].sort().pop()
   const ptsAtuais = ultimoMesPts ? ptsPorMes.get(ultimoMesPts)!.size : null
 
-  // ── Marketing ────────────────────────────────────────────────────
+  // ── Marketing ─────────────────────────────────────────────────────
+  // Despesas reais da janela. Os anúncios (linha "MKT - Anúncios") são o
+  // que se paga para as leads chegarem: dão o custo por lead. O resto do
+  // marketing (gestão de redes, site, fotos…) é custo fixo do mês, tal
+  // como as rendas. Os honorários dos PTs ficam de fora dos fixos — já
+  // entram como horas × custo/hora.
+  const despesas = despesasTodas.filter((d) => d.data.slice(0, 7) >= primeiroMes && d.data.slice(0, 7) <= ultimoMes)
+  const ehPt = (d: { subcategoria: string | null }) => /^(Honorários PT|Prémios)/.test(d.subcategoria ?? '')
+  const despFixas = despesas.filter((d) => !ehAnuncio(d) && !ehPt(d)).reduce((s, d) => s + d.valor, 0)
+  const custosFixosMes = despesas.length > 0 ? despFixas / meses.length : null
+  // Custo por lead: anúncios ÷ leads, só nos meses que têm as duas coisas
+  // (inclui o mês a decorrer — as leads só começaram a ser registadas há
+  // pouco). Se houver custos por campanha em marketing_costs, mandam esses.
   const custoMkt = (mktRes.data ?? [])
     .filter((m) => ids.has(m.estudio_id) && `${m.ano}-${String(m.mes).padStart(2, '0')}` >= primeiroMes && `${m.ano}-${String(m.mes).padStart(2, '0')}` <= ultimoMes)
     .reduce((s, m) => s + Number(m.custo), 0)
-  // Despesas reais da janela: marketing (para o custo por lead, se não
-  // houver custos por campanha), honorários dos PTs (ficam de fora dos
-  // fixos — já entram como horas × custo/hora) e o resto = custos fixos.
-  const despesas = despesasTodas.filter((d) => d.data.slice(0, 7) >= primeiroMes && d.data.slice(0, 7) <= ultimoMes)
-  const ehMarketing = (d: { categoria: string }) => d.categoria.startsWith('Publicidade')
-  const ehPt = (d: { subcategoria: string | null }) => /^(Honorários PT|Prémios)/.test(d.subcategoria ?? '')
-  const despMarketing = despesas.filter(ehMarketing).reduce((s, d) => s + d.valor, 0)
-  const despFixas = despesas.filter((d) => !ehMarketing(d) && !ehPt(d)).reduce((s, d) => s + d.valor, 0)
-  const custosFixosMes = despesas.length > 0 ? despFixas / meses.length : null
-  const marketingTotal = custoMkt > 0 ? custoMkt : despMarketing
-  const custoPorLead = marketingTotal > 0 && leads.length > 0 ? marketingTotal / leads.length : null
+  const contaCustoPorLead = calcularCustoPorLead(
+    despesasTodas.filter(ehAnuncio).map((d) => ({ data: d.data, valor: d.valor })),
+    leadsRes.data.filter((l) => ids.has(l.estudio_id)).map((l) => ({ data: (l.entrada ?? l.criado_em).slice(0, 10) })),
+    mesAtual,
+    MESES_JANELA + 1
+  )
+  const custoPorLead = custoMkt > 0 && leads.length > 0 ? custoMkt / leads.length : contaCustoPorLead.valor
 
   const custoHoraPt = parseValorConfig(configData?.valor) ?? 0
 
@@ -169,6 +178,9 @@ export default async function SimuladorPage({
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>
       )}
+
+      {/* De onde vem o custo por lead (ou porque ainda não há). */}
+      {custoMkt === 0 && <p className="mt-4 rounded-md bg-foreground/[.06] px-3 py-2 text-xs text-muted">Custo por lead — {explicarCustoPorLead(contaCustoPorLead)}</p>}
 
       <SimuladorForm base={baseReal} cenarios={cenarios} />
     </div>

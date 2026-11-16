@@ -1,3 +1,4 @@
+import { carregarCustoPorLead, explicarCustoPorLead } from '@/lib/data/custoPorLead'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { notFound } from 'next/navigation'
@@ -61,6 +62,8 @@ export default async function ObjetivosPage({
   // nasce com o tipo certo.
   const estudioId = estudio.id
   const { ehAdmin } = papeisDaSessao(sessao)
+  // O custo por lead vem das Despesas (anúncios), que só a administração vê.
+  const custoPorLeadAVir = ehAdmin && estudio ? carregarCustoPorLead(supabase, [estudio.id], hojeEmLisboa()) : Promise.resolve(null)
 
   const hoje = hojeEmLisboa()
   const ano = Number(hoje.slice(0, 4))
@@ -194,6 +197,8 @@ export default async function ObjetivosPage({
     mrr: mrrValor,
   }
 
+  const custoPorLead = await custoPorLeadAVir
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <Link
@@ -313,10 +318,12 @@ export default async function ObjetivosPage({
         Calculadora de funil inverso
       </h2>
       <p className="mt-1 text-xs text-muted">
-        Usa as taxas reais dos últimos {JANELA_FUNIL_DIAS} dias. Sem custo de marketing por lead
-        registado, não há CAC real para estimar o investimento necessário — fica de fora.
+        Usa as taxas reais dos últimos {JANELA_FUNIL_DIAS} dias.{' '}
+        {custoPorLead
+          ? `Investimento em anúncios = leads × custo por lead. ${explicarCustoPorLead(custoPorLead)}`
+          : 'O investimento em anúncios necessário só aparece na conta da administração (usa as Despesas).'}
       </p>
-      <FunilInversoForm funil={funilRecente} contactosRecentes={contactosRecentes} />
+      <FunilInversoForm funil={funilRecente} contactosRecentes={contactosRecentes} custoPorLead={custoPorLead?.valor ?? null} />
     </div>
   )
 }

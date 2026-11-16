@@ -6,9 +6,13 @@ import { calcularFunilInverso } from '@/lib/data/objetivos'
 export default function FunilInversoForm({
   funil,
   contactosRecentes,
+  custoPorLead = null,
 }: {
   funil: { total: number; porEtapa: Record<string, number> }
   contactosRecentes: number
+  // € de anúncios por lead (só a administração o recebe): com ele, a
+  // calculadora diz também quanto investir em anúncios.
+  custoPorLead?: number | null
 }) {
   const [desejados, setDesejados] = useState(5)
   const resultado = calcularFunilInverso(desejados, funil, contactosRecentes)
@@ -37,7 +41,7 @@ export default function FunilInversoForm({
           há como calcular quantas leads seriam precisas.
         </p>
       ) : (
-        <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+        <div className={`mt-3 grid gap-3 text-center ${custoPorLead != null ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
           <div>
             <p className="font-mono text-xl tabular-nums text-foreground">{resultado.leadsNecessarias}</p>
             <p className="text-xs text-muted">leads</p>
@@ -54,6 +58,14 @@ export default function FunilInversoForm({
             </p>
             <p className="text-xs text-muted">experimentais</p>
           </div>
+          {custoPorLead != null && (
+            <div>
+              <p className="font-mono text-xl tabular-nums text-foreground">
+                {Math.round(resultado.leadsNecessarias * custoPorLead).toLocaleString('pt-PT')} €
+              </p>
+              <p className="text-xs text-muted">em anúncios</p>
+            </div>
+          )}
         </div>
       )}
     </div>

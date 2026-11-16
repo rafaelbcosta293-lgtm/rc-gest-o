@@ -53,9 +53,9 @@ export type FunilInverso = {
 
 // "Quero X clientes novos por mês" — usa as taxas reais do funil (já
 // calculadas por lib/data/funil.ts, normalmente sobre os últimos 3
-// meses) para trabalhar ao contrário. O investimento em marketing (CAC)
-// fica de fora: sem custos de marketing registados (marketing_costs
-// está vazia), não há CAC real para usar.
+// meses) para trabalhar ao contrário. O investimento em anúncios
+// necessário (leads × custo por lead) é calculado à parte, só para a
+// administração — ver lib/data/custoPorLead.ts.
 export function calcularFunilInverso(
   clientesDesejados: number,
   funil: { total: number; porEtapa: Record<string, number> },

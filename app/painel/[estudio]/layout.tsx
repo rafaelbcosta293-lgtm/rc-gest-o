@@ -152,7 +152,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           <Link href={`/painel/${slug}`} title="Início do estúdio" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
-          <NavLinkInicio slug={slug} />
+          <NavLinkInicio slug={slug} comTexto />
           <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
             {MODULOS.filter((m) => !subpastasParaFiltrar.has(m.id) && !SUBPASTAS_HORARIOS.has(m.id)).map((m) =>
               m.id === 'horarios' ? (

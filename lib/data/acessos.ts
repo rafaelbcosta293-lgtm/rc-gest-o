@@ -93,7 +93,7 @@ export function podeAcederAdmin(email: string | null): boolean {
 // Guardadas em app_metadata da própria conta (Supabase Auth) — só a
 // Administração as altera (Administração → Contas). Sem nada definido,
 // a conta fica com os módulos de omissão e a Agenda só para ver.
-export const MODULOS_CONTA_PESSOAL_OMISSAO = ['treinos', 'agenda', 'horarios', 'assiduidade', 'ferias']
+export const MODULOS_CONTA_PESSOAL_OMISSAO = ['treinos', 'agenda', 'tarefas', 'horarios', 'assiduidade', 'ferias']
 
 export type PermissoesConta = { modulos: string[]; agendaEscrita: boolean }
 

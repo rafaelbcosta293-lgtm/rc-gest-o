@@ -1,0 +1,154 @@
+import { cache } from 'react'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { idsContasPartilhadas } from './contasPartilhadas'
+import { inicioDaSemana } from './horarios'
+
+export type EstadoTarefa = 'por_fazer' | 'em_curso' | 'feito'
+
+export const ESTADOS_TAREFA: { valor: EstadoTarefa; rotulo: string }[] = [
+  { valor: 'por_fazer', rotulo: 'Por fazer' },
+  { valor: 'em_curso', rotulo: 'Em curso' },
+  { valor: 'feito', rotulo: 'Feito' },
+]
+
+export type Tarefa = {
+  id: string
+  titulo: string
+  descricao: string | null
+  lista: string | null
+  estudio_id: number | null
+  responsavel_id: string | null
+  prazo: string | null
+  estado: EstadoTarefa
+  foco_semana: string | null
+  reservada: boolean
+  concluida_em: string | null
+  criado_em: string
+}
+
+export const COLUNAS_TAREFA =
+  'id, titulo, descricao, lista, estudio_id, responsavel_id, prazo, estado, foco_semana, reservada, concluida_em, criado_em'
+
+// Cada pessoa escolhe no máximo estas tarefas para a semana — a ideia do
+// foco é obrigar a escolher, não fazer uma segunda lista de tudo.
+export const MAX_FOCO_POR_PESSOA = 3
+// As feitas ficam à vista durante estes dias; depois saem do ecrã (não
+// se apagam).
+export const DIAS_FEITAS_VISIVEIS = 14
+// Uma tarefa sem prazo parada há mais do que isto fica assinalada.
+export const DIAS_TAREFA_PARADA = 30
+
+export function idadeEmDias(criadoEm: string, hoje: string): number {
+  const inicio = Date.parse(`${criadoEm.slice(0, 10)}T00:00:00Z`)
+  const fim = Date.parse(`${hoje}T00:00:00Z`)
+  return Math.max(0, Math.round((fim - inicio) / 86_400_000))
+}
+
+// "hoje", "há 1 dia", "há 12 dias", "há 3 meses".
+export function haQuantoTempo(dias: number): string {
+  if (dias <= 0) return 'hoje'
+  if (dias === 1) return 'há 1 dia'
+  if (dias < 60) return `há ${dias} dias`
+  return `há ${Math.floor(dias / 30)} meses`
+}
+
+export function emFoco(t: Pick<Tarefa, 'foco_semana' | 'estado'>, hoje: string): boolean {
+  return t.estado !== 'feito' && t.foco_semana === inicioDaSemana(hoje)
+}
+
+export type GruposDeTarefas = {
+  // Escolhidas para esta semana.
+  foco: Tarefa[]
+  // Prazo já passado ou para hoje.
+  urgentes: Tarefa[]
+  // Com prazo mais à frente, da mais próxima para a mais distante.
+  proximas: Tarefa[]
+  // Sem prazo — "para ir fazendo" — da mais antiga para a mais recente,
+  // para as que estão há mais tempo à espera não afundarem.
+  paraIrFazendo: Tarefa[]
+  // Concluídas há pouco, da mais recente para a mais antiga.
+  feitas: Tarefa[]
+}
+
+// Arruma as tarefas pelas secções do ecrã. Cada tarefa aparece numa só
+// (uma tarefa em foco não se repete mais abaixo).
+export function agruparTarefas(tarefas: Tarefa[], hoje: string): GruposDeTarefas {
+  const grupos: GruposDeTarefas = { foco: [], urgentes: [], proximas: [], paraIrFazendo: [], feitas: [] }
+  const limiteFeitas = Date.parse(`${hoje}T00:00:00Z`) - DIAS_FEITAS_VISIVEIS * 86_400_000
+  for (const t of tarefas) {
+    if (t.estado === 'feito') {
+      if (t.concluida_em && Date.parse(t.concluida_em) >= limiteFeitas) grupos.feitas.push(t)
+    } else if (emFoco(t, hoje)) grupos.foco.push(t)
+    else if (!t.prazo) grupos.paraIrFazendo.push(t)
+    else if (t.prazo <= hoje) grupos.urgentes.push(t)
+    else grupos.proximas.push(t)
+  }
+  const porPrazo = (a: Tarefa, b: Tarefa) => (a.prazo ?? '9999').localeCompare(b.prazo ?? '9999') || a.criado_em.localeCompare(b.criado_em)
+  grupos.foco.sort(porPrazo)
+  grupos.urgentes.sort(porPrazo)
+  grupos.proximas.sort(porPrazo)
+  grupos.paraIrFazendo.sort((a, b) => a.criado_em.localeCompare(b.criado_em))
+  grupos.feitas.sort((a, b) => (b.concluida_em ?? '').localeCompare(a.concluida_em ?? ''))
+  return grupos
+}
+
+export type FiltroTarefas = { pessoa?: string; estudioId?: number | 'geral'; lista?: string }
+
+// "pessoa": id de um perfil, ou "sem" para as que não têm responsável.
+export function filtrarTarefas(tarefas: Tarefa[], filtro: FiltroTarefas): Tarefa[] {
+  return tarefas.filter((t) => {
+    if (filtro.pessoa === 'sem' ? t.responsavel_id !== null : filtro.pessoa ? t.responsavel_id !== filtro.pessoa : false) return false
+    if (filtro.estudioId === 'geral' ? t.estudio_id !== null : filtro.estudioId != null ? t.estudio_id !== filtro.estudioId : false) return false
+    if (filtro.lista && (t.lista ?? '') !== filtro.lista) return false
+    return true
+  })
+}
+
+// Quantas tarefas em foco esta semana tem já este responsável (para o
+// limite de MAX_FOCO_POR_PESSOA), sem contar a própria tarefa.
+export function focoDaPessoa(tarefas: Tarefa[], responsavelId: string | null, hoje: string, excluirId?: string): number {
+  return tarefas.filter((t) => t.id !== excluirId && t.responsavel_id === responsavelId && emFoco(t, hoje)).length
+}
+
+export async function carregarTarefas(supabase: SupabaseClient, hoje: string): Promise<Tarefa[]> {
+  // Todas as abertas, mais as concluídas há pouco (as antigas não vêm).
+  const desde = new Date(Date.parse(`${hoje}T00:00:00Z`) - DIAS_FEITAS_VISIVEIS * 86_400_000).toISOString()
+  const { data, error } = await supabase
+    .from('tarefas')
+    .select(COLUNAS_TAREFA)
+    .or(`estado.neq.feito,concluida_em.gte.${desde}`)
+    .order('criado_em')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as Tarefa[]
+}
+
+// O número que aparece no menu: tarefas com o prazo passado ou para
+// hoje. Nunca parte a página.
+export async function contarTarefasUrgentes(supabase: SupabaseClient, hoje: string): Promise<number> {
+  const { count, error } = await supabase.from('tarefas').select('id', { count: 'exact', head: true }).neq('estado', 'feito').lte('prazo', hoje)
+  return error ? 0 : (count ?? 0)
+}
+
+export type PessoaTarefas = { id: string; nome: string }
+
+// A quem se pode atribuir uma tarefa: as pessoas ativas da equipa (dono
+// incluído), sem as contas partilhadas — essas são "o tablet do
+// estúdio", não alguém. Lido com o cliente de serviço (só nomes): as
+// contas partilhadas não veem as fichas da equipa do outro estúdio.
+export const pessoasParaTarefas = cache(async (): Promise<PessoaTarefas[]> => {
+  try {
+    const admin = createAdminClient()
+    const [{ data, error }, partilhadas] = await Promise.all([
+      admin.from('perfis').select('id, nome').eq('ativo', true),
+      idsContasPartilhadas(),
+    ])
+    if (error) throw new Error(error.message)
+    return (data ?? [])
+      .filter((p) => !partilhadas.has(p.id))
+      .map((p) => ({ id: p.id as string, nome: String(p.nome).trim() }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt'))
+  } catch {
+    return []
+  }
+})

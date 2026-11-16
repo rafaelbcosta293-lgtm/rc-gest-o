@@ -15,6 +15,8 @@ import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import BarraAjustavel from '@/components/BarraAjustavel'
 import AvisosFerias from './ferias/AvisosFerias'
 import AvisosHorario from '@/components/AvisosHorario'
+import { contarTarefasUrgentes } from '@/lib/data/tarefas'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 import { NavLinkTopBar, NavLinkClientesComSubmenu, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado } from './NavLink'
 
 // Na barra do computador/tablet, Treinos e Avaliações deixam de ter
@@ -30,11 +32,13 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   const { estudio: slug } = await params
 
   const supabase = await createClient()
-  const [sessao, estadosBanner, contactosAgendados, estudio] = await Promise.all([
+  const [sessao, estadosBanner, contactosAgendados, estudio, tarefasUrgentes] = await Promise.all([
     getSessaoAtual(),
     obterEstadosBanner(supabase),
     listarContactosAgendados(supabase),
     getEstudioPorSlug(supabase, slug),
+    // Tarefas com o prazo passado ou para hoje — o número no menu.
+    contarTarefasUrgentes(supabase, hojeEmLisboa()),
   ])
 
   // Entra-se num estúdio de duas formas: a conta partilhada fixa desse
@@ -148,7 +152,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
               ) : m.id === 'clientes' && !contaIndividual ? (
                 <NavLinkClientesComSubmenu key={m.id} slug={slug} ehAdmin={ehAdmin} ehGestao={ehGestao} />
               ) : podeAceder(m) ? (
-                <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} />
+                <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} aviso={m.id === 'tarefas' ? tarefasUrgentes : 0} />
               ) : (
                 <NavLinkBloqueado key={m.id} id={m.id} titulo={tituloBloqueado(m)} />
               )
@@ -183,7 +187,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
       <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around overflow-x-auto border-t border-border-subtle bg-background/90 px-1 py-1 shadow-[0_-2px_2px_rgba(24,24,27,0.05),0_-16px_32px_-8px_rgba(24,24,27,0.16)] backdrop-blur-xl md:hidden">
         {MODULOS.map((m) =>
           podeAceder(m) ? (
-            <NavLinkPhone key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} />
+            <NavLinkPhone key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} aviso={m.id === 'tarefas' ? tarefasUrgentes : 0} />
           ) : (
             <span
               key={m.id}

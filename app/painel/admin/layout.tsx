@@ -14,6 +14,7 @@ import { hojeEmLisboa, listarAvisosDespesas } from '@/lib/data/despesas'
 import AvisosHorario from '@/components/AvisosHorario'
 import { contarLembretesPorTratar } from '@/lib/data/lembretes'
 import { contarFechosPorAprovar } from '@/lib/data/horasEquipa'
+import { contarTarefasUrgentes } from '@/lib/data/tarefas'
 import AdminNav from './AdminNav'
 
 // Administração é só para o dono da app — verificado por email antes de
@@ -22,7 +23,7 @@ import AdminNav from './AdminNav'
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const hoje = hojeEmLisboa()
-  const [sessao, estadosBanner, contactosAgendados, avisosDespesas, { count: pendentesFaturas }, lembretesPorTratar, horasPorAprovar] = await Promise.all([
+  const [sessao, estadosBanner, contactosAgendados, avisosDespesas, { count: pendentesFaturas }, lembretesPorTratar, horasPorAprovar, tarefasUrgentes] = await Promise.all([
     getSessaoAtual(),
     obterEstadosBanner(supabase),
     listarContactosAgendados(supabase),
@@ -33,6 +34,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       .in('estado', ['pendente', 'erro', 'a_emitir']),
     contarLembretesPorTratar(supabase, hoje),
     contarFechosPorAprovar(supabase),
+    contarTarefasUrgentes(supabase, hoje),
   ])
 
   if (!podeAcederAdmin(sessao.email)) {
@@ -61,7 +63,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-9 w-auto" priority />
           </Link>
-          <AdminNav pendentesFaturas={pendentesFaturas ?? 0} despesasAPagar={avisosDespesas.length} lembretesPorTratar={lembretesPorTratar} horasPorAprovar={horasPorAprovar} />
+          <AdminNav pendentesFaturas={pendentesFaturas ?? 0} despesasAPagar={avisosDespesas.length} lembretesPorTratar={lembretesPorTratar} horasPorAprovar={horasPorAprovar} tarefasUrgentes={tarefasUrgentes} />
         </header>
       </div>
       <div className="flex-1">{children}</div>

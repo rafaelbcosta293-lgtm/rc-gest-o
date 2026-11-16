@@ -24,7 +24,8 @@ function moduloPorId(id: string) {
 // Computador/tablet (≥768px): ícone e nome lado a lado, numa pílula —
 // a largura toda é gerida pelo BarraAjustavel (espalha quando há
 // espaço, encolhe sem esconder nada quando não há).
-export function NavLinkTopBar({ href, id }: { href: string; id: string }) {
+// "aviso": número a mostrar junto ao nome (ex.: tarefas em atraso).
+export function NavLinkTopBar({ href, id, aviso = 0 }: { href: string; id: string; aviso?: number }) {
   const { icone: Icone, cor, nome } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
   const modo = useModoBarra()
@@ -32,7 +33,7 @@ export function NavLinkTopBar({ href, id }: { href: string; id: string }) {
   return (
     <Link
       href={href}
-      title={soIcone ? nome : undefined}
+      title={soIcone ? (aviso > 0 ? `${nome} (${aviso})` : nome) : undefined}
       className={`flex shrink-0 whitespace-nowrap font-medium tracking-tight text-foreground transition-colors ${formaPilula(modo)} ${ativo ? '' : 'border border-border-subtle hover:border-border-strong hover:bg-foreground/[.05]'}`}
       style={{
         background: ativo ? PALETA[cor].bg : undefined,
@@ -41,6 +42,7 @@ export function NavLinkTopBar({ href, id }: { href: string; id: string }) {
     >
       <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
       {!soIcone && nome}
+      {aviso > 0 && <span className="rounded-full bg-brand px-1.5 text-[11px] font-bold leading-5 text-black">{aviso}</span>}
     </Link>
   )
 }
@@ -295,17 +297,20 @@ export function NavLinkBloqueado({ id, titulo }: { id: string; titulo: string })
 
 // Telemóvel (<768px): barra fixa no fundo, ao estilo iOS — ícone +
 // legenda pequena, sempre ao alcance do polegar.
-export function NavLinkPhone({ href, id }: { href: string; id: string }) {
+export function NavLinkPhone({ href, id, aviso = 0 }: { href: string; id: string; aviso?: number }) {
   const { icone: Icone, cor, nome, curto } = moduloPorId(id)
   const ativo = estaAtivo(usePathname(), href)
   return (
     <Link
       href={href}
       aria-label={nome}
-      className="flex min-w-14 shrink-0 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5"
+      className="relative flex min-w-14 shrink-0 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5"
       style={{ color: ativo ? PALETA[cor].tx : 'var(--muted)' }}
     >
       <Icone className="h-[22px] w-[22px]" strokeWidth={ativo ? 2.75 : 2.25} />
+      {aviso > 0 && (
+        <span className="absolute right-1.5 top-0 rounded-full bg-brand px-1.5 text-[10px] font-bold leading-4 text-black">{aviso}</span>
+      )}
       <span className={`text-[10px] ${ativo ? 'font-semibold' : 'font-medium'}`}>{curto ?? nome}</span>
     </Link>
   )

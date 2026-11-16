@@ -13,6 +13,7 @@ import {
   type LucideIcon,
   Timer,
   Palmtree,
+  ListTodo,
 } from 'lucide-react'
 
 // Paleta única da app: cada família de cor tem sempre o mesmo par
@@ -214,6 +215,7 @@ export const MODULOS: Modulo[] = [
   { id: 'presencas', nome: 'Presenças', icone: CalendarCheck2, cor: 'verde', desc: 'Quem treinou e quem faltou', pronto: true },
   { id: 'pagamentos', nome: 'Pagamentos', icone: CreditCard, cor: 'ambar', desc: 'Quem tem o pagamento em dia', pronto: true },
   { id: 'alertas', nome: 'Alertas', icone: BellRing, cor: 'vermelho', desc: 'Leads, clientes e pagamentos que precisam de atenção agora', pronto: true },
+  { id: 'tarefas', nome: 'Tarefas', icone: ListTodo, cor: 'azul', desc: 'O que há para fazer na empresa, quem trata e até quando', pronto: true },
   { id: 'horarios', nome: 'Horários', icone: AlarmClock, cor: 'vermelho', desc: 'Escala da semana e ausências da equipa', pronto: true },
   { id: 'assiduidade', nome: 'Registo de Horas', curto: 'Horas', icone: Timer, cor: 'azul', desc: 'Entradas e saídas diárias, horas extra e fecho do mês', pronto: true },
   { id: 'ferias', nome: 'Férias', icone: Palmtree, cor: 'teal', desc: 'Mapa de férias anual, pedidos e aprovação', pronto: true },

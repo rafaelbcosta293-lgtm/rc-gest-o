@@ -9,6 +9,7 @@ import {
   AlarmClock,
   Megaphone,
   History,
+  ListTodo,
 } from 'lucide-react'
 import PillNavLink from '@/components/PillNavLink'
 import BarraAjustavel from '@/components/BarraAjustavel'
@@ -19,6 +20,7 @@ import BarraAjustavel from '@/components/BarraAjustavel'
 // a fronteira servidor→cliente como prop, só dados simples podem.
 const PASTAS = [
   { href: '/painel/coordenacao', label: 'Resumo', icone: Home, exato: true },
+  { href: '/painel/coordenacao/tarefas', label: 'Tarefas', icone: ListTodo },
   { href: '/painel/coordenacao/checklist', label: 'Checklist', icone: KeyRound },
   { href: '/painel/coordenacao/sessoes-experimentais', label: 'Sessões experimentais', icone: CalendarCheck2 },
   { href: '/painel/coordenacao/horas-equipa', label: 'Horas da equipa', icone: Clock },
@@ -28,11 +30,19 @@ const PASTAS = [
   { href: '/painel/coordenacao/timeline', label: 'Timeline', icone: History },
 ]
 
-export default function CoordenacaoNav() {
+// tarefasUrgentes: tarefas com o prazo passado ou para hoje.
+export default function CoordenacaoNav({ tarefasUrgentes = 0 }: { tarefasUrgentes?: number }) {
   return (
     <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
       {PASTAS.map((p) => (
-        <PillNavLink key={p.href} href={p.href} label={p.label} icone={p.icone} exato={p.exato} />
+        <PillNavLink
+          key={p.href}
+          href={p.href}
+          label={p.label}
+          icone={p.icone}
+          exato={p.exato}
+          aviso={p.href === '/painel/coordenacao/tarefas' ? tarefasUrgentes : 0}
+        />
       ))}
     </BarraAjustavel>
   )

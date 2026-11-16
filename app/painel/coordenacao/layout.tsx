@@ -11,16 +11,19 @@ import BarraSmsGatewayOffline from '@/components/BarraSmsGatewayOffline'
 import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import AvisosHorario from '@/components/AvisosHorario'
 import CoordenacaoNav from './CoordenacaoNav'
+import { contarTarefasUrgentes } from '@/lib/data/tarefas'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 
 // Coordenação é só para o dono e para a conta geral do negócio —
 // verificado por email antes de sequer chegar à password partilhada da
 // área (essa é uma segunda camada opcional, esta é obrigatória).
 export default async function CoordenacaoLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const [sessao, estadosBanner, contactosAgendados] = await Promise.all([
+  const [sessao, estadosBanner, contactosAgendados, tarefasUrgentes] = await Promise.all([
     getSessaoAtual(),
     obterEstadosBanner(supabase),
     listarContactosAgendados(supabase),
+    contarTarefasUrgentes(supabase, hojeEmLisboa()),
   ])
 
   if (!podeAcederCoordenacao(sessao.email)) {
@@ -44,7 +47,7 @@ export default async function CoordenacaoLayout({ children }: { children: React.
           <Link href="/painel" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
-          <CoordenacaoNav />
+          <CoordenacaoNav tarefasUrgentes={tarefasUrgentes} />
         </header>
       </div>
       <div className="flex-1">{children}</div>

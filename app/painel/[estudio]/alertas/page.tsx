@@ -53,6 +53,8 @@ export default async function AlertasPage({
   }
 
   const { ehGestao } = papeisDaSessao(sessao)
+  // Adiar abre já com "daqui a uma semana" (pode mudar-se).
+  const daquiAUmaSemana = new Date(Date.parse(`${hojeEmLisboa()}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10)
   const todosAlertas = (data ?? []) as AlertaRegistado[]
   // Quem não gere o estúdio só vê os alertas destinados ao seu papel
   // (ex.: PT só vê "mensalidade em atraso") — os restantes, sem papel
@@ -176,6 +178,7 @@ export default async function AlertasPage({
                               name="adiado_ate"
                               required
                               min={hojeEmLisboa()}
+                              defaultValue={daquiAUmaSemana}
                               className="rounded-lg border border-border-subtle bg-surface px-2 py-1 text-xs outline-none focus:border-brand"
                             />
                             <SubmitButton

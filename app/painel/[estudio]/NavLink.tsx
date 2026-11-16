@@ -80,6 +80,7 @@ export function NavLinkComSubpastas({
   subpastas,
   ehAdmin,
   ehGestao,
+  avisos = {},
 }: {
   slug: string
   // A pasta principal e as que ficam lá dentro (ids dos módulos).
@@ -87,6 +88,9 @@ export function NavLinkComSubpastas({
   subpastas: string[]
   ehAdmin: boolean
   ehGestao: boolean
+  // O que há para tratar em cada módulo (id → número). A pílula mostra a
+  // soma; cada subpasta, o seu.
+  avisos?: Record<string, number>
 }) {
   const pathname = usePathname()
   const clientesHref = `/painel/${slug}/${id}`
@@ -102,6 +106,8 @@ export function NavLinkComSubpastas({
   // A pílula acende-se tanto na pasta principal como em qualquer uma das
   // subpastas — todas partilham a mesma "casa" na navegação.
   const ativo = estaAtivo(pathname, clientesHref) || subModulos.some((m) => estaAtivo(pathname, `/painel/${slug}/${m.id}`))
+
+  const totalAvisos = Object.values(avisos).reduce((a, b) => a + b, 0)
 
   const [aberto, setAberto] = useState(false)
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
@@ -138,6 +144,7 @@ export function NavLinkComSubpastas({
       >
         <Icone className="h-3.5 w-3.5" strokeWidth={2.25} style={{ color: ativo ? undefined : PALETA[cor].tx }} />
         {!soIcone && nome}
+        {totalAvisos > 0 && <span className="rounded-full bg-brand px-1.5 text-[11px] font-bold leading-5 text-black">{totalAvisos}</span>}
         {modo === 'nomes' && <ChevronDown className="h-3 w-3 opacity-60" strokeWidth={2.5} />}
       </Link>
 
@@ -163,6 +170,9 @@ export function NavLinkComSubpastas({
                   >
                     <m.icone className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} style={{ color: subAtivo ? undefined : PALETA[m.cor].tx }} />
                     {m.nome}
+                    {(avisos[m.id] ?? 0) > 0 && (
+                      <span className="ml-auto rounded-full bg-brand px-1.5 text-[11px] font-bold leading-5 text-black">{avisos[m.id]}</span>
+                    )}
                   </Link>
                 ) : (
                   <span

@@ -17,6 +17,7 @@ import AvisosFerias from './ferias/AvisosFerias'
 import AvisosHorario from '@/components/AvisosHorario'
 import { contarTarefasUrgentes } from '@/lib/data/tarefas'
 import { contarAlertasAbertos } from '@/lib/data/alertasAbertos'
+import { contarLeadsParaHoje, contarPagamentosEmAtraso } from '@/lib/data/contagensMenu'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { NavLinkTopBar, NavLinkComSubpastas, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado, NavLinkInicio } from './NavLink'
 
@@ -37,7 +38,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   const { estudio: slug } = await params
 
   const supabase = await createClient()
-  const [sessao, estadosBanner, contactosAgendados, estudio, tarefasUrgentes, alertasAbertos] = await Promise.all([
+  const [sessao, estadosBanner, contactosAgendados, estudio, tarefasUrgentes, alertasAbertos, leadsParaHoje, pagamentosEmAtraso] = await Promise.all([
     getSessaoAtual(),
     obterEstadosBanner(supabase),
     listarContactosAgendados(supabase),
@@ -49,6 +50,10 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
     Promise.all([getSessaoAtual(), getEstudioPorSlug(supabase, slug)]).then(([s, e]) =>
       e ? contarAlertasAbertos(supabase, e.id, s.perfil?.papel ?? null) : 0
     ),
+    // Leads para contactar hoje e clientes com a mensalidade em atraso —
+    // os números no menu.
+    getEstudioPorSlug(supabase, slug).then((e) => (e ? contarLeadsParaHoje(supabase, e.id, hojeEmLisboa()) : 0)),
+    getEstudioPorSlug(supabase, slug).then((e) => (e ? contarPagamentosEmAtraso(supabase, e.id) : 0)),
   ])
 
   // Entra-se num estúdio de duas formas: a conta partilhada fixa desse
@@ -84,7 +89,12 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   // tem acesso ganha pílula própria — senão, sem acesso a Clientes, nem
   // via teria como chegar a Treinos no computador/tablet.
   const subpastasParaFiltrar = contaIndividual ? new Set<string>() : TODAS_AS_SUBPASTAS
-  const avisoDe = (id: string) => (id === 'tarefas' ? tarefasUrgentes : id === 'alertas' ? alertasAbertos : 0)
+  const avisos: Record<string, number> = { tarefas: tarefasUrgentes, alertas: alertasAbertos, leads: leadsParaHoje, pagamentos: pagamentosEmAtraso }
+  // Só há número nos módulos a que a conta tem acesso.
+  const avisoDe = (id: string) => {
+    const m = MODULOS.find((x) => x.id === id)
+    return m && podeAceder(m) ? (avisos[id] ?? 0) : 0
+  }
 
   return (
     <div className="flex min-h-full flex-col">
@@ -167,7 +177,15 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
                   )}
                 />
               ) : SUBPASTAS[m.id] && !contaIndividual && podeAceder(m) ? (
-                <NavLinkComSubpastas key={m.id} slug={slug} id={m.id} subpastas={SUBPASTAS[m.id]} ehAdmin={ehAdmin} ehGestao={ehGestao} />
+                <NavLinkComSubpastas
+                  key={m.id}
+                  slug={slug}
+                  id={m.id}
+                  subpastas={SUBPASTAS[m.id]}
+                  ehAdmin={ehAdmin}
+                  ehGestao={ehGestao}
+                  avisos={Object.fromEntries([m.id, ...SUBPASTAS[m.id]].map((x) => [x, avisoDe(x)]))}
+                />
               ) : podeAceder(m) ? (
                 <NavLinkTopBar key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} aviso={avisoDe(m.id)} />
               ) : (

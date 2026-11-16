@@ -20,11 +20,11 @@ import { contarAlertasAbertos } from '@/lib/data/alertasAbertos'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { NavLinkTopBar, NavLinkComSubpastas, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado, NavLinkInicio } from './NavLink'
 
-// Na barra do computador/tablet, Treinos, Avaliações e Presenças não têm
-// pílula própria — aparecem dentro de Clientes; e Objetivos dentro de
+// Na barra do computador/tablet, Treinos, Avaliações, Presenças e
+// Pagamentos não têm pílula própria — aparecem dentro de Clientes; e Objetivos dentro de
 // Leads (ver NavLinkComSubpastas). No telemóvel aparecem todas seguidas.
 const SUBPASTAS: Record<string, string[]> = {
-  clientes: ['treinos', 'avaliacoes', 'presencas'],
+  clientes: ['treinos', 'avaliacoes', 'presencas', 'pagamentos'],
   leads: ['objetivos'],
 }
 const TODAS_AS_SUBPASTAS = new Set(Object.values(SUBPASTAS).flat())

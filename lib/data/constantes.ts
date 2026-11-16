@@ -224,8 +224,8 @@ type Modulo = {
   restrito?: 'admin' | 'gestao'
 }
 
-// Ordem pedida para os menus: Clientes (com Treinos, Avaliações e
-// Presenças lá dentro), Agenda, Pagamentos, Tarefas, Alertas, Abertura /
+// Ordem pedida para os menus: Clientes (com Treinos, Avaliações,
+// Presenças e Pagamentos lá dentro), Agenda, Tarefas, Alertas, Abertura /
 // Fecho, Leads (com Objetivos lá dentro) e Instrutores (Escalas, Registo
 // de Horas e Férias). Na barra do computador as subpastas só aparecem ao
 // passar o rato pela pasta; no telemóvel aparecem todas seguidas, por
@@ -235,8 +235,8 @@ export const MODULOS: Modulo[] = [
   { id: 'treinos', nome: 'Treinos', icone: Dumbbell, cor: 'roxo', desc: 'Planos, histórico e notas entre PTs', pronto: true },
   { id: 'avaliacoes', nome: 'Avaliações', icone: Gauge, cor: 'azul', desc: 'Avaliações, reavaliações e evolução', pronto: true },
   { id: 'presencas', nome: 'Presenças', icone: CalendarCheck2, cor: 'verde', desc: 'Quem treinou e quem faltou', pronto: true },
-  { id: 'agenda', nome: 'Agenda', icone: CalendarDays, cor: 'roxo', desc: 'Treinos, avaliações e reuniões — dia, semana e mês', pronto: true },
   { id: 'pagamentos', nome: 'Pagamentos', icone: CreditCard, cor: 'ambar', desc: 'Quem tem o pagamento em dia', pronto: true },
+  { id: 'agenda', nome: 'Agenda', icone: CalendarDays, cor: 'roxo', desc: 'Treinos, avaliações e reuniões — dia, semana e mês', pronto: true },
   { id: 'tarefas', nome: 'Tarefas', icone: ListTodo, cor: 'azul', desc: 'O que há para fazer na empresa, quem trata e até quando', pronto: true },
   { id: 'alertas', nome: 'Alertas', icone: BellRing, cor: 'vermelho', desc: 'Leads, clientes e pagamentos que precisam de atenção agora', pronto: true },
   { id: 'checklist', nome: 'Abertura / Fecho', curto: 'Checklist', icone: KeyRound, cor: 'neutro', desc: 'Checklist diária do estúdio', pronto: true },

@@ -70,8 +70,8 @@ export function NavLinkTopBar({ href, id, aviso = 0 }: { href: string; id: strin
 }
 
 // Uma pasta com subpastas: a pílula abre a pasta principal e, ao passar
-// o rato, mostra as subpastas (Clientes → Treinos, Avaliações e
-// Presenças; Leads → Objetivos) — tal como o submenu "só Fátima/só
+// o rato, mostra as subpastas (Clientes → Treinos, Avaliações,
+// Presenças e Pagamentos; Leads → Objetivos) — tal como o submenu "só Fátima/só
 // Leiria" da Administração. No telemóvel ficam todas seguidas
 // (NavLinkPhone, mais abaixo) — não há "hover" num ecrã tátil.
 export function NavLinkComSubpastas({

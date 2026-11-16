@@ -1,6 +1,8 @@
 'use server'
 
 import { lerQuemFez } from '@/lib/data/quemFez'
+import { semSair, type ResultadoSemSair } from '@/lib/acoes/semSair'
+import type { Lead, Perfil } from '@/lib/supabase/database.types'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -9,6 +11,7 @@ import { getSessaoAtual } from '@/lib/data/sessao'
 import { normalizarTelefoneSms } from '@/lib/sms/gateway'
 import type { EstadoLead } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
+import { getEquipaDoEstudio, getEstudioPorSlug, getEstudios } from '@/lib/data/estudios'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -472,4 +475,40 @@ export async function converterEmCliente(formData: FormData) {
   revalidatePath(`/painel/${estudioSlug}/leads`)
   revalidatePath(`/painel/${estudioSlug}/leads/${leadId}`)
   redirect(`/painel/${estudioSlug}/treinos/${cliente.id}`)
+}
+
+// ── Janela de edição (sem sair da lista) ─────────────────────────────
+
+// Guarda uma lead (nova ou existente) a partir da janela que abre por
+// cima da lista — a mesma lógica de criarLead/atualizarLead, mas sem
+// mudar de página (ver lib/acoes/semSair.ts).
+export async function guardarLeadNaJanela(formData: FormData): Promise<ResultadoSemSair> {
+  return semSair(formData.get('id') ? atualizarLead : criarLead, formData)
+}
+
+export type DadosJanelaLead = {
+  estudioId: number
+  pts: Pick<Perfil, 'id' | 'nome'>[]
+  lead: Lead | null
+  outrosEstudios: { slug: string; nome: string }[]
+}
+
+// O que o formulário de uma lead precisa (leadId null = lead nova).
+export async function dadosDaJanelaLead(estudioSlug: string, leadId: string | null): Promise<DadosJanelaLead | { erro: string }> {
+  const supabase = await createClient()
+  const [estudio, todosEstudios, { data: lead, error }] = await Promise.all([
+    getEstudioPorSlug(supabase, estudioSlug),
+    getEstudios(supabase),
+    leadId ? supabase.from('leads').select('*').eq('id', leadId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+  ])
+  if (!estudio) return { erro: 'Estúdio não encontrado.' }
+  if (error) return { erro: error.message }
+  if (leadId && (!lead || lead.estudio_id !== estudio.id)) return { erro: 'Lead não encontrada.' }
+  const pts = await getEquipaDoEstudio(supabase, estudio.id, (lead as Lead | null)?.responsavel_id ?? undefined)
+  return {
+    estudioId: estudio.id,
+    pts,
+    lead: (lead as Lead | null) ?? null,
+    outrosEstudios: todosEstudios.filter((e) => e.slug !== estudioSlug).map((e) => ({ slug: e.slug, nome: e.nome })),
+  }
 }

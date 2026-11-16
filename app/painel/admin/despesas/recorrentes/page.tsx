@@ -1,3 +1,4 @@
+import { IrComBotaoDireito, JanelaServidor } from '@/components/janela/Janela'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -20,7 +21,7 @@ import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import TituloSeccao from '@/components/TituloSeccao'
 import CamposCategoria from '../CamposCategoria'
-import { alternarRecorrente, eliminarRecorrente, guardarRecorrente } from '../actions'
+import { alternarRecorrente, eliminarRecorrente, guardarRecorrente, guardarRecorrenteNaJanela } from '../actions'
 import {
   Mensagens,
   ROTA_DESPESAS,
@@ -110,30 +111,14 @@ export default async function RecorrentesPage({
     dias_aviso: 3,
   }
 
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
-      <Link href="/painel/admin" className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Administração
-      </Link>
-      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Despesas recorrentes e avisos</h1>
-      <p className="mt-1 text-sm text-muted">
-        Renda ou prestação, impostos, salários, serviços… Define o valor, o dia de pagamento e com quantos dias de
-        antecedência queres ser avisado. Cada vencimento entra sozinho no balanço do mês como &quot;por pagar&quot; e
-        o aviso aparece no topo da Administração até marcares a despesa como paga.
-      </p>
-
-      <SeparadoresDespesas ativo={ROTA} qs={qs} />
-      <Mensagens error={sp.error} ok={sp.ok} />
-
-      <TituloSeccao cor="teal" id="form">
-        {emEdicao ? 'Editar despesa recorrente' : 'Nova despesa recorrente'}
-      </TituloSeccao>
-      <form
-        key={emEdicao?.id ?? `${sp.s_categoria ?? ''}|${sp.s_sub ?? ''}`}
+  // O formulário (novo, ou a editar "rec").
+  const formulario = (rec: typeof emEdicao) => (
+    <form
+      key={rec?.id ?? `${sp.s_categoria ?? ''}|${sp.s_sub ?? ''}`}
         action={guardarRecorrente}
         className="mt-2 rounded-xl border border-border-subtle bg-surface p-4"
       >
-        {emEdicao && <input type="hidden" name="id" value={emEdicao.id} />}
+        {rec && <input type="hidden" name="id" value={rec.id} />}
         <input type="hidden" name="voltar" value={aqui} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="flex flex-col gap-1 text-xs font-medium text-muted">
@@ -199,16 +184,44 @@ export default async function RecorrentesPage({
           não são mensais (IVA trimestral, seguro anual…), o ciclo conta a partir do mês do primeiro vencimento.
         </p>
         <div className="mt-3 flex items-center justify-end gap-2">
-          {(emEdicao || sp.s_categoria) && (
+          {(rec || sp.s_categoria) && (
             <Link href={aqui} className={botaoSecCls}>
               Cancelar
             </Link>
           )}
           <SubmitButton pendingText="A guardar…" className={botaoCls}>
-            {emEdicao ? 'Guardar alterações' : 'Criar despesa recorrente'}
+            {rec ? 'Guardar alterações' : 'Criar despesa recorrente'}
           </SubmitButton>
         </div>
       </form>
+  )
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10">
+      <Link href="/painel/admin" className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Administração
+      </Link>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Despesas recorrentes e avisos</h1>
+      <p className="mt-1 text-sm text-muted">
+        Renda ou prestação, impostos, salários, serviços… Define o valor, o dia de pagamento e com quantos dias de
+        antecedência queres ser avisado. Cada vencimento entra sozinho no balanço do mês como &quot;por pagar&quot; e
+        o aviso aparece no topo da Administração até marcares a despesa como paga.
+      </p>
+
+      <SeparadoresDespesas ativo={ROTA} qs={qs} />
+      <Mensagens error={sp.error} ok={sp.ok} />
+
+      <TituloSeccao cor="teal" id="form">
+        Nova despesa recorrente
+      </TituloSeccao>
+      {formulario(null)}
+
+      {/* Editar: numa janela por cima da lista, sem sair do sítio. */}
+      {emEdicao && (
+        <JanelaServidor titulo="Editar despesa recorrente" fecharHref={aqui} guardar={guardarRecorrenteNaJanela}>
+          {formulario(emEdicao)}
+        </JanelaServidor>
+      )}
 
       <TituloSeccao cor="roxo">As tuas despesas recorrentes</TituloSeccao>
       {recs.length === 0 ? (
@@ -234,7 +247,12 @@ export default async function RecorrentesPage({
                 {recs.map((r) => {
                   const proximo = r.ativo ? vencimentosEntre(r, hoje, `${somarMesesISO(mesAtual, 13)}-01`)[0] : undefined
                   return (
-                    <tr key={r.id} className={`border-b border-border-subtle/60 last:border-0 ${r.ativo ? '' : 'opacity-50'}`}>
+                    <IrComBotaoDireito
+                      key={r.id}
+                      como="tr"
+                      href={`${aqui}${qs ? '&' : '?'}editar=${r.id}`}
+                      className={`border-b border-border-subtle/60 last:border-0 ${r.ativo ? '' : 'opacity-50'}`}
+                    >
                       <td className="px-4 py-2 text-foreground">
                         <span className="font-semibold">{r.subcategoria ?? r.categoria}</span>
                         <span className="block text-xs text-muted">
@@ -254,7 +272,7 @@ export default async function RecorrentesPage({
                       <td className="px-4 py-2 text-right font-mono font-semibold text-foreground">{eur(r.valor)}</td>
                       <td className="px-4 py-2">
                         <span className="flex items-center justify-end gap-1.5">
-                          <Link href={`${aqui}${qs ? '&' : '?'}editar=${r.id}#form`} className={botaoSecCls}>
+                          <Link href={`${aqui}${qs ? '&' : '?'}editar=${r.id}`} scroll={false} className={botaoSecCls}>
                             Editar
                           </Link>
                           <form action={alternarRecorrente}>
@@ -277,7 +295,7 @@ export default async function RecorrentesPage({
                           </ConfirmarAcao>
                         </span>
                       </td>
-                    </tr>
+                    </IrComBotaoDireito>
                   )
                 })}
               </tbody>

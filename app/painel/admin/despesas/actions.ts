@@ -1,5 +1,6 @@
 'use server'
 
+import { semSair, type ResultadoSemSair } from '@/lib/acoes/semSair'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -369,4 +370,15 @@ export async function alternarCategoria(formData: FormData) {
   const { error } = await supabase.from(tabela).update({ ativo }).eq('id', id)
   if (error) voltar(formData, { error: error.message })
   voltar(formData, { ok: ativo ? 'reativada' : 'desativada' })
+}
+
+// ── Janela de edição (sem sair da lista) ─────────────────────────────
+// As mesmas ações, chamadas a partir da janela que abre por cima da
+// lista: devolvem o resultado em vez de mudar de página.
+export async function guardarDespesaNaJanela(formData: FormData): Promise<ResultadoSemSair> {
+  return semSair(guardarDespesa, formData)
+}
+
+export async function guardarRecorrenteNaJanela(formData: FormData): Promise<ResultadoSemSair> {
+  return semSair(guardarRecorrente, formData)
 }

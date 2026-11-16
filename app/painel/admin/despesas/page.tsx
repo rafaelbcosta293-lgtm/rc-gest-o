@@ -1,3 +1,4 @@
+import { IrComBotaoDireito, JanelaServidor } from '@/components/janela/Janela'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -21,7 +22,7 @@ import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import TituloSeccao from '@/components/TituloSeccao'
 import CamposCategoria, { type CategoriaOpcao } from './CamposCategoria'
-import { anularDespesa, guardarDespesa, marcarDespesaPaga } from './actions'
+import { anularDespesa, guardarDespesa, marcarDespesaPaga, guardarDespesaNaJanela } from './actions'
 import {
   EtiquetaEstado,
   Mensagens,
@@ -183,17 +184,32 @@ export default async function DespesasPage({
 
       {/* Lançar / editar */}
       <TituloSeccao cor="teal" id="lancar">
-        {emEdicao ? 'Editar despesa' : 'Lançar despesa'}
+        Lançar despesa
       </TituloSeccao>
       <FormDespesa
-        key={emEdicao?.id ?? 'nova'}
+        key="nova"
         categorias={categorias}
         estudios={todosEstudios.map((e) => ({ id: e.id, nome: e.nome }))}
         estudioOmissao={estudios[0]?.id}
-        despesa={emEdicao}
+        despesa={null}
         dataOmissao={mes === hoje.slice(0, 7) ? hoje : inicio}
         voltar={aqui}
       />
+
+      {/* Editar: numa janela por cima da lista, sem sair do sítio. */}
+      {emEdicao && (
+        <JanelaServidor titulo="Editar despesa" fecharHref={aqui} guardar={guardarDespesaNaJanela}>
+          <FormDespesa
+            key={emEdicao.id}
+            categorias={categorias}
+            estudios={todosEstudios.map((e) => ({ id: e.id, nome: e.nome }))}
+            estudioOmissao={estudios[0]?.id}
+            despesa={emEdicao}
+            dataOmissao={hoje}
+            voltar={aqui}
+          />
+        </JanelaServidor>
+      )}
 
       {/* Balanço por categoria */}
       <TituloSeccao cor="roxo">Balanço de {nomeMes(mes)} por categoria</TituloSeccao>
@@ -246,8 +262,10 @@ export default async function DespesasPage({
                 const estado = estadoDespesa(d, hoje)
                 const fixa = d.categoria === CATEGORIA_AJUSTE
                 return (
-                  <li
+                  <IrComBotaoDireito
                     key={d.id}
+                    href={`${aqui}&editar=${d.id}`}
+                    title={fixa ? '' : 'Botão direito do rato: editar'}
                     className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border-subtle/60 px-4 py-2 text-sm last:border-0"
                   >
                     <span className="w-20 shrink-0 font-mono text-xs text-muted">{dataPt(vencimentoDe(d))}</span>
@@ -269,7 +287,7 @@ export default async function DespesasPage({
                             {d.pago ? 'Por pagar' : 'Marcar paga'}
                           </SubmitButton>
                         </form>
-                        <Link href={`${aqui}&editar=${d.id}#lancar`} className={botaoSecCls}>
+                        <Link href={`${aqui}&editar=${d.id}`} scroll={false} className={botaoSecCls}>
                           Editar
                         </Link>
                         <ConfirmarAcao
@@ -284,7 +302,7 @@ export default async function DespesasPage({
                         </ConfirmarAcao>
                       </span>
                     )}
-                  </li>
+                  </IrComBotaoDireito>
                 )
               })}
             </ul>

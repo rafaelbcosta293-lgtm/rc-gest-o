@@ -10,6 +10,8 @@ import { calcularMetricasFunil, type HistoricoEtapaLinha } from '@/lib/data/funi
 import StatCard from '@/components/StatCard'
 import BarMeter from '@/components/BarMeter'
 import LeadsKanban, { type LeadResumo } from './LeadsKanban'
+import JanelaLeads from './JanelaLeads'
+import { AbrirComBotaoDireito, BotaoAbrirJanela } from '@/components/janela/Janela'
 import ExportarCsvButton from '@/components/ExportarCsvButton'
 import type { QuadroDoDia } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
@@ -92,6 +94,7 @@ export default async function LeadsPage({
   }))
 
   return (
+    <JanelaLeads slug={slug}>
     <div className="mx-auto max-w-[1600px] px-4 py-10">
       <Link
         href={`/painel/${slug}`}
@@ -135,12 +138,9 @@ export default async function LeadsPage({
           >
             Importar CSV
           </Link>
-          <Link
-            href={`/painel/${slug}/leads/novo`}
-            className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-          >
+          <BotaoAbrirJanela className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover">
             + Lead
-          </Link>
+          </BotaoAbrirJanela>
         </div>
       </div>
 
@@ -218,8 +218,8 @@ export default async function LeadsPage({
           </h2>
           <div className="mt-2 flex flex-col gap-1.5">
             {visitasHoje.map((l) => (
+              <AbrirComBotaoDireito key={`visita-${l.id}`} alvo={l.id}>
               <Link
-                key={`visita-${l.id}`}
                 href={`/painel/${slug}/leads/${l.id}`}
                 className="flex items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm hover:bg-brand/[.06]"
               >
@@ -228,12 +228,13 @@ export default async function LeadsPage({
                   Visita{l.visita_hora ? ` às ${l.visita_hora.slice(0, 5)}` : ''}
                 </span>
               </Link>
+              </AbrirComBotaoDireito>
             ))}
             {contactosHoje.map((l) => {
               const atrasado = l.proximo_contacto! < hoje
               return (
+                <AbrirComBotaoDireito key={`contacto-${l.id}`} alvo={l.id}>
                 <Link
-                  key={`contacto-${l.id}`}
                   href={`/painel/${slug}/leads/${l.id}`}
                   className="flex items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm hover:bg-brand/[.06]"
                 >
@@ -242,6 +243,7 @@ export default async function LeadsPage({
                     Contactar {atrasado ? '(em atraso)' : 'hoje'}
                   </span>
                 </Link>
+                </AbrirComBotaoDireito>
               )
             })}
           </div>
@@ -256,5 +258,6 @@ export default async function LeadsPage({
         <LeadsKanban estudioSlug={slug} leads={leads} pts={pts} />
       )}
     </div>
+    </JanelaLeads>
   )
 }

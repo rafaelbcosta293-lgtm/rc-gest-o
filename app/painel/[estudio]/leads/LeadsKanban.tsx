@@ -1,5 +1,6 @@
 'use client'
 
+import { useJanelaOpcional } from '@/components/janela/Janela'
 import { useMemo, useState, useTransition } from 'react'
 import Link from '@/components/LinkRapido'
 import { ESTADOS_LEAD, PALETA } from '@/lib/data/constantes'
@@ -54,6 +55,8 @@ export default function LeadsKanban({
   leads: LeadResumo[]
   pts: { id: string; nome: string }[]
 }) {
+  // Botão direito num cartão abre a janela de edição (quando a página a tem).
+  const janela = useJanelaOpcional()
   const [busca, setBusca] = useState('')
   const [filtroResponsavel, setFiltroResponsavel] = useState('')
   const [filtroOrigem, setFiltroOrigem] = useState('')
@@ -212,6 +215,15 @@ export default function LeadsKanban({
                       key={l.id}
                       href={`/painel/${estudioSlug}/leads/${l.id}`}
                       draggable={estado !== 'Ganha'}
+                      title="Botão direito do rato: editar aqui"
+                      onContextMenu={
+                        janela
+                          ? (e) => {
+                              e.preventDefault()
+                              janela.abrir(l.id)
+                            }
+                          : undefined
+                      }
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/plain', l.id)
                         e.dataTransfer.effectAllowed = 'move'

@@ -1,5 +1,5 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, Check, Lock, Play, Repeat, Star } from 'lucide-react'
+import { ArrowLeft, Check, Play, Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ehContaFixa } from '@/lib/data/acessos'
@@ -8,16 +8,14 @@ import { hojeEmLisboa } from '@/lib/data/hoje'
 import {
   agruparTarefas,
   carregarTarefas,
-  descricaoRepeticao,
+  carregarTarefasFeitas,
   DIAS_DA_SEMANA,
   DIAS_FEITAS_VISIVEIS,
-  DIAS_TAREFA_PARADA,
   emFoco,
   escolhaDeRepeticao,
+  estatisticasTarefas,
   ESTADOS_TAREFA,
   filtrarTarefas,
-  haQuantoTempo,
-  idadeEmDias,
   MAX_FOCO_POR_PESSOA,
   pessoasParaTarefas,
   REPETICOES_TAREFA,
@@ -25,7 +23,10 @@ import {
 } from '@/lib/data/tarefas'
 import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
-import { alternarFocoTarefa, atualizarTarefa, criarTarefa, eliminarTarefa, mudarEstadoTarefa } from '@/app/painel/tarefasActions'
+import { atualizarTarefa, criarTarefa, eliminarTarefa } from '@/app/painel/tarefasActions'
+import CalendarioTarefas, { ESCALAS, type Escala } from './CalendarioTarefas'
+import PainelTarefas from './PainelTarefas'
+import { botaoPequenoCls, campoCls, dataCurta, EstadoForm, LinhaTarefa, Pastilhas, rotuloCls, type Contexto } from './partes'
 
 // O ecrã das Tarefas — o mesmo em cada estúdio, na Coordenação e na
 // Administração (só muda o endereço de base e o tema). Usa apenas as
@@ -38,6 +39,11 @@ export type ParametrosTarefas = {
   estudio?: string
   lista?: string
   editar?: string
+  // Calendário: escala (dia, semana, mês, ano), dia de referência e se
+  // mostra as tarefas que se repetem ("0" esconde).
+  cal?: string
+  data?: string
+  rotinas?: string
   ok?: string
   error?: string
 }
@@ -56,139 +62,10 @@ const MENSAGENS_OK: Record<string, string> = {
 const VISTAS = [
   { id: 'lista', rotulo: 'Lista' },
   { id: 'quadro', rotulo: 'Quadro' },
+  { id: 'calendario', rotulo: 'Calendário' },
   { id: 'pessoas', rotulo: 'Por pessoa' },
+  { id: 'painel', rotulo: 'Painel' },
 ]
-
-const campoCls =
-  'w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground outline-none focus:border-brand'
-const rotuloCls = 'flex flex-col gap-1 text-xs font-medium text-muted'
-const pastilhaCls = 'inline-flex items-center gap-1 rounded-full border border-border-subtle px-2 py-0.5 text-[11px] font-medium text-muted'
-const botaoPequenoCls =
-  'rounded-full border border-border-subtle px-2.5 py-1 text-[11px] font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-brand/[.08]'
-
-const dataCurta = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
-
-type Contexto = {
-  hoje: string
-  voltar: string
-  nomePessoa: Map<string, string>
-  nomeEstudio: Map<number, string>
-  linkEditar: (id: string) => string
-}
-
-function EstadoForm({ id, estado, voltar, children, className }: { id: string; estado: string; voltar: string; children: React.ReactNode; className?: string }) {
-  return (
-    <form action={mudarEstadoTarefa} className={className}>
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="estado" value={estado} />
-      <input type="hidden" name="voltar" value={voltar} />
-      {children}
-    </form>
-  )
-}
-
-function Pastilhas({ t, ctx }: { t: Tarefa; ctx: Contexto }) {
-  const atrasada = t.estado !== 'feito' && !!t.prazo && t.prazo < ctx.hoje
-  const paraHoje = t.estado !== 'feito' && t.prazo === ctx.hoje
-  const idade = idadeEmDias(t.criado_em, ctx.hoje)
-  return (
-    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-      {t.prazo && (
-        <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
-            atrasada
-              ? 'bg-red-500/15 text-red-700 dark:text-red-300'
-              : paraHoje
-                ? 'bg-amber-500/20 text-amber-800 dark:text-amber-200'
-                : 'bg-foreground/[.06] text-muted'
-          }`}
-        >
-          {atrasada ? 'Atrasada · ' : paraHoje ? 'Hoje · ' : ''}
-          {dataCurta(t.prazo)}
-        </span>
-      )}
-      {!t.prazo && t.estado !== 'feito' && (
-        // Parada há muito tempo: fica assinalada a âmbar.
-        <span
-          className={
-            idade > DIAS_TAREFA_PARADA
-              ? 'inline-flex items-center rounded-full border border-amber-500/60 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-200'
-              : pastilhaCls
-          }
-        >
-          criada {haQuantoTempo(idade)}
-        </span>
-      )}
-      {t.estado === 'em_curso' && (
-        <span className="inline-flex items-center rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] font-bold text-sky-800 dark:text-sky-200">Em curso</span>
-      )}
-      {descricaoRepeticao(t) && (
-        <span className={pastilhaCls} title="Ao concluir, volta a aparecer no dia seguinte em que se faz">
-          <Repeat className="h-3 w-3" /> {descricaoRepeticao(t)}
-        </span>
-      )}
-      <span className={pastilhaCls}>{t.responsavel_id ? (ctx.nomePessoa.get(t.responsavel_id) ?? 'Sem responsável') : 'Sem responsável'}</span>
-      {t.lista && <span className={pastilhaCls}>{t.lista}</span>}
-      {t.estudio_id != null && ctx.nomeEstudio.get(t.estudio_id) && <span className={pastilhaCls}>{ctx.nomeEstudio.get(t.estudio_id)}</span>}
-      {t.reservada && (
-        <span className={pastilhaCls} title="Só a administração vê esta tarefa">
-          <Lock className="h-3 w-3" /> Só administração
-        </span>
-      )}
-    </div>
-  )
-}
-
-function LinhaTarefa({ t, ctx }: { t: Tarefa; ctx: Contexto }) {
-  const feita = t.estado === 'feito'
-  const foco = emFoco(t, ctx.hoje)
-  return (
-    <li className="flex items-start gap-3 px-3 py-2.5">
-      <EstadoForm id={t.id} estado={feita ? 'por_fazer' : 'feito'} voltar={ctx.voltar} className="mt-0.5 shrink-0">
-        <button
-          type="submit"
-          title={feita ? 'Voltar a abrir' : 'Concluir'}
-          aria-label={feita ? `Voltar a abrir: ${t.titulo}` : `Concluir: ${t.titulo}`}
-          className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
-            feita ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-border-strong text-transparent hover:border-emerald-600 hover:text-emerald-600'
-          }`}
-        >
-          <Check className="h-3.5 w-3.5" strokeWidth={3} />
-        </button>
-      </EstadoForm>
-      <div className="min-w-0 flex-1">
-        <Link href={ctx.linkEditar(t.id)} className={`text-sm font-semibold text-foreground hover:underline ${feita ? 'line-through opacity-60' : ''}`}>
-          {t.titulo}
-        </Link>
-        {t.descricao && <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-xs text-muted">{t.descricao}</p>}
-        <Pastilhas t={t} ctx={ctx} />
-      </div>
-      {!feita && (
-        <div className="flex shrink-0 items-center gap-1.5">
-          <EstadoForm id={t.id} estado={t.estado === 'em_curso' ? 'por_fazer' : 'em_curso'} voltar={ctx.voltar}>
-            <button type="submit" className={botaoPequenoCls} title={t.estado === 'em_curso' ? 'Voltar a "por fazer"' : 'Marcar como em curso'}>
-              {t.estado === 'em_curso' ? 'Parar' : 'Começar'}
-            </button>
-          </EstadoForm>
-          <form action={alternarFocoTarefa}>
-            <input type="hidden" name="id" value={t.id} />
-            <input type="hidden" name="voltar" value={ctx.voltar} />
-            <button
-              type="submit"
-              title={foco ? 'Tirar do foco da semana' : 'Pôr no foco desta semana'}
-              aria-label={foco ? `Tirar do foco: ${t.titulo}` : `Pôr no foco da semana: ${t.titulo}`}
-              className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
-                foco ? 'border-brand bg-brand text-black' : 'border-border-subtle text-muted hover:border-brand hover:text-foreground'
-              }`}
-            >
-              <Star className="h-3.5 w-3.5" fill={foco ? 'currentColor' : 'none'} />
-            </button>
-          </form>
-        </div>
-      )}
-    </li>
-  )
-}
 
 function Seccao({
   titulo,
@@ -387,11 +264,14 @@ export default async function VistaTarefas({
 }) {
   const supabase = await createClient()
   const hoje = hojeEmLisboa()
-  const [sessao, todas, pessoas, estudios] = await Promise.all([
+  const verPainel = sp.vista === 'painel'
+  const [sessao, todas, pessoas, estudios, feitasRecentes] = await Promise.all([
     getSessaoAtual(),
     carregarTarefas(supabase, hoje),
     pessoasParaTarefas(),
     getEstudios(supabase),
+    // Só o painel precisa do histórico das concluídas.
+    verPainel ? carregarTarefasFeitas(supabase, hoje) : Promise.resolve([]),
   ])
   const { ehAdmin, ehGestao } = papeisDaSessao(sessao)
 
@@ -404,7 +284,15 @@ export default async function VistaTarefas({
   const listas = [...new Set(todas.map((t) => t.lista).filter((l): l is string => !!l))].sort((a, b) => a.localeCompare(b, 'pt'))
 
   const link = (extra: Partial<ParametrosTarefas> = {}) => {
-    const valores: Partial<ParametrosTarefas> = { vista: vista === 'lista' ? undefined : vista, pessoa: sp.pessoa, estudio: sp.estudio, lista: sp.lista, ...extra }
+    const valores: Partial<ParametrosTarefas> = {
+      vista: vista === 'lista' ? undefined : vista,
+      pessoa: sp.pessoa,
+      estudio: sp.estudio,
+      lista: sp.lista,
+      // O calendário mantém a escala e o dia ao concluir uma tarefa ou ao filtrar.
+      ...(vista === 'calendario' ? { cal: sp.cal, data: sp.data, rotinas: sp.rotinas } : {}),
+      ...extra,
+    }
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(valores)) if (v) qs.set(k, v)
     const texto = qs.toString()
@@ -418,6 +306,9 @@ export default async function VistaTarefas({
     nomeEstudio: new Map(estudios.map((e) => [e.id, e.nome])),
     linkEditar: (id) => `${link({ editar: id })}#editar`,
   }
+
+  const escala: Escala = ESCALAS.some((e) => e.id === sp.cal) ? (sp.cal as Escala) : 'mes'
+  const dataCalendario = /^\d{4}-\d{2}-\d{2}$/.test(sp.data ?? '') ? sp.data! : hoje
 
   // "Por pessoa" mostra sempre a equipa toda; as outras vistas respeitam
   // o filtro de pessoa.
@@ -469,7 +360,7 @@ export default async function VistaTarefas({
 
       {/* Filtros */}
       <div className="mt-5 flex flex-col gap-2">
-        {vista !== 'pessoas' && (
+        {vista !== 'pessoas' && vista !== 'painel' && (
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="w-16 text-xs font-semibold uppercase tracking-wider text-muted">Quem</span>
             <Link href={link({ pessoa: contaPessoal ? 'todas' : undefined, editar: undefined })} className={chip(!pessoa)}>
@@ -634,6 +525,36 @@ export default async function VistaTarefas({
             </section>
           ))}
         </div>
+      )}
+
+      {/* Calendário */}
+      {vista === 'calendario' && (
+        <CalendarioTarefas
+          tarefas={visiveis}
+          escala={escala}
+          data={dataCalendario}
+          comRotinas={sp.rotinas !== '0'}
+          ctx={ctx}
+          link={(extra) => link({ editar: undefined, ...extra })}
+        />
+      )}
+
+      {/* Painel */}
+      {vista === 'painel' && (
+        <PainelTarefas
+          est={estatisticasTarefas(
+            semPessoa.filter((t) => t.estado !== 'feito'),
+            feitasRecentes.filter(
+              (f) =>
+                (!sp.lista || (f.lista ?? '') === sp.lista) &&
+                (estudioFiltro === 'geral' ? f.estudio_id === null : estudioFiltro == null || f.estudio_id === estudioFiltro)
+            ),
+            hoje
+          )}
+          ctx={ctx}
+          linkPessoa={(id) => link({ vista: undefined, pessoa: id ?? 'sem' })}
+          linkLista={(lista) => link({ vista: undefined, lista })}
+        />
       )}
 
       {/* Por pessoa */}

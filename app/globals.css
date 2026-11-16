@@ -387,3 +387,15 @@ html[data-a-navegar]::after {
     }
   }
 }
+
+/* ── Gráficos das Tarefas (calendário do ano e painel) ────────────────
+   Um só tom para as quantidades (mais escuro = mais), com o passo certo
+   para o fundo claro e para o escuro. */
+.viz-tarefas {
+  --viz-serie: #2a78d6;
+  --viz-trilho: color-mix(in srgb, #2a78d6 16%, transparent);
+}
+.dark .viz-tarefas {
+  --viz-serie: #3987e5;
+  --viz-trilho: color-mix(in srgb, #3987e5 22%, transparent);
+}

@@ -5,10 +5,12 @@ import {
   diaDaSemanaISO,
   emFoco,
   escolhaDeRepeticao,
+  estatisticasTarefas,
   filtrarTarefas,
   focoDaPessoa,
   haQuantoTempo,
   idadeEmDias,
+  ocorrenciasPrevistas,
   primeiroDiaEm,
   proximaOcorrencia,
   type Tarefa,
@@ -170,5 +172,51 @@ describe('tarefas que se repetem', () => {
     expect(escolhaDeRepeticao({ repete_dias: [1, 5], repete_mensal: false })).toBe('dias')
     expect(escolhaDeRepeticao({ repete_dias: null, repete_mensal: true })).toBe('mensal')
     expect(escolhaDeRepeticao({ repete_dias: null, repete_mensal: false })).toBe('nao')
+  })
+})
+
+describe('calendário: vezes previstas de uma rotina', () => {
+  it('lista as vezes seguintes dentro do intervalo, sem a que já existe', () => {
+    expect(ocorrenciasPrevistas({ repete_dias: [1, 5], repete_mensal: false, prazo: '2026-11-16' }, '2026-11-16', '2026-11-30')).toEqual([
+      '2026-11-20',
+      '2026-11-23',
+      '2026-11-27',
+      '2026-11-30',
+    ])
+    expect(ocorrenciasPrevistas({ repete_dias: null, repete_mensal: true, prazo: '2026-11-30' }, '2026-12-01', '2027-02-28')).toEqual([
+      '2026-12-31',
+      '2027-01-31',
+      '2027-02-28',
+    ])
+    expect(ocorrenciasPrevistas({ repete_dias: null, repete_mensal: false, prazo: '2026-11-16' }, '2026-11-01', '2026-12-31')).toEqual([])
+  })
+})
+
+describe('estatísticas do painel', () => {
+  const feita = (id: string, concluida_em: string, extra: Partial<Tarefa> = {}) => ({
+    ...tarefa({ id, estado: 'feito', concluida_em, ...extra }),
+  })
+  it('conta abertas, atrasos, concluídas e cumprimento do prazo', () => {
+    const abertas = [
+      tarefa({ id: 'a', prazo: '2026-11-10', responsavel_id: 'ana', lista: 'Marketing' }),
+      tarefa({ id: 'b', prazo: HOJE, responsavel_id: 'ana' }),
+      tarefa({ id: 'c', responsavel_id: 'rui', criado_em: '2026-05-01T10:00:00Z' }),
+      tarefa({ id: 'd', prazo: '2026-12-01', repete_dias: [1], criado_em: '2026-01-01T10:00:00Z' }),
+    ]
+    const feitas = [
+      feita('f1', '2026-11-17T10:00:00Z', { prazo: '2026-11-17', responsavel_id: 'ana', lista: 'Marketing' }),
+      feita('f2', '2026-11-12T10:00:00Z', { prazo: '2026-11-10', responsavel_id: 'rui' }),
+      feita('f3', '2026-11-03T10:00:00Z'),
+      feita('f4', '2026-10-01T10:00:00Z', { prazo: '2026-10-01' }),
+    ]
+    const e = estatisticasTarefas(abertas, feitas, HOJE)
+    expect(e).toMatchObject({ abertas: 4, emAtraso: 1, paraHoje: 1, semPrazo: 1, feitas7: 2, feitas30: 3, comPrazo30: 2, noPrazo30: 1 })
+    expect(e.porSemana).toHaveLength(8)
+    expect(e.porSemana[7]).toEqual({ inicio: '2026-11-16', total: 1 })
+    expect(e.porSemana[6]).toEqual({ inicio: '2026-11-09', total: 1 })
+    expect(e.porPessoa.find((p) => p.id === 'ana')).toEqual({ id: 'ana', abertas: 2, emAtraso: 1, feitas30: 1 })
+    expect(e.porLista.find((l) => l.lista === 'Marketing')).toEqual({ lista: 'Marketing', abertas: 1, feitas30: 1 })
+    // As rotinas que se repetem não entram nas "abertas há mais tempo".
+    expect(e.maisAntigas.map((t) => t.id)).toEqual(['c', 'a', 'b'])
   })
 })

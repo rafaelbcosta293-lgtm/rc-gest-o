@@ -136,6 +136,110 @@ export function proximaOcorrencia(t: Repeticao & Pick<Tarefa, 'prazo'>, hoje: st
   return primeiroDiaEm(t.repete_dias!, paraISO(deISO(base) + UM_DIA_MS))
 }
 
+// As vezes seguintes de uma tarefa que se repete, entre duas datas — as
+// que ainda não existem (só nascem quando a anterior é concluída), para
+// o calendário as poder mostrar como previstas.
+export function ocorrenciasPrevistas(t: Repeticao & Pick<Tarefa, 'prazo'>, de: string, ate: string): string[] {
+  if (!repeteSe(t) || !t.prazo) return []
+  const datas: string[] = []
+  let atual = t.prazo
+  for (let i = 0; i < 800; i++) {
+    atual = t.repete_mensal ? mesSeguinte(atual) : primeiroDiaEm(t.repete_dias!, paraISO(deISO(atual) + UM_DIA_MS))
+    if (atual > ate) break
+    if (atual >= de) datas.push(atual)
+  }
+  return datas
+}
+
+// ── Estatísticas (painel) ────────────────────────────────────────────
+
+export type TarefaFeita = Pick<Tarefa, 'id' | 'titulo' | 'lista' | 'estudio_id' | 'responsavel_id' | 'prazo' | 'concluida_em' | 'criado_em'>
+
+const SEMANAS_NO_PAINEL = 8
+
+// O dia (em Portugal) em que uma tarefa foi concluída.
+function diaDeConclusao(concluidaEm: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date(concluidaEm))
+}
+
+export type EstatisticasTarefas = {
+  abertas: number
+  emAtraso: number
+  paraHoje: number
+  semPrazo: number
+  feitas7: number
+  feitas30: number
+  // Das concluídas nos últimos 30 dias que tinham prazo: quantas dentro dele.
+  comPrazo30: number
+  noPrazo30: number
+  // Concluídas por semana (segunda a domingo), da mais antiga para a atual.
+  porSemana: { inicio: string; total: number }[]
+  porPessoa: { id: string | null; abertas: number; emAtraso: number; feitas30: number }[]
+  porLista: { lista: string | null; abertas: number; feitas30: number }[]
+  // As tarefas abertas há mais tempo (sem contar as rotinas que se repetem).
+  maisAntigas: Tarefa[]
+}
+
+export function estatisticasTarefas(abertas: Tarefa[], feitas: TarefaFeita[], hoje: string): EstatisticasTarefas {
+  const ha = (dias: number) => paraISO(deISO(hoje) - dias * UM_DIA_MS)
+  const comDia = feitas.filter((f) => f.concluida_em).map((f) => ({ ...f, dia: diaDeConclusao(f.concluida_em!) }))
+  const feitas30 = comDia.filter((f) => f.dia > ha(30))
+  const comPrazo30 = feitas30.filter((f) => f.prazo)
+
+  const estaSemana = inicioDaSemana(hoje)
+  const porSemana = Array.from({ length: SEMANAS_NO_PAINEL }, (_, i) => {
+    const inicio = paraISO(deISO(estaSemana) - (SEMANAS_NO_PAINEL - 1 - i) * 7 * UM_DIA_MS)
+    const fim = paraISO(deISO(inicio) + 6 * UM_DIA_MS)
+    return { inicio, total: comDia.filter((f) => f.dia >= inicio && f.dia <= fim).length }
+  })
+
+  const pessoas = new Map<string | null, { abertas: number; emAtraso: number; feitas30: number }>()
+  const listas = new Map<string | null, { abertas: number; feitas30: number }>()
+  const daPessoa = (id: string | null) => pessoas.get(id) ?? pessoas.set(id, { abertas: 0, emAtraso: 0, feitas30: 0 }).get(id)!
+  const daLista = (lista: string | null) => listas.get(lista) ?? listas.set(lista, { abertas: 0, feitas30: 0 }).get(lista)!
+  for (const t of abertas) {
+    daPessoa(t.responsavel_id).abertas++
+    if (t.prazo && t.prazo < hoje) daPessoa(t.responsavel_id).emAtraso++
+    daLista(t.lista).abertas++
+  }
+  for (const f of feitas30) {
+    daPessoa(f.responsavel_id).feitas30++
+    daLista(f.lista).feitas30++
+  }
+
+  return {
+    abertas: abertas.length,
+    emAtraso: abertas.filter((t) => t.prazo && t.prazo < hoje).length,
+    paraHoje: abertas.filter((t) => t.prazo === hoje).length,
+    semPrazo: abertas.filter((t) => !t.prazo).length,
+    feitas7: comDia.filter((f) => f.dia > ha(7)).length,
+    feitas30: feitas30.length,
+    comPrazo30: comPrazo30.length,
+    noPrazo30: comPrazo30.filter((f) => f.dia <= f.prazo!).length,
+    porSemana,
+    porPessoa: [...pessoas.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.abertas - a.abertas || b.feitas30 - a.feitas30),
+    porLista: [...listas.entries()].map(([lista, v]) => ({ lista, ...v })).sort((a, b) => b.abertas - a.abertas || b.feitas30 - a.feitas30),
+    maisAntigas: abertas
+      .filter((t) => !repeteSe(t))
+      .sort((a, b) => a.criado_em.localeCompare(b.criado_em))
+      .slice(0, 5),
+  }
+}
+
+// As concluídas nas últimas semanas (para o painel) — só as colunas
+// precisas para contar.
+export async function carregarTarefasFeitas(supabase: SupabaseClient, hoje: string): Promise<TarefaFeita[]> {
+  const desde = new Date(deISO(inicioDaSemana(hoje)) - (SEMANAS_NO_PAINEL - 1) * 7 * UM_DIA_MS).toISOString()
+  const { data, error } = await supabase
+    .from('tarefas')
+    .select('id, titulo, lista, estudio_id, responsavel_id, prazo, concluida_em, criado_em')
+    .eq('estado', 'feito')
+    .gte('concluida_em', desde)
+    .limit(5000)
+  if (error) throw new Error(error.message)
+  return (data ?? []) as TarefaFeita[]
+}
+
 export function idadeEmDias(criadoEm: string, hoje: string): number {
   const inicio = Date.parse(`${criadoEm.slice(0, 10)}T00:00:00Z`)
   const fim = Date.parse(`${hoje}T00:00:00Z`)

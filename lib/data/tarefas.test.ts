@@ -15,6 +15,8 @@ import {
   proximaOcorrencia,
   SEM_REPETICAO,
   type Tarefa,
+  compararNoDia,
+  type ItemDoDia,
 } from './tarefas'
 
 const HOJE = '2026-11-18' // quarta-feira; a semana começa a 2026-11-16
@@ -275,5 +277,42 @@ describe('tarefas por estúdio', () => {
     const lista = [tarefa({ id: 'fatima', estudio_id: 1 }), tarefa({ id: 'leiria', estudio_id: 2 }), tarefa({ id: 'empresa' })]
     expect(filtrarTarefas(lista, { doEstudio: 2 }).map((t) => t.id)).toEqual(['leiria', 'empresa'])
     expect(filtrarTarefas(lista, { doEstudio: 1 }).map((t) => t.id)).toEqual(['fatima', 'empresa'])
+  })
+})
+
+describe('compararNoDia', () => {
+  const item = (nome: string, extra: Partial<ItemDoDia['tarefa']> = {}, tipo: Partial<Pick<ItemDoDia, 'prevista' | 'decorre'>> = {}) => ({
+    nome,
+    tarefa: { estado: 'por_fazer' as const, hora: null, prioridade: null, concluida_em: null, criado_em: '2026-11-01T10:00:00Z', ...extra },
+    prevista: false,
+    ...tipo,
+  })
+  const ordenar = (itens: ReturnType<typeof item>[]) => [...itens].sort(compararNoDia).map((i) => i.nome)
+
+  it('põe as concluídas no fundo e o que falta fazer em cima', () => {
+    expect(
+      ordenar([
+        item('feita cedo', { estado: 'feito', concluida_em: '2026-11-16T08:00:00Z', hora: '07:00:00' }),
+        item('por fazer'),
+        item('feita tarde', { estado: 'feito', concluida_em: '2026-11-16T15:00:00Z' }),
+        item('em curso', { estado: 'em_curso' }),
+      ])
+    ).toEqual(['por fazer', 'em curso', 'feita cedo', 'feita tarde'])
+  })
+
+  it('ordena o que falta pela hora marcada; sem hora vem depois', () => {
+    expect(ordenar([item('sem hora'), item('às 12h30', { hora: '12:30:00' }), item('às 9h', { hora: '09:00:00' })])).toEqual(['às 9h', 'às 12h30', 'sem hora'])
+  })
+
+  it('à mesma hora: primeiro as que já existem, depois as previstas; e a prioridade desempata', () => {
+    expect(
+      ordenar([
+        item('prevista', {}, { prevista: true }),
+        item('normal'),
+        item('alta', { prioridade: 'alta' }),
+        item('a decorrer', {}, { decorre: true }),
+        item('prevista às 8h', { hora: '08:00:00' }, { prevista: true }),
+      ])
+    ).toEqual(['prevista às 8h', 'alta', 'normal', 'prevista', 'a decorrer'])
   })
 })

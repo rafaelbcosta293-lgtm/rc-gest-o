@@ -258,6 +258,34 @@ export function ocorrenciasPrevistas(t: Repeticao & Pick<Tarefa, 'prazo'>, de: s
   return datas
 }
 
+// ── Ordem dentro de um dia (calendário) ──────────────────────────────
+// O que está por fazer fica em cima, do mais urgente para o menos: pela
+// hora marcada (as que não têm hora vêm depois), a seguir as que já
+// existem antes das previstas (rotinas que ainda vão nascer) e, em
+// igualdade, pela prioridade. Depois, as tarefas de vários dias que
+// ainda estão a decorrer. As concluídas vão para o fundo, pela ordem em
+// que foram feitas — para não ocuparem o topo.
+export type ItemDoDia = {
+  tarefa: Pick<Tarefa, 'estado' | 'hora' | 'prioridade' | 'concluida_em' | 'criado_em'>
+  prevista: boolean
+  decorre?: boolean
+}
+
+const PESO_PRIORIDADE: Record<Prioridade, number> = { alta: 0, media: 1, baixa: 2 }
+
+export function compararNoDia(a: ItemDoDia, b: ItemDoDia): number {
+  const grupo = (i: ItemDoDia) => (!i.prevista && i.tarefa.estado === 'feito' ? 2 : i.decorre ? 1 : 0)
+  const peso = (i: ItemDoDia) => (i.tarefa.prioridade ? PESO_PRIORIDADE[i.tarefa.prioridade] : 3)
+  if (grupo(a) !== grupo(b)) return grupo(a) - grupo(b)
+  if (grupo(a) === 2) return (a.tarefa.concluida_em ?? '').localeCompare(b.tarefa.concluida_em ?? '')
+  return (
+    (a.tarefa.hora ?? '99').localeCompare(b.tarefa.hora ?? '99') ||
+    Number(a.prevista) - Number(b.prevista) ||
+    peso(a) - peso(b) ||
+    a.tarefa.criado_em.localeCompare(b.tarefa.criado_em)
+  )
+}
+
 // ── Estatísticas (painel) ────────────────────────────────────────────
 
 export type TarefaFeita = Pick<

@@ -1,7 +1,7 @@
 import Link from '@/components/LinkRapido'
 import { ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
 import { inicioDaSemana } from '@/lib/data/horarios'
-import { DIAS_DA_SEMANA, diaDaSemanaISO, ocorrenciasPrevistas, repeteSe, type Tarefa } from '@/lib/data/tarefas'
+import { compararNoDia, DIAS_DA_SEMANA, diaDaSemanaISO, ocorrenciasPrevistas, repeteSe, type Tarefa } from '@/lib/data/tarefas'
 import ConcluirTarefa from './ConcluirTarefa'
 import { AbrirTarefa, EditarComBotaoDireito, MaisNoDia } from './JanelaTarefas'
 import { horaCurta, LinhaTarefa, type Contexto } from './partes'
@@ -10,7 +10,9 @@ import { horaCurta, LinhaTarefa, type Contexto } from './partes'
 // Cada tarefa aparece no dia do seu prazo (e, se tem data de início,
 // nos dias entre o início e o prazo); as rotinas que se repetem mostram
 // também as vezes seguintes como "previstas" (a tracejado) — essas
-// ainda não existem, nascem quando a anterior é concluída.
+// ainda não existem, nascem quando a anterior é concluída. Em cada dia,
+// o que está por fazer fica em cima (pela hora) e o que já foi feito
+// desce para o fundo.
 // Clicar numa tarefa com o botão direito do rato abre a janela para a
 // editar, sem sair do calendário.
 
@@ -99,8 +101,7 @@ const MAX_DIAS_A_DECORRER = 60
 function itensPorDia(tarefas: Tarefa[], de: string, ate: string, comRotinas: boolean): Map<string, Item[]> {
   const mapa = new Map<string, Item[]>()
   const por = (data: string, item: Item) => mapa.set(data, [...(mapa.get(data) ?? []), item])
-  const ordenadas = [...tarefas].sort((a, b) => (a.hora ?? '99').localeCompare(b.hora ?? '99'))
-  for (const t of ordenadas) {
+  for (const t of tarefas) {
     if (!t.prazo || (!comRotinas && repeteSe(t))) continue
     if (t.prazo >= de && t.prazo <= ate) por(t.prazo, { tarefa: t, prevista: false })
     if (t.inicio && t.inicio < t.prazo && t.estado !== 'feito') {
@@ -109,6 +110,8 @@ function itensPorDia(tarefas: Tarefa[], de: string, ate: string, comRotinas: boo
     }
     if (t.estado !== 'feito') for (const data of ocorrenciasPrevistas(t, de, ate)) por(data, { tarefa: t, prevista: true })
   }
+  // Em cada dia: por fazer em cima (da mais urgente para a menos), feitas no fundo.
+  for (const itens of mapa.values()) itens.sort(compararNoDia)
   return mapa
 }
 

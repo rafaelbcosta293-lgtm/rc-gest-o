@@ -1,5 +1,5 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, Check, Lock, Play, Star } from 'lucide-react'
+import { ArrowLeft, Check, Lock, Play, Repeat, Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ehContaFixa } from '@/lib/data/acessos'
@@ -8,15 +8,19 @@ import { hojeEmLisboa } from '@/lib/data/hoje'
 import {
   agruparTarefas,
   carregarTarefas,
+  descricaoRepeticao,
+  DIAS_DA_SEMANA,
   DIAS_FEITAS_VISIVEIS,
   DIAS_TAREFA_PARADA,
   emFoco,
+  escolhaDeRepeticao,
   ESTADOS_TAREFA,
   filtrarTarefas,
   haQuantoTempo,
   idadeEmDias,
   MAX_FOCO_POR_PESSOA,
   pessoasParaTarefas,
+  REPETICOES_TAREFA,
   type Tarefa,
 } from '@/lib/data/tarefas'
 import SubmitButton from '@/components/SubmitButton'
@@ -117,6 +121,11 @@ function Pastilhas({ t, ctx }: { t: Tarefa; ctx: Contexto }) {
       )}
       {t.estado === 'em_curso' && (
         <span className="inline-flex items-center rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] font-bold text-sky-800 dark:text-sky-200">Em curso</span>
+      )}
+      {descricaoRepeticao(t) && (
+        <span className={pastilhaCls} title="Ao concluir, volta a aparecer no dia seguinte em que se faz">
+          <Repeat className="h-3 w-3" /> {descricaoRepeticao(t)}
+        </span>
       )}
       <span className={pastilhaCls}>{t.responsavel_id ? (ctx.nomePessoa.get(t.responsavel_id) ?? 'Sem responsável') : 'Sem responsável'}</span>
       {t.lista && <span className={pastilhaCls}>{t.lista}</span>}
@@ -328,6 +337,30 @@ function CamposTarefa({
           </select>
         </label>
       </div>
+      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <label className={rotuloCls}>
+          Repetir
+          <select name="repeticao" defaultValue={tarefa ? escolhaDeRepeticao(tarefa) : 'nao'} className={campoCls}>
+            {REPETICOES_TAREFA.map((r) => (
+              <option key={r.valor} value={r.valor}>
+                {r.rotulo}
+              </option>
+            ))}
+          </select>
+        </label>
+        <fieldset className="flex flex-col gap-1 text-xs font-medium text-muted">
+          <legend className="mb-1">Dias (só para “dias da semana escolhidos”)</legend>
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5 py-1.5">
+            {DIAS_DA_SEMANA.map((d) => (
+              <label key={d.valor} className="flex items-center gap-1.5 text-sm text-foreground">
+                <input type="checkbox" name="dia" value={d.valor} defaultChecked={tarefa?.repete_dias?.includes(d.valor) ?? false} className="h-4 w-4" />
+                {d.curto}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      </div>
+      <p className="-mt-1 text-xs text-muted">Uma tarefa que se repete volta a aparecer, com o prazo seguinte, quando é concluída.</p>
       <textarea name="descricao" rows={tarefa?.descricao ? 4 : 2} defaultValue={tarefa?.descricao ?? ''} placeholder="Detalhes (opcional)" className={campoCls} />
       {podeReservar && (
         <label className="flex items-center gap-2 text-xs font-medium text-muted">

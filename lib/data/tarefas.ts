@@ -23,12 +23,16 @@ export type Tarefa = {
   estado: EstadoTarefa
   foco_semana: string | null
   reservada: boolean
+  // Dias da semana em que se repete (1 = segunda … 7 = domingo).
+  repete_dias: number[] | null
+  // Repete todos os meses, no dia do prazo.
+  repete_mensal: boolean
   concluida_em: string | null
   criado_em: string
 }
 
 export const COLUNAS_TAREFA =
-  'id, titulo, descricao, lista, estudio_id, responsavel_id, prazo, estado, foco_semana, reservada, concluida_em, criado_em'
+  'id, titulo, descricao, lista, estudio_id, responsavel_id, prazo, estado, foco_semana, reservada, repete_dias, repete_mensal, concluida_em, criado_em'
 
 // Cada pessoa escolhe no máximo estas tarefas para a semana — a ideia do
 // foco é obrigar a escolher, não fazer uma segunda lista de tudo.
@@ -38,6 +42,99 @@ export const MAX_FOCO_POR_PESSOA = 3
 export const DIAS_FEITAS_VISIVEIS = 14
 // Uma tarefa sem prazo parada há mais do que isto fica assinalada.
 export const DIAS_TAREFA_PARADA = 30
+
+// ── Tarefas que se repetem ───────────────────────────────────────────
+// Como no Asana: ao concluir uma tarefa que se repete, nasce a seguinte
+// com o próximo prazo (ver app/painel/tarefasActions.ts).
+
+export const DIAS_DA_SEMANA = [
+  { valor: 1, curto: 'seg' },
+  { valor: 2, curto: 'ter' },
+  { valor: 3, curto: 'qua' },
+  { valor: 4, curto: 'qui' },
+  { valor: 5, curto: 'sex' },
+  { valor: 6, curto: 'sáb' },
+  { valor: 7, curto: 'dom' },
+]
+
+// As escolhas do formulário. "dias" usa as caixas dos dias da semana.
+export const REPETICOES_TAREFA: { valor: string; rotulo: string; dias?: number[] }[] = [
+  { valor: 'nao', rotulo: 'Não se repete' },
+  { valor: 'uteis', rotulo: 'Dias úteis (seg a sex)', dias: [1, 2, 3, 4, 5] },
+  { valor: 'seg-sab', rotulo: 'Segunda a sábado', dias: [1, 2, 3, 4, 5, 6] },
+  { valor: 'todos', rotulo: 'Todos os dias', dias: [1, 2, 3, 4, 5, 6, 7] },
+  { valor: 'dias', rotulo: 'Nos dias da semana escolhidos' },
+  { valor: 'mensal', rotulo: 'Todos os meses' },
+]
+
+type Repeticao = Pick<Tarefa, 'repete_dias' | 'repete_mensal'>
+
+export function repeteSe(t: Repeticao): boolean {
+  return t.repete_mensal || (t.repete_dias?.length ?? 0) > 0
+}
+
+// Que escolha do formulário corresponde a esta tarefa.
+export function escolhaDeRepeticao(t: Repeticao): string {
+  if (t.repete_mensal) return 'mensal'
+  const dias = [...(t.repete_dias ?? [])].sort().join(',')
+  if (!dias) return 'nao'
+  return REPETICOES_TAREFA.find((r) => r.dias?.join(',') === dias)?.valor ?? 'dias'
+}
+
+// "dias úteis", "seg a sáb", "seg e sex", "todos os meses"…
+export function descricaoRepeticao(t: Repeticao): string | null {
+  if (t.repete_mensal) return 'todos os meses'
+  const dias = [...(t.repete_dias ?? [])].sort()
+  if (dias.length === 0) return null
+  const chave = dias.join(',')
+  if (chave === '1,2,3,4,5') return 'dias úteis'
+  if (chave === '1,2,3,4,5,6') return 'seg a sáb'
+  if (chave === '1,2,3,4,5,6,7') return 'todos os dias'
+  const nomes = dias.map((d) => DIAS_DA_SEMANA[d - 1].curto)
+  return nomes.length === 1 ? `${nomes[0]}, todas as semanas` : `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`
+}
+
+const UM_DIA_MS = 86_400_000
+const paraISO = (ms: number) => new Date(ms).toISOString().slice(0, 10)
+const deISO = (iso: string) => Date.parse(`${iso}T00:00:00Z`)
+
+// 1 = segunda … 7 = domingo.
+export function diaDaSemanaISO(dataISO: string): number {
+  return new Date(deISO(dataISO)).getUTCDay() || 7
+}
+
+// O primeiro dia, a partir de "desde" (inclusive), que calha num dos
+// dias da semana pedidos.
+export function primeiroDiaEm(dias: number[], desde: string): string {
+  let ms = deISO(desde)
+  for (let i = 0; i < 7 && !dias.includes(diaDaSemanaISO(paraISO(ms))); i++) ms += UM_DIA_MS
+  return paraISO(ms)
+}
+
+// O mesmo dia do mês seguinte; um prazo no último dia do mês passa para
+// o último dia do mês seguinte (31/01 → 28/02 → 31/03).
+function mesSeguinte(iso: string): string {
+  const [ano, mes, dia] = iso.split('-').map(Number)
+  const ultimoDeste = new Date(Date.UTC(ano, mes, 0)).getUTCDate()
+  const ultimoDoSeguinte = new Date(Date.UTC(ano, mes + 1, 0)).getUTCDate()
+  const novoDia = dia === ultimoDeste ? ultimoDoSeguinte : Math.min(dia, ultimoDoSeguinte)
+  return paraISO(Date.UTC(ano, mes, novoDia))
+}
+
+// O prazo da vez seguinte de uma tarefa que se repete, ou null se não
+// se repete. É sempre depois de hoje: concluir com atraso uma tarefa
+// diária não cria uma fila de dias que já passaram.
+export function proximaOcorrencia(t: Repeticao & Pick<Tarefa, 'prazo'>, hoje: string): string | null {
+  if (!repeteSe(t)) return null
+  const prazo = t.prazo ?? hoje
+  if (t.repete_mensal) {
+    let seguinte = mesSeguinte(prazo)
+    while (seguinte <= hoje) seguinte = mesSeguinte(seguinte)
+    return seguinte
+  }
+  const base = prazo > hoje ? prazo : hoje
+  return primeiroDiaEm(t.repete_dias!, paraISO(deISO(base) + UM_DIA_MS))
+}
 
 export function idadeEmDias(criadoEm: string, hoje: string): number {
   const inicio = Date.parse(`${criadoEm.slice(0, 10)}T00:00:00Z`)

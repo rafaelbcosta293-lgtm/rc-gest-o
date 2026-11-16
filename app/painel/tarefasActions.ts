@@ -6,7 +6,18 @@ import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { inicioDaSemana } from '@/lib/data/horarios'
-import { COLUNAS_TAREFA, ESTADOS_TAREFA, MAX_FOCO_POR_PESSOA, emFoco, type EstadoTarefa, type Tarefa } from '@/lib/data/tarefas'
+import {
+  COLUNAS_TAREFA,
+  ESTADOS_TAREFA,
+  MAX_FOCO_POR_PESSOA,
+  REPETICOES_TAREFA,
+  emFoco,
+  primeiroDiaEm,
+  proximaOcorrencia,
+  repeteSe,
+  type EstadoTarefa,
+  type Tarefa,
+} from '@/lib/data/tarefas'
 
 // As Tarefas aparecem em três sítios (cada estúdio, Coordenação e
 // Administração) com o mesmo ecrã — as ações são as mesmas e voltam
@@ -38,8 +49,28 @@ async function exigirSessao(formData: FormData) {
   return { sessao, supabase: await createClient(), ...papeisDaSessao(sessao) }
 }
 
+// A repetição escolhida no formulário e o prazo que daí resulta: uma
+// tarefa que se repete tem sempre prazo — sem ele, fica o primeiro dia
+// que calhe (hoje incluído); e um prazo num dia em que a tarefa não se
+// faz passa para o dia seguinte em que se faz.
+function lerRepeticao(
+  formData: FormData,
+  prazo: string | null
+): { repete_dias: number[] | null; repete_mensal: boolean; prazo: string | null } {
+  const escolha = REPETICOES_TAREFA.find((r) => r.valor === texto(formData, 'repeticao'))
+  const hoje = hojeEmLisboa()
+  if (escolha?.valor === 'mensal') return { repete_dias: null, repete_mensal: true, prazo: prazo ?? hoje }
+  const dias =
+    escolha?.dias ??
+    (escolha?.valor === 'dias'
+      ? [...new Set(formData.getAll('dia').map(Number).filter((d) => Number.isInteger(d) && d >= 1 && d <= 7))].sort()
+      : [])
+  if (dias.length === 0) return { repete_dias: null, repete_mensal: false, prazo }
+  return { repete_dias: dias, repete_mensal: false, prazo: primeiroDiaEm(dias, prazo ?? hoje) }
+}
+
 function lerCampos(formData: FormData, ehAdmin: boolean) {
-  const prazo = texto(formData, 'prazo')
+  const prazoTexto = texto(formData, 'prazo')
   const estudio = texto(formData, 'estudio_id')
   return {
     titulo: texto(formData, 'titulo'),
@@ -47,7 +78,7 @@ function lerCampos(formData: FormData, ehAdmin: boolean) {
     lista: texto(formData, 'lista'),
     estudio_id: estudio ? Number(estudio) : null,
     responsavel_id: texto(formData, 'responsavel_id'),
-    prazo: prazo && DATA.test(prazo) ? prazo : null,
+    ...lerRepeticao(formData, prazoTexto && DATA.test(prazoTexto) ? prazoTexto : null),
     // Só a administração pode reservar uma tarefa (ou tirar-lhe a reserva).
     ...(ehAdmin ? { reservada: formData.get('reservada') === '1' } : {}),
   }
@@ -68,14 +99,48 @@ export async function atualizarTarefa(formData: FormData) {
   const campos = lerCampos(formData, ehAdmin)
   if (!id) voltar(formData)
   if (!campos.titulo) voltar(formData, { error: 'O título não pode ficar em branco.', editar: id! })
+  const { error } = await supabase.from('tarefas').update(campos).eq('id', id)
+  if (error) voltar(formData, { error: error.message, editar: id! })
   const estado = texto(formData, 'estado') as EstadoTarefa | null
-  const mudaEstado = estado && ESTADOS_TAREFA.some((e) => e.valor === estado)
+  if (estado && ESTADOS_TAREFA.some((e) => e.valor === estado)) {
+    const erro = await aplicarEstado(supabase, id!, estado, sessao.userId)
+    if (erro) voltar(formData, { error: erro, editar: id! })
+  }
+  voltar(formData, { ok: 'guardada' })
+}
+
+type Cliente = Awaited<ReturnType<typeof createClient>>
+
+// Muda o estado de uma tarefa. Ao concluir uma que se repete, cria
+// primeiro a vez seguinte (com o próximo prazo) e só depois fecha esta —
+// que deixa de ser "a que se repete": a série continua na nova. Assim,
+// reabrir uma tarefa já concluída nunca dá duas séries iguais.
+// Devolve a mensagem de erro, ou null se correu bem.
+async function aplicarEstado(supabase: Cliente, id: string, estado: EstadoTarefa, userId: string | null): Promise<string | null> {
+  const { data, error: erroLer } = await supabase.from('tarefas').select(COLUNAS_TAREFA).eq('id', id).maybeSingle()
+  if (erroLer || !data) return erroLer?.message ?? 'Tarefa não encontrada.'
+  const atual = data as Tarefa
+  if (atual.estado === estado) return null
+
+  if (estado === 'feito' && repeteSe(atual)) {
+    const { error: erroSeguinte } = await supabase.from('tarefas').insert({
+      titulo: atual.titulo,
+      descricao: atual.descricao,
+      lista: atual.lista,
+      estudio_id: atual.estudio_id,
+      responsavel_id: atual.responsavel_id,
+      reservada: atual.reservada,
+      repete_dias: atual.repete_dias,
+      repete_mensal: atual.repete_mensal,
+      prazo: proximaOcorrencia(atual, hojeEmLisboa()),
+    })
+    if (erroSeguinte) return erroSeguinte.message
+  }
   const { error } = await supabase
     .from('tarefas')
-    .update({ ...campos, ...(mudaEstado ? camposDoEstado(estado, sessao.userId) : {}) })
+    .update({ ...camposDoEstado(estado, userId), ...(estado === 'feito' ? { repete_dias: null, repete_mensal: false } : {}) })
     .eq('id', id)
-  if (error) voltar(formData, { error: error.message, editar: id! })
-  voltar(formData, { ok: 'guardada' })
+  return error?.message ?? null
 }
 
 function camposDoEstado(estado: EstadoTarefa, userId: string | null) {
@@ -90,8 +155,8 @@ export async function mudarEstadoTarefa(formData: FormData) {
   const id = texto(formData, 'id')
   const estado = texto(formData, 'estado') as EstadoTarefa | null
   if (!id || !estado || !ESTADOS_TAREFA.some((e) => e.valor === estado)) voltar(formData)
-  const { error } = await supabase.from('tarefas').update(camposDoEstado(estado!, sessao.userId)).eq('id', id)
-  if (error) voltar(formData, { error: error.message })
+  const erro = await aplicarEstado(supabase, id!, estado!, sessao.userId)
+  if (erro) voltar(formData, { error: erro })
   voltar(formData, { ok: estado === 'feito' ? 'concluida' : estado === 'em_curso' ? 'em-curso' : 'reaberta' })
 }
 

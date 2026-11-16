@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
-import { ALERTAS, CORREU } from '@/lib/data/constantes'
+import { ALERTAS, CORREU, estiloDaNota, tipoDaNota } from '@/lib/data/constantes'
 import { iniciarTreino, apagarSessao } from './treino/actions'
 import SubmitButton from '@/components/SubmitButton'
 import ApagarSessaoForm from './ApagarSessaoForm'
@@ -21,6 +21,7 @@ type SessaoComExtras = {
   foco: string | null
   correu: string | null
   nota_proxima: string
+  tipo_nota: string | null
   pt: { nome: string } | null
   sessao_exercicios: { count: number }[]
 }
@@ -43,7 +44,7 @@ export default async function FichaClientePage({
     supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle(),
     supabase
       .from('sessoes')
-      .select('id, data, foco, correu, nota_proxima, pt:perfis!pt_id(nome), sessao_exercicios(count)')
+      .select('id, data, foco, correu, nota_proxima, tipo_nota, pt:perfis!pt_id(nome), sessao_exercicios(count)')
       .eq('cliente_id', clienteId)
       .order('data', { ascending: false }),
     getSessaoAtual(),
@@ -61,6 +62,7 @@ export default async function FichaClientePage({
   const ultima = lista.find((s) => s.correu)
   const porRegistar = lista.filter((s) => !s.correu && s.data <= hoje).length
   const a = ALERTAS[cliente.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
+  const temAlertaNaFicha = !!cliente.alerta && cliente.alerta !== 'Nenhum'
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -105,13 +107,28 @@ export default async function FichaClientePage({
       </div>
 
       <section className="mt-6 overflow-hidden rounded-xl border-2 border-border-subtle">
-        <div
-          className="px-4 py-2.5 text-sm"
-          style={{ background: a.bg, color: a.tx }}
-        >
-          <strong>{a.label}</strong>
-          {cliente.alerta_detalhe && <span> — {cliente.alerta_detalhe}</span>}
-        </div>
+        {/* O alerta da ficha do cliente (lesão, limitação…) só aparece
+            quando existe. Sem alerta na ficha, o título passa a ser o
+            tipo da nota do último treino, com a cor da sua gravidade —
+            antes dizia sempre "Sem alertas", a verde, mesmo com uma nota
+            de lesão escrita por baixo. */}
+        {temAlertaNaFicha && (
+          <div className="px-4 py-2.5 text-sm" style={{ background: a.bg, color: a.tx }}>
+            <strong>{a.label}</strong>
+            {cliente.alerta_detalhe && <span> — {cliente.alerta_detalhe}</span>}
+          </div>
+        )}
+        {ultima?.nota_proxima ? (
+          <div className={`px-4 py-2.5 text-sm ${estiloDaNota(ultima.tipo_nota).caixa}`}>
+            <strong>Nota do último treino: {tipoDaNota(ultima.tipo_nota)}</strong>
+          </div>
+        ) : (
+          !temAlertaNaFicha && (
+            <div className={`px-4 py-2.5 text-sm ${estiloDaNota(null).caixa}`}>
+              <strong>Sem alertas</strong>
+            </div>
+          )
+        )}
         {cliente.evento && (
           <div className="bg-purple-50 px-4 py-2 text-xs text-purple-700 dark:bg-purple-950 dark:text-purple-300">
             🏁 {cliente.evento}
@@ -122,7 +139,7 @@ export default async function FichaClientePage({
           {ultima?.nota_proxima ? (
             <>
               <div className="text-[11px] uppercase tracking-wide text-muted">
-                Nota do último treino · {fmt(ultima.data)} · {ultima.pt?.nome ?? '—'}
+                {fmt(ultima.data)} · {ultima.pt?.nome ?? '—'}
               </div>
               <p className="mt-2 text-base font-medium text-foreground">
                 {ultima.nota_proxima}
@@ -193,8 +210,8 @@ export default async function FichaClientePage({
                     <span className="text-xs text-muted">{s.pt?.nome ?? '—'}</span>
                   </div>
                   {s.nota_proxima && (
-                    <p className="mt-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                      ⚑ {s.nota_proxima}
+                    <p className={`mt-1.5 rounded-md px-2.5 py-1.5 text-sm ${estiloDaNota(s.tipo_nota).caixa}`}>
+                      <strong>{tipoDaNota(s.tipo_nota)}:</strong> {s.nota_proxima}
                     </p>
                   )}
                   {numExercicios > 0 && (

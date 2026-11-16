@@ -2,7 +2,7 @@
 
 import { Fragment, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { BLOCOS, BLOCO_COR, CORREU } from '@/lib/data/constantes'
+import { BLOCOS, BLOCO_COR, CORREU, estiloDaNota, TIPOS_NOTA } from '@/lib/data/constantes'
 import type { BlocoTipo } from '@/lib/data/constantes'
 import type { CatalogoExercicios, ItemCatalogo } from '@/lib/data/catalogo'
 import ExercicioPicker from './ExercicioPicker'
@@ -539,7 +539,7 @@ export default function TreinoForm({
             <div>
               <p className={labelCompactoCls}>Tipo de nota</p>
               <div className="mt-1.5 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Tipo de nota">
-                {['Normal', 'Ajuste', 'Excelente', 'Lesão', 'Doença', 'Prova/Evento'].map((k) => (
+                {TIPOS_NOTA.map((k) => (
                   <button
                     key={k}
                     type="button"
@@ -550,9 +550,7 @@ export default function TreinoForm({
                       marcarSujo()
                     }}
                     className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                      tipoNota === k
-                        ? 'border-brand bg-brand/15 text-foreground'
-                        : 'border-border-subtle text-muted hover:text-foreground'
+                      tipoNota === k ? estiloDaNota(k).botao : 'border-border-subtle text-muted hover:text-foreground'
                     }`}
                   >
                     {k}

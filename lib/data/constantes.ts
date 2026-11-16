@@ -80,6 +80,31 @@ export const ALERTAS = {
 
 export type AlertaTipo = keyof typeof ALERTAS
 
+// Tipos de nota que o PT deixa no fim de um treino, e a cor com que cada
+// uma aparece: a gravidade lê-se pela cor. Lesão e doença a vermelho,
+// excelente a verde; normal, ajuste e prova/evento ficam na cor do ecrã
+// (sem destaque).
+export const TIPOS_NOTA = ['Normal', 'Ajuste', 'Excelente', 'Lesão', 'Doença', 'Prova/Evento'] as const
+export type TipoNota = (typeof TIPOS_NOTA)[number]
+
+const ESTILO_NOTA_NEUTRA = { caixa: 'bg-foreground/[.05] text-foreground', botao: 'border-border-strong bg-foreground/[.07] text-foreground' }
+const ESTILOS_NOTA: Partial<Record<TipoNota, { caixa: string; botao: string }>> = {
+  Excelente: { caixa: 'bg-emerald-100 text-emerald-900', botao: 'border-emerald-600 bg-emerald-100 text-emerald-900' },
+  Lesão: { caixa: 'bg-red-100 text-red-900', botao: 'border-red-600 bg-red-100 text-red-900' },
+  Doença: { caixa: 'bg-red-100 text-red-900', botao: 'border-red-600 bg-red-100 text-red-900' },
+}
+
+// "caixa": fundo e texto de onde a nota aparece; "botao": o botão do
+// tipo escolhido no formulário do treino.
+export function estiloDaNota(tipo: string | null | undefined) {
+  return ESTILOS_NOTA[tipo as TipoNota] ?? ESTILO_NOTA_NEUTRA
+}
+
+// Uma nota sem tipo guardado (treinos antigos) conta como Normal.
+export function tipoDaNota(tipo: string | null | undefined): TipoNota {
+  return (TIPOS_NOTA as readonly string[]).includes(tipo ?? '') ? (tipo as TipoNota) : 'Normal'
+}
+
 export const CORREU = {
   'Muito bem': PALETA.verde,
   Bem: PALETA.teal,

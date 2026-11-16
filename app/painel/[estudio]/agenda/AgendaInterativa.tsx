@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Minus, Plus, HelpCircle, TriangleAlert } from 'lucide-react'
+import { Minus, Plus, HelpCircle, StickyNote, TriangleAlert } from 'lucide-react'
 import type { ClienteOpcao } from '@/components/ClienteCombobox'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
@@ -108,6 +108,13 @@ function avisosEvento(grupo: EventoComNomes[]): string | null {
     })
     .filter((l): l is string => !!l)
   return linhas.length > 0 ? linhas.join('\n') : null
+}
+
+// A nota deixada no agendamento (num treino em simultâneo é a mesma em
+// todas as pessoas; se por acaso diferirem, mostram-se todas, sem repetir).
+function notaDoEvento(grupo: EventoComNomes[]): string | null {
+  const notas = [...new Set(grupo.map((e) => e.nota?.trim()).filter((n): n is string => !!n))]
+  return notas.length > 0 ? notas.join('\n') : null
 }
 
 function minutosParaHora(minutos: number) {
@@ -979,6 +986,7 @@ function ColunaDia({
         const emSelecionado = selecionadoId === evento.id
         const numerosSocio = numerosSocioEvento(grupo)
         const avisos = avisosEvento(grupo)
+        const nota = notaDoEvento(grupo)
         const cancelado = evento.estado === 'Cancelado'
         // Os treinos já passados ficam com a cor toda (são os que
         // aconteceram — é a eles que se quer dar evidência); só os
@@ -1112,6 +1120,18 @@ function ColunaDia({
             {avisos && (
               <span title={avisos} className="absolute top-0.5 right-0.5 rounded-sm bg-white/90 p-px">
                 <TriangleAlert className="h-3 w-3 text-red-600" strokeWidth={2.5} />
+              </span>
+            )}
+            {/* Há uma nota neste agendamento — o mesmo género de aviso, ao
+                lado do triângulo (ou no lugar dele, se não houver): passa
+                o rato por cima para a ler sem abrir o evento. */}
+            {nota && (
+              <span
+                title={`Nota: ${nota}`}
+                aria-label={`Nota: ${nota}`}
+                className={`absolute top-0.5 rounded-sm bg-white/90 p-px ${avisos ? 'right-[1.15rem]' : 'right-0.5'}`}
+              >
+                <StickyNote className="h-3 w-3 text-blue-600" strokeWidth={2.5} />
               </span>
             )}
             {/* Pegas de redimensionar, ao estilo Google Calendar — zona de

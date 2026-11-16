@@ -186,10 +186,10 @@ export async function desativarInstrutor(formData: FormData) {
   voltar({ ok: reativar ? 'reativado' : 'desativado' })
 }
 
-// Eliminar de vez: a ficha, a conta de acesso, o registo de horas e as
-// férias desaparecem; o resto do histórico (treinos, pagamentos,
-// tarefas) fica, mas sem o nome dele. Só se não for mesmo possível
-// (registos que não podem ficar sem instrutor) é que fica desativado.
+// Eliminar de vez: sai da equipa e a conta de acesso é destruída; o
+// histórico (escalas, horas, férias, ausências, treinos…) fica guardado
+// — ver lib/data/eliminarInstrutor.ts. Se alguma coisa falhar, fica
+// pelo menos desativado e sem acesso.
 export async function eliminarInstrutor(formData: FormData) {
   const { admin, sessao } = await exigirAdmin()
   const id = String(formData.get('id') ?? '')

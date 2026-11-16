@@ -25,7 +25,7 @@ export default async function EquipaPage({
 
   const [estudio, { data: perfis }, sessao, partilhadas] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
-    supabase.from('perfis').select('id, nome, papel, ativo').order('nome'),
+    supabase.from('perfis').select('id, nome, papel, ativo').is('eliminado_em', null).order('nome'),
     getSessaoAtual(),
     idsContasPartilhadas(),
   ])
@@ -75,7 +75,7 @@ export default async function EquipaPage({
       )}
 
       {ok === 'eliminado' && (
-        <p className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">Instrutor eliminado de vez.</p>
+        <p className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">Instrutor eliminado. O histórico dele (escalas, horas, férias e ausências) ficou guardado.</p>
       )}
 
       <div className="mt-6 flex flex-col gap-2">
@@ -139,7 +139,7 @@ export default async function EquipaPage({
                 {podeEliminar(p.id) && (
                   <ConfirmarAcao
                     action={eliminarDaEquipa}
-                    confirmacao={`Eliminar ${p.nome} de vez? Não dá para desfazer.\n\nApaga a ficha, a conta de acesso, as escalas, o registo de horas, as férias e as ausências. Os treinos, avaliações, pagamentos e tarefas antigos ficam, mas sem o nome.\n\nSe só queres que deixe de entrar neste estúdio, usa "Remover acesso".`}
+                    confirmacao={`Eliminar ${p.nome} de vez? Não dá para desfazer.\n\nSai da equipa e a conta de acesso é apagada (deixa de poder entrar e o email fica livre). As escalas passadas, o registo de horas, as férias e as ausências ficam guardados no histórico.\n\nSe só queres que deixe de entrar neste estúdio, usa "Remover acesso".`}
                   >
                     <input type="hidden" name="estudio_slug" value={slug} />
                     <input type="hidden" name="perfil_id" value={p.id} />

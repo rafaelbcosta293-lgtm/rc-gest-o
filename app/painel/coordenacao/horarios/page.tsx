@@ -133,7 +133,7 @@ async function PainelHorariosEstudio({
       .lt('data', fimSemanaExclusivo)
       .order('criado_em'),
     getEquipaDoEstudio(supabase, estudio.id),
-    supabase.from('perfis').select('id, nome, papel, ativo').order('nome'),
+    supabase.from('perfis').select('id, nome, papel, ativo').is('eliminado_em', null).order('nome'),
   ])
 
   if (erroEscala) {

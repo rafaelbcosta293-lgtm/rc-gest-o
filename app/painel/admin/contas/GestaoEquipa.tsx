@@ -108,7 +108,7 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
   const [{ data: contas, error: erroContas }, { data: perfis, error: erroPerfis }, { data: ligacoes, error: erroLigacoes }] =
     await Promise.all([
       admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-      admin.from('perfis').select('id, nome, telefone, papel, ativo'),
+      admin.from('perfis').select('id, nome, telefone, papel, ativo, eliminado_em'),
       admin.from('perfis_estudios').select('perfil_id, estudio_id'),
     ])
   const erro = erroContas ?? erroPerfis ?? erroLigacoes
@@ -116,7 +116,8 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
 
   const perfilPorId = new Map((perfis ?? []).map((p) => [p.id as string, p]))
   const pessoas: Pessoa[] = contas.users
-    .filter((u) => !ehContaFixa(u.email ?? null))
+    // Os eliminados ficam só como arquivo do histórico: não aparecem aqui.
+    .filter((u) => !ehContaFixa(u.email ?? null) && !perfilPorId.get(u.id)?.eliminado_em)
     .map((u) => {
       const perfil = perfilPorId.get(u.id)
       const permissoes = permissoesDaConta(u.app_metadata)
@@ -280,7 +281,7 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
                   </ConfirmarAcao>
                   <ConfirmarAcao
                     action={eliminarInstrutor}
-                    confirmacao={`Eliminar ${p.nome} de vez? Não dá para desfazer. Apaga a ficha, a conta de acesso, as escalas, o registo de horas, as férias e as ausências; os treinos, avaliações, pagamentos e tarefas antigos ficam, mas sem o nome. Para manter o histórico, usa antes "Desativar".`}
+                    confirmacao={`Eliminar ${p.nome} de vez? Não dá para desfazer. Sai da equipa e a conta de acesso é apagada (deixa de poder entrar e o email fica livre). As escalas passadas, o registo de horas, as férias e as ausências ficam guardados no histórico.`}
                   >
                     <input type="hidden" name="id" value={p.id} />
                     <button type="submit" className="rounded-full border border-red-800 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-950">

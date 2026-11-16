@@ -20,7 +20,7 @@ const MENSAGENS_OK: Record<string, string> = {
   'acesso-removido': 'Acesso retirado. O perfil mantém-se.',
   desativado: 'Instrutor desativado.',
   reativado: 'Instrutor reativado — escolhe os estúdios onde trabalha.',
-  eliminado: 'Instrutor eliminado.',
+  eliminado: 'Instrutor eliminado. O histórico dele (escalas, horas, férias e ausências) ficou guardado.',
 }
 
 type LigacaoEstudio = { estudio_id: number; estudio: { nome: string } | null }

@@ -57,10 +57,10 @@ export async function mudarPapel(formData: FormData) {
   redirect(`/painel/${slug}/equipa`)
 }
 
-// Eliminar um instrutor de vez (só a administração): a ficha, a conta
-// de acesso, o registo de horas e as férias desaparecem; o resto do
-// histórico fica, sem o nome dele. As contas fixas do negócio e a
-// própria conta nunca se apagam aqui.
+// Eliminar um instrutor de vez (só a administração): sai da equipa e a
+// conta de acesso é destruída; o histórico (escalas, horas, férias,
+// ausências…) fica guardado — ver lib/data/eliminarInstrutor.ts. As
+// contas fixas do negócio e a própria conta nunca se eliminam aqui.
 export async function eliminarDaEquipa(formData: FormData) {
   const slug = String(formData.get('estudio_slug') ?? '')
   const id = String(formData.get('perfil_id') ?? '')

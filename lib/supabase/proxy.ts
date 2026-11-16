@@ -24,6 +24,7 @@ const PUBLIC_API_PATHS = [
   '/api/cron/lembretes-sms-noite',
   '/api/cron/aniversarios-sms',
   '/api/cron/backup',
+  '/api/cron/registos-instrutores',
   '/api/leads/google-forms',
   '/api/webhooks/leads',
   '/api/webhooks/facebook',

@@ -27,6 +27,7 @@ const TABELAS: Record<string, string[]> = {
   auditoria: ['id'],
   ausencias: ['id'],
   avaliacoes: ['id'],
+  avisos_horario: ['perfil_id', 'estudio_id', 'semana'],
   categorias: ['id'],
   cenarios_simulador: ['id'],
   checklist_modelo: ['id'],
@@ -55,6 +56,8 @@ const TABELAS: Record<string, string[]> = {
   lead_contactos: ['id'],
   lead_stage_history: ['id'],
   leads: ['id'],
+  lembretes: ['id'],
+  lembretes_feitos: ['lembrete_id', 'data'],
   marcos_empresa: ['id'],
   marketing_costs: ['id'],
   outros_caixa: ['id'],
@@ -73,6 +76,8 @@ const TABELAS: Record<string, string[]> = {
   saidas_caixa: ['id'],
   sessao_exercicios: ['id'],
   sessoes: ['id'],
+  tarefas: ['id'],
+  tarefas_comentarios: ['id'],
 }
 
 export async function GET(request: Request) {

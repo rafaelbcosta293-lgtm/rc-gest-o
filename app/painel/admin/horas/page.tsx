@@ -1,5 +1,5 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, FileDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { areaBloqueada } from '@/lib/data/gate'
 import { hojeEmLisboa } from '@/lib/data/hoje'
@@ -12,7 +12,8 @@ import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import { desbloquearAdmin } from '../actions'
 import { botaoCls, botaoSecCls, nomeMes } from '../despesas/partes'
-import { reverHorasDoMes } from './actions'
+import { listarArquivo } from '@/lib/data/arquivoRegistos'
+import { arquivarMes, reverHorasDoMes } from './actions'
 import CopiarResumo from './CopiarResumo'
 
 const ROTA = '/painel/admin/horas'
@@ -30,6 +31,7 @@ const COR_ESTADO: Record<EstadoFecho, string> = {
 const MENSAGENS_OK: Record<string, string> = {
   aprovado: 'Horas do mês aprovadas.',
   reaberto: 'Mês reaberto — o instrutor pode corrigir e submeter de novo.',
+  arquivado: 'PDF guardado no arquivo.',
 }
 
 const diaMes = (iso: string) => {
@@ -52,7 +54,8 @@ export default async function HorasDaEquipaPage({
   const hoje = hojeEmLisboa()
   const mesISO = /^\d{4}-\d{2}$/.test(sp.mes ?? '') ? sp.mes! : hoje.slice(0, 7)
   const [ano, mes] = mesISO.split('-').map(Number)
-  const linhas = await carregarHorasDoMes(supabase, ano, mes, hoje)
+  const [linhas, arquivo] = await Promise.all([carregarHorasDoMes(supabase, ano, mes, hoje), listarArquivo()])
+  const noArquivo = arquivo.find((a) => a.mes === mesISO)
 
   const porAprovar = linhas.filter((l) => l.estado === 'Submetido').length
   const porSubmeter = linhas.filter((l) => l.estado === 'Rascunho').length
@@ -91,6 +94,10 @@ export default async function HorasDaEquipaPage({
             Este mês
           </Link>
         )}
+        {/* <a> simples (e não Link): é um ficheiro para descarregar, não uma página. */}
+        <a href={`${ROTA}/pdf?mes=${mesISO}`} download className={`${botaoCls} ml-auto inline-flex items-center gap-1.5`}>
+          <FileDown className="h-3.5 w-3.5" /> Descarregar PDF de {nomeMes(mesISO)}
+        </a>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -212,6 +219,45 @@ export default async function HorasDaEquipaPage({
           </div>
         </section>
       )}
+      <section className="mt-8 rounded-xl border border-border-subtle bg-surface p-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Arquivo mensal em PDF</h2>
+        <p className="mt-1 text-sm text-muted">
+          Um documento por mês com os registos de cada instrutor — horas dia a dia, férias, ausências e escala — para guardar fora da aplicação. O PDF do
+          mês anterior é guardado sozinho nos dias 1, 6 e 12 de cada mês (para apanhar o que ainda for submetido ou corrigido). Inclui quem entretanto
+          saiu da equipa.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <form action={arquivarMes}>
+            <input type="hidden" name="mes" value={mesISO} />
+            <SubmitButton pendingText="A guardar…" className={botaoSecCls}>
+              {noArquivo ? `Refazer o PDF de ${nomeMes(mesISO)} no arquivo` : `Guardar já ${nomeMes(mesISO)} no arquivo`}
+            </SubmitButton>
+          </form>
+          {noArquivo && <span className="text-xs text-muted">guardado a {diaMes(noArquivo.guardadoEm)}</span>}
+        </div>
+        {arquivo.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">Ainda não há meses guardados.</p>
+        ) : (
+          <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {arquivo.map((a) => (
+              <li key={a.mes}>
+                <a
+                  href={`${ROTA}/pdf?mes=${a.mes}&arquivo=1`}
+                  download
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle px-3 py-2 text-sm hover:border-border-strong hover:bg-foreground/[.05]"
+                >
+                  <span className="flex items-center gap-2 font-semibold text-foreground first-letter:uppercase">
+                    <FileDown className="h-4 w-4 text-muted" /> {nomeMes(a.mes)}
+                  </span>
+                  <span className="text-xs text-muted">
+                    guardado a {diaMes(a.guardadoEm)} · {Math.max(1, Math.round(a.bytes / 1024))} KB
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }

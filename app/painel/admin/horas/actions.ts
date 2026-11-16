@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { podeAcederAdmin } from '@/lib/data/acessos'
+import { hojeEmLisboa } from '@/lib/data/hoje'
+import { arquivarRegistosDoMes } from '@/lib/data/arquivoRegistos'
 
 const ROTA = '/painel/admin/horas'
 
@@ -43,4 +45,20 @@ export async function reverHorasDoMes(formData: FormData) {
   if (error) voltar(mesISO, { error: error.message })
   if (!data || data.length === 0) voltar(mesISO, { error: 'Esse mês ainda não foi submetido.' })
   voltar(mesISO, { ok: aprovar ? 'aprovado' : 'reaberto' })
+}
+
+// Guarda (ou refaz) no arquivo o PDF dos registos dos instrutores de um
+// mês — o mesmo que a tarefa automática faz nos primeiros dias do mês.
+export async function arquivarMes(formData: FormData) {
+  const sessao = await getSessaoAtual()
+  if (!podeAcederAdmin(sessao.email)) redirect('/painel?erro=sem-acesso')
+  const mesISO = String(formData.get('mes') ?? '')
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mesISO)) voltar(mesISO, { error: 'Pedido inválido.' })
+  const [ano, mes] = mesISO.split('-').map(Number)
+  try {
+    await arquivarRegistosDoMes(ano, mes, hojeEmLisboa())
+  } catch (e) {
+    voltar(mesISO, { error: `Não foi possível guardar o PDF no arquivo: ${(e as Error).message}` })
+  }
+  voltar(mesISO, { ok: 'arquivado' })
 }

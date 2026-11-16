@@ -1,9 +1,8 @@
-import Link from '@/components/LinkRapido'
 import { Check, Flag, ListChecks, Lock, Repeat, Star } from 'lucide-react'
 import { descricaoRepeticao, DIAS_TAREFA_PARADA, emFoco, haQuantoTempo, idadeEmDias, type Prioridade, type Tarefa } from '@/lib/data/tarefas'
 import { alternarFocoTarefa, mudarEstadoTarefa } from '@/app/painel/tarefasActions'
 import ConcluirTarefa from './ConcluirTarefa'
-import EditarComBotaoDireito from './EditarComBotaoDireito'
+import { AbrirTarefa, EditarComBotaoDireito } from './JanelaTarefas'
 
 // Peças partilhadas pelas várias vistas das Tarefas (lista, quadro,
 // calendário…). Só cores do tema e variantes "dark:", para servirem nas
@@ -23,7 +22,6 @@ export type Contexto = {
   voltar: string
   nomePessoa: Map<string, string>
   nomeEstudio: Map<number, string>
-  linkEditar: (id: string) => string
   // A equipa (para escolher quem fez) e, numa conta pessoal, quem é.
   pessoas: { id: string; nome: string }[]
   euId: string | null
@@ -179,13 +177,13 @@ export function LinhaTarefa({ t, ctx }: { t: Tarefa; ctx: Contexto }) {
   const parada = !t.prazo && !feita && idade > DIAS_TAREFA_PARADA
 
   return (
-    <EditarComBotaoDireito href={ctx.linkEditar(t.id)} className={`flex items-start gap-3 px-3 py-2.5 ${COLUNAS_LISTA}`}>
+    <EditarComBotaoDireito id={t.id} className={`flex items-start gap-3 px-3 py-2.5 ${COLUNAS_LISTA}`}>
       <ConcluirTarefa id={t.id} titulo={t.titulo} voltar={ctx.voltar} feita={feita} pessoas={ctx.pessoas} euId={ctx.euId} />
 
       {/* Tarefa */}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <Link href={ctx.linkEditar(t.id)} className={`text-sm font-semibold text-foreground hover:underline ${feita ? 'line-through opacity-60' : ''}`}>
+          <AbrirTarefa id={t.id} className={`text-sm font-semibold text-foreground hover:underline ${feita ? 'line-through opacity-60' : ''}`}>
             {t.prioridade && (
               <Flag
                 className={`mr-1.5 inline h-3.5 w-3.5 -translate-y-px ${COR_PRIORIDADE[t.prioridade]}`}
@@ -194,7 +192,7 @@ export function LinhaTarefa({ t, ctx }: { t: Tarefa; ctx: Contexto }) {
               />
             )}
             {t.titulo}
-          </Link>
+          </AbrirTarefa>
           {t.estado === 'em_curso' && (
             <span className="inline-flex items-center rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] font-bold text-sky-800 dark:text-sky-200">
               Em curso

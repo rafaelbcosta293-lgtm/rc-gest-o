@@ -10,6 +10,7 @@ export default function CamposRepeticao({
   inicial,
   campoCls,
   rotuloCls,
+  compacto = false,
 }: {
   inicial: {
     escolha: string
@@ -20,6 +21,8 @@ export default function CamposRepeticao({
   }
   campoCls: string
   rotuloCls: string
+  // Dentro da janela de edição (estreita): sempre a duas colunas.
+  compacto?: boolean
 }) {
   const [escolha, setEscolha] = useState(inicial.escolha)
   const unidade = escolha === 'dias' ? 'semanas' : escolha === 'anual' ? 'anos' : 'meses'
@@ -27,7 +30,7 @@ export default function CamposRepeticao({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      <div className={`grid grid-cols-2 items-end gap-2.5 ${compacto ? '' : 'lg:grid-cols-4'}`}>
         <label className={`${rotuloCls} col-span-2`}>
           Repetir
           <select name="repeticao" value={escolha} onChange={(e) => setEscolha(e.target.value)} className={campoCls}>
@@ -40,7 +43,7 @@ export default function CamposRepeticao({
         </label>
         {comIntervalo && (
           <label className={rotuloCls}>
-            De quantas em quantas {unidade}
+            Intervalo ({unidade})
             <input type="number" name="repete_intervalo" min={1} max={52} defaultValue={inicial.intervalo} className={campoCls} />
           </label>
         )}

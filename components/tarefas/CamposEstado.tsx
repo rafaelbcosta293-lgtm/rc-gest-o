@@ -12,16 +12,19 @@ export default function CamposEstado({
   pessoas,
   campoCls,
   rotuloCls,
+  compacto = false,
 }: {
   estadoInicial: string
   feitaPorInicial: string
   pessoas: { id: string; nome: string }[]
   campoCls: string
   rotuloCls: string
+  // Dentro da janela de edição (estreita): sempre a duas colunas.
+  compacto?: boolean
 }) {
   const [estado, setEstado] = useState(estadoInicial)
   return (
-    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+    <div className={`grid grid-cols-2 gap-2.5 ${compacto ? '' : 'lg:grid-cols-4'}`}>
       <label className={rotuloCls}>
         Estado
         <select name="estado" value={estado} onChange={(e) => setEstado(e.target.value)} className={campoCls}>

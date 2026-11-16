@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
 import { inicioDaSemana } from '@/lib/data/horarios'
 import { DIAS_DA_SEMANA, diaDaSemanaISO, ocorrenciasPrevistas, repeteSe, type Tarefa } from '@/lib/data/tarefas'
 import ConcluirTarefa from './ConcluirTarefa'
-import EditarComBotaoDireito from './EditarComBotaoDireito'
+import { AbrirTarefa, EditarComBotaoDireito, MaisNoDia } from './JanelaTarefas'
 import { horaCurta, LinhaTarefa, type Contexto } from './partes'
 
 // O calendário das Tarefas, em quatro escalas: dia, semana, mês e ano.
@@ -11,7 +11,8 @@ import { horaCurta, LinhaTarefa, type Contexto } from './partes'
 // nos dias entre o início e o prazo); as rotinas que se repetem mostram
 // também as vezes seguintes como "previstas" (a tracejado) — essas
 // ainda não existem, nascem quando a anterior é concluída.
-// Clicar numa tarefa com o botão direito do rato abre-a para editar.
+// Clicar numa tarefa com o botão direito do rato abre a janela para a
+// editar, sem sair do calendário.
 
 export const ESCALAS = [
   { id: 'dia', rotulo: 'Dia' },
@@ -143,7 +144,7 @@ function CartaoDaSemana({ item, data, ctx }: { item: Item; data: string; ctx: Co
         : null
   return (
     <EditarComBotaoDireito
-      href={ctx.linkEditar(t.id)}
+      id={t.id}
       title="Botão direito do rato: editar"
       className={`flex items-start gap-1.5 rounded-md px-2 py-1.5 text-xs ${estiloItem(item, data, ctx.hoje)}`}
     >
@@ -158,9 +159,9 @@ function CartaoDaSemana({ item, data, ctx }: { item: Item; data: string; ctx: Co
         {item.prevista ? (
           <span className="font-medium">{t.titulo}</span>
         ) : (
-          <Link href={ctx.linkEditar(t.id)} className="font-semibold hover:underline">
+          <AbrirTarefa id={t.id} className="font-semibold hover:underline">
             {t.titulo}
-          </Link>
+          </AbrirTarefa>
         )}
         {item.decorre && (
           <span className="block opacity-70">
@@ -230,7 +231,7 @@ export default function CalendarioTarefas({
         </Link>
       </div>
       <p className="mt-2 text-xs text-muted">
-        Para editar uma tarefa, clica nela com o botão direito do rato (no telemóvel, toca e mantém).
+        Para editar uma tarefa, clica nela com o botão direito do rato (no telemóvel, toca e mantém): abre numa janela, sem sair daqui.
         {semPrazo > 0 &&
           ` ${semPrazo} tarefa${semPrazo === 1 ? '' : 's'} sem prazo não aparece${semPrazo === 1 ? '' : 'm'} no calendário — ${semPrazo === 1 ? 'está' : 'estão'} na Lista, em “Para ir fazendo”.`}
       </p>
@@ -285,10 +286,13 @@ export default function CalendarioTarefas({
             const itens = porDia.get(d) ?? []
             return (
               <section key={d} className={`rounded-xl border bg-surface p-2 ${d === hoje ? 'border-brand' : 'border-border-subtle'}`}>
-                <Link href={link({ cal: 'dia', data: d })} className="flex items-baseline justify-between gap-1 px-1 pb-1.5 hover:underline">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted">{DIAS_DA_SEMANA[diaDaSemanaISO(d) - 1].curto}</span>
-                  <span className={`text-sm font-bold ${d === hoje ? 'rounded-full bg-brand px-2 text-black' : 'text-foreground'}`}>{dia(d)}</span>
-                </Link>
+                <div className="flex items-center gap-1 px-1 pb-1.5">
+                  <Link href={link({ cal: 'dia', data: d })} className="flex flex-1 items-baseline justify-between gap-1 hover:underline">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted">{DIAS_DA_SEMANA[diaDaSemanaISO(d) - 1].curto}</span>
+                    <span className={`text-sm font-bold ${d === hoje ? 'rounded-full bg-brand px-2 text-black' : 'text-foreground'}`}>{dia(d)}</span>
+                  </Link>
+                  <MaisNoDia data={d} />
+                </div>
                 {itens.length === 0 ? (
                   <p className="px-1 py-2 text-xs text-muted">—</p>
                 ) : (
@@ -335,7 +339,7 @@ export default function CalendarioTarefas({
                     <EditarComBotaoDireito
                       key={chave(i)}
                       como="span"
-                      href={ctx.linkEditar(i.tarefa.id)}
+                      id={i.tarefa.id}
                       title={`${i.tarefa.titulo}${i.prevista ? ' (prevista)' : ''} — botão direito: editar`}
                       className={`truncate rounded px-1 py-px text-[10px] font-medium leading-tight ${estiloItem(i, d, hoje)}`}
                     >

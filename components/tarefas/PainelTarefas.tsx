@@ -1,6 +1,7 @@
 import Link from '@/components/LinkRapido'
 import { AlertTriangle } from 'lucide-react'
 import { haQuantoTempo, idadeEmDias, type EstatisticasTarefas } from '@/lib/data/tarefas'
+import { AbrirTarefa } from './JanelaTarefas'
 import type { Contexto } from './partes'
 
 // O painel das Tarefas: números para acompanhar se o trabalho anda —
@@ -177,9 +178,9 @@ export default function PainelTarefas({
             <ul className="mt-3 divide-y divide-border-subtle/60">
               {est.maisAntigas.map((t) => (
                 <li key={t.id} className="flex items-baseline justify-between gap-3 py-2">
-                  <Link href={ctx.linkEditar(t.id)} className="min-w-0 truncate text-sm font-semibold text-foreground hover:underline">
+                  <AbrirTarefa id={t.id} className="min-w-0 truncate text-sm font-semibold text-foreground hover:underline">
                     {t.titulo}
-                  </Link>
+                  </AbrirTarefa>
                   <span className="shrink-0 text-xs text-muted">
                     {t.responsavel_id ? `${ctx.nomePessoa.get(t.responsavel_id)?.split(' ')[0] ?? '—'} · ` : ''}
                     criada {haQuantoTempo(idadeEmDias(t.criado_em, ctx.hoje))}

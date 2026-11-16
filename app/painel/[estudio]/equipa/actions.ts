@@ -3,6 +3,10 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { ehContaFixa } from '@/lib/data/acessos'
+import { eliminarInstrutorDeVez } from '@/lib/data/eliminarInstrutor'
 
 // "destino" deixa este toggle ser usado tanto na página Equipa como
 // dentro de Coordenação → Horários (para gerir quem entra na escala) —
@@ -51,4 +55,37 @@ export async function mudarPapel(formData: FormData) {
 
   revalidatePath(`/painel/${slug}/equipa`)
   redirect(`/painel/${slug}/equipa`)
+}
+
+// Eliminar um instrutor de vez (só a administração): a ficha, a conta
+// de acesso, o registo de horas e as férias desaparecem; o resto do
+// histórico fica, sem o nome dele. As contas fixas do negócio e a
+// própria conta nunca se apagam aqui.
+export async function eliminarDaEquipa(formData: FormData) {
+  const slug = String(formData.get('estudio_slug') ?? '')
+  const id = String(formData.get('perfil_id') ?? '')
+  const destino = /^[a-z0-9-]+$/.test(slug) ? `/painel/${slug}/equipa` : '/painel'
+  const voltar = (params: Record<string, string>): never => {
+    revalidatePath(destino)
+    revalidatePath('/painel/admin/contas')
+    redirect(`${destino}?${new URLSearchParams(params).toString()}`)
+  }
+
+  const sessao = await getSessaoAtual()
+  if (!papeisDaSessao(sessao).ehAdmin) voltar({ error: 'Só a administração pode eliminar instrutores.' })
+  if (!id || id === sessao.userId) voltar({ error: 'Não podes eliminar a tua própria conta.' })
+
+  let admin: ReturnType<typeof createAdminClient>
+  try {
+    admin = createAdminClient()
+  } catch (e) {
+    return voltar({ error: (e as Error).message })
+  }
+  const { data, error } = await admin.auth.admin.getUserById(id)
+  if (error || !data.user) voltar({ error: 'Conta não encontrada.' })
+  if (ehContaFixa(data.user!.email ?? null)) voltar({ error: 'As contas fixas do negócio não se eliminam.' })
+
+  const resultado = await eliminarInstrutorDeVez(admin, id)
+  if (!resultado.ok) voltar({ error: `Não foi possível eliminar: ${resultado.motivo}` })
+  voltar({ ok: 'eliminado' })
 }

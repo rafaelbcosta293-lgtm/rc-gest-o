@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ehContaFixa, emailPerfilSemConta, ehEmailSemConta } from '@/lib/data/acessos'
 import { MODULOS } from '@/lib/data/constantes'
+import { eliminarInstrutorDeVez } from '@/lib/data/eliminarInstrutor'
 
 // Gestão de instrutores pela Administração: perfis (sem acesso à app) e
 // contas (com email, palavra-passe e permissões). Tudo com o cliente de
@@ -185,18 +186,20 @@ export async function desativarInstrutor(formData: FormData) {
   voltar({ ok: reativar ? 'reativado' : 'desativado' })
 }
 
-// Eliminar de vez. Se a base de dados recusar (o instrutor tem histórico
-// que depende dele), fica desativado em vez de se perder esse histórico.
+// Eliminar de vez: a ficha, a conta de acesso, o registo de horas e as
+// férias desaparecem; o resto do histórico (treinos, pagamentos,
+// tarefas) fica, mas sem o nome dele. Só se não for mesmo possível
+// (registos que não podem ficar sem instrutor) é que fica desativado.
 export async function eliminarInstrutor(formData: FormData) {
   const { admin, sessao } = await exigirAdmin()
   const id = String(formData.get('id') ?? '')
   await contaAlvo(admin, id, sessao.userId)
-  const { error } = await admin.auth.admin.deleteUser(id)
-  if (!error) voltar({ ok: 'eliminado' })
+  const resultado = await eliminarInstrutorDeVez(admin, id)
+  if (resultado.ok) voltar({ ok: 'eliminado' })
 
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
   await admin.from('perfis').update({ ativo: false, saiu_em: hoje }).eq('id', id)
   await definirEstudios(admin, id, [])
   await admin.auth.admin.updateUserById(id, { ban_duration: BLOQUEADO })
-  voltar({ ok: 'desativado-com-historico' })
+  voltar({ error: `Não foi possível eliminar de vez, por isso ficou desativado e sem acesso. Motivo: ${resultado.motivo}` })
 }

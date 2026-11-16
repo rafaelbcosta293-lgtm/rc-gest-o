@@ -21,7 +21,6 @@ const MENSAGENS_OK: Record<string, string> = {
   desativado: 'Instrutor desativado.',
   reativado: 'Instrutor reativado — escolhe os estúdios onde trabalha.',
   eliminado: 'Instrutor eliminado.',
-  'desativado-com-historico': 'Este instrutor tem histórico na app, por isso não foi apagado: ficou desativado e sem acesso.',
 }
 
 type LigacaoEstudio = { estudio_id: number; estudio: { nome: string } | null }

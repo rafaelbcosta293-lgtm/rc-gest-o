@@ -280,11 +280,11 @@ export default async function GestaoEquipa({ estudios }: { estudios: { id: numbe
                   </ConfirmarAcao>
                   <ConfirmarAcao
                     action={eliminarInstrutor}
-                    confirmacao={`Eliminar ${p.nome} de vez? Não dá para desfazer. Se tiver histórico (treinos, horas, férias), fica apenas desativado para não se perder esse histórico.`}
+                    confirmacao={`Eliminar ${p.nome} de vez? Não dá para desfazer. Apaga a ficha, a conta de acesso, as escalas, o registo de horas, as férias e as ausências; os treinos, avaliações, pagamentos e tarefas antigos ficam, mas sem o nome. Para manter o histórico, usa antes "Desativar".`}
                   >
                     <input type="hidden" name="id" value={p.id} />
                     <button type="submit" className="rounded-full border border-red-800 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-950">
-                      Eliminar
+                      Eliminar de vez
                     </button>
                   </ConfirmarAcao>
                 </div>

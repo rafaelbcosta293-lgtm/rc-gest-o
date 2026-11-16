@@ -3,7 +3,10 @@ import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { alternarAcesso, mudarPapel } from './actions'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
+import { idsContasPartilhadas } from '@/lib/data/contasPartilhadas'
+import { alternarAcesso, eliminarDaEquipa, mudarPapel } from './actions'
+import ConfirmarAcao from '@/components/ConfirmarAcao'
 import SubmitButton from '@/components/SubmitButton'
 import type { Papel } from '@/lib/supabase/database.types'
 
@@ -14,16 +17,21 @@ export default async function EquipaPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; ok?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error } = await searchParams
+  const { error, ok } = await searchParams
   const supabase = await createClient()
 
-  const [estudio, { data: perfis }] = await Promise.all([
+  const [estudio, { data: perfis }, sessao, partilhadas] = await Promise.all([
     getEstudioPorSlug(supabase, slug),
     supabase.from('perfis').select('id, nome, papel, ativo').order('nome'),
+    getSessaoAtual(),
+    idsContasPartilhadas(),
   ])
+  // Só a administração elimina — e nunca as contas do negócio nem a própria.
+  const { ehAdmin } = papeisDaSessao(sessao)
+  const podeEliminar = (id: string) => ehAdmin && id !== sessao.userId && !partilhadas.has(id)
   if (!estudio) {
     notFound()
   }
@@ -66,6 +74,10 @@ export default async function EquipaPage({
         </p>
       )}
 
+      {ok === 'eliminado' && (
+        <p className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">Instrutor eliminado de vez.</p>
+      )}
+
       <div className="mt-6 flex flex-col gap-2">
         {(perfis ?? []).map((p) => {
           const temAcesso = idsComAcesso.has(p.id)
@@ -86,7 +98,7 @@ export default async function EquipaPage({
                 </p>
                 <p className="text-xs text-muted">{!p.ativo && 'inativo'}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 <form action={mudarPapel} className="flex items-center gap-1">
                   <input type="hidden" name="estudio_slug" value={slug} />
                   <input type="hidden" name="perfil_id" value={p.id} />
@@ -124,6 +136,21 @@ export default async function EquipaPage({
                     {temAcesso ? 'Remover acesso' : 'Dar acesso'}
                   </SubmitButton>
                 </form>
+                {podeEliminar(p.id) && (
+                  <ConfirmarAcao
+                    action={eliminarDaEquipa}
+                    confirmacao={`Eliminar ${p.nome} de vez? Não dá para desfazer.\n\nApaga a ficha, a conta de acesso, as escalas, o registo de horas, as férias e as ausências. Os treinos, avaliações, pagamentos e tarefas antigos ficam, mas sem o nome.\n\nSe só queres que deixe de entrar neste estúdio, usa "Remover acesso".`}
+                  >
+                    <input type="hidden" name="estudio_slug" value={slug} />
+                    <input type="hidden" name="perfil_id" value={p.id} />
+                    <button
+                      type="submit"
+                      className="rounded-full border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+                    >
+                      Eliminar de vez
+                    </button>
+                  </ConfirmarAcao>
+                )}
               </div>
             </div>
           )

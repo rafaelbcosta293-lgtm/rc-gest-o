@@ -23,11 +23,11 @@ import CalendarioTarefas, { ESCALAS, type Escala } from './CalendarioTarefas'
 import PainelTarefas from './PainelTarefas'
 import { botaoPequenoCls, CabecalhoLista, dataCurta, EstadoForm, LinhaTarefa, Pastilhas, type Contexto } from './partes'
 
-// O ecrã das Tarefas — o mesmo em cada estúdio, na Coordenação e na
-// Administração (só muda o endereço de base e o tema). Dentro de um
-// estúdio veem-se só as tarefas desse estúdio e as da empresa toda; na
-// Coordenação e na Administração, todas. Usa apenas as cores do tema e
-// variantes "dark:", por isso lê-se bem nas áreas claras e na escura.
+// O ecrã das Tarefas — o mesmo em cada estúdio e na Coordenação (só
+// muda o endereço de base e o tema). Dentro de um estúdio veem-se só as
+// tarefas desse estúdio e as da empresa toda; na Coordenação, todas.
+// Usa apenas as cores do tema e variantes "dark:", por isso lê-se bem
+// nas áreas claras e na escura.
 
 export type ParametrosTarefas = {
   vista?: string

@@ -4,7 +4,7 @@ import { getEstudioPorSlug } from '@/lib/data/estudios'
 import VistaTarefas, { type ParametrosTarefas } from '@/components/tarefas/VistaTarefas'
 
 // As tarefas são da empresa toda (não de um estúdio): aqui vê-se a
-// mesma lista que na Coordenação e na Administração. Estar dentro de
+// mesma lista que na Coordenação. Estar dentro de
 // cada estúdio serve para a equipa a consultar na conta do estúdio — e
 // uma tarefa nova fica, por omissão, desse estúdio.
 export default async function TarefasPage({

@@ -25,9 +25,9 @@ import {
   type Tarefa,
 } from '@/lib/data/tarefas'
 
-// As Tarefas aparecem em três sítios (cada estúdio, Coordenação e
-// Administração) com o mesmo ecrã — as ações são as mesmas e voltam
-// para o sítio de onde foram chamadas.
+// As Tarefas aparecem em cada estúdio e na Coordenação com o mesmo
+// ecrã — as ações são as mesmas e voltam para o sítio de onde foram
+// chamadas.
 const DATA = /^\d{4}-\d{2}-\d{2}$/
 const HORA = /^\d{2}:\d{2}$/
 const DESTINO_VALIDO = /^\/painel\/(admin|coordenacao|[a-z0-9-]+)\/tarefas(\?|$)/

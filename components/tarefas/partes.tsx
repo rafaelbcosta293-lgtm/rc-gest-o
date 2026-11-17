@@ -27,7 +27,7 @@ export type Contexto = {
   euId: string | null
   // Passos de cada tarefa: quantos há e quantos estão feitos.
   passos: Map<string, { total: number; feitos: number }>
-  // Fora dos estúdios (Administração, Coordenação) mostra-se de que
+  // Fora dos estúdios (na Coordenação) mostra-se de que
   // estúdio é cada tarefa.
   mostrarEstudio: boolean
 }

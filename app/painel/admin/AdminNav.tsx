@@ -9,7 +9,6 @@ import {
   CalendarRange,
   CalendarDays,
   Clock,
-  ListTodo,
   Activity,
   FileText,
   Wallet,
@@ -224,19 +223,17 @@ function GrupoPill({ grupo, avisos }: { grupo: Grupo; avisos: Record<string, num
 // ("Finanças (5)") e, lá dentro, na pasta a que dizem respeito.
 // lembretesPorTratar: lembretes do calendário em atraso ou para hoje.
 // horasPorAprovar: meses de horas submetidos pelos instrutores, à espera.
-// tarefasUrgentes: tarefas com o prazo passado ou para hoje.
+// (As Tarefas passaram para a Coordenação — já não têm entrada aqui.)
 export default function AdminNav({
   pendentesFaturas = 0,
   despesasAPagar = 0,
   lembretesPorTratar = 0,
   horasPorAprovar = 0,
-  tarefasUrgentes = 0,
 }: {
   pendentesFaturas?: number
   despesasAPagar?: number
   lembretesPorTratar?: number
   horasPorAprovar?: number
-  tarefasUrgentes?: number
 }) {
   const avisos: Record<string, number> = {
     '/painel/admin/faturas': pendentesFaturas,
@@ -248,7 +245,6 @@ export default function AdminNav({
     <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
       <PillNavLink href="/painel/admin" label="Resumo" icone={Home} exato />
       <PillNavLink href="/painel/admin/calendario" label="Calendário" icone={CalendarDays} aviso={lembretesPorTratar} />
-      <PillNavLink href="/painel/admin/tarefas" label="Tarefas" icone={ListTodo} aviso={tarefasUrgentes} />
       {GRUPOS.map((g) => (
         <GrupoPill key={g.id} grupo={g} avisos={avisos} />
       ))}

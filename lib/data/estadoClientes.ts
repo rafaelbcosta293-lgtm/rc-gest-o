@@ -53,3 +53,13 @@ export function calcularTransicaoAutomatica(
   if (dias >= 1) return cliente.estado === 'Pendente' ? null : 'Pendente'
   return null
 }
+
+// Para quem só faz outros serviços (aulas de grupo, nutrição): o estado
+// geral do cliente é o melhor que tem nesses serviços — Ativo ganha a
+// Pendente, que ganha a Suspenso, que ganha a Inativo. Sem nenhum
+// serviço: Pendente (ainda não pagou nada).
+const ORDEM_ESTADOS: EstadoCliente[] = ['Ativo', 'Pendente', 'Suspenso', 'Inativo']
+export function melhorEstado(estados: EstadoCliente[]): EstadoCliente {
+  for (const e of ORDEM_ESTADOS) if (estados.includes(e)) return e
+  return 'Pendente'
+}

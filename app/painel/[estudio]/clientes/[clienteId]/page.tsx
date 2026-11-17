@@ -1,4 +1,6 @@
 import JanelaClientes from '@/app/painel/[estudio]/treinos/JanelaClientes'
+import { SERVICO_PT, carregarServicos } from '@/lib/data/servicos'
+import { carregarInscricoes } from '@/lib/data/clientesServicos'
 import { BotaoAbrirJanela } from '@/components/janela/Janela'
 import AtalhosDoCliente from '@/components/AtalhosDoCliente'
 import Link from '@/components/LinkRapido'
@@ -99,6 +101,13 @@ export default async function FichaCompletaClientePage({
   const feitos = presencas.filter((p) => p.estado === 'Presente').length
   const faltas = presencas.filter((p) => p.estado.startsWith('Faltou')).length
   const est = ESTADOS_CLIENTE[c.estado] ?? ESTADOS_CLIENTE.Ativo
+  // Em que serviços está: PT (pela ficha) e os outros, cada um com o seu estado.
+  const [servicos, inscricoes] = await Promise.all([carregarServicos(supabase), carregarInscricoes(supabase, clienteId)])
+  const nomeServico = new Map(servicos.map((s) => [s.id, s.nome]))
+  const etiquetasServico = [
+    ...((c as { cliente_pt?: boolean }).cliente_pt !== false ? [{ nome: nomeServico.get(SERVICO_PT) ?? 'Treino Personalizado', estado: c.estado }] : []),
+    ...inscricoes.map((i) => ({ nome: nomeServico.get(i.servicoId) ?? '?', estado: i.estado })),
+  ]
   const a = ALERTAS[c.alerta as keyof typeof ALERTAS] ?? ALERTAS.Nenhum
   const meses = mesesAtivo(c.inicio_contrato, c.saiu_em)
   const aniversario = c.nascimento ? proximoAniversario(c.nascimento, agora) : null
@@ -130,6 +139,21 @@ export default async function FichaCompletaClientePage({
               <span className="font-mono text-xs text-muted">Sócio {c.numero_socio}</span>
             )}
           </div>
+          {(etiquetasServico.length > 1 || inscricoes.length > 0) && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {etiquetasServico.map((e) => {
+                const cor = ESTADOS_CLIENTE[e.estado] ?? ESTADOS_CLIENTE.Ativo
+                return (
+                  <span key={e.nome} className="inline-flex items-center gap-1 rounded-full border border-border-subtle px-2 py-0.5 text-xs">
+                    <span className="font-semibold text-foreground">{e.nome}</span>
+                    <span className="rounded-full px-1.5 text-[10px] font-medium" style={{ background: cor.bg, color: cor.tx }}>
+                      {cor.label}
+                    </span>
+                  </span>
+                )
+              })}
+            </div>
+          )}
           {c.objetivo && (
             <p className="mt-1 text-sm text-muted">{c.objetivo}</p>
           )}

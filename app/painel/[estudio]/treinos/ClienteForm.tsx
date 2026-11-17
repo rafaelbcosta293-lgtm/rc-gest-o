@@ -17,6 +17,8 @@ export default function ClienteForm({
   action,
   error,
   voltar,
+  servicos = [],
+  servicosLigados,
 }: {
   estudioSlug: string
   estudioId: number
@@ -25,7 +27,12 @@ export default function ClienteForm({
   action: (formData: FormData) => void
   error?: string
   voltar?: string
+  // Serviços do estúdio e aqueles em que o cliente está (por omissão,
+  // num cliente novo, só o Treino Personalizado).
+  servicos?: { id: number; nome: string }[]
+  servicosLigados?: number[]
 }) {
+  const ligados = servicosLigados ?? [1]
   const { marcarSujo } = useAvisoSairSemGuardar()
 
   return (
@@ -34,6 +41,23 @@ export default function ClienteForm({
       <input type="hidden" name="estudio_id" value={estudioId} />
       {cliente && <input type="hidden" name="id" value={cliente.id} />}
       {voltar && <input type="hidden" name="voltar" value={voltar} />}
+
+      {servicos.length > 0 && (
+        <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-border-subtle px-3 py-2">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-muted">Serviços</legend>
+          <input type="hidden" name="servicos_enviados" value="1" />
+          {servicos.map((s) => (
+            <label key={s.id} className="flex items-center gap-1.5 text-sm text-foreground">
+              <input type="checkbox" name="servicos" value={s.id} defaultChecked={ligados.includes(s.id)} className="h-4 w-4 accent-[var(--accent)]" />
+              {s.nome}
+            </label>
+          ))}
+          <span className="basis-full text-xs text-muted">
+            Um serviço novo fica Pendente até ao primeiro pagamento desse serviço; tirar um serviço deixa-o Inativo (o
+            histórico fica).
+          </span>
+        </fieldset>
+      )}
 
       {error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

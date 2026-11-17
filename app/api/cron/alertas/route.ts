@@ -86,6 +86,7 @@ export async function GET(request: Request) {
       .from('clientes')
       .select('id, estudio_id, nome, estado, nascimento, fim_experiencia')
       .in('estado', ['Ativo', 'Pendente'])
+      .eq('cliente_pt', true)
       .in('estudio_id', estudioIds),
     todasAsLinhas((de, ate) =>
       admin.from('agenda_eventos').select('cliente_id, data, estado, tipo').eq('tipo', 'Treino').order('id').range(de, ate)

@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudios } from '@/lib/data/estudios'
-import { calcularTransicaoAutomatica } from '@/lib/data/estadoClientes'
+import { calcularTransicaoAutomatica, melhorEstado } from '@/lib/data/estadoClientes'
 import type { Cliente, EstadoCliente } from '@/lib/supabase/database.types'
 
 // Corre uma vez por dia (ver .github/workflows/estado-clientes.yml).
@@ -38,6 +38,7 @@ export async function GET(request: Request) {
       .from('clientes')
       .select('id, estado, estado_automatico')
       .not('estado', 'in', '(Suspenso,Inativo)')
+      .eq('cliente_pt', true)
       .in('estudio_id', estudioIds),
     todasAsLinhas<{ cliente_id: string; validade_maxima: string }>((de, ate) =>
       admin
@@ -80,9 +81,63 @@ export async function GET(request: Request) {
     if (error) return Response.json({ error: error.message }, { status: 500 })
   }
 
+  // ── Outros serviços (aulas de grupo, nutrição) ─────────────────────
+  // As mesmas regras, por serviço, com os pagamentos desse serviço.
+  const [{ data: inscricoesData, error: erroInscricoes }, { data: validadesData, error: erroValidades }] =
+    await Promise.all([
+      admin.from('clientes_servicos').select('cliente_id, servico_id, estado, estado_automatico'),
+      admin.from('v_validade_por_servico').select('cliente_id, servico_id, validade_maxima').neq('servico_id', 1),
+    ])
+  if (erroInscricoes) return Response.json({ error: erroInscricoes.message }, { status: 500 })
+  if (erroValidades) return Response.json({ error: erroValidades.message }, { status: 500 })
+  const validade = new Map((validadesData ?? []).map((v) => [`${v.cliente_id}|${v.servico_id}`, v.validade_maxima as string]))
+  const inscricoes = (inscricoesData ?? []) as {
+    cliente_id: string
+    servico_id: number
+    estado: EstadoCliente
+    estado_automatico: boolean
+  }[]
+  let mudancasServicos = 0
+  for (const i of inscricoes) {
+    const novo = calcularTransicaoAutomatica(
+      {
+        id: i.cliente_id,
+        estado: i.estado,
+        estadoAutomatico: i.estado_automatico,
+        validoAte: validade.get(`${i.cliente_id}|${i.servico_id}`) ?? null,
+      },
+      hojeISO
+    )
+    if (!novo) continue
+    const { error } = await admin
+      .from('clientes_servicos')
+      .update({ estado: novo, ...(novo === 'Inativo' ? { saiu_em: hojeISO } : {}) })
+      .eq('cliente_id', i.cliente_id)
+      .eq('servico_id', i.servico_id)
+    if (error) return Response.json({ error: error.message }, { status: 500 })
+    i.estado = novo
+    mudancasServicos++
+  }
+
+  // Quem não é cliente de PT: o estado geral acompanha o melhor estado
+  // nos outros serviços (é o que as listas gerais mostram).
+  const { data: soOutrosData, error: erroSoOutros } = await admin
+    .from('clientes')
+    .select('id, estado')
+    .eq('cliente_pt', false)
+    .in('estudio_id', estudioIds)
+  if (erroSoOutros) return Response.json({ error: erroSoOutros.message }, { status: 500 })
+  for (const c of (soOutrosData ?? []) as { id: string; estado: EstadoCliente }[]) {
+    const novo = melhorEstado(inscricoes.filter((i) => i.cliente_id === c.id).map((i) => i.estado))
+    if (novo === c.estado) continue
+    const { error } = await admin.from('clientes').update({ estado: novo }).eq('id', c.id)
+    if (error) return Response.json({ error: error.message }, { status: 500 })
+  }
+
   return Response.json({
     ok: true,
     pendentes: idsPorNovoEstado.Pendente.length,
     inativos: idsPorNovoEstado.Inativo.length,
+    mudancasServicos,
   })
 }

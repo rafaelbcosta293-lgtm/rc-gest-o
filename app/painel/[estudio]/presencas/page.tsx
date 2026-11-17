@@ -37,6 +37,7 @@ export default async function PresencasPage({
     .select('id, nome, frequencia_semanal, estado')
     .eq('estudio_id', estudio.id)
     .neq('estado', 'Inativo')
+    .eq('cliente_pt', true)
     .order('nome')
 
   const ids = (clientes ?? []).map((c) => c.id)

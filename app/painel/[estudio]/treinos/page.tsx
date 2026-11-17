@@ -33,6 +33,7 @@ export default async function TreinosPage({
     .select('id, nome, objetivo, alerta, sessoes(data)')
     .eq('estudio_id', estudio.id)
     .eq('estado', 'Ativo')
+    .eq('cliente_pt', true)
     .order('nome')
     .order('data', { referencedTable: 'sessoes', ascending: false })
     .limit(1, { referencedTable: 'sessoes' })

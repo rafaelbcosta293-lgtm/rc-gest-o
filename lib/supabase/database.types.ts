@@ -92,6 +92,9 @@ export type Cliente = {
   genero: GeneroCliente | null
   estado: EstadoCliente
   estado_automatico: boolean
+  // false = só faz outros serviços (aulas de grupo, nutrição): fica fora
+  // de todas as métricas de PT.
+  cliente_pt: boolean
   alerta: string
   alerta_detalhe: string | null
   evento: string | null

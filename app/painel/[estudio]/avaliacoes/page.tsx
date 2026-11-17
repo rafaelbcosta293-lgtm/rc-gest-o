@@ -39,6 +39,7 @@ export default async function AvaliacoesPage({
     .select('id, nome, avaliacoes(data, proxima_reavaliacao, peso_kg, imc, massa_gorda_pct)')
     .eq('estudio_id', estudio.id)
     .eq('estado', 'Ativo')
+    .eq('cliente_pt', true)
     .order('nome')
     .order('data', { referencedTable: 'avaliacoes', ascending: false })
     .limit(1, { referencedTable: 'avaliacoes' })

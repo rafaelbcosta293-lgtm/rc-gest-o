@@ -49,7 +49,8 @@ export async function getEvolucaoMensal(
     supabase
       .from('clientes')
       .select('estudio_id, inicio_contrato, estado')
-      .in('estudio_id', idsEstudios),
+      .in('estudio_id', idsEstudios)
+      .eq('cliente_pt', true),
     // O filtro por estúdio é feito em JS, a partir do join (estudioIdDoJoin)
     // — mais seguro do que confiar em ".in()" sobre uma coluna de um
     // recurso embutido, que não é um caminho tão bem testado nesta app

@@ -80,7 +80,7 @@ async function AgoraEstudio({ estudio }: { estudio: Pick<Estudio, 'id' | 'nome'>
   const supabase = await createClient()
 
   const [{ data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }] = await Promise.all([
-    supabase.from('clientes').select('estado').eq('estudio_id', estudio.id),
+    supabase.from('clientes').select('estado').eq('estudio_id', estudio.id).eq('cliente_pt', true),
     supabase.from('leads').select('estado, visita_data').eq('estudio_id', estudio.id),
   ])
   if (erroClientes || erroLeads) {

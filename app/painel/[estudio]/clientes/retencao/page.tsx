@@ -53,7 +53,8 @@ export default async function RetencaoPage({
     supabase
       .from('clientes')
       .select('id, estado, frequencia_semanal, inicio_contrato, fim_experiencia, saiu_em')
-      .eq('estudio_id', estudio.id),
+      .eq('estudio_id', estudio.id)
+      .eq('cliente_pt', true),
     supabase
       .from('activities')
       .select('tipo, criado_em, cliente_id')

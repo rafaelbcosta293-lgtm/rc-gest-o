@@ -60,7 +60,8 @@ export default async function OperacionalPage({
     supabase
       .from('clientes')
       .select('id, pt_principal_id, estado, frequencia_semanal')
-      .eq('estudio_id', estudio.id),
+      .eq('estudio_id', estudio.id)
+      .eq('cliente_pt', true),
     supabase.from('avaliacoes').select('cliente_id, data, proxima_reavaliacao').order('data', { ascending: false }),
     supabase.from('checklist_registos').select('tipo, data').eq('estudio_id', estudio.id),
   ])

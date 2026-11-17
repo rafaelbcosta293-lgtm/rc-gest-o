@@ -62,7 +62,7 @@ export default async function PagamentosPage({
     { data: segurosPagosData, error: erroSegurosPagos },
     { data: reativacoesData, error: erroReativacoesSeguro },
   ] = await Promise.all([
-    supabase.from('clientes').select('id, nome, estado, inicio_contrato').eq('estudio_id', estudio.id).order('nome'),
+    supabase.from('clientes').select('id, nome, estado, inicio_contrato, cliente_pt').eq('estudio_id', estudio.id).order('nome'),
     supabase.from('produtos').select('id, nome, valor, categoria:produto_categorias(nome, ordem)').eq('ativo', true).order('nome'),
     supabase
       .from('receitas_outras')
@@ -116,6 +116,22 @@ export default async function PagamentosPage({
   for (const p of (pagamentosData ?? []) as unknown as PagamentoDetalhe[]) {
     if (!ultimoPagamentoPorCliente.has(p.cliente_id)) {
       ultimoPagamentoPorCliente.set(p.cliente_id, p)
+    }
+  }
+
+  // Quem só faz outros serviços (aulas de grupo, nutrição) não tem
+  // mensalidades de PT: conta a validade mais longa dos seus serviços.
+  const soOutros = clientesBase.filter((c) => c.cliente_pt === false).map((c) => c.id)
+  if (soOutros.length > 0) {
+    const { data: deOutros } = await supabase
+      .from('pagamentos')
+      .select('cliente_id, data_pagamento, valido_ate')
+      .in('cliente_id', soOutros)
+      .is('anulado_em', null)
+      .eq('mensalidade', true)
+      .order('valido_ate', { ascending: false })
+    for (const p of (deOutros ?? []) as PagamentoDetalhe[]) {
+      if (!ultimoPagamentoPorCliente.has(p.cliente_id)) ultimoPagamentoPorCliente.set(p.cliente_id, p)
     }
   }
 

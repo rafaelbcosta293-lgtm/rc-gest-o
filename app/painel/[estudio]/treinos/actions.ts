@@ -1,5 +1,8 @@
 'use server'
 
+import { hojeEmLisboa } from '@/lib/data/hoje'
+import { SERVICO_PT, carregarServicos } from '@/lib/data/servicos'
+import { aplicarInscricoes, carregarInscricoes, servicosDoFormulario, servicosLigados } from '@/lib/data/clientesServicos'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -47,11 +50,16 @@ export async function criarCliente(formData: FormData) {
   }
   const supabase = await createClient()
 
+  // Serviços escolhidos: sem o Treino Personalizado, o cliente não é de
+  // PT (não entra nas métricas de PT) e fica Pendente até pagar.
+  const servicos = servicosDoFormulario(formData)
+  const ePt = servicos === null || servicos.includes(SERVICO_PT)
   const { data, error } = await supabase
     .from('clientes')
-    .insert({ ...camposComuns(formData), estudio_id: estudioId })
+    .insert({ ...camposComuns(formData), estudio_id: estudioId, cliente_pt: ePt, ...(ePt ? {} : { estado: 'Pendente' }) })
     .select('id')
     .single()
+  if (data && servicos) await aplicarInscricoes(supabase, data.id, servicos, hojeEmLisboa())
 
   if (error || !data) {
     redirect(
@@ -94,14 +102,24 @@ export async function atualizarCliente(formData: FormData) {
   // transição automática por falta de pagamento) quando o valor muda.
   const mudouEstado = atual?.estado !== novoEstado
 
+  const servicos = servicosDoFormulario(formData)
   const { error } = await supabase
     .from('clientes')
     .update({
       ...camposComuns(formData),
       estado: novoEstado,
       ...(mudouEstado ? { estado_automatico: false } : {}),
+      ...(servicos ? { cliente_pt: servicos.includes(SERVICO_PT) } : {}),
     })
     .eq('id', id)
+  if (!error && servicos) {
+    const erroServicos = await aplicarInscricoes(supabase, id, servicos, hojeEmLisboa())
+    if (erroServicos) {
+      redirect(
+        `/painel/${estudioSlug}/treinos/${id}/editar?voltar=${voltar}&error=${encodeURIComponent(`Ficha guardada, mas os serviços não: ${erroServicos}`)}`
+      )
+    }
+  }
 
   if (error) {
     redirect(
@@ -199,7 +217,13 @@ export async function guardarClienteNaJanela(formData: FormData): Promise<Result
   return semSair(formData.get('id') ? atualizarCliente : criarCliente, formData)
 }
 
-export type DadosJanelaCliente = { estudioId: number; pts: Pick<Perfil, 'id' | 'nome'>[]; cliente: Cliente | null }
+export type DadosJanelaCliente = {
+  estudioId: number
+  pts: Pick<Perfil, 'id' | 'nome'>[]
+  cliente: Cliente | null
+  servicos: { id: number; nome: string }[]
+  servicosLigados: number[]
+}
 
 // O que o formulário da ficha precisa (clienteId null = cliente novo).
 export async function dadosDaJanelaCliente(estudioSlug: string, clienteId: string | null): Promise<DadosJanelaCliente | { erro: string }> {
@@ -210,6 +234,17 @@ export async function dadosDaJanelaCliente(estudioSlug: string, clienteId: strin
   ])
   if (!estudio) return { erro: 'Estúdio não encontrado.' }
   if (clienteId && (!cliente || cliente.estudio_id !== estudio.id)) return { erro: 'Cliente não encontrado.' }
-  const pts = await getEquipaDoEstudio(supabase, estudio.id, (cliente as Cliente | null)?.pt_principal_id ?? undefined)
-  return { estudioId: estudio.id, pts, cliente: (cliente as Cliente | null) ?? null }
+  const [pts, servicos, inscricoes] = await Promise.all([
+    getEquipaDoEstudio(supabase, estudio.id, (cliente as Cliente | null)?.pt_principal_id ?? undefined),
+    carregarServicos(supabase, { soAtivos: true }),
+    clienteId ? carregarInscricoes(supabase, clienteId) : Promise.resolve([]),
+  ])
+  const c = (cliente as (Cliente & { cliente_pt?: boolean }) | null) ?? null
+  return {
+    estudioId: estudio.id,
+    pts,
+    cliente: c,
+    servicos: servicos.map((s) => ({ id: s.id, nome: s.nome })),
+    servicosLigados: c ? servicosLigados(c.cliente_pt !== false, inscricoes) : [SERVICO_PT],
+  }
 }

@@ -49,7 +49,7 @@ export default async function RelatorioConsolidadoPage({
     { data: pagamentosData, error: erroPagamentos },
   ] = await Promise.all([
     supabase.from('leads').select('estudio_id, estado, entrada, fecho_em'),
-    supabase.from('clientes').select('id, estudio_id, estado'),
+    supabase.from('clientes').select('id, estudio_id, estado').eq('cliente_pt', true),
     supabase.from('activities').select('tipo, criado_em').in('tipo', ['Cancelamento', 'Suspensão', 'Reativação']),
     supabase.from('alerts').select('estudio_id, severidade').neq('estado', 'Resolvido'),
     supabase.from('pagamentos_ativos').select('cliente_id, valor, data_pagamento, valido_ate, mensalidade').gte('data_pagamento', inicio),

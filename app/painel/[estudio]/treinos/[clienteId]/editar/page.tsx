@@ -1,4 +1,6 @@
 import Link from '@/components/LinkRapido'
+import { carregarServicos } from '@/lib/data/servicos'
+import { carregarInscricoes, servicosLigados } from '@/lib/data/clientesServicos'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
@@ -29,7 +31,11 @@ export default async function EditarClientePage({
     notFound()
   }
 
-  const pts = await getEquipaDoEstudio(supabase, estudio.id, cliente.pt_principal_id)
+  const [pts, servicos, inscricoes] = await Promise.all([
+    getEquipaDoEstudio(supabase, estudio.id, cliente.pt_principal_id),
+    carregarServicos(supabase, { soAtivos: true }),
+    carregarInscricoes(supabase, clienteId),
+  ])
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -49,6 +55,8 @@ export default async function EditarClientePage({
         estudioId={estudio.id}
         cliente={cliente}
         pts={pts}
+        servicos={servicos.map((s) => ({ id: s.id, nome: s.nome }))}
+        servicosLigados={servicosLigados(cliente.cliente_pt !== false, inscricoes)}
         action={atualizarCliente}
         error={error}
         voltar={voltar}

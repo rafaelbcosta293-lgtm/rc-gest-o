@@ -1,5 +1,6 @@
 'use server'
 
+import { SERVICO_PT } from '@/lib/data/servicos'
 import { lerQuemFez } from '@/lib/data/quemFez'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -67,7 +68,7 @@ export async function criarPagamento(formData: FormData) {
       registado_por: userData.user?.id ?? null,
       quem_fez: quemFez,
     }).select('id').single(),
-    supabase.from('planos').select('sessoes_por_semana').eq('id', planoId).maybeSingle(),
+    supabase.from('planos').select('sessoes_por_semana, servico_id').eq('id', planoId).maybeSingle(),
   ])
 
   if (error) {
@@ -82,14 +83,22 @@ export async function criarPagamento(formData: FormData) {
   // O plano escolhido já diz quantas vezes por semana a pessoa treina —
   // ajusta sempre a frequência do cliente a esse valor, para nunca ficar
   // desatualizada quando o cliente muda de pacote.
-  await supabase
-    .from('clientes')
-    .update({
-      estado: 'Ativo',
-      estado_automatico: true,
-      ...(plano?.sessoes_por_semana != null ? { frequencia_semanal: plano.sessoes_por_semana } : {}),
-    })
-    .eq('id', clienteId)
+  //
+  // Pagamento de outro serviço (aulas de grupo, nutrição): ativa a
+  // inscrição nesse serviço e não mexe no estado nem na frequência de PT.
+  if ((plano?.servico_id ?? SERVICO_PT) === SERVICO_PT) {
+    await supabase
+      .from('clientes')
+      .update({
+        estado: 'Ativo',
+        estado_automatico: true,
+        cliente_pt: true,
+        ...(plano?.sessoes_por_semana != null ? { frequencia_semanal: plano.sessoes_por_semana } : {}),
+      })
+      .eq('id', clienteId)
+  } else {
+    await ativarNoServico(supabase, clienteId, plano!.servico_id, dataPagamento)
+  }
 
   // "Pedir fatura": só cria um pedido pendente para a Administração
   // validar — nunca emite nada daqui. O NIF indicado fica na ficha.
@@ -333,4 +342,33 @@ export async function anularVendaProduto(formData: FormData) {
     .eq('origem', 'venda')
   if (error) voltarVendas(slug, { erroVenda: error.message })
   voltarVendas(slug, { venda: 'anulada' })
+}
+
+// Ativa (ou cria) a inscrição de um cliente noutro serviço, ao pagar a
+// mensalidade desse serviço. Quem não é cliente de PT fica também com o
+// estado geral Ativo (é o que as listas gerais mostram).
+async function ativarNoServico(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clienteId: string,
+  servicoId: number,
+  dataPagamento: string
+) {
+  const { data: atual } = await supabase
+    .from('clientes_servicos')
+    .select('inicio')
+    .eq('cliente_id', clienteId)
+    .eq('servico_id', servicoId)
+    .maybeSingle()
+  await supabase.from('clientes_servicos').upsert(
+    {
+      cliente_id: clienteId,
+      servico_id: servicoId,
+      estado: 'Ativo',
+      estado_automatico: true,
+      inicio: atual?.inicio ?? dataPagamento,
+      saiu_em: null,
+    },
+    { onConflict: 'cliente_id,servico_id' }
+  )
+  await supabase.from('clientes').update({ estado: 'Ativo' }).eq('id', clienteId).eq('cliente_pt', false)
 }

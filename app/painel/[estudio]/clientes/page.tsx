@@ -11,6 +11,8 @@ import { proximoAniversario, idadeEm } from '@/lib/data/aniversarios'
 import { treinosPrevistos, intervaloMes, fmt } from '@/lib/data/presencas'
 import ListaClientes, { type LinhaCliente } from './ListaClientes'
 import ExportarCsvButton from '@/components/ExportarCsvButton'
+import { SERVICO_PT, carregarServicos } from '@/lib/data/servicos'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 import { CAMPOS_FICHA, camposEmFalta, ehCampoFicha, rotuloCampo, type CampoFicha } from '@/lib/data/fichaCliente'
 import type { EstadoCliente, GeneroCliente } from '@/lib/supabase/database.types'
 
@@ -81,7 +83,7 @@ function numeroSequencial(numeroSocio: string | null): number | null {
 }
 
 function construirQuery(
-  base: { estado?: string; ordem?: string; dir?: string; falta?: string },
+  base: { estado?: string; ordem?: string; dir?: string; falta?: string; servico?: string },
   overrides: Record<string, string | undefined>
 ) {
   const combinado = { ...base, ...overrides }
@@ -98,10 +100,15 @@ export default async function ClientesPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ estado?: string; ordem?: string; dir?: string; falta?: string }>
+  searchParams: Promise<{ estado?: string; ordem?: string; dir?: string; falta?: string; servico?: string }>
 }) {
   const { estudio: slug } = await params
-  const { estado: estadoParam, ordem: ordemParam, dir: dirParam, falta: faltaParam } = await searchParams
+  const { estado: estadoParam, ordem: ordemParam, dir: dirParam, falta: faltaParam, servico: servicoParam } = await searchParams
+  // Serviço: cada um tem a sua lista de clientes (o PT é o de sempre).
+  const servicoSel = Number(servicoParam) > 0 ? Number(servicoParam) : SERVICO_PT
+  const ePt = servicoSel === SERVICO_PT
+  // Para os links manterem o serviço escolhido.
+  const servicoQs = ePt ? undefined : String(servicoSel)
   // Filtro "Dados incompletos": 'qualquer' (falta pelo menos um campo)
   // ou um campo em concreto (ex.: só quem não tem NIF).
   const falta: CampoFicha | 'qualquer' | null =
@@ -119,6 +126,25 @@ export default async function ClientesPage({
     notFound()
   }
 
+  // Noutro serviço, o estado e o início vêm da inscrição nesse serviço.
+  const [servicos, { data: inscricoesData }, { data: ativosPorServicoData }] = await Promise.all([
+    carregarServicos(supabase, { soAtivos: true }),
+    ePt
+      ? Promise.resolve({ data: [] as { cliente_id: string; estado: EstadoCliente; inicio: string | null; saiu_em: string | null }[] })
+      : supabase.from('clientes_servicos').select('cliente_id, estado, inicio, saiu_em').eq('servico_id', servicoSel),
+    supabase.from('clientes_servicos').select('servico_id, clientes!inner(estudio_id)').eq('estado', 'Ativo').eq('clientes.estudio_id', estudio.id),
+  ])
+  const inscricaoPorCliente = new Map(
+    ((inscricoesData ?? []) as { cliente_id: string; estado: EstadoCliente; inicio: string | null; saiu_em: string | null }[]).map((i) => [
+      i.cliente_id,
+      i,
+    ])
+  )
+  const ativosPorServico = new Map<number, number>()
+  for (const a of (ativosPorServicoData ?? []) as { servico_id: number }[]) {
+    ativosPorServico.set(a.servico_id, (ativosPorServico.get(a.servico_id) ?? 0) + 1)
+  }
+
   let query = supabase
     .from('clientes')
     .select(
@@ -126,8 +152,11 @@ export default async function ClientesPage({
     )
     .eq('estudio_id', estudio.id)
 
-  if (estado !== 'Todos') {
-    query = query.eq('estado', estado)
+  if (ePt) {
+    query = query.eq('cliente_pt', true)
+    if (estado !== 'Todos') query = query.eq('estado', estado)
+  } else {
+    query = query.in('id', [...inscricaoPorCliente.keys(), '00000000-0000-0000-0000-000000000000'])
   }
 
   const anoAtual = agora.getFullYear()
@@ -145,8 +174,23 @@ export default async function ClientesPage({
     { data: presencasData, error: erroPresencas },
   ] = await Promise.all([
     query,
-    supabase.from('clientes').select('estado').eq('estudio_id', estudio.id),
-    supabase.from('v_estado_pagamento').select('cliente_id, valido_ate, em_dia').eq('estudio_id', estudio.id),
+    ePt
+      ? supabase.from('clientes').select('estado').eq('estudio_id', estudio.id).eq('cliente_pt', true)
+      : Promise.resolve({ data: [...inscricaoPorCliente.values()].map((i) => ({ estado: i.estado })), error: null }),
+    ePt
+      ? supabase.from('v_estado_pagamento').select('cliente_id, valido_ate, em_dia').eq('estudio_id', estudio.id)
+      : supabase
+          .from('v_validade_por_servico')
+          .select('cliente_id, validade_maxima')
+          .eq('servico_id', servicoSel)
+          .then(({ data, error }) => ({
+            data: (data ?? []).map((v) => ({
+              cliente_id: v.cliente_id as string,
+              valido_ate: v.validade_maxima as string,
+              em_dia: (v.validade_maxima as string) >= hojeEmLisboa(),
+            })),
+            error,
+          })),
     supabase
       .from('presencas')
       .select('cliente_id, clientes!inner(estudio_id)')
@@ -158,7 +202,12 @@ export default async function ClientesPage({
   if (error || erroTodos || erroPagamentos || erroPresencas) {
     throw new Error((error ?? erroTodos ?? erroPagamentos ?? erroPresencas)!.message)
   }
-  const doEstado = (data ?? []) as ClienteLista[]
+  const doEstado = ((data ?? []) as ClienteLista[])
+    .map((c) => {
+      const i = inscricaoPorCliente.get(c.id)
+      return ePt || !i ? c : { ...c, estado: i.estado, inicio_contrato: i.inicio, saiu_em: i.saiu_em }
+    })
+    .filter((c) => ePt || estado === 'Todos' || c.estado === estado)
   // Campos em falta de cada cliente (do filtro de estado escolhido) e
   // quantos clientes têm cada um em falta — os números dos botões.
   const emFaltaPorCliente = new Map(doEstado.map((c) => [c.id, camposEmFalta(c)]))
@@ -199,6 +248,18 @@ export default async function ClientesPage({
   })
 
   const todos = (todosData ?? []) as { estado: EstadoCliente }[]
+  // Ativos de PT (número no separador do PT) — só se sabe aqui quando a
+  // lista é a do PT; noutro separador conta-se à parte.
+  const contagemPtAtivos = ePt
+    ? todos.filter((c) => c.estado === 'Ativo').length
+    : (
+        await supabase
+          .from('clientes')
+          .select('id', { count: 'exact', head: true })
+          .eq('estudio_id', estudio.id)
+          .eq('cliente_pt', true)
+          .eq('estado', 'Ativo')
+      ).count ?? 0
   const contagens: Record<EstadoCliente | 'Todos', number> = {
     Todos: todos.length,
     Ativo: todos.filter((c) => c.estado === 'Ativo').length,
@@ -317,13 +378,35 @@ export default async function ClientesPage({
         </div>
       </div>
 
+      {/* Um separador por serviço: cada um tem a sua lista e os seus
+          números, para não se misturarem (o PT é o de sempre). */}
+      {servicos.length > 1 && (
+        <div className="mt-6 flex flex-wrap gap-1.5 border-b border-border-subtle">
+          {servicos.map((sv) => {
+            const ativo = sv.id === servicoSel
+            const n = sv.id === SERVICO_PT ? contagemPtAtivos : ativosPorServico.get(sv.id) ?? 0
+            return (
+              <Link
+                key={sv.id}
+                href={`/painel/${slug}/clientes${construirQuery({ ordem: ordemParam, dir: dirParam }, { servico: sv.id === SERVICO_PT ? undefined : String(sv.id) })}`}
+                className={`-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
+                  ativo ? 'border-brand text-foreground' : 'border-transparent text-muted hover:text-foreground'
+                }`}
+              >
+                {sv.nome} <span className="font-normal text-muted">({n})</span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
       {/* Controlo segmentado, ao estilo iOS — uma só faixa, com o filtro
           ativo a "flutuar" lá dentro, em vez de pílulas soltas. */}
       <div className="mt-6 flex flex-wrap gap-1.5 rounded-full bg-border-subtle p-1">
         {FILTROS.map((f) => {
           const ativo = estado === f.valor
           const href = `/painel/${slug}/clientes${construirQuery(
-            { ordem: ordemParam, dir: dirParam, falta: faltaParam },
+            { ordem: ordemParam, dir: dirParam, falta: faltaParam, servico: servicoQs },
             { estado: f.valor }
           )}`
           return (
@@ -345,7 +428,7 @@ export default async function ClientesPage({
         {ORDENS.map((o) => {
           const ativo = ordem === o.valor
           const href = `/painel/${slug}/clientes${construirQuery(
-            { estado, falta: faltaParam },
+            { estado, falta: faltaParam, servico: servicoQs },
             { ordem: o.valor === 'nome' ? undefined : o.valor, dir: ativo ? direcao : undefined }
           )}`
           return (
@@ -364,7 +447,7 @@ export default async function ClientesPage({
         })}
         <Link
           href={`/painel/${slug}/clientes${construirQuery(
-            { estado, ordem: ordemParam, falta: faltaParam },
+            { estado, ordem: ordemParam, falta: faltaParam, servico: servicoQs },
             { dir: direcao === 'asc' ? 'desc' : 'asc' }
           )}`}
           className="flex items-center rounded-full border border-border-subtle px-2.5 py-1.5 font-semibold text-muted transition-colors hover:border-border-strong"
@@ -393,7 +476,7 @@ export default async function ClientesPage({
           return (
             <Link
               key={f.valor ?? 'todas'}
-              href={`/painel/${slug}/clientes${construirQuery({ estado, ordem: ordemParam, dir: dirParam }, { falta: f.valor })}`}
+              href={`/painel/${slug}/clientes${construirQuery({ estado, ordem: ordemParam, dir: dirParam, servico: servicoQs }, { falta: f.valor })}`}
               className={`rounded-full border px-3 py-1.5 font-semibold transition-colors ${
                 ativo
                   ? f.valor

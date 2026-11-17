@@ -56,15 +56,6 @@ const CONFIG_META: Record<string, { label: string; grupo: string; tipo?: 'textar
   desmarcacoes_seguidas_limite: { label: 'Limite de desmarcações seguidas', grupo: 'Desmarcações' },
   desmarcacoes_acumuladas_limite: { label: 'Limite de desmarcações acumuladas', grupo: 'Desmarcações' },
 
-  preco_tp_1x_40min: { label: '1×/semana · 40 min (€)', grupo: 'Preços — Treino Personalizado' },
-  preco_tp_1x_50min: { label: '1×/semana · 50 min (€)', grupo: 'Preços — Treino Personalizado' },
-  preco_tp_2x_40min: { label: '2×/semana · 40 min (€)', grupo: 'Preços — Treino Personalizado' },
-  preco_tp_2x_50min: { label: '2×/semana · 50 min (€)', grupo: 'Preços — Treino Personalizado' },
-
-  preco_ta_1x: { label: '1×/semana (€)', grupo: 'Preços — Treino Acompanhado' },
-  preco_ta_2x: { label: '2×/semana (€)', grupo: 'Preços — Treino Acompanhado' },
-  preco_ta_3x: { label: '3×/semana (€)', grupo: 'Preços — Treino Acompanhado' },
-
   custo_hora_pt: { label: 'Custo por hora de PT (€)', grupo: 'Outros' },
   max_clientes_bloco_exclusivo: { label: 'Máx. clientes por bloco exclusivo', grupo: 'Outros' },
   reavaliacao_antecipada_treino_acompanhado: {
@@ -82,8 +73,6 @@ const GRUPOS_ORDEM = [
   'Horário do estúdio',
   'Contratos e pagamentos',
   'Desmarcações',
-  'Preços — Treino Personalizado',
-  'Preços — Treino Acompanhado',
   'Outros',
   'Documentos',
   'Códigos QR dos estúdios',
@@ -94,8 +83,6 @@ const CORES_GRUPO: Record<string, 'teal' | 'roxo' | 'azul' | 'ambar' | 'verde' |
   'Horário do estúdio': 'azul',
   'Contratos e pagamentos': 'verde',
   Desmarcações: 'laranja',
-  'Preços — Treino Personalizado': 'roxo',
-  'Preços — Treino Acompanhado': 'teal',
   Outros: 'ambar',
   Documentos: 'neutro',
   'Códigos QR dos estúdios': 'neutro',

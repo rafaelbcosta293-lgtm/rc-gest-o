@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
 import { Info } from 'lucide-react'
 import Sparkline from './Sparkline'
+import Link from './LinkRapido'
+import { ChevronRight } from 'lucide-react'
 
 type Tendencia = { valor: number; label?: string }
 
@@ -19,6 +21,7 @@ export default function StatCard({
   historico,
   aoVivo = false,
   formula,
+  href,
 }: {
   icone?: LucideIcon
   cor?: { bg: string; tx: string }
@@ -35,6 +38,8 @@ export default function StatCard({
   // mesma forma — title nativo, sem JS: funciona ao passar o rato e
   // também com toque longo na maioria dos browsers de tablet/telemóvel.
   formula?: string
+  // Com endereço, o cartão inteiro abre a página com os dados dele.
+  href?: string
 }) {
   const subiu = tendencia ? tendencia.valor > 0 : null
   const corTendencia =
@@ -44,8 +49,8 @@ export default function StatCard({
         ? 'text-emerald-600 dark:text-emerald-400'
         : 'text-red-600 dark:text-red-400'
 
-  return (
-    <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">
+  const conteudo = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           {Icone && (
@@ -82,6 +87,20 @@ export default function StatCard({
           {tendencia.label ? ` ${tendencia.label}` : '%'}
         </p>
       )}
-    </div>
+    </>
   )
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        title={`Abrir ${label.toLowerCase()}`}
+        className="group relative block rounded-2xl border border-border-subtle bg-surface p-4 shadow-card transition-colors hover:border-brand/50 hover:bg-brand/[.04]"
+      >
+        {conteudo}
+        <ChevronRight className="absolute right-3 bottom-3 h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+      </Link>
+    )
+  }
+  return <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-card">{conteudo}</div>
 }

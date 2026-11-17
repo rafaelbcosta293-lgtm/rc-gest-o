@@ -74,8 +74,15 @@ export default async function CoordenacaoPage({
           cor={PALETA.neutro}
           label="Checklist hoje"
           valor={total > 0 ? `${concluidos}/${total}` : '—'}
+          href="/painel/coordenacao/checklist"
         />
-        <StatCard icone={CalendarCheck2} cor={PALETA.roxo} label="Sessões experimentais hoje" valor={sessoesHoje} />
+        <StatCard
+          icone={CalendarCheck2}
+          cor={PALETA.roxo}
+          label="Sessões experimentais hoje"
+          valor={sessoesHoje}
+          href="/painel/coordenacao/sessoes-experimentais"
+        />
       </div>
 
       <p className="mt-6 text-sm text-muted">

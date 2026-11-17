@@ -15,9 +15,8 @@ import {
   Palmtree,
   ListTodo,
   Users,
-  Activity,
-  Flower2,
 } from 'lucide-react'
+import { IconeGrupo, IconePilates } from '@/components/icones'
 
 // Paleta única da app: cada família de cor tem sempre o mesmo par
 // fundo/texto, esteja onde estiver (alertas, estados, leads, secções,
@@ -241,8 +240,8 @@ export const MODULOS: Modulo[] = [
   { id: 'pagamentos', nome: 'Pagamentos', icone: CreditCard, cor: 'ambar', desc: 'Quem tem o pagamento em dia', pronto: true },
   { id: 'agenda', nome: 'Agenda', icone: CalendarDays, cor: 'roxo', desc: 'Treinos, avaliações e reuniões — dia, semana e mês', pronto: true },
   { id: 'aulas', nome: 'Aulas de grupo', curto: 'Aulas', icone: Users, cor: 'teal', desc: 'Resumo do Treino Acompanhado e do Pilates — horário, lotação e inscrições', pronto: true },
-  { id: 'acompanhado', nome: 'Treino Acompanhado', curto: 'Acompanh.', icone: Activity, cor: 'azul', desc: 'Clientes, pagamentos em atraso, aulas e horário do Treino Acompanhado', pronto: true },
-  { id: 'pilates', nome: 'Pilates', icone: Flower2, cor: 'roxo', desc: 'Clientes, pagamentos em atraso, aulas e horário do Pilates', pronto: true },
+  { id: 'acompanhado', nome: 'Treino Acompanhado', curto: 'Acompanh.', icone: IconeGrupo, cor: 'azul', desc: 'Clientes, pagamentos em atraso, aulas e horário do Treino Acompanhado', pronto: true },
+  { id: 'pilates', nome: 'Pilates', icone: IconePilates, cor: 'roxo', desc: 'Clientes, pagamentos em atraso, aulas e horário do Pilates', pronto: true },
   { id: 'tarefas', nome: 'Tarefas', icone: ListTodo, cor: 'azul', desc: 'O que há para fazer na empresa, quem trata e até quando', pronto: true },
   { id: 'alertas', nome: 'Alertas', icone: BellRing, cor: 'vermelho', desc: 'Leads, clientes e pagamentos que precisam de atenção agora', pronto: true },
   { id: 'checklist', nome: 'Abertura / Fecho', curto: 'Checklist', icone: KeyRound, cor: 'neutro', desc: 'Checklist diária do estúdio', pronto: true },

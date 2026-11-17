@@ -39,6 +39,7 @@ const TABELAS: Record<string, string[]> = {
   config_assiduidade: ['perfil_id'],
   despesa_categorias: ['id'],
   dias_fechados: ['id'],
+  servicos: ['id'],
   despesa_subcategorias: ['id'],
   despesas: ['id'],
   despesas_recorrentes: ['id'],

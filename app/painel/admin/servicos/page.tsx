@@ -17,6 +17,7 @@ import TituloSeccao from '@/components/TituloSeccao'
 import ListaPlanos from './ListaPlanos'
 import SeccaoProdutos, { type CategoriaProduto, type Produto } from './SeccaoProdutos'
 import type { ConfigLinha, Plano } from '@/lib/supabase/database.types'
+import { carregarServicos } from '@/lib/data/servicos'
 import { ArrowLeft } from 'lucide-react'
 
 const inputCls =
@@ -140,6 +141,7 @@ export default async function ServicosPage({
   const produtos = ((produtosData ?? []) as Produto[]).map((p) => ({ ...p, valor: Number(p.valor) }))
 
   const planos = (planosData ?? []) as Plano[]
+  const servicos = await carregarServicos(supabase)
   const configTodo = (configData ?? []) as ConfigLinha[]
   const config = configTodo.filter((c) => !CHAVES_ESCONDIDAS.includes(c.chave))
 
@@ -170,15 +172,25 @@ export default async function ServicosPage({
         </p>
       )}
 
-      <TituloSeccao cor="teal">Serviços</TituloSeccao>
-      <p className="mt-1 text-xs text-muted">Arrasta pela pega à esquerda para mudar a ordem.</p>
-      <ListaPlanos planos={planos} />
+      <TituloSeccao cor="teal">Planos (mensalidades)</TituloSeccao>
+      <p className="mt-1 text-xs text-muted">
+        Cada plano pertence a um serviço — {servicos.map((s) => s.nome).join(', ')}. Os pagamentos ficam no serviço do
+        plano, para as métricas de cada serviço não se misturarem. Arrasta pela pega à esquerda para mudar a ordem.
+      </p>
+      <ListaPlanos planos={planos} servicos={servicos} />
 
       <form
         action={criarPlano}
         className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border-strong p-3"
       >
-        <input name="nome" required placeholder="Nome do serviço" className={`${inputCls} flex-1 basis-40`} />
+        <select name="servico_id" defaultValue={1} title="Serviço do plano" className={`${inputCls} w-44`}>
+          {servicos.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.nome}
+            </option>
+          ))}
+        </select>
+        <input name="nome" required placeholder="Nome do plano" className={`${inputCls} flex-1 basis-40`} />
         <input
           name="valor"
           type="number"
@@ -197,7 +209,7 @@ export default async function ServicosPage({
           pendingText="A criar…"
           className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-black hover:bg-brand-strong"
         >
-          + Serviço
+          + Plano
         </SubmitButton>
       </form>
       <p className="mt-2 text-xs text-muted">
@@ -206,7 +218,7 @@ export default async function ServicosPage({
         mês.
       </p>
       <p className="mt-2 text-xs text-muted">
-        Eliminar um serviço já usado em pagamentos antigos pode não ser possível — nesse caso,
+        Eliminar um plano já usado em pagamentos antigos pode não ser possível — nesse caso,
         desmarca &quot;ativo&quot; em vez de eliminar.
       </p>
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { agruparPorServico } from '@/lib/data/servicos'
 import { useState } from 'react'
 import SubmitButton from '@/components/SubmitButton'
 import QuemFez from '@/components/QuemFez'
@@ -24,10 +25,13 @@ export default function PagamentoForm({
   validadeAtual = null,
   pessoas = [],
   euId = null,
+  servicos = [],
 }: {
   estudioSlug: string
   clienteId: string
   planos: Plano[]
+  // Para agrupar os planos por serviço no menu (sem isto, lista simples).
+  servicos?: { id: number; nome: string }[]
   action: (formData: FormData) => void
   error?: string
   clienteNif?: string | null
@@ -117,11 +121,21 @@ export default function PagamentoForm({
             className={inputCls}
           >
             <option value="">— escolhe um plano —</option>
-            {planos.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome} · {p.valor}€
-              </option>
-            ))}
+            {servicos.length > 0
+              ? agruparPorServico(planos, servicos).map((g) => (
+                  <optgroup key={g.servico.id} label={g.servico.nome}>
+                    {g.itens.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nome} · {p.valor}€
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              : planos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} · {p.valor}€
+                  </option>
+                ))}
           </select>
         </div>
 

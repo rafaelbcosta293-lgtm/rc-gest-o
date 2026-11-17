@@ -1,5 +1,6 @@
 'use server'
 
+import { servicoDoFormulario } from '@/lib/data/servicos'
 import { semSair, type ResultadoSemSair } from '@/lib/acoes/semSair'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -58,6 +59,7 @@ export async function guardarDespesa(formData: FormData) {
   const vencimento = texto(formData, 'vencimento') ?? data
   const linha = {
     estudio_id: estudioId,
+    servico_id: servicoDoFormulario(formData),
     categoria,
     subcategoria: texto(formData, 'subcategoria'),
     descricao: texto(formData, 'descricao'),
@@ -216,6 +218,7 @@ export async function guardarRecorrente(formData: FormData) {
 
   const linha = {
     estudio_id: estudioId,
+    servico_id: servicoDoFormulario(formData),
     categoria,
     subcategoria: texto(formData, 'subcategoria'),
     descricao: texto(formData, 'descricao'),
@@ -238,6 +241,7 @@ export async function guardarRecorrente(formData: FormData) {
       .from('despesas')
       .update({
         valor: linha.valor,
+        servico_id: linha.servico_id,
         categoria: linha.categoria,
         subcategoria: linha.subcategoria,
         descricao: linha.descricao,

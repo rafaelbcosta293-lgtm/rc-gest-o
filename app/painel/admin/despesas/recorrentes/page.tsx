@@ -1,4 +1,6 @@
 import { IrComBotaoDireito, JanelaServidor } from '@/components/janela/Janela'
+import CampoServico from '@/components/CampoServico'
+import { carregarServicos } from '@/lib/data/servicos'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -66,7 +68,7 @@ export default async function RecorrentesPage({
   const ids = estudios.map((e) => e.id)
   const nomeEstudio = new Map(todosEstudios.map((e) => [e.id, e.nome]))
 
-  const [categorias, { data: recsData, error }, historico] = await Promise.all([
+  const [categorias, { data: recsData, error }, historico, servicos] = await Promise.all([
     carregarCategorias(supabase),
     supabase.from('despesas_recorrentes').select('*').in('estudio_id', ids).order('ativo', { ascending: false }).order('dia_vencimento'),
     todasAsLinhas<{ estudio_id: number; data: string; categoria: string; subcategoria: string | null; valor: number | string }>(
@@ -81,6 +83,7 @@ export default async function RecorrentesPage({
           .order('id')
           .range(de, ate)
     ),
+    carregarServicos(supabase, { soAtivos: true }),
   ])
   if (error) throw new Error(error.message)
 
@@ -100,6 +103,7 @@ export default async function RecorrentesPage({
 
   const inicial = emEdicao ?? {
     estudio_id: Number(sp.s_estudio) || estudios[0]?.id,
+    servico_id: null as number | null,
     categoria: sp.s_categoria ?? '',
     subcategoria: sp.s_sub ?? '',
     descricao: '',
@@ -131,6 +135,7 @@ export default async function RecorrentesPage({
               ))}
             </select>
           </label>
+          <CampoServico servicos={servicos} valorInicial={inicial.servico_id} className={inputCls} />
           <CamposCategoria
             categorias={categorias}
             categoriaInicial={inicial.categoria}

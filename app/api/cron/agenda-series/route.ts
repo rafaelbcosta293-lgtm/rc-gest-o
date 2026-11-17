@@ -51,6 +51,7 @@ export async function GET(request: Request) {
 
     const linhas = novasDatas.map((data) => ({
       estudio_id: serie.estudio_id,
+      servico_id: serie.servico_id ?? 1,
       cliente_id: serie.cliente_id,
       pt_id: serie.pt_id,
       tipo: serie.tipo,

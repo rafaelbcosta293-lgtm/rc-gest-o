@@ -1,5 +1,6 @@
 'use server'
 
+import { SERVICO_PT, servicoDoFormulario } from '@/lib/data/servicos'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -105,6 +106,7 @@ export async function criarPlano(formData: FormData) {
     .maybeSingle()
 
   const { error } = await supabase.from('planos').insert({
+    servico_id: servicoDoFormulario(formData) ?? SERVICO_PT,
     nome: formData.get('nome') as string,
     valor: Number(formData.get('valor')),
     sessoes_por_semana: formData.get('sessoes_por_semana')
@@ -128,6 +130,7 @@ export async function atualizarPlano(formData: FormData) {
   const { error } = await supabase
     .from('planos')
     .update({
+      servico_id: servicoDoFormulario(formData) ?? SERVICO_PT,
       nome: formData.get('nome') as string,
       valor: Number(formData.get('valor')),
       sessoes_por_semana: formData.get('sessoes_por_semana')

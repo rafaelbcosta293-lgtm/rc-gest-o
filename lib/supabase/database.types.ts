@@ -418,8 +418,22 @@ export type Ausencia = {
   nota: string | null
 }
 
+// Serviços do estúdio (Treino Personalizado, Treino Acompanhado, Pilates,
+// Nutrição) — cada plano, pagamento, marcação, lead e despesa diz a qual
+// pertence, para as métricas de cada um não se misturarem.
+export type FormatoServico = 'individual' | 'grupo'
+export type Servico = {
+  id: number
+  chave: string
+  nome: string
+  formato: FormatoServico
+  ordem: number
+  ativo: boolean
+}
+
 export type Plano = {
   id: string
+  servico_id: number
   nome: string
   valor: number
   sessoes_por_semana: number | null
@@ -431,6 +445,8 @@ export type Pagamento = {
   id: string
   cliente_id: string
   plano_id: string | null
+  // Vem do plano (trigger na base de dados); sem plano = Treino Personalizado.
+  servico_id: number
   valor: number
   desconto: number
   metodo: string | null
@@ -510,6 +526,7 @@ export type EstadoEventoAgenda = 'Agendado' | 'Cancelado' | 'Concluído'
 export type EventoAgenda = {
   id: string
   estudio_id: number
+  servico_id: number
   cliente_id: string | null
   pt_id: string | null
   tipo: TipoEventoAgenda
@@ -542,6 +559,7 @@ export type RepeticaoSerieAgenda = 'semanal' | 'quinzenal'
 export type AgendaSerie = {
   id: string
   estudio_id: number
+  servico_id: number
   cliente_id: string | null
   pt_id: string | null
   tipo: TipoEventoAgenda

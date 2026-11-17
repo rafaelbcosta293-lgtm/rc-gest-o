@@ -1,4 +1,5 @@
 import QuemFez from '@/components/QuemFez'
+import { carregarServicos } from '@/lib/data/servicos'
 import { dadosQuemFez } from '@/lib/data/quemFez'
 import AtalhosDoCliente from '@/components/AtalhosDoCliente'
 import Link from '@/components/LinkRapido'
@@ -51,6 +52,7 @@ export default async function PagamentosClientePage({
     supabase.from('planos').select('*').eq('ativo', true).order('valor'),
   ])
   const { pessoas, euId } = await quemFezAVir
+  const servicos = await carregarServicos(supabase)
 
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
@@ -111,6 +113,7 @@ export default async function PagamentosClientePage({
         validadeAtual={validoAte}
         pessoas={pessoas}
         euId={euId}
+        servicos={servicos}
       />
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">

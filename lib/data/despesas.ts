@@ -19,6 +19,8 @@ export const DIAS_AVISO_OMISSAO = 3
 export type DespesaRecorrente = {
   id: string
   estudio_id: number
+  // Sem serviço = do estúdio (partilhada).
+  servico_id?: number | null
   categoria: string
   subcategoria: string | null
   descricao: string | null
@@ -34,6 +36,7 @@ export type DespesaRecorrente = {
 export type DespesaLinha = {
   id: string
   estudio_id: number
+  servico_id?: number | null
   data: string
   categoria: string
   subcategoria: string | null
@@ -244,6 +247,7 @@ export async function gerarDespesasRecorrentes(supabase: SupabaseClient, hoje: s
       if (ja.has(`${r.id}|${v}`)) continue
       novas.push({
         estudio_id: r.estudio_id,
+        servico_id: r.servico_id ?? null,
         data: v,
         vencimento: v,
         categoria: r.categoria,

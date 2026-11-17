@@ -159,6 +159,8 @@ export default function LeadForm({
             <option value="">—</option>
             <option value="Treino Personalizado">Treino Personalizado</option>
             <option value="Treino Acompanhado">Treino Acompanhado</option>
+            <option value="Pilates">Pilates</option>
+            <option value="Nutrição">Nutrição</option>
           </select>
         </div>
 

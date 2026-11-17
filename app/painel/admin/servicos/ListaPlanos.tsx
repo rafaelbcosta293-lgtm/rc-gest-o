@@ -6,7 +6,7 @@ import { GripVertical } from 'lucide-react'
 import SubmitButton from '@/components/SubmitButton'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import { atualizarPlano, apagarPlano, reordenarPlanos } from './actions'
-import type { Plano } from '@/lib/supabase/database.types'
+import type { Plano, Servico } from '@/lib/supabase/database.types'
 
 const inputCls =
   'rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
@@ -15,7 +15,7 @@ const inputCls =
 // Trello/Notion) — a ordem em ecrã atualiza-se logo ao arrastar, por
 // cima da lista que veio do servidor; só ao soltar é que grava a ordem
 // nova, de uma vez, e volta a sincronizar com o servidor.
-export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[] }) {
+export default function ListaPlanos({ planos: planosIniciais, servicos }: { planos: Plano[]; servicos: Servico[] }) {
   const router = useRouter()
   const [planos, setPlanos] = useState(planosIniciais)
   const [arrastadoId, setArrastadoId] = useState<string | null>(null)
@@ -63,6 +63,13 @@ export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[
           </span>
           <form action={atualizarPlano} className="flex flex-1 flex-wrap items-center gap-2">
             <input type="hidden" name="id" value={p.id} />
+            <select name="servico_id" defaultValue={p.servico_id} title="Serviço do plano" className={`${inputCls} w-44`}>
+              {servicos.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nome}
+                </option>
+              ))}
+            </select>
             <input name="nome" defaultValue={p.nome} className={`${inputCls} flex-1 basis-40`} />
             <input
               name="valor"
@@ -96,7 +103,7 @@ export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[
             <input type="hidden" name="id" value={p.id} />
             <SubmitButton
               pendingText="…"
-              aria-label="Eliminar serviço"
+              aria-label="Eliminar plano"
               className="shrink-0 text-lg text-zinc-400 hover:text-red-600"
             >
               ×
@@ -106,7 +113,7 @@ export default function ListaPlanos({ planos: planosIniciais }: { planos: Plano[
       ))}
       {planos.length === 0 && (
         <div className="rounded-xl border border-dashed border-border-subtle p-6 text-center text-sm text-muted">
-          Ainda não há serviços registados.
+          Ainda não há planos registados.
         </div>
       )}
     </div>

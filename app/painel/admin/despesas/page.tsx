@@ -1,4 +1,6 @@
 import { carregarCustosPorLead, custoPorLeadDoMes, explicarCustoPorLead, MIN_LEADS_CUSTO_POR_LEAD } from '@/lib/data/custoPorLead'
+import CampoServico from '@/components/CampoServico'
+import { carregarServicos } from '@/lib/data/servicos'
 import { IrComBotaoDireito, JanelaServidor } from '@/components/janela/Janela'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -39,7 +41,7 @@ import {
 } from './partes'
 
 const COLUNAS =
-  'id, estudio_id, data, categoria, subcategoria, descricao, valor, origem, pago, vencimento, pago_em, dias_aviso, recorrente_id'
+  'id, estudio_id, servico_id, data, categoria, subcategoria, descricao, valor, origem, pago, vencimento, pago_em, dias_aviso, recorrente_id'
 
 export default async function DespesasPage({
   searchParams,
@@ -70,7 +72,7 @@ export default async function DespesasPage({
   const ids = estudios.map((e) => e.id)
   const nomeEstudio = new Map(todosEstudios.map((e) => [e.id, e.nome]))
 
-  const [categorias, { data: linhasData, error }, avisosTodos, { data: emEdicaoData }] = await Promise.all([
+  const [categorias, { data: linhasData, error }, avisosTodos, { data: emEdicaoData }, servicos] = await Promise.all([
     carregarCategorias(supabase),
     supabase
       .from('despesas')
@@ -85,6 +87,7 @@ export default async function DespesasPage({
     sp.editar
       ? supabase.from('despesas').select(COLUNAS).eq('id', sp.editar).is('anulado_em', null).maybeSingle()
       : Promise.resolve({ data: null }),
+    carregarServicos(supabase, { soAtivos: true }),
   ])
   if (error) throw new Error(error.message)
 
@@ -195,6 +198,7 @@ export default async function DespesasPage({
         key="nova"
         categorias={categorias}
         estudios={todosEstudios.map((e) => ({ id: e.id, nome: e.nome }))}
+        servicos={servicos}
         estudioOmissao={estudios[0]?.id}
         despesa={null}
         dataOmissao={mes === hoje.slice(0, 7) ? hoje : inicio}
@@ -208,6 +212,7 @@ export default async function DespesasPage({
             key={emEdicao.id}
             categorias={categorias}
             estudios={todosEstudios.map((e) => ({ id: e.id, nome: e.nome }))}
+        servicos={servicos}
             estudioOmissao={estudios[0]?.id}
             despesa={emEdicao}
             dataOmissao={hoje}
@@ -376,6 +381,7 @@ function Numero({ label, valor, cor, nota }: { label: string; valor: string; cor
 function FormDespesa({
   categorias,
   estudios,
+  servicos,
   estudioOmissao,
   despesa,
   dataOmissao,
@@ -383,6 +389,7 @@ function FormDespesa({
 }: {
   categorias: CategoriaOpcao[]
   estudios: { id: number; nome: string }[]
+  servicos: { id: number; nome: string }[]
   estudioOmissao?: number
   despesa: DespesaLinha | null
   dataOmissao: string
@@ -405,6 +412,7 @@ function FormDespesa({
           </select>
           {deRecorrente && <input type="hidden" name="estudio_id" value={despesa!.estudio_id} />}
         </label>
+        <CampoServico servicos={servicos} valorInicial={despesa?.servico_id} className={inputCls} />
         <CamposCategoria
           categorias={categorias}
           categoriaInicial={despesa?.categoria ?? ''}

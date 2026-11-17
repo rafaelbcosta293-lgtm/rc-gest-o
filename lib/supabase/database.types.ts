@@ -432,6 +432,8 @@ export type Servico = {
   formato: FormatoServico
   ordem: number
   ativo: boolean
+  // Aulas de grupo: lugares por aula quando não se indica outro.
+  lotacao_omissao: number | null
 }
 
 export type Plano = {

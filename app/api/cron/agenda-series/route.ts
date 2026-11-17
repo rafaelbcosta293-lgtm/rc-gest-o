@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { gerarExtensaoSerie } from '@/lib/data/agenda'
+import { gerarAulas } from '@/lib/data/aulas'
 import type { AgendaSerie } from '@/lib/supabase/database.types'
 
 // Corre uma vez por dia. Mantém a janela de ocorrências já geradas de
@@ -68,5 +69,11 @@ export async function GET(request: Request) {
     totalGeradas += linhas.length
   }
 
-  return Response.json({ ok: true, series: series.length, ocorrenciasGeradas: totalGeradas })
+  // Aulas de grupo: mantém abertas as das próximas semanas, a partir do
+  // horário semanal de cada estúdio (idempotente).
+  const { data: estudios } = await admin.from('estudios').select('id')
+  let aulasGeradas = 0
+  for (const e of estudios ?? []) aulasGeradas += await gerarAulas(admin, e.id as number, hoje)
+
+  return Response.json({ ok: true, series: series.length, ocorrenciasGeradas: totalGeradas, aulasGeradas })
 }

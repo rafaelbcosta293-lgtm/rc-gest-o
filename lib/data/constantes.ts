@@ -14,6 +14,7 @@ import {
   Timer,
   Palmtree,
   ListTodo,
+  Users,
 } from 'lucide-react'
 
 // Paleta única da app: cada família de cor tem sempre o mesmo par
@@ -237,6 +238,7 @@ export const MODULOS: Modulo[] = [
   { id: 'presencas', nome: 'Presenças', icone: CalendarCheck2, cor: 'verde', desc: 'Quem treinou e quem faltou', pronto: true },
   { id: 'pagamentos', nome: 'Pagamentos', icone: CreditCard, cor: 'ambar', desc: 'Quem tem o pagamento em dia', pronto: true },
   { id: 'agenda', nome: 'Agenda', icone: CalendarDays, cor: 'roxo', desc: 'Treinos, avaliações e reuniões — dia, semana e mês', pronto: true },
+  { id: 'aulas', nome: 'Aulas de grupo', curto: 'Aulas', icone: Users, cor: 'teal', desc: 'Treino Acompanhado e Pilates — horário, lotação e inscrições', pronto: true },
   { id: 'tarefas', nome: 'Tarefas', icone: ListTodo, cor: 'azul', desc: 'O que há para fazer na empresa, quem trata e até quando', pronto: true },
   { id: 'alertas', nome: 'Alertas', icone: BellRing, cor: 'vermelho', desc: 'Leads, clientes e pagamentos que precisam de atenção agora', pronto: true },
   { id: 'checklist', nome: 'Abertura / Fecho', curto: 'Checklist', icone: KeyRound, cor: 'neutro', desc: 'Checklist diária do estúdio', pronto: true },

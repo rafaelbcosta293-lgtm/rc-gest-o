@@ -22,6 +22,8 @@ import {
 } from '@/lib/data/agenda'
 import type { EstadoEventoAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
+import { datasFechadas, mensagemDiaFechado } from '@/lib/data/diasFechados'
+import { papeisDaSessao } from '@/lib/data/sessao'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -354,14 +356,21 @@ export async function criarEvento(formData: FormData) {
         ? { modo: 'ate', ate: repeteAte }
         : { modo: 'vezes', vezes: repeteVezes ? Number(repeteVezes) : 8 }
 
-  const ocorrencias = gerarOcorrencias(data, repeticao, limite)
+  // Dias fechados: o primeiro dia não pode estar fechado; numa
+  // repetição, as vezes que calham num dia fechado ficam de fora.
+  const todasOcorrencias = gerarOcorrencias(data, repeticao, limite)
+  const fechadas = await datasFechadas(supabase, estudioId, todasOcorrencias)
+  if (fechadas.includes(data)) {
+    redirect(`/painel/${estudioSlug}/agenda/novo?error=${encodeURIComponent(mensagemDiaFechado([data]))}`)
+  }
+  const ocorrencias = todasOcorrencias.filter((d) => !fechadas.includes(d))
 
-  // Uma série indefinida precisa de um modelo em agenda_series, para o
-  // cron saber como continuar a gerá-la depois desta janela inicial —
-  // as de duração definida (até data/N vezes) continuam sem ele, tal
-  // como antes.
+  // Uma repetição precisa de um modelo em agenda_series (a base de dados
+  // exige-o para o serie_id): a indefinida fica ativa, para o cron a
+  // continuar depois desta janela inicial; a de duração definida (até
+  // data/N vezes) fica inativa — já está toda gerada.
   let serieId: string | null = null
-  if (repeticao !== 'nao' && limite.modo === 'indefinido') {
+  if (repeticao !== 'nao' && ocorrencias.length > 1) {
     const { data: serie, error: erroSerie } = await supabase
       .from('agenda_series')
       .insert({
@@ -372,8 +381,9 @@ export async function criarEvento(formData: FormData) {
         titulo,
         hora_inicio: horaInicio,
         duracao_min: duracaoMin,
-        repeticao,
+        repeticao: repeticao === 'quinzenal' ? 'quinzenal' : 'semanal',
         nota,
+        ativa: limite.modo === 'indefinido',
         criado_por: sessao.userId,
       })
       .select('id')
@@ -384,8 +394,6 @@ export async function criarEvento(formData: FormData) {
       )
     }
     serieId = serie.id
-  } else if (ocorrencias.length > 1) {
-    serieId = randomUUID()
   }
 
   const linhas = ocorrencias.map((dataOcorrencia) => ({
@@ -462,6 +470,11 @@ export async function atualizarEvento(formData: FormData) {
     .maybeSingle()
   if (erroAtual) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroAtual.message)}`)
+  }
+  if (eventoAtual && eventoAtual.data !== data) {
+    const { data: ev } = await supabase.from('agenda_eventos').select('estudio_id').eq('id', id).maybeSingle()
+    const fechadas = ev ? await datasFechadas(supabase, ev.estudio_id, [data]) : []
+    if (fechadas.length > 0) redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(mensagemDiaFechado(fechadas))}`)
   }
   const mudouQuandoOuHora =
     !!eventoAtual &&
@@ -773,14 +786,20 @@ export async function criarEventoRapido(
   const supabase = await createClient()
 
   const idsClientes: (string | null)[] = input.clienteIds.length > 0 ? input.clienteIds : [null]
-  const ocorrencias = gerarOcorrencias(input.data, input.repeticao, input.limite)
+  // Dias fechados: o primeiro dia não pode estar fechado; numa
+  // repetição, as vezes que calham num dia fechado ficam de fora.
+  const todasOcorrencias = gerarOcorrencias(input.data, input.repeticao, input.limite)
+  const fechadas = await datasFechadas(supabase, input.estudioId, todasOcorrencias)
+  if (fechadas.includes(input.data)) return { error: mensagemDiaFechado([input.data]) }
+  const ocorrencias = todasOcorrencias.filter((d) => !fechadas.includes(d))
 
-  // Uma série indefinida precisa do modelo em agenda_series para o cron
-  // a conseguir continuar — guarda só a primeira pessoa quando é um
-  // treino em simultâneo (caso raro de combinar as duas coisas; para
-  // grupos recorrentes, "N vezes" ou "até data" descrevem isto melhor).
+  // Uma repetição precisa do modelo em agenda_series (a base de dados
+  // exige-o para o serie_id): ativo numa série indefinida, para o cron a
+  // conseguir continuar; inativo numa de duração definida (já está toda
+  // gerada). Guarda só a primeira pessoa quando é um treino em
+  // simultâneo (as linhas do grupo partilham a série).
   let serieId: string | null = null
-  if (input.repeticao !== 'nao' && input.limite.modo === 'indefinido') {
+  if (input.repeticao !== 'nao' && ocorrencias.length > 1) {
     const { data: serie, error: erroSerie } = await supabase
       .from('agenda_series')
       .insert({
@@ -791,16 +810,15 @@ export async function criarEventoRapido(
         titulo: input.titulo,
         hora_inicio: input.horaInicio,
         duracao_min: input.duracaoMin,
-        repeticao: input.repeticao,
+        repeticao: input.repeticao === 'quinzenal' ? 'quinzenal' : 'semanal',
         nota: input.nota,
+        ativa: input.limite.modo === 'indefinido',
         criado_por: sessao.userId,
       })
       .select('id')
       .single()
     if (erroSerie || !serie) return { error: erroSerie?.message ?? 'Não foi possível criar a série.' }
     serieId = serie.id
-  } else if (ocorrencias.length > 1) {
-    serieId = randomUUID()
   }
 
   const linhas = ocorrencias.flatMap((dataOcorrencia) => {
@@ -893,6 +911,14 @@ export async function atualizarEventoRapido(
 
     revalidatePath(`/painel/${input.estudioSlug}/agenda`)
     return { ok: true }
+  }
+
+  {
+    const { data: atual } = await supabase.from('agenda_eventos').select('data').eq('id', input.id).maybeSingle()
+    if (atual && atual.data !== input.data) {
+      const fechadas = await datasFechadas(supabase, input.estudioId, [input.data])
+      if (fechadas.length > 0) return { error: mensagemDiaFechado(fechadas) }
+    }
   }
 
   // Linhas que hoje compõem este treino (só esta, ou todo o grupo
@@ -1014,6 +1040,11 @@ async function aplicarASerie(
     o.id === input.id ? false : eventoJaTerminou(o.data, o.hora_inicio, o.duracao_min)
   )
   if (visadas.length === 0) return null
+  if (input.dataNova && input.dataNova !== arrastado.data) {
+    const { data: ev } = await supabase.from('agenda_eventos').select('estudio_id').eq('id', input.id).maybeSingle()
+    const fechadas = ev ? await datasFechadas(supabase, ev.estudio_id, visadas.map((v) => v.dataNova)) : []
+    if (fechadas.length > 0) return mensagemDiaFechado(fechadas)
+  }
 
   // Uma atualização por dia novo (as linhas de um treino em simultâneo
   // partilham o dia) — sempre por id, para nunca apanhar uma linha que
@@ -1075,6 +1106,14 @@ export async function moverEventoRapido(input: {
     if (erro) return { error: erro }
     revalidatePath(`/painel/${input.estudioSlug}/agenda`)
     return { ok: true }
+  }
+
+  {
+    const { data: ev } = await supabase.from('agenda_eventos').select('estudio_id, data').eq('id', input.id).maybeSingle()
+    if (ev && ev.data !== input.data) {
+      const fechadas = await datasFechadas(supabase, ev.estudio_id, [input.data])
+      if (fechadas.length > 0) return { error: mensagemDiaFechado(fechadas) }
+    }
   }
 
   const selectQuery = supabase.from('agenda_eventos').select('estado, duracao_min')
@@ -1216,6 +1255,11 @@ export async function reativarEventoRapido(input: {
     ? await supabase.from('agenda_eventos').select('id, cliente_id, data, pt_id').eq('grupo_id', input.grupoId)
     : await supabase.from('agenda_eventos').select('id, cliente_id, data, pt_id').eq('id', input.id)
   if (erroLinhas) return { error: erroLinhas.message }
+  {
+    const { data: ev } = await supabase.from('agenda_eventos').select('estudio_id, data').eq('id', input.id).maybeSingle()
+    const fechadas = ev ? await datasFechadas(supabase, ev.estudio_id, [ev.data]) : []
+    if (fechadas.length > 0) return { error: mensagemDiaFechado(fechadas) }
+  }
 
   const query = supabase
     .from('agenda_eventos')
@@ -1290,6 +1334,34 @@ export async function apagarEventoRapido(input: {
     .in('id', (eventosParaApagar ?? []).map((e) => e.id))
   if (error) return { error: error.message }
 
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}
+
+// ── Dias fechados (feriados) ─────────────────────────────────────────
+
+// Fechar o estúdio num dia (só a gestão): a partir daí a Agenda não
+// deixa marcar, mover nem repetir treinos para esse dia. Os treinos que
+// já lá estavam marcados ficam como estão — a página avisa quantos são.
+export async function fecharDiaNaAgenda(input: { estudioSlug: string; estudioId: number; data: string; motivo: string | null }): Promise<ResultadoAcaoRapida> {
+  const sessao = await getSessaoAtual()
+  if (!papeisDaSessao(sessao).ehGestao) return { error: 'Só a gestão pode fechar dias na Agenda.' }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.data)) return { error: 'Data inválida.' }
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('dias_fechados')
+    .upsert({ estudio_id: input.estudioId, data: input.data, motivo: input.motivo?.trim() || null }, { onConflict: 'estudio_id,data' })
+  if (error) return { error: error.message }
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  return { ok: true }
+}
+
+export async function reabrirDiaNaAgenda(input: { estudioSlug: string; estudioId: number; data: string }): Promise<ResultadoAcaoRapida> {
+  const sessao = await getSessaoAtual()
+  if (!papeisDaSessao(sessao).ehGestao) return { error: 'Só a gestão pode reabrir dias na Agenda.' }
+  const supabase = await createClient()
+  const { error } = await supabase.from('dias_fechados').delete().eq('estudio_id', input.estudioId).eq('data', input.data)
+  if (error) return { error: error.message }
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   return { ok: true }
 }

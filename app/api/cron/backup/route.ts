@@ -38,6 +38,7 @@ const TABELAS: Record<string, string[]> = {
   config: ['chave'],
   config_assiduidade: ['perfil_id'],
   despesa_categorias: ['id'],
+  dias_fechados: ['id'],
   despesa_subcategorias: ['id'],
   despesas: ['id'],
   despesas_recorrentes: ['id'],

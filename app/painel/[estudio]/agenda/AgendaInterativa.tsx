@@ -266,6 +266,7 @@ export default function AgendaInterativa({
   leads,
   pts,
   somenteLeitura,
+  diasFechados = {},
 }: {
   slug: string
   estudioId: number
@@ -277,6 +278,8 @@ export default function AgendaInterativa({
   leads: LeadOpcao[]
   pts: PtOpcao[]
   somenteLeitura: boolean
+  // Dias em que o estúdio está fechado (feriados): data → motivo.
+  diasFechados?: Record<string, string>
 }) {
   const router = useRouter()
   const [modal, setModal] = useState<EstadoModal>({ aberto: false })
@@ -316,6 +319,11 @@ export default function AgendaInterativa({
   }
 
   function mover(id: string, novaData: string, novaHoraInicio: string) {
+    const original = eventos.find((e) => e.id === id)
+    if (diasFechados[novaData] && original?.data !== novaData) {
+      setErro(`O estúdio está fechado neste dia (${diasFechados[novaData]}) — não se podem marcar treinos.`)
+      return
+    }
     const pedido: PedidoSerie = { tipo: 'mover', id, data: novaData, horaInicio: novaHoraInicio }
     if (eventos.find((e) => e.id === id)?.serie_id) setPedidoSerie(pedido)
     else aplicarArrasto(pedido, 'um')
@@ -449,9 +457,22 @@ export default function AgendaInterativa({
 
   return (
     <>
+      {/* Erros de arrastar/mover (com a janela fechada não havia onde os ver). */}
+      {erro && !modal.aberto && (
+        <div
+          role="alert"
+          className="mt-1.5 flex items-start justify-between gap-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
+        >
+          <span>{erro}</span>
+          <button type="button" onClick={() => setErro(null)} className="shrink-0 text-xs font-semibold underline">
+            Fechar
+          </button>
+        </div>
+      )}
       <GrelhaInterativa
         dias={dias}
         estudioId={estudioId}
+        diasFechados={diasFechados}
         porDia={porDia}
         onMover={mover}
         onRedimensionar={redimensionar}
@@ -603,9 +624,11 @@ function GrelhaInterativa({
   zoomIndice,
   onZoomIndiceChange,
   somenteLeitura,
+  diasFechados,
 }: {
   dias: string[]
   estudioId: number
+  diasFechados: Record<string, string>
   porDia: Record<string, EventoComNomes[]>
   onMover: (id: string, dia: string, horaInicio: string) => void
   onRedimensionar: (id: string, horaInicio: string, duracaoMin: number) => void
@@ -654,7 +677,8 @@ function GrelhaInterativa({
   // cursor é a mão de arrastar.
   const mostraCruz = useCallback(
     (alvo: EventTarget | null, aCriar: boolean) =>
-      !somenteLeitura && (aCriar || !(alvo instanceof Element && alvo.closest('button'))),
+      !somenteLeitura &&
+      (aCriar || !(alvo instanceof Element && (alvo.closest('button') || alvo.closest('[data-fechado]')))),
     [somenteLeitura]
   )
 
@@ -916,10 +940,14 @@ function GrelhaInterativa({
           {dias.map((d, i) => (
             <div
               key={d}
-              className="whitespace-nowrap rounded-t-lg bg-brand/[.05] px-1 py-1 text-center text-[11px] font-semibold text-foreground"
+              title={diasFechados[d] ? `Estúdio fechado — ${diasFechados[d]}` : undefined}
+              className={`whitespace-nowrap rounded-t-lg px-1 py-1 text-center text-[11px] font-semibold ${
+                diasFechados[d] ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200' : 'bg-brand/[.05] text-foreground'
+              }`}
             >
               {dias.length > 1 ? DIAS_SEMANA[i] : DIAS_SEMANA[(new Date(`${d}T00:00:00`).getDay() + 6) % 7]}
-              <span className="ml-1 font-normal text-muted">{fmt(d)}</span>
+              <span className={`ml-1 font-normal ${diasFechados[d] ? '' : 'text-muted'}`}>{fmt(d)}</span>
+              {diasFechados[d] && <span className="ml-1 font-bold">· Fechado</span>}
             </div>
           ))}
         </div>
@@ -957,6 +985,7 @@ function GrelhaInterativa({
                 previa={previa?.dia === dia ? previa : null}
                 pxPorMinuto={pxPorMinuto}
                 somenteLeitura={somenteLeitura}
+                fechado={diasFechados[dia] ?? null}
               />
             ))}
           </div>
@@ -1013,8 +1042,11 @@ function ColunaDia({
   previa,
   pxPorMinuto,
   somenteLeitura,
+  fechado,
 }: {
   dia: string
+  // Motivo, quando o estúdio está fechado neste dia: não se cria nada.
+  fechado: string | null
   eventos: EventoComNomes[]
   estudioId: number
   registarRef: (el: HTMLDivElement | null) => void
@@ -1041,12 +1073,26 @@ function ColunaDia({
   return (
     <div
       ref={registarRef}
-      onMouseDown={somenteLeitura ? undefined : onIniciarCriacao}
+      onMouseDown={somenteLeitura || fechado ? undefined : onIniciarCriacao}
+      data-fechado={fechado ? '' : undefined}
       className="relative border-l border-border-subtle bg-surface transition-colors select-none"
       // Sem cursor do sistema na grelha vazia: a cruz é desenhada pela
       // página (sempre preta).
-      style={somenteLeitura ? undefined : { cursor: 'none' }}
+      style={somenteLeitura || fechado ? undefined : { cursor: 'none' }}
     >
+      {fechado && (
+        <div
+          className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(135deg,rgba(217,119,6,.10)_0_8px,transparent_8px_16px)]"
+          aria-hidden
+        >
+          <div
+            className="absolute inset-x-1 rounded bg-amber-100/90 px-1.5 py-1 text-center text-[11px] font-semibold text-amber-900 dark:bg-amber-950/90 dark:text-amber-200"
+            style={{ top: HORA_INICIAL_VISIVEL * 60 * pxPorMinuto + 6 }}
+          >
+            Fechado — {fechado}
+          </div>
+        </div>
+      )}
       {HORAS_GRADE.map((h) => (
         <div
           key={h}

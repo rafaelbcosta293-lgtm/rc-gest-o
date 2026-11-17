@@ -2,13 +2,15 @@ import Link from '@/components/LinkRapido'
 import { ArrowLeft, CalendarOff, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
-import { getSessaoAtual } from '@/lib/data/sessao'
+import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ehContaFixa } from '@/lib/data/acessos'
 import { getEquipaDoEstudio, obterOutroEstudioEClientes } from '@/lib/data/estudios'
 import { fmt, MESES, DIAS_SEMANA, diasDoMes, offsetPrimeiroDia } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { corTipoEvento } from '@/lib/data/agenda'
-import { feriadosNoIntervalo } from '@/lib/data/feriados'
+import { feriadosDoEstudio } from '@/lib/data/assiduidade'
+import { carregarDiasFechados } from '@/lib/data/diasFechados'
+import FecharDia from './FecharDia'
 import AgendaInterativa from './AgendaInterativa'
 import BuscaAgenda from './BuscaAgenda'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
@@ -93,6 +95,7 @@ function CalendarioMes({
   basePath,
   hoje,
   qsExtra,
+  diasFechados,
 }: {
   dias: string[]
   offset: number
@@ -100,6 +103,7 @@ function CalendarioMes({
   basePath: string
   hoje: string
   qsExtra: string
+  diasFechados: Record<string, string>
 }) {
   const porDia = new Map<string, EventoComNomes[]>()
   for (const e of eventos) {
@@ -125,11 +129,13 @@ function CalendarioMes({
             <Link
               key={dia}
               href={`${basePath}?vista=dia&data=${dia}${qsExtra}`}
+              title={diasFechados[dia] ? `Estúdio fechado — ${diasFechados[dia]}` : undefined}
               className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg hover:bg-brand/[.06] ${
                 dia === hoje ? 'ring-2 ring-brand ring-offset-1' : ''
-              }`}
+              } ${diasFechados[dia] ? 'bg-amber-100/70 dark:bg-amber-950/60' : ''}`}
             >
               <span className="text-[10px] text-muted">{numero}</span>
+              {diasFechados[dia] && <span className="text-[9px] font-bold text-amber-800 dark:text-amber-300">Fechado</span>}
               <PontosDia eventos={porDia.get(dia) ?? []} />
             </Link>
           )
@@ -215,6 +221,7 @@ export default async function AgendaConteudo({
     { outroEstudio, clientesOutroEstudio },
     eventos,
     sessao,
+    diasFechados,
   ] = await Promise.all([
     getEquipaDoEstudio(supabase, estudio.id),
     supabase
@@ -231,6 +238,7 @@ export default async function AgendaConteudo({
     obterOutroEstudioEClientes(supabase, estudio.id),
     buscarEventos(supabase, estudio.id, inicio, fimExclusivo, ptFiltro),
     getSessaoAtual(),
+    carregarDiasFechados(supabase, estudio.id, inicio, fimExclusivo),
   ])
   // Conta pessoal (fora das 4 contas fixas do negócio — ver ehContaFixa)
   // só pode VER a Agenda: sem botão de criar, sem arrastar para criar/
@@ -247,7 +255,18 @@ export default async function AgendaConteudo({
   const clientes = (clientesData ?? []) as { id: string; nome: string }[]
   const leads = (leadsData ?? []) as LeadOpcao[]
   const qsExtra = ptFiltro ? `&pt=${ptFiltro}` : ''
-  const feriadosPeriodo = feriadosNoIntervalo(inicio, fimExclusivo)
+  // Feriados do estúdio (nacionais + o municipal de cada concelho) e os
+  // dias que a gestão fechou no período — um dia fechado que não seja
+  // feriado também aparece, para se poder reabrir.
+  const anos = [...new Set([Number(inicio.slice(0, 4)), Number(fimExclusivo.slice(0, 4))])]
+  const feriados = anos
+    .flatMap((a) => feriadosDoEstudio(slug, a))
+    .filter((f) => f.data >= inicio && f.data < fimExclusivo)
+  const nomesFeriado = new Map(feriados.map((f) => [f.data, f.nome]))
+  const diasAvisados = [...new Set([...feriados.map((f) => f.data), ...Object.keys(diasFechados)])].sort()
+  const podeFechar = !somenteLeitura && papeisDaSessao(sessao).ehGestao
+  // Treinos ainda marcados num dia fechado — ficam como estão; avisa-se.
+  const marcadosNoDia = (data: string) => eventos.filter((e) => e.data === data && e.estado !== 'Cancelado').length
 
   return (
     <div>
@@ -354,14 +373,38 @@ export default async function AgendaConteudo({
         </div>
       </div>
 
-      {feriadosPeriodo.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-amber-700 dark:text-amber-400">
-          {feriadosPeriodo.map((f) => (
-            <span key={f.data} className="inline-flex items-center gap-1">
-              <CalendarOff className="h-3 w-3 shrink-0" />
-              Feriado{vista !== 'dia' ? ` · ${fmt(f.data)}` : ''}: {f.nome}
-            </span>
-          ))}
+      {diasAvisados.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-amber-700 dark:text-amber-400">
+          {diasAvisados.map((data) => {
+            const nome = nomesFeriado.get(data)
+            const fechado = data in diasFechados
+            const marcados = fechado ? marcadosNoDia(data) : 0
+            return (
+              <span key={data} className="inline-flex flex-wrap items-center gap-1.5">
+                <CalendarOff className="h-3 w-3 shrink-0" />
+                <span>
+                  {nome ? 'Feriado' : 'Dia fechado'}
+                  {vista !== 'dia' ? ` · ${fmt(data)}` : ''}: {nome ?? diasFechados[data]}
+                  {fechado && <strong> · Estúdio fechado</strong>}
+                </span>
+                {podeFechar && (
+                  <FecharDia
+                    estudioSlug={slug}
+                    estudioId={estudio.id}
+                    data={data}
+                    motivo={nome ?? diasFechados[data] ?? 'Estúdio fechado'}
+                    fechado={fechado}
+                  />
+                )}
+                {marcados > 0 && (
+                  <span className="font-semibold text-red-700 dark:text-red-300">
+                    {marcados === 1 ? 'Ainda há 1 treino marcado' : `Ainda há ${marcados} treinos marcados`} neste dia — desmarca-os se for
+                    preciso.
+                  </span>
+                )}
+              </span>
+            )
+          })}
         </div>
       )}
 
@@ -383,6 +426,7 @@ export default async function AgendaConteudo({
           leads={leads}
           pts={pts}
           somenteLeitura={somenteLeitura}
+          diasFechados={diasFechados}
         />
       )}
       {vista === 'mes' && (
@@ -393,6 +437,7 @@ export default async function AgendaConteudo({
           basePath={basePath}
           hoje={hoje}
           qsExtra={qsExtra}
+          diasFechados={diasFechados}
         />
       )}
     </div>

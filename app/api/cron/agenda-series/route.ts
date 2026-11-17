@@ -29,6 +29,10 @@ export async function GET(request: Request) {
   const series = (seriesData ?? []) as AgendaSerie[]
   let totalGeradas = 0
 
+  // Dias em que o estúdio está fechado (feriados): as séries saltam-nos.
+  const { data: fechadosData } = await admin.from('dias_fechados').select('estudio_id, data').gte('data', hoje)
+  const fechados = new Set((fechadosData ?? []).map((f) => `${f.estudio_id}|${f.data}`))
+
   for (const serie of series) {
     const { data: ultimaData, error: erroUltima } = await admin
       .from('agenda_eventos')
@@ -40,7 +44,9 @@ export async function GET(request: Request) {
     if (erroUltima) return Response.json({ error: erroUltima.message }, { status: 500 })
     if (!ultimaData) continue // sem nenhuma ocorrência ainda — nada para estender a partir daqui
 
-    const novasDatas = gerarExtensaoSerie(ultimaData.data, serie.repeticao, hoje)
+    const novasDatas = gerarExtensaoSerie(ultimaData.data, serie.repeticao, hoje).filter(
+      (data) => !fechados.has(`${serie.estudio_id}|${data}`)
+    )
     if (novasDatas.length === 0) continue
 
     const linhas = novasDatas.map((data) => ({

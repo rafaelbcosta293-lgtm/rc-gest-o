@@ -201,7 +201,7 @@ export async function emitirPedidoFatura(formData: FormData) {
   // da app) para os próximos rascunhos já virem bem preenchidos.
   const lembrar: { chave: string; valor: string }[] = []
   for (const l of rascunho.linhas) {
-    if (l.produto_referencia && l.tipo !== 'outro') lembrar.push({ chave: chaveProduto(l.tipo), valor: l.produto_referencia })
+    if (l.produto_referencia && l.tipo !== 'outro') lembrar.push({ chave: chaveProduto(l.tipo, l.servico_chave), valor: l.produto_referencia })
   }
   if (rascunho.documento.metodo && rascunho.documento.zsgo_metodo_id) {
     lembrar.push({ chave: chaveMetodo(rascunho.documento.metodo), valor: rascunho.documento.zsgo_metodo_id })

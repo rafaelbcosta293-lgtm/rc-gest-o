@@ -29,6 +29,20 @@ const pagamento = {
 }
 
 describe('montarRascunho', () => {
+  it('a mensalidade de cada serviço usa o artigo desse serviço (sem cair no do PT)', () => {
+    const base = { pagamento: { ...pagamento, inclui_inscricao: false, inclui_seguro: false }, cliente }
+    const pt = montarRascunho({ ...base, plano: { nome: 'Express 4', valor: 110, servicoChave: 'pt' }, config })
+    expect(pt.linhas[0].produto_referencia).toBe('MENS')
+    const pilatesSemArtigo = montarRascunho({ ...base, plano: { nome: 'Pilates 1×', valor: 60, servicoChave: 'pilates' }, config })
+    expect(pilatesSemArtigo.linhas[0]).toMatchObject({ produto_referencia: null, servico_chave: 'pilates' })
+    const pilates = montarRascunho({
+      ...base,
+      plano: { nome: 'Pilates 1×', valor: 60, servicoChave: 'pilates' },
+      config: { ...config, zsgo_produto_mensalidade_pilates: 'PIL' },
+    })
+    expect(pilates.linhas[0].produto_referencia).toBe('PIL')
+  })
+
   it('cria uma linha por opção escolhida, com o preço de tabela de cada uma', () => {
     const r = montarRascunho({ pagamento, plano: { nome: 'TA 2x', valor: 69 }, cliente, config })
     expect(r.linhas.map((l) => [l.tipo, l.preco_com_iva])).toEqual([

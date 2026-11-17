@@ -23,6 +23,9 @@ export type LinhaRascunho = {
   // o preço sem IVA — a conversão é feita só no momento de emitir.
   preco_com_iva: number
   iva: number
+  // Serviço da mensalidade (pt, acompanhado, pilates…) — cada serviço
+  // tem o seu artigo no ZS Go, lembrado à parte.
+  servico_chave?: string | null
 }
 
 export type RascunhoFatura = {
@@ -80,8 +83,11 @@ export function arredondar(n: number, casas = 2): number {
   return Math.round((n + Number.EPSILON) * f) / f
 }
 
-// Chave de config para lembrar o produto do ZS Go escolhido por tipo de linha.
-export function chaveProduto(tipo: TipoLinhaFatura): string {
+// Chave de config para lembrar o produto do ZS Go escolhido por tipo de
+// linha. A mensalidade é lembrada por serviço (cada serviço tem o seu
+// artigo no ZS Go); a do Treino Personalizado mantém a chave de sempre.
+export function chaveProduto(tipo: TipoLinhaFatura, servicoChave?: string | null): string {
+  if (tipo === 'mensalidade' && servicoChave && servicoChave !== 'pt') return `zsgo_produto_mensalidade_${servicoChave}`
   return `zsgo_produto_${tipo}`
 }
 
@@ -128,7 +134,7 @@ export type DadosParaRascunho = {
     inclui_reativacao: boolean
     nota: string | null
   }
-  plano: { nome: string; valor: number } | null
+  plano: { nome: string; valor: number; servicoChave?: string | null } | null
   cliente: {
     nome: string
     nif: string | null
@@ -151,7 +157,10 @@ export type DadosParaRascunho = {
 // mostra-a e pode-se acertar à mão.
 export function montarRascunho(d: DadosParaRascunho): RascunhoFatura {
   const { pagamento: p, config } = d
-  const produto = (t: TipoLinhaFatura) => config[chaveProduto(t)] || null
+  // A mensalidade usa o artigo do serviço do plano (sem cair no do PT:
+  // se ainda não houver um escolhido para esse serviço, fica por escolher).
+  const servicoChave = d.plano?.servicoChave ?? null
+  const produto = (t: TipoLinhaFatura) => config[chaveProduto(t, t === 'mensalidade' ? servicoChave : null)] || null
   const linha = (tipo: TipoLinhaFatura, descricao: string, preco: number): LinhaRascunho => ({
     tipo,
     descricao,
@@ -159,6 +168,7 @@ export function montarRascunho(d: DadosParaRascunho): RascunhoFatura {
     quantidade: 1,
     preco_com_iva: arredondar(preco),
     iva: IVA_POR_OMISSAO,
+    ...(tipo === 'mensalidade' && servicoChave ? { servico_chave: servicoChave } : {}),
   })
 
   const [ano, mes] = p.data_pagamento.split('-').map(Number)

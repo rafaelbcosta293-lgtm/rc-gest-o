@@ -8,12 +8,12 @@ export const CHAVES_CONFIG_FATURA = [
   'taxa_inscricao',
   'seguro_anual',
   'taxa_reativacao',
-  ...TIPOS_LINHA.map(chaveProduto),
+  ...TIPOS_LINHA.map((t) => chaveProduto(t)),
 ]
 
 export async function lerConfigFatura(supabase: SupabaseClient) {
   const { data } = await supabase.from('config').select('chave, valor').or(
-    `chave.in.(${CHAVES_CONFIG_FATURA.join(',')}),chave.like.zsgo_metodo_*`
+    `chave.in.(${CHAVES_CONFIG_FATURA.join(',')}),chave.like.zsgo_metodo_*,chave.like.zsgo_produto_*`
   )
   return Object.fromEntries((data ?? []).map((l) => [l.chave as string, l.valor as string | null]))
 }
@@ -28,7 +28,7 @@ export async function criarPedidoFatura(
   const { data: pagamento, error: erroPag } = await supabase
     .from('pagamentos')
     .select(
-      'id, cliente_id, valor, desconto, metodo, data_pagamento, valido_ate, inclui_inscricao, inclui_seguro, inclui_reativacao, nota, anulado_em, plano:planos(nome, valor), cliente:clientes(id, nome, nif, morada, codigo_postal, cidade, email, estudio_id)'
+      'id, cliente_id, valor, desconto, metodo, data_pagamento, valido_ate, inclui_inscricao, inclui_seguro, inclui_reativacao, nota, anulado_em, plano:planos(nome, valor, servico:servicos(chave)), cliente:clientes(id, nome, nif, morada, codigo_postal, cidade, email, estudio_id)'
     )
     .eq('id', pagamentoId)
     .maybeSingle()
@@ -62,7 +62,12 @@ export async function criarPedidoFatura(
       inclui_reativacao: pagamento.inclui_reativacao,
       nota: pagamento.nota,
     },
-    plano: pagamento.plano as unknown as { nome: string; valor: number } | null,
+    plano: (() => {
+      const pl = pagamento.plano as unknown as { nome: string; valor: number; servico: { chave: string } | { chave: string }[] | null } | null
+      if (!pl) return null
+      const sv = Array.isArray(pl.servico) ? pl.servico[0] : pl.servico
+      return { nome: pl.nome, valor: pl.valor, servicoChave: sv?.chave ?? null }
+    })(),
     cliente,
     config,
   })

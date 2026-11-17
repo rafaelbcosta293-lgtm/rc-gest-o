@@ -205,6 +205,9 @@ export default async function AgendaConteudo({
     tituloPeriodo = `${MESES[mes - 1]} ${ano}`
   }
 
+  // O período que se está a ver inclui o dia de hoje?
+  const periodoTemHoje = hoje >= inicio && hoje < fimExclusivo
+
   const [
     pts,
     { data: clientesData, error: erroClientes },
@@ -297,6 +300,19 @@ export default async function AgendaConteudo({
             aria-label="Seguinte"
           >
             <ChevronRight className="h-4 w-4" />
+          </Link>
+          {/* Volta ao período de hoje sem mudar a vista (semana continua
+              semana) nem o filtro de instrutor. Fica em destaque quando se
+              está a ver outro período. */}
+          <Link
+            href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, {})}`}
+            aria-current={periodoTemHoje ? 'date' : undefined}
+            title={periodoTemHoje ? 'Já estás no período de hoje' : 'Voltar a hoje'}
+            className={`rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+              periodoTemHoje ? 'border border-border-subtle text-muted hover:bg-brand/[.08]' : 'bg-brand text-black hover:bg-brand-strong'
+            }`}
+          >
+            Hoje
           </Link>
         </div>
 

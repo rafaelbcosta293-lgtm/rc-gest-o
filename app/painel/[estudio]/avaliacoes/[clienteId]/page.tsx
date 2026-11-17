@@ -79,62 +79,39 @@ export default async function AvaliacoesClientePage({
       )}
 
       {atual && (
-        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-foreground">
-              {atual.peso_kg ?? '—'}
-            </strong>
-            <span className="text-xs text-muted">
-              peso (kg){' '}
-              {anterior && diferenca(atual.peso_kg, anterior.peso_kg) !== null && (
-                <>· {diferenca(atual.peso_kg, anterior.peso_kg)! > 0 ? '+' : ''}
-                  {diferenca(atual.peso_kg, anterior.peso_kg)}</>
-              )}
-            </span>
-          </div>
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-foreground">
-              {atual.massa_gorda_pct ?? '—'}
-            </strong>
-            <span className="text-xs text-muted">
-              massa gorda (%){' '}
-              {anterior &&
-                diferenca(atual.massa_gorda_pct, anterior.massa_gorda_pct) !== null && (
-                  <>· {diferenca(atual.massa_gorda_pct, anterior.massa_gorda_pct)! > 0 ? '+' : ''}
-                    {diferenca(atual.massa_gorda_pct, anterior.massa_gorda_pct)}</>
-                )}
-            </span>
-          </div>
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-foreground">
-              {atual.massa_muscular_kg ?? '—'}
-            </strong>
-            <span className="text-xs text-muted">massa muscular (kg)</span>
-          </div>
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-foreground">
-              {atual.massa_gorda_kg ?? '—'}
-            </strong>
-            <span className="text-xs text-muted">massa gorda (kg)</span>
-          </div>
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-foreground">
-              {atual.imc ?? '—'}
-            </strong>
-            <span className="text-xs text-muted">IMC</span>
-          </div>
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-foreground">
-              {atual.idade_metabolica ?? '—'}
-            </strong>
-            <span className="text-xs text-muted">idade metabólica</span>
-          </div>
-          <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-            <strong className="block text-lg text-foreground">
-              {atual.densidade_ossea ?? '—'}
-            </strong>
-            <span className="text-xs text-muted">densidade óssea (kg)</span>
-          </div>
+        // Pela mesma ordem do formulário da avaliação.
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {(
+            [
+              ['peso (kg)', atual.peso_kg, anterior?.peso_kg],
+              ['massa gorda (%)', atual.massa_gorda_pct, anterior?.massa_gorda_pct],
+              ['massa gorda (kg)', atual.massa_gorda_kg, anterior?.massa_gorda_kg],
+              ['massa muscular (kg)', atual.massa_muscular_kg, anterior?.massa_muscular_kg],
+              ['densidade óssea (kg)', atual.densidade_ossea, anterior?.densidade_ossea],
+              ['IMC', atual.imc, anterior?.imc],
+              ['metabolismo (kcal)', atual.metabolismo_kcal, anterior?.metabolismo_kcal],
+              ['idade metabólica', atual.idade_metabolica, anterior?.idade_metabolica],
+              ['hidratação (%)', atual.hidratacao_pct, anterior?.hidratacao_pct],
+              ['gordura visceral', atual.gordura_visceral, anterior?.gordura_visceral],
+            ] as [string, number | null, number | null | undefined][]
+          ).map(([rotulo, valor, antes]) => {
+            const dif = anterior ? diferenca(valor, antes ?? null) : null
+            return (
+              <div key={rotulo} className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
+                <strong className="block text-lg text-foreground">{valor ?? '—'}</strong>
+                <span className="text-xs text-muted">
+                  {rotulo}
+                  {dif !== null && dif !== 0 && (
+                    <>
+                      {' '}
+                      · {dif > 0 ? '+' : ''}
+                      {dif}
+                    </>
+                  )}
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
 

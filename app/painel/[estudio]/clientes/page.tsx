@@ -11,6 +11,7 @@ import { proximoAniversario, idadeEm } from '@/lib/data/aniversarios'
 import { treinosPrevistos, intervaloMes, fmt } from '@/lib/data/presencas'
 import ListaClientes, { type LinhaCliente } from './ListaClientes'
 import ExportarCsvButton from '@/components/ExportarCsvButton'
+import { CAMPOS_FICHA, camposEmFalta, ehCampoFicha, rotuloCampo, type CampoFicha } from '@/lib/data/fichaCliente'
 import type { EstadoCliente, GeneroCliente } from '@/lib/supabase/database.types'
 
 type ClienteLista = {
@@ -28,6 +29,11 @@ type ClienteLista = {
   inicio_contrato: string | null
   saiu_em: string | null
   frequencia_semanal: number | null
+  morada: string | null
+  codigo_postal: string | null
+  cidade: string | null
+  objetivo: string | null
+  pt_principal_id: string | null
 }
 
 type PagamentoResumo = { cliente_id: string; valido_ate: string | null; em_dia: boolean }
@@ -75,7 +81,7 @@ function numeroSequencial(numeroSocio: string | null): number | null {
 }
 
 function construirQuery(
-  base: { estado?: string; ordem?: string; dir?: string },
+  base: { estado?: string; ordem?: string; dir?: string; falta?: string },
   overrides: Record<string, string | undefined>
 ) {
   const combinado = { ...base, ...overrides }
@@ -92,10 +98,14 @@ export default async function ClientesPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ estado?: string; ordem?: string; dir?: string }>
+  searchParams: Promise<{ estado?: string; ordem?: string; dir?: string; falta?: string }>
 }) {
   const { estudio: slug } = await params
-  const { estado: estadoParam, ordem: ordemParam, dir: dirParam } = await searchParams
+  const { estado: estadoParam, ordem: ordemParam, dir: dirParam, falta: faltaParam } = await searchParams
+  // Filtro "Dados incompletos": 'qualquer' (falta pelo menos um campo)
+  // ou um campo em concreto (ex.: só quem não tem NIF).
+  const falta: CampoFicha | 'qualquer' | null =
+    faltaParam === 'qualquer' ? 'qualquer' : ehCampoFicha(faltaParam) ? faltaParam : null
   // Sem filtro na URL, mostra os ativos por omissão — "Todos" passa a
   // ser uma escolha explícita, como qualquer outro filtro.
   const estado = estadoParam ?? 'Ativo'
@@ -112,7 +122,7 @@ export default async function ClientesPage({
   let query = supabase
     .from('clientes')
     .select(
-      'id, numero_socio, nome, nome_preferido, telefone, email, nif, estado, genero, alerta, nascimento, inicio_contrato, saiu_em, frequencia_semanal'
+      'id, numero_socio, nome, nome_preferido, telefone, email, nif, estado, genero, alerta, nascimento, inicio_contrato, saiu_em, frequencia_semanal, morada, codigo_postal, cidade, objetivo, pt_principal_id'
     )
     .eq('estudio_id', estudio.id)
 
@@ -148,7 +158,20 @@ export default async function ClientesPage({
   if (error || erroTodos || erroPagamentos || erroPresencas) {
     throw new Error((error ?? erroTodos ?? erroPagamentos ?? erroPresencas)!.message)
   }
-  const clientes = (data ?? []) as ClienteLista[]
+  const doEstado = (data ?? []) as ClienteLista[]
+  // Campos em falta de cada cliente (do filtro de estado escolhido) e
+  // quantos clientes têm cada um em falta — os números dos botões.
+  const emFaltaPorCliente = new Map(doEstado.map((c) => [c.id, camposEmFalta(c)]))
+  const incompletos = doEstado.filter((c) => emFaltaPorCliente.get(c.id)!.length > 0).length
+  const contagemFalta = new Map<CampoFicha, number>()
+  for (const lista of emFaltaPorCliente.values()) for (const k of lista) contagemFalta.set(k, (contagemFalta.get(k) ?? 0) + 1)
+  const clientes =
+    falta === null
+      ? doEstado
+      : doEstado.filter((c) => {
+          const lista = emFaltaPorCliente.get(c.id)!
+          return falta === 'qualquer' ? lista.length > 0 : lista.includes(falta)
+        })
 
   // Ordenado aqui (não no Supabase) porque o critério "Nº de cliente"
   // precisa de extrair a parte numérica do numero_socio — não dá para
@@ -228,6 +251,8 @@ export default async function ClientesPage({
         : 'sem pagamentos',
       pagamentoEmDia: pagamento ? pagamento.em_dia : null,
       treinosLabel: alvo != null ? `${feitos} de ${alvo} treinos` : `${feitos} treinos`,
+      emFalta: (emFaltaPorCliente.get(c.id) ?? []).map(rotuloCampo),
+      emFaltaTexto: (emFaltaPorCliente.get(c.id) ?? []).map(rotuloCampo).join(', '),
       aniversarioLabel: aniversario
         ? aniversario.dias === 0
           ? '🎂 faz anos hoje'
@@ -267,6 +292,9 @@ export default async function ClientesPage({
               { chave: 'idadeLabel', label: 'Idade' },
               { chave: 'pagamentoLabel', label: 'Pagamento' },
               { chave: 'treinosLabel', label: 'Treinos' },
+              { chave: 'email', label: 'Email' },
+              { chave: 'nif', label: 'NIF' },
+              { chave: 'emFaltaTexto', label: 'Dados em falta na ficha' },
             ]}
             linhas={linhas}
             nomeFicheiro={`clientes-${slug}`}
@@ -295,7 +323,7 @@ export default async function ClientesPage({
         {FILTROS.map((f) => {
           const ativo = estado === f.valor
           const href = `/painel/${slug}/clientes${construirQuery(
-            { ordem: ordemParam, dir: dirParam },
+            { ordem: ordemParam, dir: dirParam, falta: faltaParam },
             { estado: f.valor }
           )}`
           return (
@@ -317,7 +345,7 @@ export default async function ClientesPage({
         {ORDENS.map((o) => {
           const ativo = ordem === o.valor
           const href = `/painel/${slug}/clientes${construirQuery(
-            { estado },
+            { estado, falta: faltaParam },
             { ordem: o.valor === 'nome' ? undefined : o.valor, dir: ativo ? direcao : undefined }
           )}`
           return (
@@ -336,7 +364,7 @@ export default async function ClientesPage({
         })}
         <Link
           href={`/painel/${slug}/clientes${construirQuery(
-            { estado, ordem: ordemParam },
+            { estado, ordem: ordemParam, falta: faltaParam },
             { dir: direcao === 'asc' ? 'desc' : 'asc' }
           )}`}
           className="flex items-center rounded-full border border-border-subtle px-2.5 py-1.5 font-semibold text-muted transition-colors hover:border-border-strong"
@@ -346,7 +374,41 @@ export default async function ClientesPage({
         </Link>
       </div>
 
-      <ListaClientes linhas={linhas} slug={slug} />
+      {/* Dados incompletos na ficha: todos os que têm algo em falta, ou
+          só os que não têm um campo em concreto. Junta-se ao filtro de
+          estado acima (ex.: ativos sem NIF). */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+        <span className="font-semibold">Ficha:</span>
+        {(
+          [
+            { valor: undefined, label: 'Todas' },
+            { valor: 'qualquer', label: `Dados incompletos (${incompletos})` },
+            ...CAMPOS_FICHA.filter((c) => (contagemFalta.get(c.campo) ?? 0) > 0 || falta === c.campo).map((c) => ({
+              valor: c.campo,
+              label: `Sem ${c.rotulo === 'NIF' ? 'NIF' : c.rotulo.toLowerCase()} (${contagemFalta.get(c.campo) ?? 0})`,
+            })),
+          ] as { valor: string | undefined; label: string }[]
+        ).map((f) => {
+          const ativo = (falta ?? undefined) === f.valor
+          return (
+            <Link
+              key={f.valor ?? 'todas'}
+              href={`/painel/${slug}/clientes${construirQuery({ estado, ordem: ordemParam, dir: dirParam }, { falta: f.valor })}`}
+              className={`rounded-full border px-3 py-1.5 font-semibold transition-colors ${
+                ativo
+                  ? f.valor
+                    ? 'border-amber-600 bg-amber-600 text-white'
+                    : 'border-brand bg-brand text-black'
+                  : 'border-border-subtle text-muted hover:border-border-strong'
+              }`}
+            >
+              {f.label}
+            </Link>
+          )
+        })}
+      </div>
+
+      <ListaClientes linhas={linhas} slug={slug} mostrarEmFalta={falta !== null} />
     </div>
     </JanelaClientes>
   )

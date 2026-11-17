@@ -29,9 +29,21 @@ export type LinhaCliente = {
   pagamentoEmDia: boolean | null
   treinosLabel: string
   aniversarioLabel: string | null
+  // Campos da ficha que estão por preencher (rótulos).
+  emFalta: string[]
+  emFaltaTexto: string
 }
 
-export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]; slug: string }) {
+export default function ListaClientes({
+  linhas,
+  slug,
+  mostrarEmFalta = false,
+}: {
+  linhas: LinhaCliente[]
+  slug: string
+  // Com o filtro "Dados incompletos" ativo, cada linha diz o que falta.
+  mostrarEmFalta?: boolean
+}) {
   const [filtro, setFiltro] = useState('')
   const [editando, setEditando] = useState<ClienteEdicao | null>(null)
 
@@ -124,6 +136,9 @@ export default function ListaClientes({ linhas, slug }: { linhas: LinhaCliente[]
               <span className="w-32 shrink-0">{l.treinosLabel}</span>
               <span className="w-40 shrink-0">{l.aniversarioLabel}</span>
             </div>
+            {mostrarEmFalta && l.emFalta.length > 0 && (
+              <div className="text-xs font-medium text-amber-700 dark:text-amber-400">Falta: {l.emFalta.join(' · ')}</div>
+            )}
           </Link>
         ))}
       </div>

@@ -2,9 +2,9 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, UserMinus, UserPlus, X } from 'lucide-react'
+import { Check, Trash2, UserMinus, UserPlus, X } from 'lucide-react'
 import { normalizarTexto } from '@/lib/texto'
-import { cancelarAula, editarAula, inscreverNaAula, mudarInscricao, reabrirAula, type ResultadoAula } from './actions'
+import { cancelarAula, editarAula, inscreverNaAula, mudarInscricao, reabrirAula, removerInscricao, type ResultadoAula } from './actions'
 import type { EstadoInscricao } from '@/lib/data/aulas'
 
 export type InscritoNaJanela = {
@@ -203,7 +203,7 @@ export default function JanelaAula({
                         )}
                         <button
                           type="button"
-                          title="Cancelar a inscrição (liberta o lugar)"
+                          title="Desistiu: cancelar a inscrição (liberta o lugar e fica no histórico como cancelada)"
                           onClick={() => correr(() => mudarInscricao({ estudioSlug, inscricaoId: i.id, estado: 'Cancelada' }))}
                           className="flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-foreground/[.08] hover:text-red-600"
                         >
@@ -211,6 +211,19 @@ export default function JanelaAula({
                         </button>
                       </>
                     )}
+                    <button
+                      type="button"
+                      title="Remover — inscrito por engano (apaga a inscrição, sem ficar no histórico)"
+                      aria-label={`Remover ${i.nome} desta aula`}
+                      onClick={() => {
+                        if (window.confirm(`Remover ${i.nome} desta aula? A inscrição é apagada (para quando foi um engano).`)) {
+                          correr(() => removerInscricao({ estudioSlug, inscricaoId: i.id }))
+                        }
+                      }}
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </span>
                 )}
               </li>

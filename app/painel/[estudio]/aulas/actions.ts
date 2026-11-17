@@ -59,6 +59,18 @@ export async function mudarInscricao(input: { estudioSlug: string; inscricaoId: 
   return { ok: true }
 }
 
+// Remover uma inscrição feita por engano: apaga-a de vez (não fica como
+// "Cancelada" no histórico da pessoa nem conta como desistência).
+export async function removerInscricao(input: { estudioSlug: string; inscricaoId: string }): Promise<ResultadoAula> {
+  if (!(await podeEscrever())) return { error: 'A tua conta só pode ver as aulas.' }
+  const supabase = await createClient()
+  const { error, count } = await supabase.from('aulas_inscricoes').delete({ count: 'exact' }).eq('id', input.inscricaoId)
+  if (error) return { error: error.message }
+  if (!count) return { error: 'Não foi possível remover esta inscrição.' }
+  revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
+  return { ok: true }
+}
+
 export async function cancelarAula(input: { estudioSlug: string; aulaId: string; motivo: string | null }): Promise<ResultadoAula> {
   if (!(await podeEscrever())) return { error: 'A tua conta só pode ver as aulas.' }
   const supabase = await createClient()

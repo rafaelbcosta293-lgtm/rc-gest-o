@@ -84,8 +84,8 @@ export async function GET(request: Request) {
     todasAsLinhas((de, ate) => admin.from('lead_stage_history').select('lead_id, criado_em').order('id').range(de, ate)),
     admin
       .from('clientes')
-      .select('id, estudio_id, nome, nascimento, fim_experiencia')
-      .eq('estado', 'Ativo')
+      .select('id, estudio_id, nome, estado, nascimento, fim_experiencia')
+      .in('estado', ['Ativo', 'Pendente'])
       .in('estudio_id', estudioIds),
     todasAsLinhas((de, ate) =>
       admin.from('agenda_eventos').select('cliente_id, data, estado, tipo').eq('tipo', 'Treino').order('id').range(de, ate)
@@ -205,6 +205,7 @@ export async function GET(request: Request) {
       id: c.id,
       estudio_id: c.estudio_id,
       nome: c.nome,
+      estado: c.estado === 'Pendente' ? 'Pendente' : 'Ativo',
       nascimento: c.nascimento,
       fim_experiencia: c.fim_experiencia,
       tem_treino_agendado: clientesComTreinoFuturo.has(c.id),

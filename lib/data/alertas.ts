@@ -159,6 +159,10 @@ export type ClienteParaAlertas = {
   id: string
   estudio_id: number
   nome: string
+  // Omissão: 'Ativo'. Os pendentes só entram no alerta de "sem treino
+  // agendado" — o resto (pagamentos, reavaliações, …) continua só para
+  // os ativos.
+  estado?: 'Ativo' | 'Pendente'
   nascimento: string | null
   fim_experiencia: string | null
   tem_treino_agendado: boolean
@@ -181,15 +185,19 @@ export function avaliarClientes(
   const candidatos: AlertaCandidato[] = []
 
   for (const c of clientes) {
+    const pendente = c.estado === 'Pendente'
     if (!c.tem_treino_agendado) {
+      // Um pendente sem treino marcado é um cliente que se pode perder sem
+      // ninguém dar por isso — o mesmo alerta dos ativos, para lhe ligar.
       candidatos.push({
         regraChave: 'cliente_sem_treino_agendado',
         severidade: 'Crítico',
-        titulo: `${c.nome}: ativo sem treino agendado`,
+        titulo: `${c.nome}: ${pendente ? 'pendente' : 'ativo'} sem treino agendado`,
         estudioId: c.estudio_id,
         clienteId: c.id,
       })
     }
+    if (pendente) continue
 
     if (
       c.desmarcacoes_consecutivas >= limites.desmarcacoesConsecutivas ||

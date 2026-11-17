@@ -104,6 +104,28 @@ describe('avaliarClientes', () => {
     expect(c.find((a) => a.regraChave === 'cliente_sem_treino_agendado')?.severidade).toBe('Crítico')
   })
 
+  it('pendente sem treino agendado dispara o mesmo alerta — e só esse', () => {
+    const c = avaliarClientes(
+      [
+        cliente({
+          estado: 'Pendente',
+          tem_treino_agendado: false,
+          em_dia: false,
+          desmarcacoes_consecutivas: 3,
+          proxima_reavaliacao: '2026-03-01',
+        }),
+      ],
+      '2026-03-20'
+    )
+    expect(c.map((a) => a.regraChave)).toEqual(['cliente_sem_treino_agendado'])
+    expect(c[0].titulo).toContain('pendente sem treino agendado')
+    expect(c[0].severidade).toBe('Crítico')
+  })
+
+  it('pendente com treino marcado não tem alerta', () => {
+    expect(avaliarClientes([cliente({ estado: 'Pendente', tem_treino_agendado: true, em_dia: false })], '2026-03-20')).toEqual([])
+  })
+
   it('2 desmarcações consecutivas ou 5 acumuladas disparam cliente_limite_desmarcacoes', () => {
     expect(
       avaliarClientes([cliente({ desmarcacoes_consecutivas: 2 })], '2026-03-05').some(

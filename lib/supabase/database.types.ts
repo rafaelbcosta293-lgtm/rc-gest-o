@@ -434,6 +434,8 @@ export type Servico = {
   ativo: boolean
   // Aulas de grupo: lugares por aula quando não se indica outro.
   lotacao_omissao: number | null
+  // Aulas de grupo: as reservas pela app abrem estas horas antes da aula.
+  reserva_abre_horas: number | null
 }
 
 export type Plano = {

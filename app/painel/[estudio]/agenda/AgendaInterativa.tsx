@@ -8,7 +8,8 @@ import { Minus, Plus, HelpCircle, StickyNote, TriangleAlert } from 'lucide-react
 import type { ClienteOpcao } from '@/components/ClienteCombobox'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
-import { disporBlocos } from '@/lib/data/agendaLayout'
+import { disporBlocos, type PosicaoBloco } from '@/lib/data/agendaLayout'
+import NextLink from 'next/link'
 import { nomeCurto } from '@/lib/data/clientes'
 import { ALERTAS } from '@/lib/data/constantes'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
@@ -29,6 +30,23 @@ import type { EventoAgenda, TipoEventoAgenda as TipoEvento } from '@/lib/supabas
 // Carregado só quando se abre mesmo o modal (criar/editar) — nunca faz
 // parte do bundle inicial da Agenda, a página mais visitada da app.
 const EventoModalOverlay = dynamic(() => import('./EventoModalOverlay'), { ssr: false })
+
+// Uma aula de grupo (Treino Acompanhado, Pilates) mostrada na grelha da
+// Agenda — a sala é a mesma, por isso ocupa espaço ao lado dos treinos.
+// Só para ver: clicar abre a aula (inscritos, presenças) em Aulas.
+export type AulaNaAgenda = {
+  id: string
+  data: string
+  hora_inicio: string
+  duracao_min: number
+  servicoNome: string
+  servicoChave: string
+  instrutorNome: string | null
+  inscritos: number
+  lotacao: number
+  cancelada: boolean
+  href: string
+}
 
 export type EventoComNomes = EventoAgenda & {
   cliente: {
@@ -268,6 +286,7 @@ export default function AgendaInterativa({
   pts,
   somenteLeitura,
   diasFechados = {},
+  aulas = [],
 }: {
   slug: string
   estudioId: number
@@ -281,6 +300,8 @@ export default function AgendaInterativa({
   somenteLeitura: boolean
   // Dias em que o estúdio está fechado (feriados): data → motivo.
   diasFechados?: Record<string, string>
+  // Aulas de grupo a mostrar na grelha (vazio = escondidas).
+  aulas?: AulaNaAgenda[]
 }) {
   const router = useRouter()
   const [modal, setModal] = useState<EstadoModal>({ aberto: false })
@@ -474,6 +495,7 @@ export default function AgendaInterativa({
         dias={dias}
         estudioId={estudioId}
         diasFechados={diasFechados}
+        aulas={aulas}
         porDia={porDia}
         onMover={mover}
         onRedimensionar={redimensionar}
@@ -571,15 +593,29 @@ function representantesDoDia(eventosDia: EventoComNomes[]): { evento: EventoComN
 
 // Dispõe os eventos do dia (ver lib/data/agendaLayout.ts): sobrepostos
 // lado a lado, a alargar para o espaço livre; desmarcados por trás.
-function disporEventosDoDia(eventosDia: EventoComNomes[]): EventoPosicionado[] {
+// As aulas de grupo entram na mesma disposição (ficam ao lado dos
+// treinos à mesma hora, porque a sala é a mesma).
+function disporEventosDoDia(
+  eventosDia: EventoComNomes[],
+  aulasDia: AulaNaAgenda[] = []
+): { eventos: EventoPosicionado[]; aulas: (AulaNaAgenda & PosicaoBloco)[] } {
   const representantes = representantesDoDia(eventosDia)
   const porId = new Map(representantes.map((r) => [r.evento.id, r]))
-  return disporBlocos(
-    representantes.map((r) => {
+  const aulaPorId = new Map(aulasDia.map((a) => [`aula:${a.id}`, a]))
+  const posicoes = disporBlocos([
+    ...representantes.map((r) => {
       const inicio = minutosDoDia(r.evento.hora_inicio)
       return { id: r.evento.id, inicio, fim: inicio + r.evento.duracao_min, cancelado: r.evento.estado === 'Cancelado' }
-    })
-  ).map((p) => ({ ...porId.get(p.id)!, ...p }))
+    }),
+    ...aulasDia.map((a) => {
+      const inicio = minutosDoDia(a.hora_inicio)
+      return { id: `aula:${a.id}`, inicio, fim: inicio + a.duracao_min, cancelado: a.cancelada }
+    }),
+  ])
+  return {
+    eventos: posicoes.filter((p) => porId.has(p.id)).map((p) => ({ ...porId.get(p.id)!, ...p })),
+    aulas: posicoes.filter((p) => aulaPorId.has(p.id)).map((p) => ({ ...aulaPorId.get(p.id)!, ...p })),
+  }
 }
 
 // Arredondado aos 10 minutos aqui, na origem — para a caixa que
@@ -626,10 +662,12 @@ function GrelhaInterativa({
   onZoomIndiceChange,
   somenteLeitura,
   diasFechados,
+  aulas,
 }: {
   dias: string[]
   estudioId: number
   diasFechados: Record<string, string>
+  aulas: AulaNaAgenda[]
   porDia: Record<string, EventoComNomes[]>
   onMover: (id: string, dia: string, horaInicio: string) => void
   onRedimensionar: (id: string, horaInicio: string, duracaoMin: number) => void
@@ -679,7 +717,8 @@ function GrelhaInterativa({
   const mostraCruz = useCallback(
     (alvo: EventTarget | null, aCriar: boolean) =>
       !somenteLeitura &&
-      (aCriar || !(alvo instanceof Element && (alvo.closest('button') || alvo.closest('[data-fechado]')))),
+      (aCriar ||
+        !(alvo instanceof Element && (alvo.closest('button') || alvo.closest('[data-fechado]') || alvo.closest('[data-aula]')))),
     [somenteLeitura]
   )
 
@@ -1004,6 +1043,7 @@ function GrelhaInterativa({
                 pxPorMinuto={pxPorMinuto}
                 somenteLeitura={somenteLeitura}
                 fechado={diasFechados[dia] ?? null}
+                aulas={aulas.filter((a) => a.data === dia)}
               />
             ))}
           </div>
@@ -1061,10 +1101,12 @@ function ColunaDia({
   pxPorMinuto,
   somenteLeitura,
   fechado,
+  aulas,
 }: {
   dia: string
   // Motivo, quando o estúdio está fechado neste dia: não se cria nada.
   fechado: string | null
+  aulas: AulaNaAgenda[]
   eventos: EventoComNomes[]
   estudioId: number
   registarRef: (el: HTMLDivElement | null) => void
@@ -1085,6 +1127,7 @@ function ColunaDia({
     const intervalo = setInterval(() => setAgora(Date.now()), 60_000)
     return () => clearInterval(intervalo)
   }, [])
+  const disposicao = disporEventosDoDia(eventos, aulas)
   const dataAgora = new Date(agora)
   const ehHoje = dia === dataAgora.toISOString().slice(0, 10)
   const minutoAgora = dataAgora.getHours() * 60 + dataAgora.getMinutes()
@@ -1131,7 +1174,47 @@ function ColunaDia({
           </span>
         </div>
       )}
-      {disporEventosDoDia(eventos).map(({ evento, grupo, coluna, colunas, largura, recuo, nivel, extra, coberto }) => {
+      {disposicao.aulas.map((a) => {
+        const util = `(100% - ${a.recuo * ABA_CANCELADO}px)`
+        const cheia = a.inscritos >= a.lotacao
+        const fimAula = horaFim(a.hora_inicio, a.duracao_min)
+        return (
+          <NextLink
+            key={`aula-${a.id}`}
+            href={a.href}
+            data-aula=""
+            onMouseDown={(e) => e.stopPropagation()}
+            title={`Aula de grupo · ${a.servicoNome} · ${a.hora_inicio.slice(0, 5)}–${fimAula} · ${
+              a.cancelada ? 'cancelada' : `${a.inscritos}/${a.lotacao} inscritos`
+            }${a.instrutorNome ? ` · ${a.instrutorNome}` : ''} · clica para abrir a aula`}
+            className={`absolute overflow-hidden rounded-md border border-l-4 px-1.5 py-0.5 text-left text-[11px] leading-tight shadow-sm transition-colors ${
+              a.servicoChave === 'pilates'
+                ? 'border-fuchsia-300 border-l-fuchsia-500 bg-fuchsia-50 text-fuchsia-950 hover:bg-fuchsia-100 dark:bg-fuchsia-950/60 dark:text-fuchsia-100'
+                : 'border-sky-300 border-l-sky-500 bg-sky-50 text-sky-950 hover:bg-sky-100 dark:bg-sky-950/60 dark:text-sky-100'
+            } ${a.cancelada ? 'opacity-50 line-through' : ''}`}
+            style={{
+              top: minutosDoDia(a.hora_inicio) * pxPorMinuto,
+              height: Math.max(a.duracao_min * pxPorMinuto, ALTURA_MIN_BLOCO) - 2,
+              left: `calc(${util} * ${a.coluna / a.colunas} + 1px)`,
+              width: `calc(${util} * ${(a.largura + a.extra) / a.colunas} - 2px)`,
+              zIndex: a.cancelada ? a.nivel : 10 + a.coluna,
+              cursor: 'pointer',
+            }}
+          >
+            <span className="flex items-center justify-between gap-1">
+              <span className="truncate font-bold">{a.servicoNome}</span>
+              <span className={`shrink-0 rounded-full px-1 font-bold ${cheia ? 'bg-red-200 text-red-800' : 'bg-white/70'}`}>
+                {a.cancelada ? '—' : `${a.inscritos}/${a.lotacao}`}
+              </span>
+            </span>
+            <span className="block truncate">
+              {a.hora_inicio.slice(0, 5)} – {fimAula}
+              {a.instrutorNome ? ` · ${a.instrutorNome}` : ''}
+            </span>
+          </NextLink>
+        )
+      })}
+      {disposicao.eventos.map(({ evento, grupo, coluna, colunas, largura, recuo, nivel, extra, coberto }) => {
         const inicioMin = minutosDoDia(evento.hora_inicio)
         const emArrasto = arrastandoId === evento.id
         const emSelecionado = selecionadoId === evento.id

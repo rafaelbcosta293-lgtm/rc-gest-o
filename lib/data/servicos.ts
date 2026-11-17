@@ -6,7 +6,7 @@ import type { Servico } from '@/lib/supabase/database.types'
 export const SERVICO_PT = 1
 
 export async function carregarServicos(supabase: SupabaseClient, { soAtivos = false } = {}): Promise<Servico[]> {
-  let q = supabase.from('servicos').select('id, chave, nome, formato, ordem, ativo, lotacao_omissao').order('ordem')
+  let q = supabase.from('servicos').select('id, chave, nome, formato, ordem, ativo, lotacao_omissao, reserva_abre_horas').order('ordem')
   if (soAtivos) q = q.eq('ativo', true)
   const { data, error } = await q
   if (error) throw new Error(error.message)

@@ -10,7 +10,7 @@ import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import { carregarServicos } from '@/lib/data/servicos'
 import { DIAS_SEMANA_LONGOS, SEMANAS_ABERTAS, gerarAulas, ocupadas, type Aula, type HorarioAula, type InscricaoAula } from '@/lib/data/aulas'
-import { criarAulaAvulsa, guardarHorarioAula, terminarHorarioAula } from './actions'
+import { criarAulaAvulsa, guardarHorarioAula, guardarJanelaReserva, terminarHorarioAula } from './actions'
 import JanelaAula, { type ClienteOpcaoAula, type InscritoNaJanela } from './JanelaAula'
 import SubmitButton from '@/components/SubmitButton'
 
@@ -56,7 +56,7 @@ export default async function AulasPage({
 
   const sessao = await getSessaoAtual()
   const podeEscrever = ehContaFixa(sessao.email) || !!sessao.agendaEscrita
-  const ehGestao = papeisDaSessao(sessao).ehGestao
+  const { ehGestao, ehAdmin } = papeisDaSessao(sessao)
 
   // Abre as aulas das próximas semanas a partir do horário (idempotente).
   if (podeEscrever) await gerarAulas(supabase, estudio.id, hoje)
@@ -145,6 +145,7 @@ export default async function AulasPage({
   const aqui = `/painel/${slug}/aulas${query(base, {})}`
   const mensagemOk: Record<string, string> = {
     'aula-criada': 'Aula criada.',
+    reservas: 'Guardado — as reservas pela app passam a abrir com essa antecedência.',
     'horario-criado': `Horário guardado — as aulas das próximas ${SEMANAS_ABERTAS} semanas já estão abertas.`,
     'horario-terminado': sp.ficaram
       ? `Horário terminado. Ficaram ${sp.ficaram} aula(s) futura(s) com inscritos — avisa as pessoas e cancela-as aqui.`
@@ -331,6 +332,33 @@ export default async function AulasPage({
           </SubmitButton>
         </form>
       )}
+
+      <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">Reservas pela app</h2>
+      <p className="mt-1 text-xs text-muted">
+        Como nos ginásios: cada pessoa só consegue reservar uma aula a partir de X horas antes do início (e até a aula
+        começar), sempre até à lotação. A equipa pode inscrever pessoas a qualquer momento.
+      </p>
+      <form action={guardarJanelaReserva} className="mt-2 flex flex-wrap items-end gap-3 rounded-xl border border-border-subtle bg-surface p-3">
+        <input type="hidden" name="estudio_slug" value={slug} />
+        <input type="hidden" name="voltar" value={aqui} />
+        {servicosGrupo.map((s) => (
+          <label key={s.id} className={rotuloCls}>
+            {s.nome} — abre
+            <select name={`abre_${s.id}`} defaultValue={s.reserva_abre_horas ?? 48} disabled={!ehAdmin} className={campoCls}>
+              {[12, 24, 48, 72, 168].map((h) => (
+                <option key={h} value={h}>
+                  {h === 168 ? '1 semana' : `${h} horas`} antes
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+        {ehAdmin && (
+          <SubmitButton pendingText="A guardar…" className="rounded-full bg-brand px-4 py-2 text-xs font-bold text-black hover:bg-brand-strong">
+            Guardar
+          </SubmitButton>
+        )}
+      </form>
 
       {janela}
     </div>

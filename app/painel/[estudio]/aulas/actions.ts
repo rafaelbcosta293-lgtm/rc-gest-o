@@ -196,3 +196,20 @@ export async function terminarHorarioAula(formData: FormData) {
   revalidatePath(caminho(String(formData.get('estudio_slug'))))
   voltar(formData, ficaram > 0 ? { ok: 'horario-terminado', ficaram: String(ficaram) } : { ok: 'horario-terminado' })
 }
+
+// Quantas horas antes da aula abrem as reservas pela app (por serviço).
+// A equipa pode sempre inscrever pessoas, a qualquer momento.
+export async function guardarJanelaReserva(formData: FormData) {
+  if (!papeisDaSessao(await getSessaoAtual()).ehAdmin) voltar(formData, { error: 'Só a Administração pode mudar isto.' })
+  const supabase = await createClient()
+  for (const [chave, valor] of formData.entries()) {
+    if (!chave.startsWith('abre_')) continue
+    const servicoId = Number(chave.slice(5))
+    const horas = Number(valor)
+    if (!servicoId || !Number.isInteger(horas) || horas < 1 || horas > 336) continue
+    const { error } = await supabase.from('servicos').update({ reserva_abre_horas: horas }).eq('id', servicoId)
+    if (error) voltar(formData, { error: error.message })
+  }
+  revalidatePath(caminho(String(formData.get('estudio_slug'))))
+  voltar(formData, { ok: 'reservas' })
+}

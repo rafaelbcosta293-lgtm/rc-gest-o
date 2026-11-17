@@ -13,6 +13,9 @@ import { carregarDiasFechados } from '@/lib/data/diasFechados'
 import FecharDia from './FecharDia'
 import AgendaInterativa from './AgendaInterativa'
 import BuscaAgenda from './BuscaAgenda'
+import BotaoAulasAgenda from './BotaoAulasAgenda'
+import { COOKIE_AULAS_AGENDA, carregarAulasNaAgenda } from '@/lib/data/aulasNaAgenda'
+import { cookies } from 'next/headers'
 import FiltroInstrutor from './FiltroInstrutor'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda, Estudio } from '@/lib/supabase/database.types'
@@ -212,6 +215,10 @@ export default async function AgendaConteudo({
     tituloPeriodo = `${MESES[mes - 1]} ${ano}`
   }
 
+  // Mostrar as aulas de grupo na grelha? (botão "Aulas"; escolha guardada
+  // num cookie deste browser — por omissão, mostra.)
+  const verAulas = (await cookies()).get(COOKIE_AULAS_AGENDA)?.value !== '0'
+
   // O período que se está a ver inclui o dia de hoje?
   const periodoTemHoje = hoje >= inicio && hoje < fimExclusivo
 
@@ -223,6 +230,7 @@ export default async function AgendaConteudo({
     eventos,
     sessao,
     diasFechados,
+    aulasNaAgenda,
   ] = await Promise.all([
     getEquipaDoEstudio(supabase, estudio.id),
     supabase
@@ -240,6 +248,10 @@ export default async function AgendaConteudo({
     buscarEventos(supabase, estudio.id, inicio, fimExclusivo, ptFiltro),
     getSessaoAtual(),
     carregarDiasFechados(supabase, estudio.id, inicio, fimExclusivo),
+    // Aulas de grupo na grelha (a sala é a mesma), salvo se escondidas.
+    verAulas && vista !== 'mes'
+      ? carregarAulasNaAgenda(supabase, estudio.id, slug, inicio, fimExclusivo, ptFiltro)
+      : Promise.resolve([]),
   ])
   // Conta pessoal (fora das 4 contas fixas do negócio — ver ehContaFixa)
   // só pode VER a Agenda: sem botão de criar, sem arrastar para criar/
@@ -334,6 +346,7 @@ export default async function AgendaConteudo({
           >
             Hoje
           </Link>
+          {vista !== 'mes' && <BotaoAulasAgenda ativo={verAulas} />}
         </div>
 
         {pts.length > 0 && (
@@ -416,6 +429,7 @@ export default async function AgendaConteudo({
           pts={pts}
           somenteLeitura={somenteLeitura}
           diasFechados={diasFechados}
+          aulas={aulasNaAgenda}
         />
       )}
       {vista === 'mes' && (

@@ -15,8 +15,7 @@ export default function FiltroInstrutor({
   const router = useRouter()
   const ativo = valor !== ''
   return (
-    <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
-      <span className="font-semibold">Instrutor:</span>
+    <label className="flex shrink-0 items-center text-xs text-muted">
       <select
         value={valor}
         aria-label="Filtrar por instrutor"
@@ -30,7 +29,7 @@ export default function FiltroInstrutor({
       >
         {opcoes.map((o) => (
           <option key={o.id} value={o.id}>
-            {o.nome}
+            {o.id === '' ? 'Instrutor: todos' : o.nome}
           </option>
         ))}
       </select>

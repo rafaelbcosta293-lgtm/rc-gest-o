@@ -44,6 +44,7 @@ const TABELAS: Record<string, string[]> = {
   aulas_horario: ['id'],
   aulas: ['id'],
   aulas_inscricoes: ['id'],
+  treinos_historico: ['estudio_id', 'data'],
   despesa_subcategorias: ['id'],
   despesas: ['id'],
   despesas_recorrentes: ['id'],

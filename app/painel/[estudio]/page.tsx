@@ -1,4 +1,5 @@
 import Link from '@/components/LinkRapido'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 import { notFound } from 'next/navigation'
 import { UsersRound, AlertTriangle, BellRing, Cake, CreditCard, Megaphone } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -94,7 +95,7 @@ export default async function EstudioPage({
     { data: alertasData },
     { count: leadsNovasCount },
   ] = await Promise.all([
-    supabase.from('clientes').select('id, nome, nascimento, estado, inicio_contrato').eq('estudio_id', estudio.id).eq('cliente_pt', true),
+    supabase.from('clientes').select('id, nome, nascimento, estado, inicio_contrato, cliente_pt').eq('estudio_id', estudio.id),
     supabase.from('v_estado_pagamento').select('em_dia').eq('estudio_id', estudio.id),
     supabase.from('v_leads_paradas').select('id').eq('estudio_id', estudio.id),
     supabase.from('alerts').select('*').eq('estudio_id', estudio.id).neq('estado', 'Resolvido'),
@@ -108,8 +109,11 @@ export default async function EstudioPage({
 
   const { ehGestao } = papeisDaSessao(sessao)
 
+  // Todos os clientes (para os aniversários); as métricas de PT só
+  // contam os clientes de PT.
   const todosClientes = clientes ?? []
-  const ativos = todosClientes.filter((c) => c.estado === 'Ativo').length
+  const clientesPt = todosClientes.filter((c) => c.cliente_pt !== false)
+  const ativos = clientesPt.filter((c) => c.estado === 'Ativo').length
 
   const mensalidadesEmDivida = (pagamentosEstadoData ?? []).filter((p) => !p.em_dia).length
   const leadsContactoAtrasado = (leadsParadasData ?? []).length
@@ -120,14 +124,17 @@ export default async function EstudioPage({
   const alertasVisiveis = ehGestao
     ? todosAlertas
     : todosAlertas.filter((a) => a.papel_destinatario && a.papel_destinatario === sessao.perfil?.papel)
-  const hoje = new Date()
+  // Aniversários: toda a gente, com ou sem mensalidade ativa (como na
+  // página de Aniversários e no SMS automático), e o dia de hoje visto
+  // de Lisboa — o servidor está em UTC.
+  const hoje = new Date(`${hojeEmLisboa()}T12:00:00`)
   const aniversariantesHoje = todosClientes
-    .filter((c) => c.estado === 'Ativo' && c.nascimento && proximoAniversario(c.nascimento, hoje).dias === 0)
+    .filter((c) => c.nascimento && proximoAniversario(c.nascimento, hoje).dias === 0)
     .map((c) => ({ id: c.id, nome: c.nome, idade: idadeEm(c.nascimento!, hoje) }))
 
   // Estas duas só precisam dos ids dos clientes ativos — também correm
   // em paralelo entre si.
-  const clientesAtivos = todosClientes.filter((c) => c.estado === 'Ativo')
+  const clientesAtivos = clientesPt.filter((c) => c.estado === 'Ativo')
   const idsClientesAtivos = clientesAtivos.map((c) => c.id)
   const [{ data: segurosPagosData }, { data: reativacoesData }] = idsClientesAtivos.length
     ? await Promise.all([

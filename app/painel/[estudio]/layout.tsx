@@ -157,9 +157,9 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             da página continua no modelo claro, ao contrário da
             Administração, onde o escuro é a área toda. */}
         <header className="dark tema-proprio shadow-deep hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl md:flex">
-          {/* O logótipo e o botão "Início" voltam ao menu inicial deste
-              estúdio; para trocar de estúdio há o botão à direita. */}
-          <Link href={`/painel/${slug}`} title="Início do estúdio" className="flex shrink-0 items-center">
+          {/* O logótipo volta ao quadro inicial (estúdios, Coordenação,
+              Administração); o botão "Início" volta ao início deste estúdio. */}
+          <Link href="/painel" title="Quadro inicial — estúdios, Coordenação e Administração" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
           <NavLinkInicio slug={slug} comTexto />

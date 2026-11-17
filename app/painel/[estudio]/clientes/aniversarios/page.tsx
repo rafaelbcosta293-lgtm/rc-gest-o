@@ -1,4 +1,5 @@
 import Link from '@/components/LinkRapido'
+import { hojeEmLisboa } from '@/lib/data/hoje'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
@@ -134,7 +135,8 @@ export default async function AniversariosPage({
   const { estudio: slug } = await params
   const { error, vista, mes: mesParam, reenvioEnviados, reenvioFalhas, reenvioPendentes, reenvioOffline } =
     await searchParams
-  const agora = new Date()
+  // "Hoje" visto de Lisboa (o servidor está em UTC).
+  const agora = new Date(`${hojeEmLisboa()}T12:00:00`)
   const anoAtual = agora.getFullYear()
   // Calendário é a vista principal — só passa a lista se pedirem
   // explicitamente "?vista=lista".

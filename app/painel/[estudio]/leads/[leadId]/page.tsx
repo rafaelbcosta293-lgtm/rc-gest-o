@@ -11,6 +11,7 @@ import { fmt } from '@/lib/data/presencas'
 import {
   adicionarContacto,
   agendarExperimental,
+  marcarExperimentalNaoRealizada,
   apagarLead,
   atualizarLead,
   converterEmCliente,
@@ -152,6 +153,21 @@ export default async function LeadPage({
       </p>
 
       <ContactoRapido nome={lead.nome} telefone={lead.telefone} estudioSlug={slug} />
+
+      {/* Exceções: marcar à mão que a sessão experimental não se realizou
+          (desmarcar a sessão na Agenda já faz isto sozinho). */}
+      {!lead.cliente_id && !['Falhou a experimental', 'Ganha', 'Perdida'].includes(lead.estado) && (
+        <form action={marcarExperimentalNaoRealizada} className="mt-3">
+          <input type="hidden" name="estudio_slug" value={slug} />
+          <input type="hidden" name="lead_id" value={lead.id} />
+          <SubmitButton
+            pendingText="A atualizar…"
+            className="rounded-full border border-red-600/40 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950"
+          >
+            Sessão experimental não realizada
+          </SubmitButton>
+        </form>
+      )}
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

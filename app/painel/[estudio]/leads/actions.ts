@@ -256,6 +256,45 @@ export async function moverEstadoLeadRapido(input: {
   return { ok: true }
 }
 
+// Botão na ficha da lead, para as exceções (ex.: não apareceu e a sessão
+// ficou por desmarcar na Agenda): passa a lead para "Falhou a
+// experimental" e desmarca na Agenda as sessões experimentais dela que
+// ainda estavam marcadas até hoje (as futuras ficam, se houver). A
+// automação de desmarcar na Agenda continua a fazer o mesmo sozinha.
+export async function marcarExperimentalNaoRealizada(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const leadId = formData.get('lead_id') as string
+  const supabase = await createClient()
+  const hoje = hojeEmLisboa()
+
+  const { data: lead } = await supabase.from('leads').select('estado, cliente_id, visita_data').eq('id', leadId).maybeSingle()
+  if (!lead) redirect(`/painel/${estudioSlug}/leads?error=${encodeURIComponent('Lead não encontrada.')}`)
+  if (lead.cliente_id || lead.estado === 'Ganha') {
+    redirect(`/painel/${estudioSlug}/leads/${leadId}?error=${encodeURIComponent('Esta lead já é cliente.')}`)
+  }
+
+  const { error } = await supabase
+    .from('leads')
+    .update({
+      estado: 'Falhou a experimental',
+      ...(lead.visita_data && lead.visita_data <= hoje ? { visita_data: null, visita_hora: null, visita_marcada_em: null } : {}),
+    })
+    .eq('id', leadId)
+  if (error) redirect(`/painel/${estudioSlug}/leads/${leadId}?error=${encodeURIComponent(error.message)}`)
+
+  await supabase
+    .from('agenda_eventos')
+    .update({ estado: 'Cancelado', motivo_cancelamento: 'Não compareceu à sessão experimental' })
+    .eq('lead_id', leadId)
+    .eq('tipo', 'Sessão experimental')
+    .eq('estado', 'Agendado')
+    .lte('data', hoje)
+
+  revalidatePath(`/painel/${estudioSlug}/leads`)
+  revalidatePath(`/painel/${estudioSlug}/agenda`)
+  redirect(`/painel/${estudioSlug}/leads/${leadId}`)
+}
+
 // "Agendar experimental" junta duas coisas que até aqui existiam
 // separadas: marca a visita na própria lead (como o resto do fluxo já
 // fazia) e cria também o evento correspondente na Agenda interna, para

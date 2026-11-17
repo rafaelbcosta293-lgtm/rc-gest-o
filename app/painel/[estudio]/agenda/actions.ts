@@ -259,6 +259,50 @@ async function reconciliarPresencasDoEvento(
   return null
 }
 
+// Sessão experimental desmarcada na Agenda → a lead passa no funil para
+// "Falhou a experimental" (não realizou a sessão) e deixa de mostrar a
+// visita marcada. Só mexe em leads que estavam em "Experimental
+// agendada" — nunca numa já ganha, perdida ou noutra etapa à frente.
+async function experimentalDesmarcada(supabase: SupabaseClient, eventoIds: string[]): Promise<string | null> {
+  if (eventoIds.length === 0) return null
+  const { data: eventos, error } = await supabase
+    .from('agenda_eventos')
+    .select('lead_id, data, hora_inicio, tipo')
+    .in('id', eventoIds)
+    .eq('tipo', 'Sessão experimental')
+    .not('lead_id', 'is', null)
+  if (error) return error.message
+  const leadIds = [...new Set((eventos ?? []).map((e) => e.lead_id as string))]
+  if (leadIds.length === 0) return null
+  const { error: erroLead } = await supabase
+    .from('leads')
+    .update({ estado: 'Falhou a experimental' })
+    .in('id', leadIds)
+    .eq('estado', 'Experimental agendada')
+  if (erroLead) return erroLead.message
+  return limparVisitaLeadsApagadas(supabase, (eventos ?? []) as EventoParaLimparVisita[])
+}
+
+// Sessão experimental reativada → a lead volta a "Experimental agendada"
+// (se tinha passado a "Falhou a experimental"), com a visita outra vez.
+async function experimentalReativada(supabase: SupabaseClient, eventoIds: string[]): Promise<string | null> {
+  if (eventoIds.length === 0) return null
+  const { data: eventos, error } = await supabase
+    .from('agenda_eventos')
+    .select('lead_id, data, hora_inicio')
+    .in('id', eventoIds)
+    .eq('tipo', 'Sessão experimental')
+    .not('lead_id', 'is', null)
+  if (error) return error.message
+  for (const e of eventos ?? []) {
+    const { data: lead } = await supabase.from('leads').select('estado').eq('id', e.lead_id).maybeSingle()
+    if (lead?.estado !== 'Falhou a experimental') continue
+    const erro = await sincronizarVisitaLead(supabase, e.lead_id as string, e.data as string, e.hora_inicio as string)
+    if (erro) return erro
+  }
+  return null
+}
+
 type EventoParaLimparVisita = { lead_id: string | null; data: string; hora_inicio: string }
 
 // Ao apagar um evento de "Sessão experimental" ligado a uma lead, essa
@@ -637,8 +681,13 @@ export async function desmarcarEvento(formData: FormData) {
   if (erroReconciliar) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroReconciliar)}`)
   }
+  const erroLead = await experimentalDesmarcada(supabase, [id])
+  if (erroLead) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(`Desmarcado, mas a lead não foi atualizada: ${erroLead}`)}`)
+  }
 
   revalidatePath(`/painel/${estudioSlug}/agenda`)
+  revalidatePath(`/painel/${estudioSlug}/leads`)
   redirect(`/painel/${estudioSlug}/agenda/${id}`)
 }
 
@@ -695,6 +744,11 @@ export async function reativarEvento(formData: FormData) {
   if (erroReconciliar) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroReconciliar)}`)
   }
+  const erroLead = await experimentalReativada(supabase, [id])
+  if (erroLead) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroLead)}`)
+  }
+  revalidatePath(`/painel/${estudioSlug}/leads`)
 
   revalidatePath(`/painel/${estudioSlug}/agenda`)
   redirect(`/painel/${estudioSlug}/agenda/${id}`)
@@ -1236,8 +1290,11 @@ export async function desmarcarEventoRapido(input: {
 
   const erroReconciliar = await reconciliarPresencasDoEvento(supabase, linhasData ?? [], input.contarComoRealizado)
   if (erroReconciliar) return { error: erroReconciliar }
+  const erroLead = await experimentalDesmarcada(supabase, (linhasData ?? []).map((l) => l.id as string))
+  if (erroLead) return { error: `Desmarcado, mas a lead não foi atualizada: ${erroLead}` }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  revalidatePath(`/painel/${input.estudioSlug}/leads`)
   return { ok: true }
 }
 
@@ -1271,8 +1328,11 @@ export async function reativarEventoRapido(input: {
   // (só essa); o cron volta a contá-la quando o evento terminar.
   const erroReconciliar = await reconciliarPresencasDoEvento(supabase, linhasData ?? [], false)
   if (erroReconciliar) return { error: erroReconciliar }
+  const erroLead = await experimentalReativada(supabase, (linhasData ?? []).map((l) => l.id as string))
+  if (erroLead) return { error: erroLead }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+  revalidatePath(`/painel/${input.estudioSlug}/leads`)
   return { ok: true }
 }
 

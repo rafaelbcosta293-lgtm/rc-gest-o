@@ -9,14 +9,18 @@ import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { ehContaFixa } from '@/lib/data/acessos'
 import {
+  correspondePalavras,
   gerarOcorrencias,
   eventoJaTerminou,
+  ocorrenciasAMover,
+  palavrasDaPesquisa,
   pesquisarEventosAgenda,
   type EventoPesquisavel,
+  type OcorrenciaDaSerie,
   type LimiteRepeticao,
   type Repeticao,
 } from '@/lib/data/agenda'
-import type { TipoEventoAgenda } from '@/lib/supabase/database.types'
+import type { EstadoEventoAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 
 function campoOuNull(formData: FormData, nome: string) {
@@ -37,42 +41,124 @@ export type ResultadoPesquisaAgenda = {
   nomePt: string | null
 }
 
+export type ClientePesquisaAgenda = { id: string; nome: string; numeroSocio: string | null; estado: string }
+
 // Pesquisa global na agenda (não só no período visível) — pede-se um
 // mínimo de 2 caracteres para não trazer o estúdio inteiro a cada
-// toque de tecla. Vai buscar tudo do estúdio (sem janela de datas: a
-// agenda de um estúdio ainda é pequena) e filtra em memória com
-// pesquisarEventosAgenda, para encontrar por nome mesmo com acentos
-// diferentes dos escritos.
-export async function pesquisarAgenda(estudioId: number, texto: string): Promise<ResultadoPesquisaAgenda[]> {
-  if (texto.trim().length < 2) return []
+// toque de tecla. Devolve primeiro os clientes cujo nome tem todas as
+// palavras escritas, em qualquer ordem ("Maria Garcia" encontra "Maria
+// João Garcia"), e depois os eventos que correspondem. Vai buscar tudo
+// do estúdio (sem janela de datas: a agenda de um estúdio ainda é
+// pequena) e filtra em memória, para encontrar por nome mesmo com
+// acentos diferentes dos escritos.
+export async function pesquisarAgenda(
+  estudioId: number,
+  texto: string
+): Promise<{ clientes: ClientePesquisaAgenda[]; eventos: ResultadoPesquisaAgenda[] }> {
+  if (texto.trim().length < 2) return { clientes: [], eventos: [] }
   const supabase = await createClient()
-  const { data, error } = await todasAsLinhas((de, ate) =>
-    supabase
-      .from('agenda_eventos')
-      .select(
-        'id, data, hora_inicio, duracao_min, tipo, titulo, estado, nota, cliente:clientes(nome, nome_preferido, numero_socio), pt:perfis!pt_id(nome)'
-      )
-      .eq('estudio_id', estudioId)
-      .order('data', { ascending: false })
-      .order('hora_inicio', { ascending: false })
-      .order('id')
-      .range(de, ate)
-  )
+  const [{ data, error }, { data: clientesData, error: erroClientes }] = await Promise.all([
+    todasAsLinhas((de, ate) =>
+      supabase
+        .from('agenda_eventos')
+        .select(
+          'id, data, hora_inicio, duracao_min, tipo, titulo, estado, nota, cliente:clientes(nome, nome_preferido, numero_socio), pt:perfis!pt_id(nome)'
+        )
+        .eq('estudio_id', estudioId)
+        .order('data', { ascending: false })
+        .order('hora_inicio', { ascending: false })
+        .order('id')
+        .range(de, ate)
+    ),
+    todasAsLinhas((de, ate) =>
+      supabase.from('clientes').select('id, nome, nome_preferido, numero_socio, estado').eq('estudio_id', estudioId).order('id').range(de, ate)
+    ),
+  ])
   if (error) throw new Error(error.message)
+  if (erroClientes) throw new Error(erroClientes.message)
+
+  const palavras = palavrasDaPesquisa(texto)
+  type ClienteLinha = { id: string; nome: string; nome_preferido: string | null; numero_socio: string | null; estado: string }
+  const clientes = ((clientesData ?? []) as ClienteLinha[])
+    .filter((c) => correspondePalavras(palavras, [c.nome, c.nome_preferido, c.numero_socio]))
+    // Os ativos primeiro; depois por nome.
+    .sort((a, b) => Number(a.estado !== 'Ativo') - Number(b.estado !== 'Ativo') || a.nome.localeCompare(b.nome, 'pt'))
+    .slice(0, 8)
+    .map((c) => ({ id: c.id, nome: c.nome, numeroSocio: c.numero_socio, estado: c.estado }))
 
   const eventos = (data ?? []) as unknown as EventoPesquisavel[]
   const encontrados = pesquisarEventosAgenda(eventos, texto).slice(0, 50)
-  return encontrados.map((e) => ({
-    id: e.id,
-    data: e.data,
-    horaInicio: e.hora_inicio,
-    duracaoMin: e.duracao_min,
-    tipo: e.tipo,
-    titulo: e.titulo,
-    estado: e.estado,
-    nomeCliente: e.cliente?.nome_preferido ?? e.cliente?.nome ?? null,
-    nomePt: e.pt?.nome ?? null,
-  }))
+  return {
+    clientes,
+    eventos: encontrados.map((e) => ({
+      id: e.id,
+      data: e.data,
+      horaInicio: e.hora_inicio,
+      duracaoMin: e.duracao_min,
+      tipo: e.tipo,
+      titulo: e.titulo,
+      estado: e.estado,
+      nomeCliente: e.cliente?.nome_preferido ?? e.cliente?.nome ?? null,
+      nomePt: e.pt?.nome ?? null,
+    })),
+  }
+}
+
+export type HistoricoAgendaCliente = {
+  cliente: { id: string; nome: string; numeroSocio: string | null; estado: string; estudioSlug: string | null }
+  eventos: (ResultadoPesquisaAgenda & { nota: string | null; estudioSlug: string | null })[]
+}
+
+// Tudo o que um cliente tem (e teve) na agenda — treinos, avaliações,
+// sessões, do primeiro ao último, por ordem — para a janela que abre a
+// partir da pesquisa.
+export async function historicoAgendaCliente(clienteId: string): Promise<HistoricoAgendaCliente | { erro: string }> {
+  if (!/^[0-9a-f-]{36}$/i.test(clienteId)) return { erro: 'Cliente não encontrado.' }
+  const supabase = await createClient()
+  const [{ data: cliente, error: erroCliente }, { data, error }] = await Promise.all([
+    supabase.from('clientes').select('id, nome, nome_preferido, numero_socio, estado, estudio:estudios(slug)').eq('id', clienteId).maybeSingle(),
+    todasAsLinhas((de, ate) =>
+      supabase
+        .from('agenda_eventos')
+        .select('id, data, hora_inicio, duracao_min, tipo, titulo, estado, nota, pt:perfis!pt_id(nome), estudio:estudios(slug)')
+        .eq('cliente_id', clienteId)
+        .order('data')
+        .order('hora_inicio')
+        .order('id')
+        .range(de, ate)
+    ),
+  ])
+  if (erroCliente || error) return { erro: (erroCliente ?? error)!.message }
+  if (!cliente) return { erro: 'Cliente não encontrado.' }
+  type Linha = {
+    id: string
+    data: string
+    hora_inicio: string
+    duracao_min: number
+    tipo: TipoEventoAgenda
+    titulo: string | null
+    estado: EstadoEventoAgenda
+    nota: string | null
+    pt: { nome: string } | null
+    estudio: { slug: string } | null
+  }
+  const c = cliente as unknown as { id: string; nome: string; nome_preferido: string | null; numero_socio: string | null; estado: string; estudio: { slug: string } | null }
+  return {
+    cliente: { id: c.id, nome: c.nome_preferido ? `${c.nome} (${c.nome_preferido})` : c.nome, numeroSocio: c.numero_socio, estado: c.estado, estudioSlug: c.estudio?.slug ?? null },
+    eventos: ((data ?? []) as unknown as Linha[]).map((e) => ({
+      id: e.id,
+      data: e.data,
+      horaInicio: e.hora_inicio,
+      duracaoMin: e.duracao_min,
+      tipo: e.tipo,
+      titulo: e.titulo,
+      estado: e.estado,
+      nomeCliente: c.nome,
+      nomePt: e.pt?.nome ?? null,
+      nota: e.nota,
+      estudioSlug: e.estudio?.slug ?? null,
+    })),
+  }
 }
 
 // Uma conta pessoal (fora das 4 contas fixas do negócio) só pode VER a
@@ -896,17 +982,100 @@ export async function atualizarEventoRapido(
   return { ok: true }
 }
 
+// Mover ou redimensionar uma série inteira (ou "este e os seguintes")
+// a partir de um arrasto na grelha. Cada ocorrência anda os mesmos dias
+// que a arrastada (ex.: de terça para segunda, todas um dia antes) e
+// fica com a hora/duração nova; as que já aconteceram ou foram
+// desmarcadas ficam como estão (são histórico). O modelo da série
+// (agenda_series) também fica com a hora/duração nova, para as
+// ocorrências que o cron ainda vai gerar nascerem já certas — e como o
+// cron continua a partir da última data, nascem também no dia novo.
+async function aplicarASerie(
+  supabase: SupabaseClient,
+  input: {
+    id: string
+    serieId: string
+    escopo: 'seguintes' | 'serie'
+    dataNova: string | null
+    horaInicio: string
+    duracaoMin: number | null
+  }
+): Promise<string | null> {
+  const { data: arrastado, error: erroArrastado } = await supabase.from('agenda_eventos').select('data').eq('id', input.id).maybeSingle()
+  if (erroArrastado || !arrastado) return erroArrastado?.message ?? 'Evento não encontrado.'
+  const { data: linhas, error } = await supabase
+    .from('agenda_eventos')
+    .select('id, data, hora_inicio, duracao_min, estado')
+    .eq('serie_id', input.serieId)
+  if (error) return error.message
+  const ocorrencias = (linhas ?? []) as OcorrenciaDaSerie[]
+  // A arrastada muda sempre (é a que se viu mudar), mesmo que já tenha passado.
+  const visadas = ocorrenciasAMover(ocorrencias, input.escopo, arrastado.data, input.dataNova ?? arrastado.data, (o) =>
+    o.id === input.id ? false : eventoJaTerminou(o.data, o.hora_inicio, o.duracao_min)
+  )
+  if (visadas.length === 0) return null
+
+  // Uma atualização por dia novo (as linhas de um treino em simultâneo
+  // partilham o dia) — sempre por id, para nunca apanhar uma linha que
+  // já foi mudada.
+  const porDia = new Map<string, string[]>()
+  for (const v of visadas) porDia.set(v.dataNova, [...(porDia.get(v.dataNova) ?? []), v.id])
+  for (const [dia, ids] of porDia) {
+    const { error: erroUpdate } = await supabase
+      .from('agenda_eventos')
+      .update({
+        data: dia,
+        hora_inicio: input.horaInicio,
+        ...(input.duracaoMin != null ? { duracao_min: input.duracaoMin } : {}),
+        lembrete_enviado: false,
+        lembrete_enviado_em: null,
+      })
+      .in('id', ids)
+    if (erroUpdate) return erroUpdate.message
+  }
+  // Se a arrastada já estava concluída e a nova data/hora ainda não chegou, volta a "Agendado".
+  const arrastadaAntes = ocorrencias.find((o) => o.id === input.id)
+  if (arrastadaAntes?.estado === 'Concluído') {
+    const fim = eventoJaTerminou(input.dataNova ?? arrastado.data, input.horaInicio, input.duracaoMin ?? arrastadaAntes.duracao_min)
+    if (!fim) await supabase.from('agenda_eventos').update({ estado: 'Agendado' }).eq('id', input.id)
+  }
+
+  const { error: erroModelo } = await supabase
+    .from('agenda_series')
+    .update({ hora_inicio: input.horaInicio, ...(input.duracaoMin != null ? { duracao_min: input.duracaoMin } : {}) })
+    .eq('id', input.serieId)
+  return erroModelo?.message ?? null
+}
+
 export async function moverEventoRapido(input: {
   estudioSlug: string
   id: string
   grupoId: string | null
   data: string
   horaInicio: string
+  // Num evento que faz parte de uma série: só este (omissão), este e os
+  // seguintes, ou toda a série.
+  serieId?: string | null
+  escopo?: EscopoEditar
 }): Promise<ResultadoAcaoRapida> {
   const bloqueio = await bloquearEscritaNaAgenda()
   if (bloqueio) return { error: bloqueio }
 
   const supabase = await createClient()
+
+  if (input.serieId && input.escopo && input.escopo !== 'um') {
+    const erro = await aplicarASerie(supabase, {
+      id: input.id,
+      serieId: input.serieId,
+      escopo: input.escopo,
+      dataNova: input.data,
+      horaInicio: input.horaInicio,
+      duracaoMin: null,
+    })
+    if (erro) return { error: erro }
+    revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+    return { ok: true }
+  }
 
   const selectQuery = supabase.from('agenda_eventos').select('estado, duracao_min')
   const { data: atuais, error: erroAtuais } = input.grupoId
@@ -946,11 +1115,27 @@ export async function redimensionarEventoRapido(input: {
   grupoId: string | null
   horaInicio: string
   duracaoMin: number
+  serieId?: string | null
+  escopo?: EscopoEditar
 }): Promise<ResultadoAcaoRapida> {
   const bloqueio = await bloquearEscritaNaAgenda()
   if (bloqueio) return { error: bloqueio }
 
   const supabase = await createClient()
+
+  if (input.serieId && input.escopo && input.escopo !== 'um') {
+    const erro = await aplicarASerie(supabase, {
+      id: input.id,
+      serieId: input.serieId,
+      escopo: input.escopo,
+      dataNova: null,
+      horaInicio: input.horaInicio,
+      duracaoMin: input.duracaoMin,
+    })
+    if (erro) return { error: erro }
+    revalidatePath(`/painel/${input.estudioSlug}/agenda`)
+    return { ok: true }
+  }
 
   const selectQuery = supabase.from('agenda_eventos').select('estado, data')
   const { data: atuais, error: erroAtuais } = input.grupoId

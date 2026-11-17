@@ -127,16 +127,31 @@ export type EventoPesquisavel = {
   pt: { nome: string } | null
 }
 
-// Pesquisa na agenda: compara o texto (sem acentos/maiúsculas, ver
-// normalizarTexto) contra tudo o que pode identificar um evento — nome
-// e nº de sócio do cliente, nome do instrutor, título (Reunião/Outro/
-// Sessão experimental) e nota — para "pesquisar o nome de um cliente"
-// encontrar todos os eventos dele, sejam de que tipo forem.
+// As palavras de uma pesquisa, sem acentos nem maiúsculas.
+export function palavrasDaPesquisa(texto: string): string[] {
+  return normalizarTexto(texto).split(/[\s,;]+/).filter(Boolean)
+}
+
+// Encontra por palavras, em qualquer ordem: "Maria Garcia" encontra
+// "Maria João Garcia", e "João Maria" encontra "Maria João". Cada
+// palavra escrita tem de aparecer em algum dos campos (sem acentos nem
+// maiúsculas; basta o início ou um pedaço da palavra).
+export function correspondePalavras(palavras: string[], campos: (string | null | undefined)[]): boolean {
+  if (palavras.length === 0) return false
+  const tudo = normalizarTexto(campos.filter(Boolean).join(' '))
+  return palavras.every((p) => tudo.includes(p))
+}
+
+// Pesquisa na agenda: compara as palavras escritas (em qualquer ordem,
+// ver correspondePalavras) com tudo o que pode identificar um evento —
+// nome e nº de sócio do cliente, nome do instrutor, título (Reunião/
+// Outro/Sessão experimental) e nota — para "pesquisar o nome de um
+// cliente" encontrar todos os eventos dele, sejam de que tipo forem.
 export function pesquisarEventosAgenda<T extends EventoPesquisavel>(eventos: T[], texto: string): T[] {
-  const alvo = normalizarTexto(texto.trim())
-  if (!alvo) return []
-  return eventos.filter((e) => {
-    const campos = [
+  const palavras = palavrasDaPesquisa(texto.trim())
+  if (palavras.length === 0) return []
+  return eventos.filter((e) =>
+    correspondePalavras(palavras, [
       e.cliente?.nome,
       e.cliente?.nome_preferido,
       e.cliente?.numero_socio,
@@ -144,7 +159,33 @@ export function pesquisarEventosAgenda<T extends EventoPesquisavel>(eventos: T[]
       e.titulo,
       e.nota,
       rotuloTipoEvento(e.tipo, e.titulo),
-    ]
-    return campos.some((campo) => campo && normalizarTexto(campo).includes(alvo))
-  })
+    ])
+  )
+}
+
+// ── Mover uma série ao arrastar ──────────────────────────────────────
+
+// Dias entre duas datas (b − a).
+export function diasEntre(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000)
+}
+
+export type OcorrenciaDaSerie = { id: string; data: string; hora_inicio: string; duracao_min: number; estado: EstadoEventoAgenda }
+
+// As ocorrências de uma série que um arrasto "este e os seguintes" ou
+// "toda a série" deve mudar, e a data nova de cada uma (a mesma
+// deslocação de dias do evento arrastado — ex.: de terça para segunda,
+// todas um dia antes). As que já aconteceram (ou foram desmarcadas)
+// ficam como estão: são histórico.
+export function ocorrenciasAMover(
+  ocorrencias: OcorrenciaDaSerie[],
+  escopo: 'seguintes' | 'serie',
+  dataArrastada: string,
+  dataNova: string,
+  terminou: (o: OcorrenciaDaSerie) => boolean = (o) => eventoJaTerminou(o.data, o.hora_inicio, o.duracao_min)
+): { id: string; dataNova: string }[] {
+  const deslocacao = diasEntre(dataArrastada, dataNova)
+  return ocorrencias
+    .filter((o) => (escopo === 'serie' || o.data >= dataArrastada) && o.estado !== 'Cancelado' && !terminou(o))
+    .map((o) => ({ id: o.id, dataNova: somarDias(o.data, deslocacao) }))
 }

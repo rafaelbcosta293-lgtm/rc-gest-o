@@ -2,19 +2,23 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from '@/components/LinkRapido'
-import { Search, X } from 'lucide-react'
+import { Search, UserRound, X } from 'lucide-react'
 import { fmt } from '@/lib/data/presencas'
 import { corTipoEvento, rotuloTipoEvento } from '@/lib/data/agenda'
-import { pesquisarAgenda, type ResultadoPesquisaAgenda } from './actions'
+import { pesquisarAgenda, type ClientePesquisaAgenda, type ResultadoPesquisaAgenda } from './actions'
+import HistoricoCliente from './HistoricoCliente'
 
 // Pesquisa global na agenda (nome do cliente, do instrutor, título ou
-// nota) — não se limita ao dia/semana/mês visível, por isso cada
-// resultado salta para o dia exato desse evento. Pedido do dono: "por
-// exemplo, pesquisar o nome de um cliente e aparecerem todos os
-// eventos desse cliente na agenda".
+// nota), com as palavras em qualquer ordem ("Maria Garcia" encontra
+// "Maria João Garcia") — não se limita ao dia/semana/mês visível. Em
+// cima aparecem os clientes: escolher um abre a janela com todos os
+// agendamentos dele, do primeiro ao último. Por baixo, os eventos, e
+// cada um salta para o dia exato.
 export default function BuscaAgenda({ estudioId, basePath }: { estudioId: number; basePath: string }) {
   const [texto, setTexto] = useState('')
   const [resultados, setResultados] = useState<ResultadoPesquisaAgenda[]>([])
+  const [clientes, setClientes] = useState<ClientePesquisaAgenda[]>([])
+  const [clienteAberto, setClienteAberto] = useState<string | null>(null)
   const [aPesquisar, setAPesquisar] = useState(false)
   const [aberto, setAberto] = useState(false)
   const caixaRef = useRef<HTMLDivElement>(null)
@@ -25,12 +29,16 @@ export default function BuscaAgenda({ estudioId, basePath }: { estudioId: number
       () => {
         if (curto) {
           setResultados([])
+          setClientes([])
           setAPesquisar(false)
           return
         }
         setAPesquisar(true)
         pesquisarAgenda(estudioId, texto)
-          .then((r) => setResultados(r))
+          .then((r) => {
+            setResultados(r.eventos)
+            setClientes(r.clientes)
+          })
           .finally(() => setAPesquisar(false))
       },
       curto ? 0 : 300
@@ -86,10 +94,35 @@ export default function BuscaAgenda({ estudioId, basePath }: { estudioId: number
         <div className="absolute left-0 right-0 z-30 mt-1.5 max-h-96 overflow-y-auto rounded-xl border border-border-subtle bg-surface shadow-card sm:w-[22rem]">
           {aPesquisar ? (
             <p className="px-3 py-3 text-xs text-muted">A pesquisar…</p>
-          ) : resultados.length === 0 ? (
+          ) : resultados.length === 0 && clientes.length === 0 ? (
             <p className="px-3 py-3 text-xs text-muted">Sem resultados para &quot;{texto}&quot;.</p>
           ) : (
-            resultados.map((r, i) => (
+            <>
+            {clientes.length > 0 && (
+              <div className="border-b border-border-subtle bg-foreground/[.03]">
+                <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted">Clientes — ver todos os agendamentos</p>
+                {clientes.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setClienteAberto(c.id)
+                      setAberto(false)
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-brand/[.08]"
+                  >
+                    <UserRound className="h-3.5 w-3.5 shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1 truncate font-semibold text-foreground">{c.nome}</span>
+                    {c.numeroSocio && <span className="shrink-0 text-[10px] text-muted">{c.numeroSocio}</span>}
+                    {c.estado !== 'Ativo' && <span className="shrink-0 text-[10px] text-muted">· {c.estado}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {resultados.length > 0 && (
+              <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted">Agendamentos</p>
+            )}
+            {resultados.map((r, i) => (
               <Link
                 key={r.id}
                 href={`${basePath}?vista=dia&data=${r.data}`}
@@ -116,10 +149,12 @@ export default function BuscaAgenda({ estudioId, basePath }: { estudioId: number
                   {r.nomePt ? ` · ${r.nomePt}` : ''}
                 </span>
               </Link>
-            ))
+            ))}
+            </>
           )}
         </div>
       )}
+      {clienteAberto && <HistoricoCliente clienteId={clienteAberto} basePath={basePath} onFechar={() => setClienteAberto(null)} />}
     </div>
   )
 }

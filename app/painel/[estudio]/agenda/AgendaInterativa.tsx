@@ -185,6 +185,76 @@ const ALTURA_MIN_BLOCO = 18
 const CRUZ_TAMANHO = 21
 const CRUZ_ESPESSURA = 2
 
+type PedidoSerie =
+  | { tipo: 'mover'; id: string; data: string; horaInicio: string }
+  | { tipo: 'redimensionar'; id: string; horaInicio: string; duracaoMin: number }
+
+const DIAS_LONGOS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
+const diaLongo = (iso: string) => DIAS_LONGOS[new Date(`${iso}T12:00:00Z`).getUTCDay()]
+const diaMes = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+
+// A caixa que aparece ao largar um evento repetido: aplicar a mudança
+// só a este, a este e aos seguintes, ou à série toda.
+function PerguntaSerie({
+  pedido,
+  evento,
+  onEscolher,
+  onCancelar,
+}: {
+  pedido: PedidoSerie
+  evento: EventoComNomes | null
+  onEscolher: (escopo: EscopoEditar) => void
+  onCancelar: () => void
+}) {
+  useEffect(() => {
+    function tecla(e: KeyboardEvent) {
+      if (e.key === 'Escape') onCancelar()
+    }
+    document.addEventListener('keydown', tecla)
+    return () => document.removeEventListener('keydown', tecla)
+  }, [onCancelar])
+
+  const mudaDia = pedido.tipo === 'mover' && evento && pedido.data !== evento.data
+  const descricao =
+    pedido.tipo === 'mover'
+      ? mudaDia && evento
+        ? `De ${diaLongo(evento.data)} ${diaMes(evento.data)} às ${evento.hora_inicio.slice(0, 5)} para ${diaLongo(pedido.data)} ${diaMes(pedido.data)} às ${pedido.horaInicio.slice(0, 5)}.`
+        : `Passa a começar às ${pedido.horaInicio.slice(0, 5)}.`
+      : `Passa a ser das ${pedido.horaInicio.slice(0, 5)}, com ${pedido.duracaoMin} min.`
+  const botao = 'w-full rounded-xl border border-border-subtle px-4 py-2.5 text-left text-sm hover:border-brand hover:bg-brand/[.08]'
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onCancelar}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Treino repetido"
+        className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface p-5 shadow-pop"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-base font-bold text-foreground">Este treino repete-se</h2>
+        <p className="mt-1 text-sm text-muted">{descricao} A que treinos aplicar?</p>
+        <div className="mt-4 flex flex-col gap-2">
+          <button type="button" autoFocus onClick={() => onEscolher('um')} className={botao}>
+            <span className="font-semibold text-foreground">Só este</span>
+          </button>
+          <button type="button" onClick={() => onEscolher('seguintes')} className={botao}>
+            <span className="font-semibold text-foreground">Este e os seguintes</span>
+          </button>
+          <button type="button" onClick={() => onEscolher('serie')} className={botao}>
+            <span className="font-semibold text-foreground">Todos os da série</span>
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-muted">
+          {mudaDia ? 'Os outros treinos mudam o mesmo número de dias. ' : ''}Os que já aconteceram ou foram desmarcados ficam como estão.
+        </p>
+        <button type="button" onClick={onCancelar} className="mt-3 w-full text-center text-xs font-semibold text-muted underline hover:text-foreground">
+          Cancelar (não mudar nada)
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function AgendaInterativa({
   slug,
   estudioId,
@@ -225,28 +295,36 @@ export default function AgendaInterativa({
     router.refresh()
   }
 
-  function mover(id: string, novaData: string, novaHoraInicio: string) {
-    const grupoId = eventos.find((e) => e.id === id)?.grupo_id ?? null
+  // Arrastar (mover ou esticar) um evento que faz parte de uma série:
+  // antes de gravar pergunta-se se é só este, este e os seguintes, ou
+  // toda a série — a mesma regra de editar ou apagar.
+  const [pedidoSerie, setPedidoSerie] = useState<PedidoSerie | null>(null)
+
+  function aplicarArrasto(pedido: PedidoSerie, escopo: EscopoEditar) {
+    setPedidoSerie(null)
+    const evento = eventos.find((e) => e.id === pedido.id)
+    const grupoId = evento?.grupo_id ?? null
+    const serieId = evento?.serie_id ?? null
     iniciarTransicao(async () => {
-      const resultado = await moverEventoRapido({
-        estudioSlug: slug,
-        id,
-        grupoId,
-        data: novaData,
-        horaInicio: novaHoraInicio,
-      })
+      const resultado =
+        pedido.tipo === 'mover'
+          ? await moverEventoRapido({ estudioSlug: slug, id: pedido.id, grupoId, data: pedido.data, horaInicio: pedido.horaInicio, serieId, escopo })
+          : await redimensionarEventoRapido({ estudioSlug: slug, id: pedido.id, grupoId, horaInicio: pedido.horaInicio, duracaoMin: pedido.duracaoMin, serieId, escopo })
       if ('error' in resultado) setErro(resultado.error)
       else router.refresh()
     })
   }
 
+  function mover(id: string, novaData: string, novaHoraInicio: string) {
+    const pedido: PedidoSerie = { tipo: 'mover', id, data: novaData, horaInicio: novaHoraInicio }
+    if (eventos.find((e) => e.id === id)?.serie_id) setPedidoSerie(pedido)
+    else aplicarArrasto(pedido, 'um')
+  }
+
   function redimensionar(id: string, horaInicio: string, duracaoMin: number) {
-    const grupoId = eventos.find((e) => e.id === id)?.grupo_id ?? null
-    iniciarTransicao(async () => {
-      const resultado = await redimensionarEventoRapido({ estudioSlug: slug, id, grupoId, horaInicio, duracaoMin })
-      if ('error' in resultado) setErro(resultado.error)
-      else router.refresh()
-    })
+    const pedido: PedidoSerie = { tipo: 'redimensionar', id, horaInicio, duracaoMin }
+    if (eventos.find((e) => e.id === id)?.serie_id) setPedidoSerie(pedido)
+    else aplicarArrasto(pedido, 'um')
   }
 
   function aoSubmeter(formData: FormData, clienteIds: string[]) {
@@ -386,6 +464,15 @@ export default function AgendaInterativa({
         onZoomIndiceChange={setZoomIndice}
         somenteLeitura={somenteLeitura}
       />
+
+      {pedidoSerie && (
+        <PerguntaSerie
+          pedido={pedidoSerie}
+          evento={eventos.find((e) => e.id === pedidoSerie.id) ?? null}
+          onEscolher={(escopo) => aplicarArrasto(pedidoSerie, escopo)}
+          onCancelar={() => setPedidoSerie(null)}
+        />
+      )}
 
       {modal.aberto && (
         <EventoModalOverlay

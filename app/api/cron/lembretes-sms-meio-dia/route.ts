@@ -6,3 +6,4 @@
 export { GET } from '../lembretes-sms/route'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300

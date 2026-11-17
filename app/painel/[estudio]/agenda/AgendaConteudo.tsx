@@ -360,14 +360,17 @@ export default async function AgendaConteudo({
           </div>
         )}
 
+        {/* Na mesma linha da data e dos instrutores: ajuda e zoom da
+            grelha (vêm de AgendaInterativa), pesquisa e "+ Evento". */}
         <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div id="agenda-ferramentas" className="flex items-center gap-1.5" />
           <BuscaAgenda estudioId={estudio.id} basePath={basePath} />
           {!somenteLeitura && (
             <Link
               href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
             >
-              <Plus className="h-4 w-4" /> Evento
+              <Plus className="h-3.5 w-3.5" /> Evento
             </Link>
           )}
         </div>

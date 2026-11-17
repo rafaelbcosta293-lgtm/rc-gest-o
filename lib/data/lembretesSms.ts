@@ -7,6 +7,12 @@ import { enviarSms, normalizarTelefoneSms, prioridadePorOrdem } from '@/lib/sms/
 import type { Estudio } from '@/lib/supabase/database.types'
 import type { ResultadoEstudio } from './smsGateway'
 
+// Quando o telemóvel não responde, a mesma passagem tenta mais vezes
+// antes de desistir (3 tentativas no total, com ~1 minuto entre elas).
+export const TENTATIVAS_SE_OFFLINE = 3
+const ESPERA_ENTRE_TENTATIVAS_MS = 55_000
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 export const TEMPLATE_LEMBRETE_OMISSAO =
   'Olá {nome}! Lembramos que o teu treino é {dia_semana}, dia {dia_mes}, às {hora}. Contamos contigo! Com os melhores cumprimentos, Equipa RC Private Fitness Studio'
 
@@ -174,7 +180,10 @@ async function processarLembretesDoEstudio(
   admin: SupabaseClient,
   estudio: Pick<Estudio, 'id' | 'slug' | 'nome'>,
   amanha: string,
-  templates: TemplatesLembrete
+  templates: TemplatesLembrete,
+  // Quantas vezes tentar a primeira mensagem se o telemóvel não responder
+  // (o botão de reenvio no painel tenta só 1, para não ficar à espera).
+  tentativasSeOffline = TENTATIVAS_SE_OFFLINE
 ): Promise<ResultadoEstudio> {
   // Normalmente é mesmo "amanhã" — só avança quando amanhã cai num dia
   // de fecho deste estúdio (ver proximoDiaAlvoLembrete), para o
@@ -237,7 +246,16 @@ async function processarLembretesDoEstudio(
       naoEAmanha: diaAlvo !== amanha,
       templateSabado: templates.sabado,
     })
-    const resultado = await enviarSms(estudio.slug, destino.telefone ?? '', texto, { prioridade: prioridadePorOrdem(indice) })
+    let resultado = await enviarSms(estudio.slug, destino.telefone ?? '', texto, { prioridade: prioridadePorOrdem(indice) })
+    // O telemóvel não respondeu: antes de dar a passagem como falhada,
+    // espera um pouco e tenta de novo (muitas vezes é só um soluço de
+    // rede). Só na primeira mensagem — se o telemóvel respondeu a uma,
+    // está ligado.
+    for (let tentativa = 1; enviados === 0 && !resultado.ok && resultado.tipo === 'offline' && tentativa < tentativasSeOffline; tentativa++) {
+      console.warn(`Lembretes SMS (${estudio.slug}): telemóvel sem resposta (${resultado.mensagem}) — nova tentativa daqui a ${ESPERA_ENTRE_TENTATIVAS_MS / 1000}s`)
+      await esperar(ESPERA_ENTRE_TENTATIVAS_MS)
+      resultado = await enviarSms(estudio.slug, destino.telefone ?? '', texto, { prioridade: prioridadePorOrdem(indice) })
+    }
 
     if (resultado.ok) {
       await admin
@@ -251,7 +269,7 @@ async function processarLembretesDoEstudio(
 
     if (resultado.tipo === 'offline' || resultado.tipo === 'configuracao') {
       gatewayOffline = true
-      estado = await registarFalhaGateway(admin, estudio, estado)
+      estado = await registarFalhaGateway(admin, estudio, estado, { origem: 'lembretes', mensagem: resultado.mensagem })
       console.error(`Lembretes SMS (${estudio.slug}): gateway offline (${resultado.mensagem})`)
       break
     }
@@ -277,10 +295,11 @@ export async function processarLembretesSms(admin: SupabaseClient): Promise<Resu
   const amanha = dataDeAmanhaEmLisboa()
   const [estudios, templates] = await Promise.all([getEstudios(admin), obterTemplates(admin)])
 
-  const porEstudio: ResultadoEstudio[] = []
-  for (const estudio of estudios) {
-    porEstudio.push(await processarLembretesDoEstudio(admin, estudio, amanha, templates))
-  }
+  // Os estúdios ao mesmo tempo: cada um tem o seu telemóvel, e as novas
+  // tentativas de um (que esperam) não atrasam o outro.
+  const porEstudio: ResultadoEstudio[] = await Promise.all(
+    estudios.map((estudio) => processarLembretesDoEstudio(admin, estudio, amanha, templates))
+  )
 
   return { porEstudio, gatewayOffline: porEstudio.some((r) => r.gatewayOffline) }
 }
@@ -295,5 +314,5 @@ export async function processarLembretesSmsDoEstudio(
 
   const amanha = dataDeAmanhaEmLisboa()
   const templates = await obterTemplates(admin)
-  return processarLembretesDoEstudio(admin, estudio, amanha, templates)
+  return processarLembretesDoEstudio(admin, estudio, amanha, templates, 1)
 }

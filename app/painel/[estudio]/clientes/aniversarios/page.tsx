@@ -1,4 +1,5 @@
 import Link from '@/components/LinkRapido'
+import { emCrise as gatewayEmCrise } from '@/lib/data/smsGateway'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -174,7 +175,7 @@ export default async function AniversariosPage({
     throw new Error((erroClientes ?? erroEnvios ?? erroEstadoGateway)!.message)
   }
   const estadoGateway = estadoGatewayData as EstadoSmsGateway
-  const emCrise = estadoGateway.tentativas_falhadas >= 3 && estadoGateway.offline_desde !== null
+  const emCrise = gatewayEmCrise(estadoGateway)
 
   const clientes = (clientesData ?? []) as ClienteAniversario[]
   const msgAtiva = configData?.find((c) => c.chave === 'msg_aniversario')?.valor ?? ''

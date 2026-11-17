@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { createPortal } from 'react-dom'
 import { Minus, Plus, HelpCircle, StickyNote, TriangleAlert } from 'lucide-react'
 import type { ClienteOpcao } from '@/components/ClienteCombobox'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
@@ -888,6 +889,53 @@ function GrelhaInterativa({
     }
   }
 
+  // O sítio na barra de cima da Agenda onde ficam a ajuda e o zoom.
+  const [alvoFerramentas, setAlvoFerramentas] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAlvoFerramentas(document.getElementById('agenda-ferramentas'))
+  }, [])
+  const ferramentas = (
+    <>
+        {/* Instruções de uso — texto igual ao de antes, só que agora
+          num ícone com dica ao passar o rato, em vez de um parágrafo
+          sempre visível, para a grelha começar mais perto do topo. */}
+      <span
+        title={
+          somenteLeitura
+            ? 'A tua conta só pode ver a Agenda — botão direito num evento para ver os detalhes.'
+            : 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio.'
+        }
+        className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground"
+      >
+        <HelpCircle className="h-3.5 w-3.5" />
+      </span>
+      <div className="flex shrink-0 items-center gap-0.5 rounded-full border border-border-subtle bg-surface px-0.5 py-0.5 shadow-pop">
+        <button
+          type="button"
+          onClick={() => onZoomIndiceChange(Math.max(0, zoomIndice - 1))}
+          disabled={zoomIndice === 0}
+          title="Diminuir zoom"
+          className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
+        >
+          <Minus className="h-3 w-3" />
+        </button>
+        <span className="w-8 text-center text-[10px] font-semibold text-muted">
+          {Math.round((pxPorMinuto / NIVEIS_ZOOM[ZOOM_OMISSAO]) * 100)}%
+        </span>
+        <button
+          type="button"
+          onClick={() => onZoomIndiceChange(Math.min(NIVEIS_ZOOM.length - 1, zoomIndice + 1))}
+          disabled={zoomIndice === NIVEIS_ZOOM.length - 1}
+          title="Aumentar zoom"
+          className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
+        >
+          <Plus className="h-3 w-3" />
+        </button>
+      </div>
+    </>
+  )
+
   return (
     <div
       className="mt-1 overflow-x-auto"
@@ -896,44 +944,14 @@ function GrelhaInterativa({
       }}
       onScroll={aoRolarGrelha}
     >
-      <div className="mb-1 flex items-center justify-end gap-1.5">
-        {/* Instruções de uso — texto igual ao de antes, só que agora
-            num ícone com dica ao passar o rato, em vez de um parágrafo
-            sempre visível, para a grelha começar mais perto do topo. */}
-        <span
-          title={
-            somenteLeitura
-              ? 'A tua conta só pode ver a Agenda — botão direito num evento para ver os detalhes.'
-              : 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio.'
-          }
-          className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground"
-        >
-          <HelpCircle className="h-3.5 w-3.5" />
-        </span>
-        <div className="flex shrink-0 items-center gap-0.5 rounded-full border border-border-subtle bg-surface px-0.5 py-0.5 shadow-pop">
-          <button
-            type="button"
-            onClick={() => onZoomIndiceChange(Math.max(0, zoomIndice - 1))}
-            disabled={zoomIndice === 0}
-            title="Diminuir zoom"
-            className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
-          >
-            <Minus className="h-3 w-3" />
-          </button>
-          <span className="w-8 text-center text-[10px] font-semibold text-muted">
-            {Math.round((pxPorMinuto / NIVEIS_ZOOM[ZOOM_OMISSAO]) * 100)}%
-          </span>
-          <button
-            type="button"
-            onClick={() => onZoomIndiceChange(Math.min(NIVEIS_ZOOM.length - 1, zoomIndice + 1))}
-            disabled={zoomIndice === NIVEIS_ZOOM.length - 1}
-            title="Aumentar zoom"
-            className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
-          >
-            <Plus className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
+      {/* Ajuda e zoom: vão para a barra de cima da Agenda (ao lado da
+          pesquisa e do "+ Evento"), para a grelha começar mais acima. Se
+          essa barra não existir, ficam aqui por cima da grelha. */}
+      {alvoFerramentas ? (
+        createPortal(ferramentas, alvoFerramentas)
+      ) : (
+        <div className="mb-1 flex items-center justify-end gap-1.5">{ferramentas}</div>
+      )}
       <div className={largura}>
         <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}` }}>
           <div />

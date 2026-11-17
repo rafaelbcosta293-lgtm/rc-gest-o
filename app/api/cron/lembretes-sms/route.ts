@@ -13,6 +13,8 @@ import { processarLembretesSms } from '@/lib/data/lembretesSms'
 // CRON_SECRET, como os outros crons (o Vercel Cron já inclui este
 // cabeçalho sozinho, por a variável estar configurada no projeto).
 export const dynamic = 'force-dynamic'
+// Com o telemóvel sem resposta, cada passagem tenta de novo (até ~2 min).
+export const maxDuration = 300
 
 export async function GET(request: Request) {
   const esperado = process.env.CRON_SECRET

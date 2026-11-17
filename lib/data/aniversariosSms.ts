@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getEstudios } from './estudios'
 import { preencherMensagem } from './aniversarios'
 import { obterEstadoGateway, registarFalhaGateway, registarSucessoGateway } from './smsGateway'
+import { TENTATIVAS_SE_OFFLINE } from './lembretesSms'
 import { enviarSms } from '@/lib/sms/gateway'
 import type { Estudio } from '@/lib/supabase/database.types'
 import type { ResultadoEstudio } from './smsGateway'
@@ -38,7 +39,9 @@ async function processarAniversariosDoEstudio(
   admin: SupabaseClient,
   estudio: Pick<Estudio, 'id' | 'slug' | 'nome'>,
   hoje: string,
-  templates: { ativo: string; exCliente: string }
+  templates: { ativo: string; exCliente: string },
+  // O botão de reenvio no painel tenta só 1 vez (para não ficar à espera).
+  tentativasSeOffline = TENTATIVAS_SE_OFFLINE
 ): Promise<ResultadoEstudio> {
   const ano = Number(hoje.slice(0, 4))
   const mesDia = hoje.slice(5, 10)
@@ -94,7 +97,13 @@ async function processarAniversariosDoEstudio(
     }
 
     const texto = preencherMensagem(template, cliente.nome, cliente.genero, cliente.nome_preferido)
-    const resultado = await enviarSms(estudio.slug, cliente.telefone ?? '', texto)
+    let resultado = await enviarSms(estudio.slug, cliente.telefone ?? '', texto)
+    // Telemóvel sem resposta: tenta de novo antes de dar a passagem como
+    // falhada (como nos lembretes de treino).
+    for (let tentativa = 1; enviados === 0 && !resultado.ok && resultado.tipo === 'offline' && tentativa < tentativasSeOffline; tentativa++) {
+      await new Promise((r) => setTimeout(r, 55_000))
+      resultado = await enviarSms(estudio.slug, cliente.telefone ?? '', texto)
+    }
 
     if (resultado.ok) {
       await admin.from('envios_aniversario').insert({ cliente_id: cliente.id, ano })
@@ -105,7 +114,7 @@ async function processarAniversariosDoEstudio(
 
     if (resultado.tipo === 'offline' || resultado.tipo === 'configuracao') {
       gatewayOffline = true
-      estado = await registarFalhaGateway(admin, estudio, estado)
+      estado = await registarFalhaGateway(admin, estudio, estado, { origem: 'aniversarios', mensagem: resultado.mensagem })
       console.error(`Parabéns SMS (${estudio.slug}): gateway offline (${resultado.mensagem})`)
       break
     }
@@ -138,10 +147,10 @@ export async function processarAniversariosSms(admin: SupabaseClient): Promise<R
   const hoje = dataDeHojeEmLisboa()
   const [estudios, templates] = await Promise.all([getEstudios(admin), obterTemplates(admin)])
 
-  const porEstudio: ResultadoEstudio[] = []
-  for (const estudio of estudios) {
-    porEstudio.push(await processarAniversariosDoEstudio(admin, estudio, hoje, templates))
-  }
+  // Os estúdios ao mesmo tempo (cada um com o seu telemóvel).
+  const porEstudio: ResultadoEstudio[] = await Promise.all(
+    estudios.map((estudio) => processarAniversariosDoEstudio(admin, estudio, hoje, templates))
+  )
 
   return { porEstudio, gatewayOffline: porEstudio.some((r) => r.gatewayOffline) }
 }
@@ -156,5 +165,5 @@ export async function processarAniversariosSmsDoEstudio(
 
   const hoje = dataDeHojeEmLisboa()
   const templates = await obterTemplates(admin)
-  return processarAniversariosDoEstudio(admin, estudio, hoje, templates)
+  return processarAniversariosDoEstudio(admin, estudio, hoje, templates, 1)
 }

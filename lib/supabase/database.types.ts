@@ -585,6 +585,8 @@ export type EstadoSmsGateway = {
   offline_desde: string | null
   alerta_registado_em: string | null
   atualizado_em: string
+  // A mensagem de erro da última falha (ver sms_gateway_falhas).
+  ultimo_erro?: string | null
 }
 
 export type Avaliacao = {

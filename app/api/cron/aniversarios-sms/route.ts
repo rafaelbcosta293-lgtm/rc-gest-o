@@ -10,6 +10,7 @@ import { processarAniversariosSms } from '@/lib/data/aniversariosSms'
 // como os outros crons (o Vercel Cron já inclui este cabeçalho
 // sozinho, por a variável estar configurada no projeto).
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 export async function GET(request: Request) {
   const esperado = process.env.CRON_SECRET

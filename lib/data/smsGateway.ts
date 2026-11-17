@@ -7,10 +7,12 @@ import type { Estudio, EstadoSmsGateway } from '@/lib/supabase/database.types'
 // é o mesmo telemóvel por estúdio, por isso uma falha de ligação é uma
 // única "crise" por estúdio, não uma por funcionalidade.
 
-// A partir de quantas falhas consecutivas se considera "offline" a
-// sério (não só um soluço passageiro de rede) — é o mesmo limiar que
-// decide quando a faixa vermelha e o alerta em Administração aparecem.
-export const LIMIAR_CRISE = 3
+// A partir de quantas passagens falhadas seguidas se considera "offline"
+// a sério — é o mesmo limiar que decide quando a faixa vermelha e o
+// alerta aparecem. Basta 1: cada passagem já volta a tentar sozinha
+// (ver TENTATIVAS_SE_OFFLINE em lembretesSms.ts) antes de contar como
+// falha, por isso um soluço passageiro de rede nunca chega aqui.
+export const LIMIAR_CRISE = 1
 const REGRA_GATEWAY_OFFLINE = 'sms_gateway_offline'
 
 export type ResultadoEstudio = {
@@ -71,9 +73,10 @@ async function registarAlertaGatewayOffline(admin: SupabaseClient, estudio: Pick
     severidade: 'Crítico' as const,
     titulo: `SMS Gateway (${estudio.nome}) offline — as mensagens por SMS não estão a ser enviadas`,
     descricao:
-      `O telemóvel que envia SMS (lembretes de treino, parabéns de aniversário) em ${estudio.nome} está ` +
-      'inacessível há 3 tentativas consecutivas. Verifica se está ligado, com bateria e com rede, e depois ' +
-      'usa o botão de reenvio no painel correspondente (Lembretes SMS ou Aniversários).',
+      `O telemóvel que envia SMS (lembretes de treino, parabéns de aniversário) em ${estudio.nome} não ` +
+      'respondeu, nem depois de tentar de novo. Verifica se está ligado, com bateria, com rede e com a app ' +
+      'do gateway aberta, e depois usa o botão de reenvio no painel correspondente (Lembretes SMS ou ' +
+      'Aniversários). O erro exato fica em Administração → Lembretes SMS.',
   })
 }
 
@@ -122,16 +125,23 @@ export async function registarSucessoGateway(
 export async function registarFalhaGateway(
   admin: SupabaseClient,
   estudio: Pick<Estudio, 'id' | 'nome'>,
-  estadoAtual: EstadoSmsGateway
+  estadoAtual: EstadoSmsGateway,
+  falha: { origem: 'lembretes' | 'aniversarios'; mensagem: string }
 ): Promise<EstadoSmsGateway> {
   const novasTentativas = estadoAtual.tentativas_falhadas + 1
   const agoraISO = new Date().toISOString()
+  const mensagem = falha.mensagem.slice(0, 500)
+
+  // Fica o registo de cada falha, com o erro exato — para se saber a
+  // causa mais tarde (os registos da Vercel só duram 1 hora).
+  await admin.from('sms_gateway_falhas').insert({ estudio_id: estudio.id, origem: falha.origem, mensagem })
 
   const { data: atualizado } = await admin
     .from('estado_sms_gateway')
     .update({
       tentativas_falhadas: novasTentativas,
       ultima_falha_em: agoraISO,
+      ultimo_erro: mensagem,
       offline_desde: estadoAtual.offline_desde ?? agoraISO,
       atualizado_em: agoraISO,
     })

@@ -20,12 +20,19 @@ import {
 import PortaSenha from '@/components/PortaSenha'
 import SubmitButton from '@/components/SubmitButton'
 import TituloSeccao from '@/components/TituloSeccao'
+import { emCrise as gatewayEmCrise } from '@/lib/data/smsGateway'
 import TemplateForm from './TemplateForm'
 import TesteSmsForm from './TesteSmsForm'
 import { reenviarLembretesPendentes } from './actions'
 import type { Estudio, EstadoSmsGateway } from '@/lib/supabase/database.types'
 
-type EstadoDoEstudio = { estudio: Estudio; estado: EstadoSmsGateway; pendentes: number; semNumero: string[] }
+type EstadoDoEstudio = {
+  estudio: Estudio
+  estado: EstadoSmsGateway
+  pendentes: number
+  semNumero: string[]
+  falhas: { ocorrido_em: string; origem: string; mensagem: string }[]
+}
 
 export default async function LembretesSmsPage({
   searchParams,
@@ -79,7 +86,7 @@ export default async function LembretesSmsPage({
         // O dia visado pode não ser "amanhã" — ver proximoDiaAlvoLembrete
         // (hoje só muda para o Fátima, à véspera de um domingo).
         const diaAlvo = proximoDiaAlvoLembrete(amanha, estudio.slug)
-        const [{ data: estadoData, error: erroEstado }, { data: pendentesData }] = await Promise.all([
+        const [{ data: estadoData, error: erroEstado }, { data: pendentesData }, { data: falhasData }] = await Promise.all([
           supabase.from('estado_sms_gateway').select('*').eq('estudio_id', estudio.id).single(),
           supabase
             .from('agenda_eventos')
@@ -90,6 +97,12 @@ export default async function LembretesSmsPage({
             .eq('data', diaAlvo)
             .eq('lembrete_enviado', false)
             .order('hora_inicio'),
+          supabase
+            .from('sms_gateway_falhas')
+            .select('ocorrido_em, origem, mensagem')
+            .eq('estudio_id', estudio.id)
+            .order('ocorrido_em', { ascending: false })
+            .limit(5),
         ])
         if (erroEstado) throw new Error(erroEstado.message)
         type Pendente = {
@@ -107,7 +120,8 @@ export default async function LembretesSmsPage({
           })
           .filter((p) => !normalizarTelefoneSms(p.telefone))
           .map((p) => `${p.nome} (${p.hora})`)
-        return { estudio, estado: estadoData as EstadoSmsGateway, pendentes: pendentesLista.length, semNumero }
+        const falhas = (falhasData ?? []) as { ocorrido_em: string; origem: string; mensagem: string }[]
+        return { estudio, estado: estadoData as EstadoSmsGateway, pendentes: pendentesLista.length, semNumero, falhas }
       })
     ),
   ])
@@ -140,8 +154,10 @@ export default async function LembretesSmsPage({
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Lembretes SMS</h1>
       <p className="mt-1 text-sm text-muted">
         Todos os dias às 10:00, avisa por SMS quem tem treino agendado para o dia seguinte. Volta a passar pela
-        agenda perto do meio-dia e ao fim do dia (entre as 19h e as 21h) para enviar os lembretes das marcações feitas
-        entretanto — quem já recebeu não recebe outra vez. Cada estúdio envia pelo seu próprio telemóvel.
+        agenda perto do meio-dia, a meio da tarde e ao fim do dia para enviar os lembretes das marcações feitas
+        entretanto (ou os que falharam) — quem já recebeu não recebe outra vez. Se o telemóvel não responder, cada
+        passagem tenta de novo sozinha (3 vezes, com cerca de 1 minuto entre elas) e, se continuar sem resposta,
+        aparece logo o aviso vermelho. Cada estúdio envia pelo seu próprio telemóvel.
       </p>
 
       {error && (
@@ -152,8 +168,8 @@ export default async function LembretesSmsPage({
 
       <TituloSeccao cor="teal">Estado do gateway, por estúdio</TituloSeccao>
       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {estadosPorEstudio.map(({ estudio, estado, pendentes, semNumero }) => {
-          const emCrise = estado.tentativas_falhadas >= 3 && estado.offline_desde !== null
+        {estadosPorEstudio.map(({ estudio, estado, pendentes, semNumero, falhas }) => {
+          const emCrise = gatewayEmCrise(estado)
           return (
             <div
               key={estudio.slug}
@@ -182,9 +198,29 @@ export default async function LembretesSmsPage({
                       timeZone: 'Europe/Lisbon',
                     })}`}
                   {estado.alerta_registado_em && ' · alerta já registado na app'}
+                  {estado.ultimo_erro && (
+                    <span className="mt-1 block font-mono text-xs break-words">Erro: {estado.ultimo_erro}</span>
+                  )}
                 </p>
               ) : (
                 <p className="text-muted">Sem falhas de ligação registadas.</p>
+              )}
+
+              {falhas.length > 0 && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted">Últimas falhas registadas ({falhas.length})</summary>
+                  <ul className="mt-1 flex flex-col gap-1">
+                    {falhas.map((f) => (
+                      <li key={f.ocorrido_em}>
+                        <span className="text-muted">
+                          {new Date(f.ocorrido_em).toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })} ·{' '}
+                          {f.origem === 'aniversarios' ? 'aniversários' : 'lembretes'}:
+                        </span>{' '}
+                        <span className="font-mono break-words">{f.mensagem}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               )}
 
               {reenvioEstudio === estudio.slug && (

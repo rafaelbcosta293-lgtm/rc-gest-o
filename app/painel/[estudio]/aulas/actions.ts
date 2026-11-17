@@ -30,7 +30,7 @@ export async function inscreverNaAula(input: { estudioSlug: string; aulaId: stri
   const supabase = await createClient()
   const { error } = await supabase.rpc('inscrever_em_aula', { p_aula: input.aulaId, p_cliente: input.clienteId, p_origem: 'equipa' })
   if (error) return { error: error.message }
-  revalidatePath(caminho(input.estudioSlug))
+  revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
   return { ok: true }
 }
 
@@ -46,7 +46,7 @@ export async function mudarInscricao(input: { estudioSlug: string; inscricaoId: 
     if (i?.estado === 'Cancelada') {
       const { error } = await supabase.rpc('inscrever_em_aula', { p_aula: i.aula_id, p_cliente: i.cliente_id, p_origem: 'equipa' })
       if (error) return { error: error.message }
-      revalidatePath(caminho(input.estudioSlug))
+      revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
       return { ok: true }
     }
   }
@@ -55,7 +55,7 @@ export async function mudarInscricao(input: { estudioSlug: string; inscricaoId: 
     .update({ estado: input.estado, atualizado_em: new Date().toISOString() })
     .eq('id', input.inscricaoId)
   if (error) return { error: error.message }
-  revalidatePath(caminho(input.estudioSlug))
+  revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
   return { ok: true }
 }
 
@@ -67,7 +67,7 @@ export async function cancelarAula(input: { estudioSlug: string; aulaId: string;
     .update({ estado: 'Cancelada', motivo_cancelamento: input.motivo?.trim() || null })
     .eq('id', input.aulaId)
   if (error) return { error: error.message }
-  revalidatePath(caminho(input.estudioSlug))
+  revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
   return { ok: true }
 }
 
@@ -76,7 +76,7 @@ export async function reabrirAula(input: { estudioSlug: string; aulaId: string }
   const supabase = await createClient()
   const { error } = await supabase.from('aulas').update({ estado: 'Aberta', motivo_cancelamento: null }).eq('id', input.aulaId)
   if (error) return { error: error.message }
-  revalidatePath(caminho(input.estudioSlug))
+  revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
   return { ok: true }
 }
 
@@ -99,7 +99,7 @@ export async function editarAula(input: {
     .update({ lotacao: input.lotacao, instrutor_id: input.instrutorId || null, hora_inicio: input.horaInicio, duracao_min: input.duracaoMin })
     .eq('id', input.aulaId)
   if (error) return { error: error.message }
-  revalidatePath(caminho(input.estudioSlug))
+  revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
   return { ok: true }
 }
 
@@ -145,7 +145,7 @@ export async function criarAulaAvulsa(formData: FormData) {
     lotacao,
   })
   if (error) voltar(formData, { error: error.message })
-  revalidatePath(caminho(String(formData.get('estudio_slug'))))
+  revalidatePath(`/painel/${String(formData.get('estudio_slug'))}`, 'layout')
   voltar(formData, { ok: 'aula-criada' })
 }
 
@@ -172,7 +172,7 @@ export async function guardarHorarioAula(formData: FormData) {
   })
   if (error) voltar(formData, { error: error.message })
   await gerarAulas(supabase, estudioId, hojeEmLisboa())
-  revalidatePath(caminho(String(formData.get('estudio_slug'))))
+  revalidatePath(`/painel/${String(formData.get('estudio_slug'))}`, 'layout')
   voltar(formData, { ok: 'horario-criado' })
 }
 
@@ -193,7 +193,7 @@ export async function terminarHorarioAula(formData: FormData) {
     .map((a) => a.id as string)
   if (semNinguem.length > 0) await supabase.from('aulas').delete().in('id', semNinguem)
   const ficaram = (futuras?.length ?? 0) - semNinguem.length
-  revalidatePath(caminho(String(formData.get('estudio_slug'))))
+  revalidatePath(`/painel/${String(formData.get('estudio_slug'))}`, 'layout')
   voltar(formData, ficaram > 0 ? { ok: 'horario-terminado', ficaram: String(ficaram) } : { ok: 'horario-terminado' })
 }
 
@@ -210,6 +210,6 @@ export async function guardarJanelaReserva(formData: FormData) {
     const { error } = await supabase.from('servicos').update({ reserva_abre_horas: horas }).eq('id', servicoId)
     if (error) voltar(formData, { error: error.message })
   }
-  revalidatePath(caminho(String(formData.get('estudio_slug'))))
+  revalidatePath(`/painel/${String(formData.get('estudio_slug'))}`, 'layout')
   voltar(formData, { ok: 'reservas' })
 }

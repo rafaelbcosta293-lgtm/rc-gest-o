@@ -27,6 +27,7 @@ import { NavLinkTopBar, NavLinkComSubpastas, NavLinkPastaHorarios, NavLinkPhone,
 const SUBPASTAS: Record<string, string[]> = {
   clientes: ['treinos', 'avaliacoes', 'presencas', 'pagamentos'],
   leads: ['objetivos'],
+  aulas: ['acompanhado', 'pilates'],
 }
 const TODAS_AS_SUBPASTAS = new Set(Object.values(SUBPASTAS).flat())
 

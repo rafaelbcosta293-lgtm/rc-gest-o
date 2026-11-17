@@ -1,11 +1,11 @@
 import { calcularCustoPorLead, ehAnuncio, explicarCustoPorLead } from '@/lib/data/custoPorLead'
+import { carregarCustoHoraPt } from '@/lib/data/custoHoraPt'
 import Link from '@/components/LinkRapido'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { areaBloqueada } from '@/lib/data/gate'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
-import { parseValorConfig } from '@/lib/data/financeiro'
 import { carregarDespesas, carregarPagamentosAnalise } from '@/lib/data/cargaFinanceira'
 import { baseClientesMensal, mesesEntre, mrrNormalizado, receitaMensal, somarMeses } from '@/lib/data/analiseFinanceira'
 import type { Racios } from '@/lib/data/simulador'
@@ -42,7 +42,7 @@ export default async function SimuladorPage({
   const desde = `${primeiroMes}-01`
   const ate = `${mesAtual}-01`
 
-  const [pagamentos, despesasTodas, { data: cenariosData, error: erroCenarios }, leadsRes, registosRes, mktRes, { data: configData }] =
+  const [pagamentos, despesasTodas, { data: cenariosData, error: erroCenarios }, leadsRes, registosRes, mktRes, custoHora] =
     await Promise.all([
       carregarPagamentosAnalise(supabase, ids),
       carregarDespesas(supabase, ids),
@@ -62,7 +62,7 @@ export default async function SimuladorPage({
         { emParalelo: 2 }
       ),
       supabase.from('marketing_costs').select('estudio_id, ano, mes, custo'),
-      supabase.from('config').select('valor').eq('chave', 'custo_hora_pt').maybeSingle(),
+      carregarCustoHoraPt(supabase, [...ids], hoje),
     ])
   if (erroCenarios) throw new Error(erroCenarios.message)
 
@@ -130,7 +130,8 @@ export default async function SimuladorPage({
   )
   const custoPorLead = custoMkt > 0 && leads.length > 0 ? custoMkt / leads.length : contaCustoPorLead.valor
 
-  const custoHoraPt = parseValorConfig(configData?.valor) ?? 0
+  // Honorários dos PTs ÷ horas de treino dadas (ver lib/data/custoHoraPt.ts).
+  const custoHoraPt = custoHora.valor ?? 0
 
   // Rácios reais (com valores de referência só onde ainda não há dados).
   const racios: Racios = {

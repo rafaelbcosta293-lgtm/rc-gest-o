@@ -6,7 +6,8 @@ import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
 import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
 import { PALETA, corGraficoEstudio } from '@/lib/data/constantes'
-import { agingDivida, parseValorConfig } from '@/lib/data/financeiro'
+import { agingDivida } from '@/lib/data/financeiro'
+import { carregarCustoHoraPt } from '@/lib/data/custoHoraPt'
 import { carregarDespesas, carregarOutrasReceitas, carregarPagamentosAnalise } from '@/lib/data/cargaFinanceira'
 import {
   MESES_CURTOS,
@@ -89,7 +90,7 @@ export default async function FinanceiroPage({
     { data: comprasData },
     { data: outrosData },
     { data: registosData },
-    { data: configData },
+    custoHora,
   ] = await Promise.all([
     carregarPagamentosAnalise(supabase, idsEstudios),
     carregarOutrasReceitas(supabase, idsEstudios),
@@ -109,14 +110,15 @@ export default async function FinanceiroPage({
       (de, ate) => supabase.from('registos_pt').select('estudio_id, data, horas').order('id').range(de, ate),
       { emParalelo: 3 }
     ),
-    supabase.from('config').select('valor').eq('chave', 'custo_hora_pt').maybeSingle(),
+    carregarCustoHoraPt(supabase, [...idsEstudios], hoje),
   ])
   if (erroClientes) throw new Error(erroClientes.message)
 
   // ── Dados base ────────────────────────────────────────────────────
   const clientes = clientesData.filter((c) => idsEstudios.has(c.estudio_id))
   const nomePlano = new Map((planosData ?? []).map((p) => [p.id as string, p.nome as string]))
-  const custoHoraPt = parseValorConfig(configData?.valor) ?? 0
+  // Honorários dos PTs ÷ horas de treino dadas (ver lib/data/custoHoraPt.ts).
+  const custoHoraPt = custoHora.valor ?? 0
   const compras = comprasData.filter((c) => idsEstudios.has(c.estudio_id))
   const outrasSaidas = outrosData.filter((c) => idsEstudios.has(c.estudio_id))
   const registos = registosData.filter((r) => idsEstudios.has(r.estudio_id))

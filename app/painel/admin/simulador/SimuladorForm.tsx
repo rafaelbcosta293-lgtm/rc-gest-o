@@ -46,7 +46,7 @@ const CAMPOS_RACIOS: {
   { chave: 'arpu', label: 'Receita por cliente (€/mês)', ajuda: 'Preço médio efetivo', min: 0, max: 400, step: 1, formato: 'eur' },
   { chave: 'horasPtPorCliente', label: 'Horas de PT por cliente/mês', ajuda: 'Carga de treino por cliente', min: 0, max: 20, step: 0.1, formato: 'num' },
   { chave: 'horasPorPt', label: 'Horas por PT/mês', ajuda: 'Capacidade de cada PT', min: 10, max: 220, step: 1, formato: 'num' },
-  { chave: 'custoHoraPt', label: 'Custo por hora de PT (€)', ajuda: 'Config. em Serviços', min: 0, max: 40, step: 0.5, formato: 'eur' },
+  { chave: 'custoHoraPt', label: 'Custo por hora de PT (€)', ajuda: 'Calculado: honorários dos PTs ÷ horas de treino do mês (Agenda)', min: 0, max: 40, step: 0.5, formato: 'eur' },
   { chave: 'custoPorLead', label: 'Custo por lead (€)', ajuda: 'Anúncios ÷ leads', min: 0, max: 100, step: 0.5, formato: 'eur' },
   { chave: 'custosFixos', label: 'Custos fixos (€/mês)', ajuda: 'Despesas sem PTs nem marketing (+ 3º estúdio…)', min: 0, max: 30000, step: 100, formato: 'eur' },
 ]

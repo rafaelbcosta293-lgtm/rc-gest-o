@@ -25,67 +25,48 @@ const inputCls =
 
 const NOME_ESTUDIO: Record<string, string> = { fatima: 'Fátima', leiria: 'Leiria' }
 
-// Estas chaves de "config" têm forms dedicados (write-only, nunca
-// mostram o valor atual) — não devem aparecer na lista genérica de
-// "Definições do negócio". As de aniversário editam-se em Clientes →
-// Aniversários, onde já são usadas.
+// Estas chaves de "config" têm sítio próprio — não aparecem na lista
+// genérica de "Definições do negócio": as de aniversário editam-se em
+// Clientes → Aniversários; os textos dos lembretes, em Lembretes SMS.
 const CHAVES_ESCONDIDAS = [
   'msg_aniversario',
   'msg_aniversario_ex',
+  'msg_lembrete_treino',
+  'msg_lembrete_treino_sabado',
   chaveConfigSenha('admin'),
   chaveConfigSenha('coordenacao'),
   ...ESTUDIOS_COM_CONTA_PARTILHADA.map((s) => chaveAtivoDispositivo(s)!),
 ]
 
-// A chave em si (ex.: "desmarcacoes_acumuladas_limite") não é um nome
-// pensado para se ler — aqui ganha um rótulo em português e um grupo,
-// para a lista deixar de ser uma pilha única e passar a secções com
-// sentido, fáceis de encontrar.
+// A chave em si não é um nome pensado para se ler — aqui ganha um rótulo
+// em português e um grupo. (As definições que nada usava foram apagadas;
+// o custo por hora de PT passou a ser calculado — ver custoHoraPt.ts.)
 const CONFIG_META: Record<string, { label: string; grupo: string; tipo?: 'textarea' | 'time' }> = {
-  horario_estudio_inicio: { label: 'Hora de abertura', grupo: 'Horário do estúdio', tipo: 'time' },
-  horario_estudio_fim: { label: 'Hora de fecho', grupo: 'Horário do estúdio', tipo: 'time' },
-
-  contrato_minimo_meses: { label: 'Contrato mínimo (meses)', grupo: 'Contratos e pagamentos' },
-  dia_limite_mensalidade: { label: 'Dia limite do mês para pagar a mensalidade', grupo: 'Contratos e pagamentos' },
   taxa_inscricao: { label: 'Taxa de inscrição (€)', grupo: 'Contratos e pagamentos' },
   taxa_reativacao: { label: 'Taxa de reativação (€)', grupo: 'Contratos e pagamentos' },
   seguro_anual: { label: 'Seguro anual (€)', grupo: 'Contratos e pagamentos' },
-  validade_sessoes_dias: { label: 'Validade das sessões (dias)', grupo: 'Contratos e pagamentos' },
 
-  horas_desmarcacao: { label: 'Antecedência mínima para desmarcar (horas)', grupo: 'Desmarcações' },
-  desmarcacoes_seguidas_limite: { label: 'Limite de desmarcações seguidas', grupo: 'Desmarcações' },
-  desmarcacoes_acumuladas_limite: { label: 'Limite de desmarcações acumuladas', grupo: 'Desmarcações' },
+  ferias_max_pts_simultaneo: { label: 'Máx. instrutores de férias ao mesmo tempo', grupo: 'Equipa' },
 
-  custo_hora_pt: { label: 'Custo por hora de PT (€)', grupo: 'Outros' },
-  max_clientes_bloco_exclusivo: { label: 'Máx. clientes por bloco exclusivo', grupo: 'Outros' },
-  reavaliacao_antecipada_treino_acompanhado: {
-    label: 'Reavaliação antecipada — Treino Acompanhado (€)',
-    grupo: 'Outros',
-  },
-
-  regulamento: { label: 'Regulamento do estúdio', grupo: 'Documentos', tipo: 'textarea' },
-
-  qr_token_fatima: { label: 'Código QR — Fátima', grupo: 'Códigos QR dos estúdios' },
-  qr_token_leiria: { label: 'Código QR — Leiria', grupo: 'Códigos QR dos estúdios' },
+  zsgo_produto_mensalidade: { label: 'Artigo — mensalidade de Treino Personalizado', grupo: 'Faturação (ZS Go)' },
+  zsgo_produto_mensalidade_acompanhado: { label: 'Artigo — mensalidade de Treino Acompanhado', grupo: 'Faturação (ZS Go)' },
+  zsgo_produto_mensalidade_pilates: { label: 'Artigo — mensalidade de Pilates', grupo: 'Faturação (ZS Go)' },
+  zsgo_produto_mensalidade_nutricao: { label: 'Artigo — mensalidade de Nutrição', grupo: 'Faturação (ZS Go)' },
+  zsgo_produto_inscricao: { label: 'Artigo — taxa de inscrição', grupo: 'Faturação (ZS Go)' },
+  zsgo_produto_seguro: { label: 'Artigo — seguro anual', grupo: 'Faturação (ZS Go)' },
+  zsgo_produto_reativacao: { label: 'Artigo — taxa de reativação', grupo: 'Faturação (ZS Go)' },
+  zsgo_metodo_mb_way: { label: 'Método de pagamento — MB Way', grupo: 'Faturação (ZS Go)' },
+  zsgo_metodo_multibanco: { label: 'Método de pagamento — Multibanco', grupo: 'Faturação (ZS Go)' },
+  zsgo_metodo_transferencia: { label: 'Método de pagamento — Transferência', grupo: 'Faturação (ZS Go)' },
+  zsgo_metodo_numerario: { label: 'Método de pagamento — Numerário', grupo: 'Faturação (ZS Go)' },
 }
 
-const GRUPOS_ORDEM = [
-  'Horário do estúdio',
-  'Contratos e pagamentos',
-  'Desmarcações',
-  'Outros',
-  'Documentos',
-  'Códigos QR dos estúdios',
-  'Outras definições',
-] as const
+const GRUPOS_ORDEM = ['Contratos e pagamentos', 'Equipa', 'Faturação (ZS Go)', 'Outras definições'] as const
 
 const CORES_GRUPO: Record<string, 'teal' | 'roxo' | 'azul' | 'ambar' | 'verde' | 'vermelho' | 'neutro' | 'laranja'> = {
-  'Horário do estúdio': 'azul',
   'Contratos e pagamentos': 'verde',
-  Desmarcações: 'laranja',
-  Outros: 'ambar',
-  Documentos: 'neutro',
-  'Códigos QR dos estúdios': 'neutro',
+  Equipa: 'azul',
+  'Faturação (ZS Go)': 'roxo',
   'Outras definições': 'neutro',
 }
 

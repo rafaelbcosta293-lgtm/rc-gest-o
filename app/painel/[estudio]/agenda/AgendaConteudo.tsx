@@ -13,6 +13,7 @@ import { carregarDiasFechados } from '@/lib/data/diasFechados'
 import FecharDia from './FecharDia'
 import AgendaInterativa from './AgendaInterativa'
 import BuscaAgenda from './BuscaAgenda'
+import FiltroInstrutor from './FiltroInstrutor'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda, Estudio } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
@@ -26,7 +27,7 @@ function ehVista(v: string | undefined): v is Vista {
 }
 
 function construirQuery(
-  base: { vista?: string; pt?: string },
+  base: { vista?: string; pt?: string; data?: string },
   overrides: Record<string, string | undefined>
 ) {
   const combinado = { ...base, ...overrides }
@@ -336,28 +337,13 @@ export default async function AgendaConteudo({
         </div>
 
         {pts.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
-            <span className="font-semibold">Instrutor:</span>
-            <Link
-              href={`${basePath}${construirQuery({ vista }, { pt: undefined })}`}
-              className={`rounded-full border px-2.5 py-1 font-medium ${
-                !ptFiltro ? 'border-brand bg-brand text-black' : 'border-border-subtle text-muted'
-              }`}
-            >
-              Todos
-            </Link>
-            {pts.map((p) => (
-              <Link
-                key={p.id}
-                href={`${basePath}${construirQuery({ vista }, { pt: p.id })}`}
-                className={`rounded-full border px-2.5 py-1 font-medium ${
-                  ptFiltro === p.id ? 'border-brand bg-brand text-black' : 'border-border-subtle text-muted'
-                }`}
-              >
-                {p.nome}
-              </Link>
-            ))}
-          </div>
+          <FiltroInstrutor
+            valor={ptFiltro ?? ''}
+            opcoes={[
+              { id: '', nome: 'Todos', href: `${basePath}${construirQuery({ vista, data: dataParam }, { pt: undefined })}` },
+              ...pts.map((p) => ({ id: p.id, nome: p.nome, href: `${basePath}${construirQuery({ vista, data: dataParam }, { pt: p.id })}` })),
+            ]}
+          />
         )}
 
         {/* Na mesma linha da data e dos instrutores: ajuda e zoom da

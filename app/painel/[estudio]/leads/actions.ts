@@ -11,6 +11,7 @@ import { getSessaoAtual } from '@/lib/data/sessao'
 import { normalizarTelefoneSms } from '@/lib/sms/gateway'
 import type { EstadoLead } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
+import { registarContactoExperimental } from '@/lib/data/contactoExperimental'
 import { getEquipaDoEstudio, getEstudioPorSlug, getEstudios } from '@/lib/data/estudios'
 
 function campoOuNull(formData: FormData, nome: string) {
@@ -342,6 +343,10 @@ export async function agendarExperimental(formData: FormData) {
   if (erroLead) {
     redirect(`/painel/${estudioSlug}/leads/${leadId}?error=${encodeURIComponent(erroLead.message)}`)
   }
+
+  // Sessão marcada = contacto com sucesso (fica no histórico da lead).
+  const erroContacto = await registarContactoExperimental(supabase, leadId, sessao.userId)
+  if (erroContacto) console.error('[leads] contacto da experimental não registado:', erroContacto)
 
   revalidatePath(`/painel/${estudioSlug}/leads`)
   revalidatePath(`/painel/${estudioSlug}/leads/${leadId}`)

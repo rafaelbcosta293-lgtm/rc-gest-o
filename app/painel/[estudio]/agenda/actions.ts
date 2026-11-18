@@ -22,6 +22,7 @@ import {
 } from '@/lib/data/agenda'
 import type { EstadoEventoAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
+import { registarContactoExperimental } from '@/lib/data/contactoExperimental'
 import { datasFechadas, mensagemDiaFechado } from '@/lib/data/diasFechados'
 import { papeisDaSessao } from '@/lib/data/sessao'
 
@@ -467,6 +468,9 @@ export async function criarEvento(formData: FormData) {
     if (erroLead) {
       redirect(`/painel/${estudioSlug}/agenda/novo?error=${encodeURIComponent(erroLead)}`)
     }
+    // Sessão marcada a uma lead da lista = contacto com sucesso.
+    const erroContacto = await registarContactoExperimental(supabase, leadId, sessao.userId)
+    if (erroContacto) console.error('[agenda] contacto da experimental não registado:', erroContacto)
   }
 
   revalidatePath(`/painel/${estudioSlug}/agenda`)
@@ -901,6 +905,9 @@ export async function criarEventoRapido(
   if (input.tipo === 'Sessão experimental') {
     const erroLead = await sincronizarVisitaLead(supabase, input.leadId, input.data, input.horaInicio)
     if (erroLead) return { error: erroLead }
+    // Sessão marcada a uma lead da lista = contacto com sucesso.
+    const erroContacto = await registarContactoExperimental(supabase, input.leadId, sessao.userId)
+    if (erroContacto) console.error('[agenda] contacto da experimental não registado:', erroContacto)
   }
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)

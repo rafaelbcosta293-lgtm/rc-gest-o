@@ -133,7 +133,7 @@ export default async function TabletCheckinPage({
               </li>
               <li>A página mostra só um teclado numérico — nunca nomes nem dados de clientes.</li>
               <li>
-                Aceita o número de quem tem um treino ou aula marcados <strong className="text-foreground">de 30 min antes do início até ao fim</strong>
+                Aceita o número de quem tem um treino ou aula marcados <strong className="text-foreground">de 30 min antes do início até 30 min depois do fim</strong>
                 . Escreve-se só a parte dos números (ex.: F26345 → 26345).
               </li>
               <li>Se o link for parar a quem não devia, carregue em &quot;Desativar link&quot; e crie um novo.</li>

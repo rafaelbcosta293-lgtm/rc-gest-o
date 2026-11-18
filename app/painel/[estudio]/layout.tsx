@@ -15,6 +15,7 @@ import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import BarraAjustavel from '@/components/BarraAjustavel'
 import AvisosFerias from './ferias/AvisosFerias'
 import AvisosHorario from '@/components/AvisosHorario'
+import AvisoAcessos from '@/components/AvisoAcessos'
 import { contarTarefasUrgentes } from '@/lib/data/tarefas'
 import { contarAlertasAbertos } from '@/lib/data/alertasAbertos'
 import { contarLeadsParaHoje, contarPagamentosEmAtraso } from '@/lib/data/contagensMenu'
@@ -110,6 +111,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             página inteira só era enviada depois de ela responder. Assim a
             página sai logo e o aviso entra quando chegar. */}
         <Suspense fallback={null}>
+          <AvisoAcessos supabase={supabase} />
           <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
           {estudio && (
             <AvisosFerias

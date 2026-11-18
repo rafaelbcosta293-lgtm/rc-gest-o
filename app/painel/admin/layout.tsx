@@ -12,6 +12,7 @@ import AlertaContactosAgendados from '@/components/AlertaContactosAgendados'
 import AlertaDespesas from '@/components/AlertaDespesas'
 import { hojeEmLisboa, listarAvisosDespesas } from '@/lib/data/despesas'
 import AvisosHorario from '@/components/AvisosHorario'
+import AvisoAcessos from '@/components/AvisoAcessos'
 import { contarLembretesPorTratar } from '@/lib/data/lembretes'
 import { contarFechosPorAprovar } from '@/lib/data/horasEquipa'
 import AdminNav from './AdminNav'
@@ -55,6 +56,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             página inteira só era enviada depois de ela responder. Assim a
             página sai logo e o aviso entra quando chegar. */}
         <Suspense fallback={null}>
+          <AvisoAcessos supabase={supabase} />
           <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
         </Suspense>
         <header className="shadow-deep flex items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-3 backdrop-blur-xl">

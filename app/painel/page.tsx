@@ -8,6 +8,7 @@ import { getSessaoAtual } from '@/lib/data/sessao'
 import { corEstudio } from '@/lib/data/constantes'
 import { podeAcederAdmin, podeAcederCoordenacao, podeAcederEstudio } from '@/lib/data/acessos'
 import AvisosHorario from '@/components/AvisosHorario'
+import AvisoAcessos from '@/components/AvisoAcessos'
 
 // Um símbolo do estúdio em vez de uma letra solta — o marco que
 // identifica cada cidade (Santuário de Fátima / Castelo de Leiria).
@@ -73,6 +74,7 @@ export default async function PainelPage({
             página inteira só era enviada depois de ela responder. Assim a
             página sai logo e o aviso entra quando chegar. */}
         <Suspense fallback={null}>
+          <AvisoAcessos supabase={supabase} />
           <AvisosHorario supabase={supabase} userId={sessao.userId} email={email} />
         </Suspense>
       </div>

@@ -1131,6 +1131,7 @@ function ColunaDia({
   const dataAgora = new Date(agora)
   const ehHoje = dia === dataAgora.toISOString().slice(0, 10)
   const minutoAgora = dataAgora.getHours() * 60 + dataAgora.getMinutes()
+  const diaLocal = `${dataAgora.getFullYear()}-${String(dataAgora.getMonth() + 1).padStart(2, '0')}-${String(dataAgora.getDate()).padStart(2, '0')}`
   return (
     <div
       ref={registarRef}
@@ -1191,7 +1192,13 @@ function ColunaDia({
               a.servicoChave === 'pilates'
                 ? 'border-fuchsia-300 border-l-fuchsia-500 bg-fuchsia-50 text-fuchsia-950 hover:bg-fuchsia-100 dark:bg-fuchsia-950/60 dark:text-fuchsia-100'
                 : 'border-sky-300 border-l-sky-500 bg-sky-50 text-sky-950 hover:bg-sky-100 dark:bg-sky-950/60 dark:text-sky-100'
-            } ${a.cancelada ? 'opacity-50 line-through' : ''}`}
+            } ${
+              a.cancelada
+                ? 'opacity-50 line-through'
+                : dia < diaLocal || (dia === diaLocal && minutosDoDia(a.hora_inicio) + a.duracao_min <= minutoAgora)
+                  ? 'opacity-[.72] hover:opacity-100'
+                  : ''
+            }`}
             style={{
               top: minutosDoDia(a.hora_inicio) * pxPorMinuto,
               height: Math.max(a.duracao_min * pxPorMinuto, ALTURA_MIN_BLOCO) - 2,
@@ -1222,9 +1229,11 @@ function ColunaDia({
         const avisos = avisosEvento(grupo)
         const nota = notaDoEvento(grupo)
         const cancelado = evento.estado === 'Cancelado'
-        // Os treinos já passados ficam com a cor toda (são os que
-        // aconteceram — é a eles que se quer dar evidência); só os
-        // desmarcados ficam apagados.
+        // Os eventos que já terminaram ficam ligeiramente desvanecidos
+        // (bem menos do que os desmarcados); ao passar o rato voltam à
+        // cor toda.
+        const passado =
+          !cancelado && (dia < diaLocal || (dia === diaLocal && inicioMin + evento.duracao_min <= minutoAgora))
         const altura = Math.max(evento.duracao_min * pxPorMinuto, ALTURA_MIN_BLOCO) - 2
         const fim = horaFim(evento.hora_inicio, evento.duracao_min)
         const rotulo = rotuloEvento(grupo, estudioId)
@@ -1264,8 +1273,8 @@ function ColunaDia({
                   ? 'cursor-pointer'
                   : emArrasto
                     ? 'cursor-grabbing opacity-30'
-                    : 'cursor-grab'
-            } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${
+                    : `cursor-grab ${passado ? 'opacity-[.72] hover:opacity-100' : ''}`
+            } ${somenteLeitura && passado ? 'opacity-[.72]' : ''} ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''} ${
               cancelado ? 'hover:!z-30 hover:!text-[#8A4A45] hover:shadow-lg' : ''
             }`}
             style={{

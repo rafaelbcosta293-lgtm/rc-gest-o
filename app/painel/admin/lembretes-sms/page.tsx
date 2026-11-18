@@ -166,6 +166,17 @@ export default async function LembretesSmsPage({
         </p>
       )}
 
+      <Link
+        href="/painel/admin/lembretes-sms/numero-cliente"
+        className="mt-6 flex items-center justify-between rounded-xl border border-border-subtle bg-surface px-4 py-3 text-sm shadow-card hover:bg-brand/[.04]"
+      >
+        <span>
+          <strong className="text-foreground">SMS com o nº de cliente</strong>
+          <span className="text-muted"> — mensagem única para o check-in no tablet</span>
+        </span>
+        <span className="font-semibold text-brand">Abrir →</span>
+      </Link>
+
       <TituloSeccao cor="teal">Estado do gateway, por estúdio</TituloSeccao>
       <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {estadosPorEstudio.map(({ estudio, estado, pendentes, semNumero, falhas }) => {

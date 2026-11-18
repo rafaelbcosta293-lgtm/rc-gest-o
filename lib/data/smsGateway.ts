@@ -126,7 +126,7 @@ export async function registarFalhaGateway(
   admin: SupabaseClient,
   estudio: Pick<Estudio, 'id' | 'nome'>,
   estadoAtual: EstadoSmsGateway,
-  falha: { origem: 'lembretes' | 'aniversarios'; mensagem: string }
+  falha: { origem: 'lembretes' | 'aniversarios' | 'numero_cliente'; mensagem: string }
 ): Promise<EstadoSmsGateway> {
   const novasTentativas = estadoAtual.tentativas_falhadas + 1
   const agoraISO = new Date().toISOString()

@@ -45,7 +45,7 @@ export default async function PresencasClientePage({
         .maybeSingle(),
       supabase
         .from('presencas')
-        .select('id, data, estado, nota, origem, pt:perfis!pt_id(nome)')
+        .select('id, data, estado, nota, origem, checkin_em, pt:perfis!pt_id(nome)')
         .eq('cliente_id', clienteId)
         .gte('data', inicio)
         .lt('data', fimExclusivo)
@@ -65,6 +65,7 @@ export default async function PresencasClientePage({
     data: string
     estado: string
     nota: string | null
+    checkin_em?: string | null
     origem: string
     pt: { nome: string } | null
   }
@@ -246,7 +247,11 @@ export default async function PresencasClientePage({
                 {p.estado}
               </span>
               <span className="text-xs text-muted">
-                {p.origem === 'calendario' ? 'Calendário (histórico)' : (p.pt?.nome ?? '—')}
+                {p.origem === 'calendario'
+                  ? 'Calendário (histórico)'
+                  : p.origem === 'checkin'
+                    ? `Check-in no tablet${p.checkin_em ? ` às ${new Date(p.checkin_em).toLocaleTimeString('pt-PT', { timeZone: 'Europe/Lisbon', hour: '2-digit', minute: '2-digit' })}` : ''}${p.pt?.nome ? ` · ${p.pt.nome}` : ''}`
+                    : (p.pt?.nome ?? '—')}
               </span>
               {p.nota && (
                 <span className="flex-1 truncate text-xs text-muted">

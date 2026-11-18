@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export default function CopiarTexto({ texto, className }: { texto: string; className?: string }) {
+export default function CopiarTexto({ texto, className, rotulo = 'Copiar mensagem' }: { texto: string; className?: string; rotulo?: string }) {
   const [copiado, setCopiado] = useState(false)
 
   return (
@@ -19,7 +19,7 @@ export default function CopiarTexto({ texto, className }: { texto: string; class
       }}
       className={className}
     >
-      {copiado ? 'Copiado ✓' : 'Copiar mensagem'}
+      {copiado ? 'Copiado ✓' : rotulo}
     </button>
   )
 }

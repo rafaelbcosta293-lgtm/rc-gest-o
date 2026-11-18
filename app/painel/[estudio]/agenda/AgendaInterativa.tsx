@@ -59,6 +59,8 @@ export type EventoComNomes = EventoAgenda & {
     alerta: string
   } | null
   pt: { id: string; nome: string } | null
+  // Hora em que o cliente fez check-in no tablet (se fez).
+  checkin_em?: string | null
 }
 
 export type PtOpcao = { id: string; nome: string }
@@ -1229,6 +1231,17 @@ function ColunaDia({
         const avisos = avisosEvento(grupo)
         const nota = notaDoEvento(grupo)
         const cancelado = evento.estado === 'Cancelado'
+        // Check-in no tablet de algum dos clientes deste bloco.
+        const chegadas = grupo
+          .filter((g) => g.checkin_em)
+          .map(
+            (g) =>
+              `${g.cliente?.nome_preferido || g.cliente?.nome?.split(' ')[0] || 'Cliente'} chegou às ${new Date(g.checkin_em!).toLocaleTimeString('pt-PT', {
+                timeZone: 'Europe/Lisbon',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}`
+          )
         // Os eventos que já terminaram ficam ligeiramente desvanecidos
         // (bem menos do que os desmarcados); ao passar o rato voltam à
         // cor toda.
@@ -1252,7 +1265,7 @@ function ColunaDia({
                   ? `Desmarcado · ${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim} · clica para ver`
                   : emSelecionado
                     ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar'
-                    : `${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${numerosSocio ? ` · sócio ${numerosSocio}` : ''} · arrasta para mover · botão direito para editar`
+                    : `${chegadas.length ? `✓ ${chegadas.join(', ')} (check-in) · ` : ''}${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${numerosSocio ? ` · sócio ${numerosSocio}` : ''} · arrasta para mover · botão direito para editar`
             }
             // Conta só de leitura: o bloco é só para ver — sem clique,
             // sem botão direito, sem arrastar (o nome e as horas aparecem
@@ -1299,6 +1312,8 @@ function ColunaDia({
               // trás dos outros.
               border: `1px solid ${cancelado ? COR_CONTORNO_CANCELADO : COR_CONTORNO_BLOCO}`,
               ...(cancelado ? { borderRight: `3px solid ${COR_ABA_CANCELADO}` } : {}),
+              // Cliente já fez check-in no tablet: barra verde à esquerda.
+              ...(!cancelado && chegadas.length ? { boxShadow: 'inset 4px 0 0 #16a34a' } : {}),
             }}
           >
             {/* Conteúdo num wrapper à parte, só este com overflow-hidden

@@ -53,6 +53,7 @@ type EventoComNomes = EventoAgenda & {
     alerta: string
   } | null
   pt: { id: string; nome: string } | null
+  checkin_em?: string | null
 }
 
 async function buscarEventos(
@@ -74,9 +75,23 @@ async function buscarEventos(
     .order('hora_inicio')
   if (ptFiltro) query = query.eq('pt_id', ptFiltro)
 
-  const { data, error } = await query
+  // Hora do check-in no tablet (presenças com origem "checkin") — mostrada
+  // no bloco do treino, para o instrutor ver quem já chegou.
+  const [{ data, error }, { data: checkins }] = await Promise.all([
+    query,
+    supabase
+      .from('presencas')
+      .select('agenda_evento_id, checkin_em')
+      .eq('origem', 'checkin')
+      .not('agenda_evento_id', 'is', null)
+      .gte('data', inicio)
+      .lt('data', fimExclusivo),
+  ])
   if (error) throw new Error(error.message)
-  return (data ?? []) as unknown as EventoComNomes[]
+  const horaCheckin = new Map(
+    ((checkins ?? []) as { agenda_evento_id: string; checkin_em: string | null }[]).map((c) => [c.agenda_evento_id, c.checkin_em])
+  )
+  return ((data ?? []) as unknown as EventoComNomes[]).map((e) => (horaCheckin.has(e.id) ? { ...e, checkin_em: horaCheckin.get(e.id) ?? null } : e))
 }
 
 function PontosDia({ eventos }: { eventos: EventoComNomes[] }) {

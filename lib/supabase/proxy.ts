@@ -35,7 +35,10 @@ function isPublicPath(pathname: string) {
   return (
     PUBLIC_PATHS.includes(pathname) ||
     PUBLIC_API_PATHS.includes(pathname) ||
-    pathname.startsWith('/auth')
+    pathname.startsWith('/auth') ||
+    // Tablet de check-in dos clientes: sem login (a página só chama
+    // registar_checkin, que valida o link secreto do tablet).
+    pathname.startsWith('/checkin/')
   )
 }
 

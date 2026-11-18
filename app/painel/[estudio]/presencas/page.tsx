@@ -1,5 +1,5 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Tablet } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
@@ -163,8 +163,11 @@ export default async function PresencasPage({
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
         Presenças
       </h1>
-      <p className="mt-1 text-sm text-muted">
-        {estudio.nome} · quem treinou e quem faltou este mês.
+      <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-muted">
+        <span>{estudio.nome} · quem treinou e quem faltou este mês.</span>
+        <Link href={`/painel/${slug}/presencas/tablet`} className="inline-flex items-center gap-1 font-semibold text-brand hover:underline">
+          <Tablet className="h-4 w-4" /> Tablet de check-in
+        </Link>
       </p>
 
       <div className="mt-6 flex items-center gap-3">

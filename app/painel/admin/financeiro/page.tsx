@@ -8,6 +8,7 @@ import { desbloquearAdmin } from '../actions'
 import { PALETA, corGraficoEstudio } from '@/lib/data/constantes'
 import { agingDivida } from '@/lib/data/financeiro'
 import { carregarCustoHoraPt } from '@/lib/data/custoHoraPt'
+import { carregarTreinosDados, treinosEntre } from '@/lib/data/treinosDados'
 import { carregarDespesas, carregarOutrasReceitas, carregarPagamentosAnalise } from '@/lib/data/cargaFinanceira'
 import {
   MESES_CURTOS,
@@ -91,6 +92,7 @@ export default async function FinanceiroPage({
     { data: outrosData },
     { data: registosData },
     custoHora,
+    treinosDados,
   ] = await Promise.all([
     carregarPagamentosAnalise(supabase, idsEstudios),
     carregarOutrasReceitas(supabase, idsEstudios),
@@ -111,6 +113,7 @@ export default async function FinanceiroPage({
       { emParalelo: 3 }
     ),
     carregarCustoHoraPt(supabase, [...idsEstudios], hoje),
+    carregarTreinosDados(supabase, [...idsEstudios], hoje),
   ])
   if (erroClientes) throw new Error(erroClientes.message)
 
@@ -162,6 +165,11 @@ export default async function FinanceiroPage({
     }
   }
   const custos = custosPeriodo(periodo.inicio, periodo.fim)
+  // Treinos dados no período (histórico do calendário + Agenda, ver
+  // lib/data/treinosDados.ts) e no período de comparação.
+  const treinosDe = (p: { inicio: string; fim: string } | null) => (p ? treinosEntre(treinosDados, p.inicio.slice(0, 7), p.fim.slice(0, 7)) : null)
+  const treinosPeriodo = treinosDe(periodo) ?? 0
+  const treinosComparacao = treinosDe(homologo ?? anterior)
   const resultado = resumo.receita - custos.total
   const margemOperacional = resumo.receita > 0 ? resultado / resumo.receita : 0
   const resultadoAnt = anterior ? resumoAnt!.receita - custosPeriodo(anterior.inicio, anterior.fim).total : null
@@ -356,6 +364,7 @@ export default async function FinanceiroPage({
       perdidos,
       despesas: despesasAno,
       resultado: total - despesasAno,
+      treinos: treinosEntre(treinosDados, `${ano}-01`, `${ano}-12`),
     }
   })
   const anosCompletos = porAno.filter((a) => a.mesesComReceita === 12 && Number(a.ano) < anoAtual).reverse()
@@ -501,6 +510,7 @@ export default async function FinanceiroPage({
       descontos: mensal.descontos[i],
       pagamentos: mensal.pagamentos[i],
       ativos: b?.ativos ?? 0,
+      treinos: treinosEntre(treinosDados, m, m),
       novos: b?.novos ?? 0,
       perdidos: b?.perdidos ?? 0,
       churn: b?.churn != null ? Math.round(b.churn * 10000) / 100 : '',
@@ -530,6 +540,7 @@ export default async function FinanceiroPage({
             { chave: 'descontos', label: 'Descontos (€)' },
             { chave: 'pagamentos', label: 'Nº pagamentos' },
             { chave: 'ativos', label: 'Clientes cobertos' },
+            { chave: 'treinos', label: 'Treinos dados' },
             { chave: 'novos', label: 'Novos' },
             { chave: 'perdidos', label: 'Perdidos' },
             { chave: 'churn', label: 'Churn (%)' },
@@ -645,6 +656,13 @@ export default async function FinanceiroPage({
             sufixo={`ticket médio ${eur2(resumo.ticketMedio)}`}
             tendencia={tendencia(variacao(resumo.pagamentos, comparacaoPrincipal?.pagamentos), rotuloComparacao)}
             formula="Nº de mensalidades pagas no período (seguros, inscrições e outros extras não contam); ticket médio = receita de mensalidades ÷ nº de mensalidades."
+          />
+          <StatCard
+            label="Treinos dados"
+            valor={treinosPeriodo.toLocaleString('pt-PT')}
+            sufixo={treinosPeriodo > 0 ? `receita por treino ${eur2(resumo.receita / treinosPeriodo)}` : undefined}
+            tendencia={tendencia(variacao(treinosPeriodo, treinosComparacao ?? undefined), rotuloComparacao)}
+            formula="Sessões de treino dadas no período: até 31/10/2026 pelas contagens do Google Calendar de cada estúdio; depois, pela Agenda da app (treinos não desmarcados e já passados; duplas e trios contam uma vez). Receita por treino = receita líquida ÷ treinos."
           />
           <StatCard
             label="Clientes pagantes"
@@ -844,7 +862,7 @@ export default async function FinanceiroPage({
               valor={`${eur(resultado)} · ${pctSimples(margemOperacional)}`}
               destaque
             />
-            {custos.horas > 0 && <Linha label="Receita por hora de PT" valor={eur2(resumo.receita / custos.horas)} />}
+            {treinosPeriodo > 0 && <Linha label={`Receita por treino (${treinosPeriodo.toLocaleString('pt-PT')} treinos)`} valor={eur2(resumo.receita / treinosPeriodo)} />}
           </Cartao>
         </Seccao>
       </div>
@@ -862,6 +880,7 @@ export default async function FinanceiroPage({
               { chave: 'media', label: 'Média mensal (€)' },
               { chave: 'descontos', label: 'Descontos (€)' },
               { chave: 'pagamentos', label: 'Nº pagamentos' },
+              { chave: 'treinos', label: 'Treinos dados' },
               { chave: 'novos', label: 'Novos clientes' },
               { chave: 'perdidos', label: 'Clientes perdidos' },
               { chave: 'despesas', label: 'Despesas (€)' },
@@ -874,6 +893,7 @@ export default async function FinanceiroPage({
               media: Math.round(a.mediaMensal * 100) / 100,
               descontos: Math.round(a.desc * 100) / 100,
               pagamentos: a.npag,
+              treinos: a.treinos,
               novos: a.novos,
               perdidos: a.perdidos,
               despesas: Math.round(a.despesas * 100) / 100,

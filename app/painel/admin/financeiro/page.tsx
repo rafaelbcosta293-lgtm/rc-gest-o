@@ -905,7 +905,7 @@ export default async function FinanceiroPage({
         }
       >
         <div className="overflow-x-auto rounded-2xl border border-border-subtle bg-surface shadow-card">
-          <table className="w-full min-w-[1100px] text-sm">
+          <table className="w-full min-w-[1180px] text-sm">
             <thead>
               <tr className="text-left text-xs text-muted">
                 <th className="px-4 py-2 font-semibold">Ano</th>
@@ -917,6 +917,7 @@ export default async function FinanceiroPage({
                 <th className="px-3 py-2 text-right font-semibold">Média/mês</th>
                 <th className="px-3 py-2 text-right font-semibold">Descontos</th>
                 <th className="px-3 py-2 text-right font-semibold">Pagamentos</th>
+                <th className="px-3 py-2 text-right font-semibold">Treinos</th>
                 <th className="px-3 py-2 text-right font-semibold">Despesas</th>
                 <th className="px-3 py-2 text-right font-semibold">Resultado</th>
                 <th className="px-3 py-2 text-right font-semibold">Margem</th>
@@ -944,6 +945,12 @@ export default async function FinanceiroPage({
                     <td className="px-3 py-2 text-right tabular-nums">{eur(a.mediaMensal)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted">{eur(a.desc)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted">{a.npag.toLocaleString('pt-PT')}</td>
+                    <td
+                      className="px-3 py-2 text-right tabular-nums"
+                      title={a.treinos ? `Receita por treino: ${eur2(a.total / a.treinos)}` : undefined}
+                    >
+                      {a.treinos ? a.treinos.toLocaleString('pt-PT') : '—'}
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums">{a.despesas ? eur(a.despesas) : '—'}</td>
                     <td className={`px-3 py-2 text-right font-semibold tabular-nums ${!a.despesas ? 'text-muted' : a.resultado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {a.despesas ? eur(a.resultado) : '—'}
@@ -956,6 +963,65 @@ export default async function FinanceiroPage({
               })}
             </tbody>
           </table>
+        </div>
+      </Seccao>
+
+      {/* Treinos dados, mês a mês e por estúdio */}
+      <Seccao
+        titulo="Treinos dados por mês"
+        sub="Sessões de treino dadas em cada mês (quanto mais intenso, mais treinos). Até 31/10/2026 pelas contagens do Google Calendar; depois, pela Agenda da app — o mês a decorrer conta só os treinos já dados."
+      >
+        <div className="space-y-3">
+          {estudios.map((e) => {
+            const meses = treinosDados.get(e.id)
+            const anosE = Array.from(new Set(Array.from(meses?.keys() ?? []).map((m) => m.slice(0, 4)))).sort()
+            const maxE = Math.max(1, ...Array.from(meses?.values() ?? []))
+            return (
+              <div key={e.id} className="overflow-x-auto rounded-2xl border border-border-subtle bg-surface p-3 shadow-card">
+                <table className="w-full min-w-[920px] border-separate border-spacing-1 text-xs">
+                  <thead>
+                    <tr className="text-muted">
+                      <th className="w-20 text-left font-semibold text-foreground">{e.nome}</th>
+                      {MESES_CURTOS.map((m) => (
+                        <th key={m} className="font-semibold capitalize">{m}</th>
+                      ))}
+                      <th className="w-16 text-right font-semibold">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {anosE.length === 0 && (
+                      <tr>
+                        <td colSpan={14} className="py-2 text-muted">Sem treinos registados.</td>
+                      </tr>
+                    )}
+                    {anosE.map((a) => (
+                      <tr key={a}>
+                        <td className="font-semibold text-foreground">{a}</td>
+                        {MESES_CURTOS.map((_, i) => {
+                          const m = `${a}-${String(i + 1).padStart(2, '0')}`
+                          const v = meses?.get(m) ?? 0
+                          return (
+                            <td key={m} className="p-0">
+                              <CelulaSazonal
+                                href={null}
+                                titulo={v > 0 ? `${e.nome} · ${rotuloMes(m)}: ${v.toLocaleString('pt-PT')} treinos` : 'Sem treinos'}
+                                intensidade={v > 0 ? v / maxE : null}
+                              >
+                                {v > 0 ? v.toLocaleString('pt-PT') : '—'}
+                              </CelulaSazonal>
+                            </td>
+                          )
+                        })}
+                        <td className="text-right font-semibold tabular-nums text-foreground">
+                          {treinosEntre(treinosDados, `${a}-01`, `${a}-12`, e.id).toLocaleString('pt-PT')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })}
         </div>
       </Seccao>
 

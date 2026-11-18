@@ -56,9 +56,9 @@ export default async function EquipaPage({
         Equipa — {estudio.nome}
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Só quem tem acesso a este estúdio consegue ver e trabalhar com os clientes dele. Quem
-        cria conta em <span className="font-medium">/registo</span> só aparece com acesso depois
-        de aprovado aqui.
+        Só quem tem acesso a este estúdio consegue ver e trabalhar com os clientes dele. As contas da
+        equipa são criadas pela Administração; cada vez que alguém ganha acesso a um estúdio, a
+        Administração recebe um aviso.
       </p>
 
       <Link

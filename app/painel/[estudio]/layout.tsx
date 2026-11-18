@@ -58,8 +58,8 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
   ])
 
   // Entra-se num estúdio de duas formas: a conta partilhada fixa desse
-  // estúdio (lib/data/acessos.ts), ou uma conta pessoal registada em
-  // /registo e já aprovada pelo dono em Equipa ("Dar acesso" — grava em
+  // estúdio (lib/data/acessos.ts), ou uma conta pessoal criada pela
+  // Administração e já aprovada pelo dono em Equipa ("Dar acesso" — grava em
   // perfis_estudios). O "papel" da ficha em "perfis" nunca decide isto
   // por si só, só o que a conta pode FAZER depois de já ter entrado.
   // As contas fixas entram só pelo email — a consulta a perfis_estudios

@@ -39,7 +39,7 @@ export function slugEstudioDoEmailPartilhado(email: string | null): string | nul
 }
 
 // Além das contas fixas (podeAcederEstudio), uma conta pessoal
-// registada em /registo também entra num estúdio depois de o dono a
+// criada pela Administração também entra num estúdio depois de o dono a
 // aprovar em Equipa ("Dar acesso") — isso grava uma linha em
 // perfis_estudios. Sem essa aprovação, a conta fica "por aprovar": vê
 // a app mas nenhum estúdio, mesmo com a ficha já criada.
@@ -59,8 +59,8 @@ export async function podeAcederEstudioAprovado(
 }
 
 // true só para as 4 contas fixas do negócio (dono, geral, Fátima,
-// Leiria) — qualquer outra conta é uma conta pessoal (registada por um
-// instrutor em /registo), sempre restrita a Treinos (completo) +
+// Leiria) — qualquer outra conta é uma conta pessoal (criada pela
+// Administração para um instrutor), sempre restrita a Treinos (completo) +
 // Agenda/Horários (só ver), nunca a mais nenhum módulo — ver MODULOS
 // em lib/data/constantes.ts e app/painel/[estudio]/layout.tsx. Esta
 // restrição é independente do "papel" da ficha em "perfis": o

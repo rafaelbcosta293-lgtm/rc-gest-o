@@ -5,7 +5,8 @@ import { NOME_COOKIE, chaveAtivoDispositivo } from '@/lib/data/dispositivo'
 
 // Páginas que qualquer visitante pode ver sem ter sessão iniciada.
 // Tudo o resto (ex.: /painel) exige login.
-const PUBLIC_PATHS = ['/', '/login', '/registo', '/recuperar-password']
+// (Não há registo público: as contas são criadas pela Administração.)
+const PUBLIC_PATHS = ['/', '/login', '/recuperar-password']
 
 // Endpoints chamados por serviços externos, sem sessão de utilizador
 // nenhuma (cron de retenção, webhooks de leads) — cada um valida o seu

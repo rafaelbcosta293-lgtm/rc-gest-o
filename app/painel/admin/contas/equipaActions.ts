@@ -50,11 +50,21 @@ function lerPapel(formData: FormData) {
 
 type Admin = ReturnType<typeof createAdminClient>
 
+// Só mexe no que muda (tira os estúdios desmarcados, junta os novos) —
+// assim o alerta de acessos (alertas_acesso) só aparece quando alguém
+// ganha mesmo um estúdio, não sempre que se guarda a ficha.
 async function definirEstudios(admin: Admin, perfilId: string, estudios: number[]) {
-  const { error: erroApagar } = await admin.from('perfis_estudios').delete().eq('perfil_id', perfilId)
+  let apagar = admin.from('perfis_estudios').delete().eq('perfil_id', perfilId)
+  if (estudios.length > 0) apagar = apagar.not('estudio_id', 'in', `(${estudios.join(',')})`)
+  const { error: erroApagar } = await apagar
   if (erroApagar) return erroApagar.message
   if (estudios.length === 0) return null
-  const { error } = await admin.from('perfis_estudios').insert(estudios.map((estudio_id) => ({ perfil_id: perfilId, estudio_id })))
+  const { error } = await admin
+    .from('perfis_estudios')
+    .upsert(
+      estudios.map((estudio_id) => ({ perfil_id: perfilId, estudio_id })),
+      { onConflict: 'perfil_id,estudio_id', ignoreDuplicates: true }
+    )
   return error?.message ?? null
 }
 

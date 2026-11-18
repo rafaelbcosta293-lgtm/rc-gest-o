@@ -86,16 +86,6 @@ export default async function LoginPage({
             Esqueceste-te da palavra-passe?
           </Link>
         </p>
-
-        <p className="mt-2 text-sm text-muted">
-          Ainda não tens conta?{' '}
-          <Link
-            href="/registo"
-            className="font-medium text-foreground underline decoration-border-strong underline-offset-2 hover:decoration-foreground"
-          >
-            Criar conta
-          </Link>
-        </p>
       </div>
     </div>
   )

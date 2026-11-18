@@ -50,12 +50,6 @@ export default async function Home() {
           >
             Iniciar sessão
           </Link>
-          <Link
-            href="/registo"
-            className="rounded-full border border-border-strong px-5 py-2.5 text-sm font-bold hover:bg-foreground/[.08]"
-          >
-            Criar conta
-          </Link>
         </div>
       )}
     </div>

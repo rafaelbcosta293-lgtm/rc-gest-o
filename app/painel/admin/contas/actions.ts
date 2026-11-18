@@ -150,17 +150,20 @@ export async function corrigirAcessoEstudio(formData: FormData) {
     redirect(`/painel/admin/contas?error=${encodeURIComponent('Conta não encontrada.')}`)
   }
 
+  // Só tira os outros estúdios e acrescenta este se ainda não o tiver —
+  // assim o alerta de acessos só aparece quando muda mesmo alguma coisa.
   const { error: erroApagar } = await admin
     .from('perfis_estudios')
     .delete()
     .eq('perfil_id', idUtilizador)
+    .neq('estudio_id', estudioId)
   if (erroApagar) {
     redirect(`/painel/admin/contas?error=${encodeURIComponent(erroApagar.message)}`)
   }
 
   const { error: erroInserir } = await admin
     .from('perfis_estudios')
-    .insert({ perfil_id: idUtilizador, estudio_id: estudioId })
+    .upsert({ perfil_id: idUtilizador, estudio_id: estudioId }, { onConflict: 'perfil_id,estudio_id', ignoreDuplicates: true })
   if (erroInserir) {
     redirect(`/painel/admin/contas?error=${encodeURIComponent(erroInserir.message)}`)
   }

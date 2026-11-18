@@ -197,8 +197,13 @@ export async function criarInstrutor(formData: FormData) {
     )
   }
 
-  if (telefone) {
-    await admin.from('perfis').update({ telefone }).eq('id', criado.user.id)
+  // O perfil de equipa é sempre criado aqui (as contas novas já não
+  // ganham perfil sozinhas — ver a migração 20261118030000).
+  const { error: erroPerfil } = await admin
+    .from('perfis')
+    .upsert({ id: criado.user.id, nome, telefone: telefone || null, papel: 'pt', ativo: true, saiu_em: null })
+  if (erroPerfil) {
+    redirect(`/painel/coordenacao/horarios?error=${encodeURIComponent(erroPerfil.message)}`)
   }
 
   const { error: erroAcesso } = await admin

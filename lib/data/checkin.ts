@@ -4,13 +4,22 @@
 
 export type ResultadoCheckin =
   | { estado: 'ok'; tipo: 'treino' | 'aula'; hora: string; repetido: boolean }
+  // Tem treino/aula agora, mas a mensalidade desse serviço não está em dia:
+  // a presença não fica registada e pede-se, com simpatia, para regularizar.
+  | { estado: 'sem_mensalidade'; tipo: 'treino' | 'aula'; hora: string }
   | { estado: 'recusado' | 'bloqueado' | 'posto_invalido' | 'erro' }
 
 // Mensagem a mostrar no ecrã do tablet. A recusa é sempre a mesma,
 // exista ou não o número — quem experimente números ao calhas não fica
 // a saber nada.
-export function mensagemCheckin(r: ResultadoCheckin): { tom: 'ok' | 'aviso' | 'erro'; titulo: string; texto: string } {
+export function mensagemCheckin(r: ResultadoCheckin): { tom: 'ok' | 'info' | 'aviso' | 'erro'; titulo: string; texto: string } {
   switch (r.estado) {
+    case 'sem_mensalidade':
+      return {
+        tom: 'info',
+        titulo: 'Falta só regularizar a mensalidade',
+        texto: `Para registar a presença ${r.tipo === 'aula' ? 'na aula' : 'no treino'} das ${r.hora}, fale por favor com o seu treinador para regularizar a mensalidade. Obrigado!`,
+      }
     case 'ok':
       return {
         tom: 'ok',
@@ -38,6 +47,9 @@ export function lerResultado(dados: unknown): ResultadoCheckin {
   const d = dados as Partial<{ estado: string; tipo: string; hora: string; repetido: boolean }> | null
   if (d?.estado === 'ok' && typeof d.hora === 'string') {
     return { estado: 'ok', tipo: d.tipo === 'aula' ? 'aula' : 'treino', hora: d.hora, repetido: !!d.repetido }
+  }
+  if (d?.estado === 'sem_mensalidade' && typeof d.hora === 'string') {
+    return { estado: 'sem_mensalidade', tipo: d.tipo === 'aula' ? 'aula' : 'treino', hora: d.hora }
   }
   if (d?.estado === 'recusado' || d?.estado === 'bloqueado' || d?.estado === 'posto_invalido') return { estado: d.estado }
   return { estado: 'erro' }

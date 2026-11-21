@@ -32,7 +32,7 @@ export default async function TabletCheckinPage({
   const base = `${proto}://${host}`
 
   const hoje = hojeEmLisboa()
-  const [{ data: postosData }, { data: checkinsHoje }] = await Promise.all([
+  const [{ data: postosData }, { data: checkinsHoje }, { data: tentativasData }] = await Promise.all([
     ehGestao
       ? supabase.from('checkin_postos').select('id, nome, token, criado_em').eq('estudio_id', estudio.id).is('revogado_em', null).order('criado_em')
       : Promise.resolve({ data: [] as Posto[] }),
@@ -42,7 +42,28 @@ export default async function TabletCheckinPage({
       .eq('origem', 'checkin')
       .eq('data', hoje)
       .eq('cliente.estudio_id', estudio.id),
+    // Quem tentou registar sem a mensalidade em dia hoje (a margem de 1h
+    // cobre a hora de verão; o dia de Lisboa filtra-se mais abaixo). Só a
+    // gestão consegue ler.
+    ehGestao
+      ? supabase
+          .from('checkin_tentativas')
+          .select('criado_em, cliente:clientes(id, nome, nome_preferido), posto:checkin_postos!inner(estudio_id)')
+          .eq('motivo', 'sem_mensalidade')
+          .eq('posto.estudio_id', estudio.id)
+          .gte('criado_em', `${hoje}T00:00:00+01:00`)
+          .order('criado_em')
+      : Promise.resolve({ data: [] }),
   ])
+  type Tentativa = { criado_em: string; cliente: { id: string; nome: string; nome_preferido: string | null } | null }
+  const semMensalidade = new Map<string, { nome: string; horas: string[] }>()
+  for (const t of (tentativasData ?? []) as unknown as Tentativa[]) {
+    if (!t.cliente || hojeEmLisboa(new Date(t.criado_em)) !== hoje) continue
+    const hora = new Date(t.criado_em).toLocaleTimeString('pt-PT', { timeZone: 'Europe/Lisbon', hour: '2-digit', minute: '2-digit' })
+    const r = semMensalidade.get(t.cliente.id) ?? { nome: t.cliente.nome, horas: [] }
+    r.horas.push(hora)
+    semMensalidade.set(t.cliente.id, r)
+  }
   const postos = (postosData ?? []) as Posto[]
 
   return (
@@ -59,6 +80,25 @@ export default async function TabletCheckinPage({
       </p>
 
       {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</p>}
+
+      {ehGestao && semMensalidade.size > 0 && (
+        <section className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
+          <p className="font-semibold">Hoje tentaram registar a presença sem a mensalidade em dia (não ficou registada):</p>
+          <ul className="mt-2 space-y-0.5">
+            {[...semMensalidade.entries()].map(([id, r]) => (
+              <li key={id}>
+                <Link href={`/painel/${slug}/clientes/${id}`} className="font-medium underline-offset-2 hover:underline">
+                  {r.nome}
+                </Link>{' '}
+                <span className="text-sky-800 dark:text-sky-300">· {r.horas.join(', ')}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-sky-800 dark:text-sky-300">
+            Depois de registar o pagamento, o cliente pode voltar a fazer o check-in no tablet (até 30 min depois do fim do treino).
+          </p>
+        </section>
+      )}
 
       {!ehGestao ? (
         <p className="mt-6 rounded-xl border border-border-subtle bg-surface p-4 text-sm text-muted">
@@ -132,6 +172,10 @@ export default async function TabletCheckinPage({
                 </ul>
               </li>
               <li>A página mostra só um teclado numérico — nunca nomes nem dados de clientes.</li>
+              <li>
+                Se a mensalidade não estiver em dia, a presença não fica registada e o tablet pede, com simpatia, para falar com o treinador
+                e regularizar — essas tentativas aparecem no topo desta página.
+              </li>
               <li>
                 Aceita o número de quem tem um treino ou aula marcados <strong className="text-foreground">de 30 min antes do início até 30 min depois do fim</strong>
                 . Escreve-se só a parte dos números (ex.: F26345 → 26345).

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { CheckCircle2, Delete, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, Delete, AlertTriangle, HeartHandshake } from 'lucide-react'
 import { registarPresenca } from './actions'
 import { limparNumero, mensagemCheckin, type ResultadoCheckin } from '@/lib/data/checkin'
 
@@ -57,7 +57,9 @@ export default function TecladoCheckin({ token }: { token: string }) {
       setNumero('')
       setResultado(r)
       if (temporizador.current) clearTimeout(temporizador.current)
-      temporizador.current = setTimeout(() => setResultado(null), SEGUNDOS_RESULTADO * 1000)
+      // A mensagem da mensalidade é mais longa: fica mais tempo no ecrã.
+      const segundos = r.estado === 'sem_mensalidade' ? SEGUNDOS_RESULTADO * 2 : SEGUNDOS_RESULTADO
+      temporizador.current = setTimeout(() => setResultado(null), segundos * 1000)
     })
   }
 
@@ -85,10 +87,22 @@ export default function TecladoCheckin({ token }: { token: string }) {
           aria-live="polite"
           onClick={() => setResultado(null)}
           className={`mt-10 flex w-full max-w-md flex-col items-center rounded-3xl px-6 py-12 text-center shadow-lg ${
-            msg.tom === 'ok' ? 'bg-emerald-600 text-white' : msg.tom === 'aviso' ? 'bg-amber-100 text-amber-950' : 'bg-red-100 text-red-950'
+            msg.tom === 'ok'
+              ? 'bg-emerald-600 text-white'
+              : msg.tom === 'info'
+                ? 'bg-sky-50 text-sky-950 ring-1 ring-sky-200'
+                : msg.tom === 'aviso'
+                  ? 'bg-amber-100 text-amber-950'
+                  : 'bg-red-100 text-red-950'
           }`}
         >
-          {msg.tom === 'ok' ? <CheckCircle2 className="h-20 w-20" /> : <AlertTriangle className="h-16 w-16" />}
+          {msg.tom === 'ok' ? (
+            <CheckCircle2 className="h-20 w-20" />
+          ) : msg.tom === 'info' ? (
+            <HeartHandshake className="h-16 w-16 text-sky-600" />
+          ) : (
+            <AlertTriangle className="h-16 w-16" />
+          )}
           <p className="mt-4 text-2xl font-bold">{msg.titulo}</p>
           <p className="mt-2 text-lg">{msg.texto}</p>
         </div>

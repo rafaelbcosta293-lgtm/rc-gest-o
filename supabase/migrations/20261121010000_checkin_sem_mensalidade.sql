@@ -1,17 +1,23 @@
--- Check-in no tablet: quem não tem a mensalidade em dia (pagamento de
+-- Check-in no tablet de quem não tem a mensalidade em dia (pagamento de
 -- mensalidade, não anulado, desse serviço, válido até hoje ou depois — a
--- mesma regra dos "pagamentos em atraso") não fica com a presença
--- registada; o tablet mostra uma mensagem simpática a pedir para
--- regularizar. A tentativa fica guardada (com o cliente) para a equipa a
--- ver no painel do tablet.
+-- mesma regra dos "pagamentos em atraso"):
+-- - a presença fica registada na mesma, assinalada (mensalidade_em_falta),
+--   para ninguém ter de barrar o cliente à porta;
+-- - o tablet mostra uma mensagem simpática e os meios de pagamento do
+--   estúdio (definidos pela gestão; dados do negócio, não do cliente);
+-- - a tentativa fica guardada com o cliente para a equipa do estúdio ver
+--   um aviso na app e registar o pagamento.
 
+alter table public.presencas add column if not exists mensalidade_em_falta boolean not null default false;
 alter table public.checkin_tentativas add column if not exists cliente_id uuid references public.clientes(id) on delete cascade;
+alter table public.checkin_tentativas add column if not exists servico_id smallint references public.servicos(id);
 alter table public.checkin_tentativas add column if not exists motivo text;
 
--- A gestão vê as tentativas dos tablets dos seus estúdios.
+-- A equipa de cada estúdio vê as tentativas dos tablets desse estúdio.
 drop policy if exists "gestao_le_checkin_tentativas" on public.checkin_tentativas;
-create policy "gestao_le_checkin_tentativas" on public.checkin_tentativas for select
-  using ((select e_gestao()) and exists (
+drop policy if exists "equipa_le_checkin_tentativas" on public.checkin_tentativas;
+create policy "equipa_le_checkin_tentativas" on public.checkin_tentativas for select
+  using (exists (
     select 1 from public.checkin_postos p
      where p.id = checkin_tentativas.posto_id
        and ((select e_admin()) or p.estudio_id = any ((select estudios_acessiveis())::smallint[]))));
@@ -31,6 +37,23 @@ as $$
 $$;
 revoke all on function public.mensalidade_em_dia(uuid, smallint, date) from public, anon, authenticated;
 
+-- Meios de pagamento do estúdio (config: pagamento_<campo>_<slug>).
+create or replace function public.dados_pagamento_estudio(p_estudio smallint)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'mbway', (select nullif(trim(valor), '') from config where chave = 'pagamento_mbway_' || e.slug),
+    'iban', (select nullif(trim(valor), '') from config where chave = 'pagamento_iban_' || e.slug),
+    'titular', (select nullif(trim(valor), '') from config where chave = 'pagamento_titular_' || e.slug),
+    'nota', (select nullif(trim(valor), '') from config where chave = 'pagamento_nota_' || e.slug))
+  from estudios e where e.id = p_estudio;
+$$;
+revoke all on function public.dados_pagamento_estudio(smallint) from public, anon, authenticated;
+
 create or replace function public.registar_checkin(p_token text, p_numero text)
 returns jsonb
 language plpgsql
@@ -48,6 +71,9 @@ declare
   v_aula record;
   v_pres record;
   v_repetido boolean := false;
+  v_falta boolean := false;
+  v_slug text;
+  v_pag jsonb;
 begin
   select * into v_posto from public.checkin_postos where token = p_token and revogado_em is null;
   if not found then
@@ -89,38 +115,43 @@ begin
 
     if v_ev.id is not null and (v_aula.inscricao_id is null
         or abs(extract(epoch from (v_agora - (v_hoje + v_ev.hora_inicio)))) <= abs(extract(epoch from (v_agora - (v_hoje + v_aula.hora_inicio))))) then
-      -- Sem mensalidade em dia para este serviço: não regista e avisa com
-      -- uma mensagem simpática (a equipa vê a tentativa no painel do tablet).
-      if not public.mensalidade_em_dia(v_cliente, v_ev.servico_id, v_hoje) then
-        insert into public.checkin_tentativas (posto_id, ok, cliente_id, motivo) values (v_posto.id, true, v_cliente, 'sem_mensalidade');
-        return jsonb_build_object('estado', 'sem_mensalidade', 'tipo', 'treino', 'hora', to_char(v_ev.hora_inicio, 'HH24:MI'));
-      end if;
+      v_falta := not public.mensalidade_em_dia(v_cliente, v_ev.servico_id, v_hoje);
       select id, origem, checkin_em into v_pres from public.presencas where cliente_id = v_cliente and data = v_hoje;
       if v_pres.id is null then
-        insert into public.presencas (cliente_id, data, estado, pt_id, origem, agenda_evento_id, checkin_em)
-        values (v_cliente, v_hoje, 'Presente', v_ev.pt_id, 'checkin', v_ev.id, now());
+        insert into public.presencas (cliente_id, data, estado, pt_id, origem, agenda_evento_id, checkin_em, mensalidade_em_falta)
+        values (v_cliente, v_hoje, 'Presente', v_ev.pt_id, 'checkin', v_ev.id, now(), v_falta);
       elsif v_pres.origem = 'manual' then
         -- Marcada à mão por alguém da equipa: não se mexe no estado.
         v_repetido := v_pres.checkin_em is not null;
-        update public.presencas set checkin_em = coalesce(checkin_em, now()) where id = v_pres.id;
+        update public.presencas set checkin_em = coalesce(checkin_em, now()), mensalidade_em_falta = v_falta where id = v_pres.id;
       else
         v_repetido := v_pres.checkin_em is not null;
         update public.presencas
            set estado = 'Presente', origem = 'checkin', checkin_em = coalesce(checkin_em, now()),
-               agenda_evento_id = coalesce(agenda_evento_id, v_ev.id), pt_id = coalesce(pt_id, v_ev.pt_id)
+               agenda_evento_id = coalesce(agenda_evento_id, v_ev.id), pt_id = coalesce(pt_id, v_ev.pt_id),
+               mensalidade_em_falta = v_falta
          where id = v_pres.id;
+      end if;
+      if v_falta then
+        insert into public.checkin_tentativas (posto_id, ok, cliente_id, servico_id, motivo)
+        values (v_posto.id, true, v_cliente, v_ev.servico_id, 'sem_mensalidade');
+        return jsonb_build_object('estado', 'ok', 'tipo', 'treino', 'hora', to_char(v_ev.hora_inicio, 'HH24:MI'),
+          'repetido', v_repetido, 'mensalidade_em_falta', true, 'pagamento', public.dados_pagamento_estudio(v_posto.estudio_id));
       end if;
       insert into public.checkin_tentativas (posto_id, ok) values (v_posto.id, true);
       return jsonb_build_object('estado', 'ok', 'tipo', 'treino', 'hora', to_char(v_ev.hora_inicio, 'HH24:MI'), 'repetido', v_repetido);
     elsif v_aula.inscricao_id is not null then
-      if not public.mensalidade_em_dia(v_cliente, v_aula.servico_id, v_hoje) then
-        insert into public.checkin_tentativas (posto_id, ok, cliente_id, motivo) values (v_posto.id, true, v_cliente, 'sem_mensalidade');
-        return jsonb_build_object('estado', 'sem_mensalidade', 'tipo', 'aula', 'hora', to_char(v_aula.hora_inicio, 'HH24:MI'));
-      end if;
+      v_falta := not public.mensalidade_em_dia(v_cliente, v_aula.servico_id, v_hoje);
       v_repetido := v_aula.checkin_em is not null;
       update public.aulas_inscricoes
          set estado = 'Presente', checkin_em = coalesce(checkin_em, now()), atualizado_em = now()
        where id = v_aula.inscricao_id;
+      if v_falta then
+        insert into public.checkin_tentativas (posto_id, ok, cliente_id, servico_id, motivo)
+        values (v_posto.id, true, v_cliente, v_aula.servico_id, 'sem_mensalidade');
+        return jsonb_build_object('estado', 'ok', 'tipo', 'aula', 'hora', to_char(v_aula.hora_inicio, 'HH24:MI'),
+          'repetido', v_repetido, 'mensalidade_em_falta', true, 'pagamento', public.dados_pagamento_estudio(v_posto.estudio_id));
+      end if;
       insert into public.checkin_tentativas (posto_id, ok) values (v_posto.id, true);
       return jsonb_build_object('estado', 'ok', 'tipo', 'aula', 'hora', to_char(v_aula.hora_inicio, 'HH24:MI'), 'repetido', v_repetido);
     end if;

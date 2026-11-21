@@ -16,6 +16,7 @@ import BarraAjustavel from '@/components/BarraAjustavel'
 import AvisosFerias from './ferias/AvisosFerias'
 import AvisosHorario from '@/components/AvisosHorario'
 import AvisoAcessos from '@/components/AvisoAcessos'
+import AvisoCheckinSemMensalidade from '@/components/AvisoCheckinSemMensalidade'
 import { contarTarefasUrgentes } from '@/lib/data/tarefas'
 import { contarAlertasAbertos } from '@/lib/data/alertasAbertos'
 import { contarLeadsParaHoje, contarPagamentosEmAtraso } from '@/lib/data/contagensMenu'
@@ -112,6 +113,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             página sai logo e o aviso entra quando chegar. */}
         <Suspense fallback={null}>
           <AvisoAcessos supabase={supabase} />
+          {estudio && <AvisoCheckinSemMensalidade supabase={supabase} estudioId={estudio.id} slug={slug} />}
           <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
           {estudio && (
             <AvisosFerias

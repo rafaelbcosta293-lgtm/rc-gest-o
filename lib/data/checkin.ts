@@ -1,26 +1,42 @@
-// Check-in no tablet do estúdio (ver a migração 20261118010000_checkin_tablet.sql).
-// A resposta da base de dados nunca traz nomes nem outros dados de
-// clientes — só o resultado e a hora do treino/aula.
+// Check-in no tablet do estúdio (ver as migrações 20261118010000_checkin_tablet.sql
+// e 20261121010000_checkin_sem_mensalidade.sql). A resposta da base de
+// dados nunca traz nomes nem outros dados de clientes — só o resultado, a
+// hora do treino/aula e, se a mensalidade não estiver em dia, os meios de
+// pagamento do estúdio (dados do negócio).
+
+export type DadosPagamento = { mbway: string | null; iban: string | null; titular: string | null; nota: string | null }
 
 export type ResultadoCheckin =
-  | { estado: 'ok'; tipo: 'treino' | 'aula'; hora: string; repetido: boolean }
-  // Tem treino/aula agora, mas a mensalidade desse serviço não está em dia:
-  // a presença não fica registada e pede-se, com simpatia, para regularizar.
-  | { estado: 'sem_mensalidade'; tipo: 'treino' | 'aula'; hora: string }
+  | {
+      estado: 'ok'
+      tipo: 'treino' | 'aula'
+      hora: string
+      repetido: boolean
+      // A presença ficou registada, mas a mensalidade desse serviço não está
+      // em dia: mostra-se uma mensagem simpática e os meios de pagamento.
+      mensalidadeEmFalta?: boolean
+      pagamento?: DadosPagamento | null
+    }
   | { estado: 'recusado' | 'bloqueado' | 'posto_invalido' | 'erro' }
+
+export const temDadosPagamento = (p: DadosPagamento | null | undefined): p is DadosPagamento =>
+  !!p && !!(p.mbway || p.iban || p.nota)
 
 // Mensagem a mostrar no ecrã do tablet. A recusa é sempre a mesma,
 // exista ou não o número — quem experimente números ao calhas não fica
 // a saber nada.
 export function mensagemCheckin(r: ResultadoCheckin): { tom: 'ok' | 'info' | 'aviso' | 'erro'; titulo: string; texto: string } {
   switch (r.estado) {
-    case 'sem_mensalidade':
-      return {
-        tom: 'info',
-        titulo: 'Falta só regularizar a mensalidade',
-        texto: `Para registar a presença ${r.tipo === 'aula' ? 'na aula' : 'no treino'} das ${r.hora}, fale por favor com o seu treinador para regularizar a mensalidade. Obrigado!`,
-      }
     case 'ok':
+      if (r.mensalidadeEmFalta) {
+        return {
+          tom: 'info',
+          titulo: 'Presença registada · ' + (r.tipo === 'aula' ? 'aula' : 'treino') + ' das ' + r.hora,
+          texto: temDadosPagamento(r.pagamento)
+            ? 'A sua mensalidade ainda não está regularizada. Pode tratar já disso — mostramos a seguir as formas de pagamento. Obrigado!'
+            : 'A sua mensalidade ainda não está regularizada. Pedimos que a regularize pelos meios habituais. Obrigado!',
+        }
+      }
       return {
         tom: 'ok',
         titulo: r.repetido ? 'Presença já estava registada' : 'Presença registada',
@@ -43,13 +59,25 @@ export function limparNumero(texto: string): string {
   return texto.replace(/\D/g, '').slice(0, 10)
 }
 
+const texto = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+
 export function lerResultado(dados: unknown): ResultadoCheckin {
-  const d = dados as Partial<{ estado: string; tipo: string; hora: string; repetido: boolean }> | null
+  const d = dados as Partial<{
+    estado: string
+    tipo: string
+    hora: string
+    repetido: boolean
+    mensalidade_em_falta: boolean
+    pagamento: Record<string, unknown> | null
+  }> | null
   if (d?.estado === 'ok' && typeof d.hora === 'string') {
-    return { estado: 'ok', tipo: d.tipo === 'aula' ? 'aula' : 'treino', hora: d.hora, repetido: !!d.repetido }
-  }
-  if (d?.estado === 'sem_mensalidade' && typeof d.hora === 'string') {
-    return { estado: 'sem_mensalidade', tipo: d.tipo === 'aula' ? 'aula' : 'treino', hora: d.hora }
+    const r: ResultadoCheckin = { estado: 'ok', tipo: d.tipo === 'aula' ? 'aula' : 'treino', hora: d.hora, repetido: !!d.repetido }
+    if (d.mensalidade_em_falta) {
+      r.mensalidadeEmFalta = true
+      const p = d.pagamento
+      r.pagamento = p ? { mbway: texto(p.mbway), iban: texto(p.iban), titular: texto(p.titular), nota: texto(p.nota) } : null
+    }
+    return r
   }
   if (d?.estado === 'recusado' || d?.estado === 'bloqueado' || d?.estado === 'posto_invalido') return { estado: d.estado }
   return { estado: 'erro' }

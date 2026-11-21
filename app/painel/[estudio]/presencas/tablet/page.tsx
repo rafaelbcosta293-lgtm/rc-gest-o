@@ -8,7 +8,8 @@ import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import CopiarTexto from '@/components/CopiarTexto'
 import ConfirmarAcao from '@/components/ConfirmarAcao'
 import { hojeEmLisboa } from '@/lib/data/hoje'
-import { criarPostoCheckin, desativarPostoCheckin } from './actions'
+import { criarPostoCheckin, desativarPostoCheckin, guardarMeiosPagamento } from './actions'
+import { CAMPOS_PAGAMENTO } from '@/lib/data/meiosPagamento'
 
 type Posto = { id: string; nome: string; token: string; criado_em: string }
 
@@ -17,10 +18,10 @@ export default async function TabletCheckinPage({
   searchParams,
 }: {
   params: Promise<{ estudio: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; guardado?: string }>
 }) {
   const { estudio: slug } = await params
-  const { error } = await searchParams
+  const { error, guardado } = await searchParams
   const supabase = await createClient()
   const [estudio, sessao] = await Promise.all([getEstudioPorSlug(supabase, slug), getSessaoAtual()])
   if (!estudio) notFound()
@@ -32,7 +33,7 @@ export default async function TabletCheckinPage({
   const base = `${proto}://${host}`
 
   const hoje = hojeEmLisboa()
-  const [{ data: postosData }, { data: checkinsHoje }, { data: tentativasData }] = await Promise.all([
+  const [{ data: postosData }, { data: checkinsHoje }, { data: pagamentoData }] = await Promise.all([
     ehGestao
       ? supabase.from('checkin_postos').select('id, nome, token, criado_em').eq('estudio_id', estudio.id).is('revogado_em', null).order('criado_em')
       : Promise.resolve({ data: [] as Posto[] }),
@@ -42,28 +43,16 @@ export default async function TabletCheckinPage({
       .eq('origem', 'checkin')
       .eq('data', hoje)
       .eq('cliente.estudio_id', estudio.id),
-    // Quem tentou registar sem a mensalidade em dia hoje (a margem de 1h
-    // cobre a hora de verão; o dia de Lisboa filtra-se mais abaixo). Só a
-    // gestão consegue ler.
     ehGestao
       ? supabase
-          .from('checkin_tentativas')
-          .select('criado_em, cliente:clientes(id, nome, nome_preferido), posto:checkin_postos!inner(estudio_id)')
-          .eq('motivo', 'sem_mensalidade')
-          .eq('posto.estudio_id', estudio.id)
-          .gte('criado_em', `${hoje}T00:00:00+01:00`)
-          .order('criado_em')
+          .from('config')
+          .select('chave, valor')
+          .in('chave', CAMPOS_PAGAMENTO.map((c) => `pagamento_${c.campo}_${slug}`))
       : Promise.resolve({ data: [] }),
   ])
-  type Tentativa = { criado_em: string; cliente: { id: string; nome: string; nome_preferido: string | null } | null }
-  const semMensalidade = new Map<string, { nome: string; horas: string[] }>()
-  for (const t of (tentativasData ?? []) as unknown as Tentativa[]) {
-    if (!t.cliente || hojeEmLisboa(new Date(t.criado_em)) !== hoje) continue
-    const hora = new Date(t.criado_em).toLocaleTimeString('pt-PT', { timeZone: 'Europe/Lisbon', hour: '2-digit', minute: '2-digit' })
-    const r = semMensalidade.get(t.cliente.id) ?? { nome: t.cliente.nome, horas: [] }
-    r.horas.push(hora)
-    semMensalidade.set(t.cliente.id, r)
-  }
+  const valorPagamento = (campo: string) =>
+    ((pagamentoData ?? []) as { chave: string; valor: string | null }[]).find((c) => c.chave === `pagamento_${campo}_${slug}`)?.valor ?? ''
+
   const postos = (postosData ?? []) as Posto[]
 
   return (
@@ -79,26 +68,10 @@ export default async function TabletCheckinPage({
         <strong className="text-foreground">{(checkinsHoje ?? []).length}</strong> check-in{(checkinsHoje ?? []).length === 1 ? '' : 's'}.
       </p>
 
-      {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</p>}
-
-      {ehGestao && semMensalidade.size > 0 && (
-        <section className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
-          <p className="font-semibold">Hoje tentaram registar a presença sem a mensalidade em dia (não ficou registada):</p>
-          <ul className="mt-2 space-y-0.5">
-            {[...semMensalidade.entries()].map(([id, r]) => (
-              <li key={id}>
-                <Link href={`/painel/${slug}/clientes/${id}`} className="font-medium underline-offset-2 hover:underline">
-                  {r.nome}
-                </Link>{' '}
-                <span className="text-sky-800 dark:text-sky-300">· {r.horas.join(', ')}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-sky-800 dark:text-sky-300">
-            Depois de registar o pagamento, o cliente pode voltar a fazer o check-in no tablet (até 30 min depois do fim do treino).
-          </p>
-        </section>
+      {guardado && (
+        <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">Meios de pagamento guardados.</p>
       )}
+      {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</p>}
 
       {!ehGestao ? (
         <p className="mt-6 rounded-xl border border-border-subtle bg-surface p-4 text-sm text-muted">
@@ -150,6 +123,32 @@ export default async function TabletCheckinPage({
           </section>
 
           <section className="mt-8 rounded-xl border border-border-subtle bg-surface p-4 text-sm text-foreground shadow-card">
+            <h2 className="font-semibold">Meios de pagamento mostrados no tablet</h2>
+            <p className="mt-1 text-muted">
+              Quando alguém faz check-in sem a mensalidade em dia, a presença fica registada e o tablet mostra uma mensagem simpática e, a
+              seguir, estes dados durante 20 segundos. Deixe em branco o que não quiser mostrar.
+            </p>
+            <form action={guardarMeiosPagamento} className="mt-3 grid gap-3 sm:grid-cols-2">
+              <input type="hidden" name="estudio_slug" value={slug} />
+              {CAMPOS_PAGAMENTO.map((c) => (
+                <label key={c.campo} className={`flex flex-col gap-1 ${c.campo === 'nota' ? 'sm:col-span-2' : ''}`}>
+                  <span className="text-xs font-semibold text-muted">{c.rotulo}</span>
+                  {c.campo === 'nota' ? (
+                    <textarea name={c.campo} defaultValue={valorPagamento(c.campo)} rows={2} placeholder={c.exemplo} className="rounded-lg border border-border-strong bg-background px-3 py-2" />
+                  ) : (
+                    <input name={c.campo} defaultValue={valorPagamento(c.campo)} placeholder={c.exemplo} className="rounded-lg border border-border-strong bg-background px-3 py-2" />
+                  )}
+                </label>
+              ))}
+              <div className="sm:col-span-2">
+                <button type="submit" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="mt-8 rounded-xl border border-border-subtle bg-surface p-4 text-sm text-foreground shadow-card">
             <h2 className="font-semibold">Como pôr o tablet a funcionar</h2>
             <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-muted">
               <li>
@@ -173,8 +172,8 @@ export default async function TabletCheckinPage({
               </li>
               <li>A página mostra só um teclado numérico — nunca nomes nem dados de clientes.</li>
               <li>
-                Se a mensalidade não estiver em dia, a presença não fica registada e o tablet pede, com simpatia, para falar com o treinador
-                e regularizar — essas tentativas aparecem no topo desta página.
+                Se a mensalidade não estiver em dia, a presença fica registada na mesma; o tablet mostra uma mensagem simpática e os meios de
+                pagamento acima, e aparece um aviso no topo da app do estúdio até o pagamento ser registado.
               </li>
               <li>
                 Aceita o número de quem tem um treino ou aula marcados <strong className="text-foreground">de 30 min antes do início até 30 min depois do fim</strong>

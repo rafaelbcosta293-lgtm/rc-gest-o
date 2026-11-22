@@ -48,12 +48,10 @@ export function mensagemCheckin(r: ResultadoCheckin): { tom: 'ok' | 'info' | 'av
     case 'sem_mensalidade':
       return {
         tom: 'info',
-        titulo: 'Não foi possível registar a presença',
+        titulo: 'Não foi possível registar a sua presença',
         texto:
           (r.expirouEm ? `A sua mensalidade expirou a ${r.expirouEm}.` : 'Não encontrámos uma mensalidade ativa.') +
-          (temDadosPagamento(r.pagamento)
-            ? ' Pode regularizar já aqui ou, se preferir, aguarde pelo seu instrutor para a regularizar. Assim que estiver em dia, a presença passa a ficar registada.'
-            : ' Por favor, aguarde pelo seu instrutor para regularizar a mensalidade. Assim que estiver em dia, a presença passa a ficar registada. Obrigado!'),
+          ' Aguarde aqui pelo seu instrutor para a regularizar.',
       }
     case 'recusado':
       return { tom: 'aviso', titulo: 'Não encontrámos um treino agora', texto: 'Confirme o número ou fale com o seu treinador.' }

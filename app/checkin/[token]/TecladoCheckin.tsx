@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { CheckCircle2, Delete, AlertTriangle, HeartHandshake, Smartphone, Landmark } from 'lucide-react'
 import QRCode from 'qrcode'
 import { registarPresenca } from './actions'
-import { formatarEuros, limparNumero, mensagemCheckin, temDadosPagamento, type DadosPagamento, type ResultadoCheckin } from '@/lib/data/checkin'
+import { limparNumero, mensagemCheckin, temDadosPagamento, type DadosPagamento, type ResultadoCheckin } from '@/lib/data/checkin'
 
 const SEGUNDOS_RESULTADO = 4
 // Mensalidade por regularizar: o aviso e os meios de pagamento ficam no
@@ -61,7 +61,7 @@ export default function TecladoCheckin({ token }: { token: string }) {
       setNumero('')
       setResultado(r)
       if (temporizador.current) clearTimeout(temporizador.current)
-      const segundos = r.estado === 'sem_mensalidade' ? (temDadosPagamento(r.pagamento) ? SEGUNDOS_PAGAMENTO : SEGUNDOS_RESULTADO * 2) : SEGUNDOS_RESULTADO
+      const segundos = r.estado === 'sem_mensalidade' ? (temDadosPagamento(r.pagamento) ? SEGUNDOS_PAGAMENTO : 10) : SEGUNDOS_RESULTADO
       temporizador.current = setTimeout(limpar, segundos * 1000)
     })
   }
@@ -183,11 +183,6 @@ function MensalidadeEmFalta({
       <HeartHandshake className="mx-auto h-12 w-12 text-sky-600" />
       <p className="mt-3 text-2xl font-bold">{msg.titulo}</p>
       <p className="mt-2 text-lg text-zinc-700">{msg.texto}</p>
-      {resultado.valor != null && (
-        <p className="mt-4 text-base text-zinc-600">
-          Valor da mensalidade: <span className="text-2xl font-bold text-zinc-900">{formatarEuros(resultado.valor)}</span>
-        </p>
-      )}
       {dados && <MeiosPagamento dados={dados} />}
       <button type="button" onClick={onFechar} className="mt-6 h-14 w-full rounded-2xl bg-zinc-900 text-lg font-bold text-white active:scale-[.98]">
         Concluir

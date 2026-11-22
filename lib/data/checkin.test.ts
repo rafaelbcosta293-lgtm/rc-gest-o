@@ -30,9 +30,8 @@ describe('check-in no tablet', () => {
       pagamento: { mbway: '912 345 678', iban: null, titular: null, link: 'https://pagar.exemplo.pt/rc', nota: null },
     })
     const m = mensagemCheckin(r)
-    expect(m.titulo).toBe('Não foi possível registar a presença')
-    expect(m.texto).toContain('expirou a 30/11/2026')
-    expect(m.texto).toContain('aguarde pelo seu instrutor')
+    expect(m.titulo).toBe('Não foi possível registar a sua presença')
+    expect(m.texto).toBe('A sua mensalidade expirou a 30/11/2026. Aguarde aqui pelo seu instrutor para a regularizar.')
   })
   it('o QR code só aceita links https', () => {
     const r = lerResultado({ estado: 'sem_mensalidade', hora: '09:00', pagamento: { link: 'javascript:alert(1)' } })
@@ -40,9 +39,7 @@ describe('check-in no tablet', () => {
   })
   it('sem histórico de mensalidade e sem meios de pagamento definidos', () => {
     const r = lerResultado({ estado: 'sem_mensalidade', tipo: 'aula', hora: '18:30', expirou_em: null, valor: null, pagamento: null })
-    expect(mensagemCheckin(r).texto).toBe(
-      'Não encontrámos uma mensalidade ativa. Por favor, aguarde pelo seu instrutor para regularizar a mensalidade. Assim que estiver em dia, a presença passa a ficar registada. Obrigado!'
-    )
+    expect(mensagemCheckin(r).texto).toBe('Não encontrámos uma mensalidade ativa. Aguarde aqui pelo seu instrutor para a regularizar.')
     expect(temDadosPagamento({ mbway: null, iban: null, titular: 'RC', link: null, nota: null })).toBe(false)
   })
   it('valores em euros', () => {

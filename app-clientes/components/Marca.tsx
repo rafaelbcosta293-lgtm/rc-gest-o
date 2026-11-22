@@ -1,13 +1,13 @@
 import Image from 'next/image'
 
-export default function Marca({ pequeno = false }: { pequeno?: boolean }) {
-  const largura = pequeno ? 72 : 150
+// Logótipo (626×245 no ficheiro, sem margens).
+export default function Marca({ largura = 150, claro = false }: { largura?: number; claro?: boolean }) {
   return (
     <Image
-      src="/logo-preto.png"
+      src={claro ? '/logo-dourado.png' : '/logo-preto.png'}
       alt="RC Private Fitness Studio"
       width={largura}
-      height={Math.round((largura * 600) / 800)}
+      height={Math.round((largura * 245) / 626)}
       priority
     />
   )

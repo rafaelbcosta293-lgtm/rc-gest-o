@@ -151,7 +151,7 @@ export default async function ServicosPage({
         action={criarPlano}
         className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border-strong p-3"
       >
-        <select name="servico_id" defaultValue={1} title="Serviço do plano" className={`${inputCls} w-44`}>
+        <select name="servico_id" defaultValue={1} title="Serviço do plano" className={`${inputCls} w-44 max-sm:w-full`}>
           {servicos.map((s) => (
             <option key={s.id} value={s.id}>
               {s.nome}

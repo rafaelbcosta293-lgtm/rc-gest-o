@@ -74,11 +74,11 @@ export default function StatCard({
         {historico && historico.length > 1 && <Sparkline valores={historico} />}
       </div>
 
-      <div className="mt-3 flex items-baseline gap-1.5">
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
         <span className="font-mono text-[1.75rem] font-bold leading-none tracking-tight tabular-nums text-foreground">
           {valor}
         </span>
-        {sufixo && <span className="text-sm font-medium text-muted">{sufixo}</span>}
+        {sufixo && <span className="min-w-0 text-sm font-medium text-muted">{sufixo}</span>}
       </div>
 
       {tendencia && (

@@ -57,7 +57,7 @@ export default async function CoordenacaoChecklistPage({
             Abertura e fecho de cada estúdio: o que ficou por fazer e as notas de turno, sem sair da Coordenação.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
           <Link href={`${ROTA}?data=${somarDias(data, -1)}`} aria-label="Dia anterior" className={botao}>
             <ChevronLeft className="h-4 w-4" />
           </Link>

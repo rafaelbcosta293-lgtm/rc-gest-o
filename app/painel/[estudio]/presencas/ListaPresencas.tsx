@@ -63,7 +63,7 @@ function CartaoResumo({
       </span>
       <div className="min-w-0">
         <p className="font-mono text-xl font-bold leading-none text-foreground">{valor}</p>
-        <p className="mt-0.5 truncate text-[11px] text-muted">{label}</p>
+        <p className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-muted">{label}</p>
       </div>
     </Link>
   )

@@ -54,7 +54,7 @@ export default async function AdminAgoraPage({
       <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2">
         {estudios.map((estudio) => (
           <section key={estudio.id}>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: corEstudio(estudio.slug).cor }}

@@ -304,7 +304,7 @@ export default async function AgendaConteudo({
           agenda começar o mais perto possível do topo (pedido do
           dono, repetido — cada vez mais compacto). */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex min-w-0 shrink-0 items-center gap-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-2 max-sm:order-1">
           {mostrarVoltar && (
             <Link
               href={`/painel/${slug}`}
@@ -318,7 +318,7 @@ export default async function AgendaConteudo({
           </h1>
         </div>
 
-        <div className="flex shrink-0 gap-1.5 rounded-full bg-border-subtle p-1">
+        <div className="flex shrink-0 gap-1.5 rounded-full bg-border-subtle p-1 max-sm:order-2 max-sm:ml-auto">
           {VISTAS.map((v) => (
             <Link
               key={v}
@@ -332,7 +332,12 @@ export default async function AgendaConteudo({
           ))}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        {/* No telemóvel os grupos desfazem-se ("contents") e cada peça
+            ganha a sua ordem, para a barra ficar em quatro linhas
+            arrumadas: título + vistas · período · Aulas/instrutor/+ Evento
+            · pesquisa + zoom. No computador fica tudo numa linha. */}
+        <div className="flex items-center gap-2 max-sm:contents sm:shrink-0">
+          <div className="flex items-center gap-2 max-sm:order-3 max-sm:w-full">
           <Link
             href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: anterior })}`}
             className="rounded-full border border-border-strong px-2 py-1 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
@@ -361,10 +366,16 @@ export default async function AgendaConteudo({
           >
             Hoje
           </Link>
-          {vista !== 'mes' && <BotaoAulasAgenda ativo={verAulas} />}
+          </div>
+          {vista !== 'mes' && (
+            <span className="flex max-sm:order-4">
+              <BotaoAulasAgenda ativo={verAulas} />
+            </span>
+          )}
         </div>
 
         {pts.length > 0 && (
+          <div className="flex min-w-0 max-sm:order-5 max-sm:min-w-[9rem] max-sm:flex-1">
           <FiltroInstrutor
             valor={ptFiltro ?? ''}
             opcoes={[
@@ -372,17 +383,20 @@ export default async function AgendaConteudo({
               ...pts.map((p) => ({ id: p.id, nome: p.nome, href: `${basePath}${construirQuery({ vista, data: dataParam }, { pt: p.id })}` })),
             ]}
           />
+          </div>
         )}
 
         {/* Na mesma linha da data e dos instrutores: ajuda e zoom da
             grelha (vêm de AgendaInterativa), pesquisa e "+ Evento". */}
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <div id="agenda-ferramentas" className="flex items-center gap-1.5" />
-          <BuscaAgenda estudioId={estudio.id} basePath={basePath} />
+        <div className="ml-auto flex items-center gap-2 max-sm:contents sm:shrink-0">
+          <div id="agenda-ferramentas" className="flex items-center gap-1.5 max-sm:order-8" />
+          <div className="flex min-w-0 max-sm:order-7 max-sm:min-w-[12rem] max-sm:flex-1">
+            <BuscaAgenda estudioId={estudio.id} basePath={basePath} />
+          </div>
           {!somenteLeitura && (
             <Link
               href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover max-sm:order-6 max-sm:px-4 max-sm:py-2 max-sm:text-sm"
             >
               <Plus className="h-3.5 w-3.5" /> Evento
             </Link>

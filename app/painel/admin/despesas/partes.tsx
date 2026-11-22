@@ -46,7 +46,7 @@ const SEPARADORES = [
 
 export function SeparadoresDespesas({ ativo, qs = '' }: { ativo: string; qs?: string }) {
   return (
-    <nav className="mt-4 flex flex-wrap gap-2">
+    <nav className="fila-deslizante mt-4 flex flex-wrap gap-2">
       {SEPARADORES.map((s) => (
         <Link
           key={s.href}

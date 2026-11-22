@@ -177,7 +177,7 @@ async function PainelHorariosEstudio({
       <TituloSeccao cor="azul" id={`planeamento-${slug}`}>
         Semana
       </TituloSeccao>
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-2 flex flex-wrap items-center gap-3">
         <Link
           href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaAnterior, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
           className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
@@ -185,7 +185,7 @@ async function PainelHorariosEstudio({
         >
           <ChevronLeft className="h-4 w-4" />
         </Link>
-        <span className="text-sm font-medium">
+        <span className="text-sm font-medium whitespace-nowrap">
           {fmt(diasSemana[0])} – {fmt(diasSemana[6])}
         </span>
         <Link
@@ -202,7 +202,7 @@ async function PainelHorariosEstudio({
               ? `Copiar o horário de ${fmt(semanaAnterior)} – ${fmt(somarDias(semanaAnterior, 6))} para esta semana? Substitui o que já está marcado nesta semana.`
               : `Copiar o horário de ${fmt(semanaAnterior)} – ${fmt(somarDias(semanaAnterior, 6))} para esta semana?`
           }
-          className="ml-auto"
+          className="ml-auto max-sm:ml-0 max-sm:w-full"
         >
           <input type="hidden" name="estudio_slug" value={slug} />
           <input type="hidden" name="estudio_id" value={estudio.id} />
@@ -214,7 +214,7 @@ async function PainelHorariosEstudio({
           />
           <SubmitButton
             pendingText="A copiar…"
-            className="rounded-full border border-border-strong px-4 py-1.5 text-sm font-bold hover:bg-brand/[.08]"
+            className="rounded-full border border-border-strong px-4 py-1.5 text-sm font-bold hover:bg-brand/[.08] max-sm:w-full max-sm:py-2"
           >
             Copiar horário da semana anterior
           </SubmitButton>

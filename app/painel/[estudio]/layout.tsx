@@ -22,7 +22,7 @@ import { contarTarefasUrgentes } from '@/lib/data/tarefas'
 import { contarAlertasAbertos } from '@/lib/data/alertasAbertos'
 import { contarLeadsParaHoje, contarPagamentosEmAtraso } from '@/lib/data/contagensMenu'
 import { hojeEmLisboa } from '@/lib/data/hoje'
-import { NavLinkTopBar, NavLinkComSubpastas, NavLinkPastaHorarios, NavLinkPhone, NavLinkBloqueado, NavLinkInicio } from './NavLink'
+import { NavLinkTopBar, NavLinkComSubpastas, NavLinkPastaHorarios, NavLinkBloqueado, NavLinkInicio, NavTelemovel } from './NavLink'
 
 // Na barra do computador/tablet, Treinos, Avaliações, Presenças e
 // Pagamentos não têm pílula própria — aparecem dentro de Clientes; e Objetivos dentro de
@@ -223,25 +223,14 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
 
       {/* O conteúdo ganha espaço extra no fundo, no telemóvel, para a
           barra de separadores fixa não tapar o fim da página. */}
-      <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
+      <div className="min-w-0 flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
 
-      {/* Telemóvel: barra de separadores fixa no fundo, ao estilo iOS. */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around overflow-x-auto border-t border-border-subtle bg-background/90 px-1 py-1 shadow-[0_-2px_2px_rgba(24,24,27,0.05),0_-16px_32px_-8px_rgba(24,24,27,0.16)] backdrop-blur-xl md:hidden">
-        {MODULOS.map((m) =>
-          podeAceder(m) ? (
-            <NavLinkPhone key={m.id} href={`/painel/${slug}/${m.id}`} id={m.id} aviso={avisoDe(m.id)} />
-          ) : (
-            <span
-              key={m.id}
-              title={tituloBloqueado(m)}
-              className="flex min-w-14 shrink-0 cursor-not-allowed flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-muted opacity-40"
-            >
-              <m.icone className="h-[22px] w-[22px]" strokeWidth={2} />
-              <span className="text-[10px] font-medium">{m.curto ?? m.nome}</span>
-            </span>
-          )
-        )}
-      </nav>
+      {/* Telemóvel: barra de separadores fixa no fundo (os módulos mais
+          usados + "Mais", que abre a lista completa). */}
+      <NavTelemovel
+        slug={slug}
+        itens={MODULOS.map((m) => ({ id: m.id, acessivel: podeAceder(m), aviso: avisoDe(m.id), motivo: podeAceder(m) ? undefined : tituloBloqueado(m) }))}
+      />
     </div>
   )
 }

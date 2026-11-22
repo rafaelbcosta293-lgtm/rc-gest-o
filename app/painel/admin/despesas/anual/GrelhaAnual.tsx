@@ -153,7 +153,7 @@ export default function GrelhaAnual({
         </SubmitButton>
       </div>
 
-      <div className="mt-3 overflow-x-auto rounded-xl border border-border-subtle bg-surface">
+      <div className="campos-densos mt-3 overflow-x-auto rounded-xl border border-border-subtle bg-surface">
         <table ref={tabela} className="w-full min-w-[1180px] border-separate border-spacing-0 text-xs">
           <thead>
             <tr className="text-muted">

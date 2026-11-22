@@ -173,7 +173,7 @@ export default async function ConteudoAulas({
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           {titulo} <span className="font-normal text-muted">· {estudio.nome}</span>
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
           <Link
             href={`${basePath}${query(base, { data: somarDias(inicio, -7) })}`}
             aria-label="Semana anterior"

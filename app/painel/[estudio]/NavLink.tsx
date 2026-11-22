@@ -1,10 +1,11 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import FolhaInferior from '@/components/FolhaInferior'
 import { createPortal } from 'react-dom'
 import Link from '@/components/LinkRapido'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, BriefcaseBusiness, Home } from 'lucide-react'
+import { ChevronDown, BriefcaseBusiness, Home, LayoutGrid } from 'lucide-react'
 import { MODULOS, PALETA } from '@/lib/data/constantes'
 import { formaPilula, useModoBarra } from '@/components/BarraAjustavel'
 
@@ -328,12 +329,104 @@ export function NavLinkPhone({ href, id, aviso = 0 }: { href: string; id: string
     <Link
       href={href}
       aria-label={nome}
-      className="relative flex min-w-14 shrink-0 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5"
+      aria-current={ativo ? 'page' : undefined}
+      className="relative flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5"
       style={{ color: ativo ? PALETA[cor].tx : 'var(--muted)' }}
     >
       <Icone className="h-[22px] w-[22px]" strokeWidth={ativo ? 2.75 : 2.25} />
-      {aviso > 0 && <span className="absolute right-1.5 top-0 rounded-full bg-brand px-1.5 text-[10px] font-bold leading-4 text-black">{aviso}</span>}
-      <span className={`text-[10px] ${ativo ? 'font-semibold' : 'font-medium'}`}>{curto ?? nome}</span>
+      {aviso > 0 && <span className="absolute top-0 left-1/2 ml-1.5 rounded-full bg-brand px-1.5 text-[10px] leading-4 font-bold text-black">{aviso}</span>}
+      <span className={`max-w-full truncate text-[11px] ${ativo ? 'font-semibold' : 'font-medium'}`}>{curto ?? nome}</span>
     </Link>
+  )
+}
+
+// Telemóvel: barra de separadores com os quatro módulos mais usados a
+// que a conta tem acesso e um botão "Mais", que abre a lista completa
+// (com nomes) numa folha ao fundo do ecrã — em vez de uma tira com todos
+// os módulos, que obrigava a deslizar de lado às cegas.
+const PRIORIDADE_TELEMOVEL = ['agenda', 'clientes', 'pagamentos', 'tarefas', 'treinos', 'aulas', 'leads', 'presencas']
+
+export type ItemNavTelemovel = { id: string; acessivel: boolean; aviso: number; motivo?: string }
+
+export function NavTelemovel({ slug, itens }: { slug: string; itens: ItemNavTelemovel[] }) {
+  const pathname = usePathname()
+  const [aberto, setAberto] = useState(false)
+  const acessiveis = itens.filter((i) => i.acessivel)
+  const principais = [
+    ...PRIORIDADE_TELEMOVEL.map((id) => acessiveis.find((i) => i.id === id)).filter((i): i is ItemNavTelemovel => !!i),
+    ...acessiveis.filter((i) => !PRIORIDADE_TELEMOVEL.includes(i.id)),
+  ].slice(0, 4)
+  const idsPrincipais = new Set(principais.map((i) => i.id))
+  const resto = itens.filter((i) => !idsPrincipais.has(i.id))
+  const avisosNoResto = resto.reduce((s, i) => s + (i.acessivel ? i.aviso : 0), 0)
+  const ativoNoResto = resto.some((i) => i.acessivel && estaAtivo(pathname, `/painel/${slug}/${i.id}`))
+
+  return (
+    <>
+      <nav
+        aria-label="Módulos"
+        className="fixed inset-x-0 bottom-0 z-10 grid border-t border-border-subtle bg-background/90 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-[0_-2px_2px_rgba(24,24,27,0.05),0_-16px_32px_-8px_rgba(24,24,27,0.16)] backdrop-blur-xl md:hidden"
+        style={{ gridTemplateColumns: `repeat(${principais.length + (resto.length > 0 ? 1 : 0)}, minmax(0, 1fr))` }}
+      >
+        {principais.map((i) => (
+          <NavLinkPhone key={i.id} href={`/painel/${slug}/${i.id}`} id={i.id} aviso={i.aviso} />
+        ))}
+        {resto.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setAberto(true)}
+            aria-haspopup="dialog"
+            aria-expanded={aberto}
+            className="relative flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5"
+            style={{ color: ativoNoResto ? 'var(--foreground)' : 'var(--muted)' }}
+          >
+            <LayoutGrid className="h-[22px] w-[22px]" strokeWidth={ativoNoResto ? 2.75 : 2.25} />
+            {avisosNoResto > 0 && (
+              <span className="absolute top-0 left-1/2 ml-1.5 rounded-full bg-brand px-1.5 text-[10px] leading-4 font-bold text-black">{avisosNoResto}</span>
+            )}
+            <span className={`text-[11px] ${ativoNoResto ? 'font-semibold' : 'font-medium'}`}>Mais</span>
+          </button>
+        )}
+      </nav>
+
+      <FolhaInferior aberta={aberto} aoFechar={() => setAberto(false)} titulo="Todos os módulos">
+        <ul className="grid grid-cols-3 gap-2 px-1 pt-1">
+          {itens.map((i) => {
+            const { icone: Icone, cor, nome, curto } = moduloPorId(i.id)
+            const href = `/painel/${slug}/${i.id}`
+            const ativo = estaAtivo(pathname, href)
+            const conteudo = (
+              <>
+                <span className="relative flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: PALETA[cor].bg, color: PALETA[cor].tx }}>
+                  <Icone className="h-[22px] w-[22px]" strokeWidth={2.25} />
+                  {i.acessivel && i.aviso > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 rounded-full bg-brand px-1.5 text-[10px] leading-4 font-bold text-black ring-2 ring-surface">{i.aviso}</span>
+                  )}
+                </span>
+                <span className="mt-1.5 line-clamp-2 text-center text-xs leading-tight font-medium">{curto && nome.length > 16 ? curto : nome}</span>
+              </>
+            )
+            return (
+              <li key={i.id}>
+                {i.acessivel ? (
+                  <Link
+                    href={href}
+                    onClick={() => setAberto(false)}
+                    aria-current={ativo ? 'page' : undefined}
+                    className={`flex h-full min-h-[5.5rem] flex-col items-center rounded-2xl px-1.5 py-2.5 text-foreground active:bg-foreground/[.06] ${ativo ? 'bg-foreground/[.06] ring-1 ring-border-strong' : ''}`}
+                  >
+                    {conteudo}
+                  </Link>
+                ) : (
+                  <span title={i.motivo} className="flex h-full min-h-[5.5rem] cursor-not-allowed flex-col items-center rounded-2xl px-1.5 py-2.5 text-muted opacity-40">
+                    {conteudo}
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </FolhaInferior>
+    </>
   )
 }

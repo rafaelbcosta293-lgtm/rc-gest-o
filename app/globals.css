@@ -163,6 +163,27 @@
   --shadow-glow: var(--shadow-glow-value);
   --shadow-glow-brand: var(--shadow-glow-brand-value);
   --shadow-deep: var(--shadow-deep-value);
+
+  /* Folhas que sobem do fundo do ecrã no telemóvel (menus). */
+  --animate-subir: subir 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-aparecer: aparecer 0.18s ease-out;
+}
+
+@keyframes subir {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 * {
@@ -398,4 +419,43 @@ html[data-a-navegar]::after {
 .dark .viz-tarefas {
   --viz-serie: #3987e5;
   --viz-trilho: color-mix(in srgb, #3987e5 22%, transparent);
+}
+
+/* Telemóvel: o iPhone amplia a página sozinho ao tocar num campo com
+   letra abaixo de 16px (e não volta atrás). Com 16px nos campos de
+   escrita isso deixa de acontecer. Fora das camadas do Tailwind, por
+   isso ganha às classes de tamanho de cada campo sem mexer página a
+   página. Ficam de fora as grelhas densas (classe "campos-densos"), onde
+   cada coluna tem largura fixa e a letra maior cortava o texto. */
+@media (max-width: 767px) {
+  :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="submit"], [type="button"], [type="hidden"]),
+      select,
+      textarea
+    ):not(.campos-densos *) {
+    font-size: 16px;
+  }
+}
+
+/* Telemóvel: filas de filtros/atalhos numa só linha que desliza de lado
+   (sem barra à vista), em vez de partirem em duas ou três linhas e
+   empurrarem o conteúdo para baixo. No computador ficam como estão. */
+@media (max-width: 767px) {
+  .fila-deslizante {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    /* chega às margens do ecrã para se perceber que continua para o lado */
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    scroll-padding-inline: 1rem;
+  }
+  .fila-deslizante::-webkit-scrollbar {
+    display: none;
+  }
+  .fila-deslizante > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
 }

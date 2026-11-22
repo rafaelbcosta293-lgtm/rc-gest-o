@@ -342,7 +342,7 @@ export default async function ClientesPage({
             a ficha completa de cada um, num só sítio
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
           <ExportarCsvButton
             colunas={[
               { chave: 'numeroSocio', label: 'Nº de cliente' },
@@ -381,7 +381,7 @@ export default async function ClientesPage({
       {/* Um separador por serviço: cada um tem a sua lista e os seus
           números, para não se misturarem (o PT é o de sempre). */}
       {servicos.length > 1 && (
-        <div className="mt-6 flex flex-wrap gap-1.5 border-b border-border-subtle">
+        <div className="fila-deslizante mt-6 flex flex-wrap gap-1.5 border-b border-border-subtle">
           {servicos.map((sv) => {
             const ativo = sv.id === servicoSel
             const n = sv.id === SERVICO_PT ? contagemPtAtivos : ativosPorServico.get(sv.id) ?? 0
@@ -402,7 +402,7 @@ export default async function ClientesPage({
 
       {/* Controlo segmentado, ao estilo iOS — uma só faixa, com o filtro
           ativo a "flutuar" lá dentro, em vez de pílulas soltas. */}
-      <div className="mt-6 flex flex-wrap gap-1.5 rounded-full bg-border-subtle p-1">
+      <div className="mt-6 flex flex-wrap gap-1 rounded-3xl bg-border-subtle p-1 sm:gap-1.5 sm:rounded-full">
         {FILTROS.map((f) => {
           const ativo = estado === f.valor
           const href = `/painel/${slug}/clientes${construirQuery(
@@ -413,7 +413,7 @@ export default async function ClientesPage({
             <Link
               key={f.valor}
               href={href}
-              className={`flex-1 rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-all ${
+              className={`flex-1 rounded-full px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap transition-all sm:px-3 sm:py-1.5 ${
                 ativo ? 'bg-surface text-foreground shadow-pop' : 'text-muted hover:text-foreground'
               }`}
             >
@@ -423,7 +423,7 @@ export default async function ClientesPage({
         })}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+      <div className="fila-deslizante mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
         <span className="font-semibold">Ordenar por:</span>
         {ORDENS.map((o) => {
           const ativo = ordem === o.valor
@@ -460,7 +460,7 @@ export default async function ClientesPage({
       {/* Dados incompletos na ficha: todos os que têm algo em falta, ou
           só os que não têm um campo em concreto. Junta-se ao filtro de
           estado acima (ex.: ativos sem NIF). */}
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+      <div className="fila-deslizante mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
         <span className="font-semibold">Ficha:</span>
         {(
           [

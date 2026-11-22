@@ -163,13 +163,13 @@ export default async function AlertasPage({
                         >
                           Resolver
                         </BotaoQuemFez>
-                        <details className="group">
-                          <summary className="cursor-pointer list-none rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]">
+                        <details className="group [&[open]]:w-full">
+                          <summary className="inline-block cursor-pointer list-none rounded-full border border-border-strong px-3 py-1.5 text-xs font-bold hover:bg-foreground/[.08]">
                             Adiar…
                           </summary>
                           <form
                             action={adiarAlerta}
-                            className="mt-2 flex items-center gap-2"
+                            className="mt-2 flex flex-wrap items-center gap-2"
                           >
                             <input type="hidden" name="estudio_slug" value={slug} />
                             <input type="hidden" name="id" value={a.id} />

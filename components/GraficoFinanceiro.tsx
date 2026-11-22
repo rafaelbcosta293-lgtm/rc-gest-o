@@ -130,8 +130,11 @@ export default function GraficoFinanceiro({
           ))}
         </div>
       )}
-      <div ref={caixa} className="relative w-full select-none" onMouseLeave={() => setAtivo(null)}>
-        <svg width={largura} height={altura} className="block" role="img" aria-label={series.map((s) => s.nome).join(', ')}>
+      {/* O SVG fica "absolute" para não contar para a largura mínima da
+          caixa: dentro de uma grelha, um SVG de 800px impedia a coluna de
+          encolher no telemóvel e a página inteira deslizava para o lado. */}
+      <div ref={caixa} className="relative w-full select-none" style={{ height: altura }} onMouseLeave={() => setAtivo(null)}>
+        <svg width={largura} height={altura} className="absolute top-0 left-0 block" role="img" aria-label={series.map((s) => s.nome).join(', ')}>
           {ticks.map((t) => (
             <g key={t}>
               <line x1={margem.esq} x2={largura - margem.dir} y1={y(t)} y2={y(t)} stroke="currentColor" className="text-border-subtle" strokeWidth={t === 0 ? 1 : 0.5} opacity={t === 0 ? 0.9 : 0.6} />

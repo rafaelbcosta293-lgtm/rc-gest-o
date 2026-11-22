@@ -115,7 +115,7 @@ export default async function LeadsPage({
             {estudio.nome} · {leads.length} {leads.length === 1 ? 'lead' : 'leads'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
           <ExportarCsvButton
             colunas={[
               { chave: 'nome', label: 'Nome' },

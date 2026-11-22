@@ -115,7 +115,7 @@ export default async function DespesasAnualPage({
       <Mensagens error={sp.error} ok={sp.ok} />
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
           <Link href={link(ano - 1)} className={botaoSecCls} aria-label="Ano anterior">
             <ChevronLeft className="h-4 w-4" />
           </Link>

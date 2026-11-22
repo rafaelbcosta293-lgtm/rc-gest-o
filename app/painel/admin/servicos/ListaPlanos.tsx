@@ -63,7 +63,7 @@ export default function ListaPlanos({ planos: planosIniciais, servicos }: { plan
           </span>
           <form action={atualizarPlano} className="flex flex-1 flex-wrap items-center gap-2">
             <input type="hidden" name="id" value={p.id} />
-            <select name="servico_id" defaultValue={p.servico_id} title="Serviço do plano" className={`${inputCls} w-44`}>
+            <select name="servico_id" defaultValue={p.servico_id} title="Serviço do plano" className={`${inputCls} w-44 max-sm:w-full`}>
               {servicos.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.nome}

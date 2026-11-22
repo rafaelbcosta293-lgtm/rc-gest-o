@@ -111,7 +111,8 @@ export default function PagamentoForm({
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <div className="flex flex-col gap-0.5">
+        {/* No telemóvel as listas (plano e método) ocupam a linha toda, para o texto não ficar cortado. */}
+        <div className="col-span-2 flex flex-col gap-0.5 sm:col-span-1">
           <label className={labelCls}>Plano</label>
           <select
             name="plano_id"
@@ -166,7 +167,7 @@ export default function PagamentoForm({
           />
         </div>
 
-        <div className="flex flex-col gap-0.5">
+        <div className="col-span-2 flex flex-col gap-0.5 sm:col-span-1">
           <label className={labelCls}>Método</label>
           <select name="metodo" required defaultValue="" className={inputCls}>
             <option value="">— escolhe um método —</option>

@@ -44,7 +44,8 @@ export default function BarraAjustavel({
 }) {
   const exteriorRef = useRef<HTMLDivElement>(null)
   // Três cópias escondidas (nunca visíveis, fora do fluxo normal da
-  // página) só para medir a largura real em cada modo —
+  // página, dentro de uma caixa de tamanho zero para não alargarem a
+  // página em ecrãs estreitos) só para medir a largura real em cada modo —
   // a visível reflete a decisão, sem nunca precisar de "tentar e
   // voltar atrás" (isso é que arriscava ciclos sem fim nalgumas
   // larguras, com a barra a ficar presa a meio da troca).
@@ -97,7 +98,7 @@ export default function BarraAjustavel({
           ['icones', medirSoIconesRef],
         ] as const
       ).map(([m, ref]) => (
-        <div key={m} aria-hidden className="pointer-events-none fixed top-0 left-0 opacity-0 -z-10">
+        <div key={m} aria-hidden className="pointer-events-none fixed top-0 left-0 -z-10 h-0 w-0 overflow-hidden opacity-0">
           <nav ref={ref as React.RefObject<HTMLElement>} className={`w-max ${navClassName}`}>
             <ModoBarraContext.Provider value={m}>{children}</ModoBarraContext.Provider>
           </nav>

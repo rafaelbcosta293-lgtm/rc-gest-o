@@ -317,7 +317,7 @@ export default function TreinoForm({
             colunas nunca ficam espremidas num ecrã estreito — desliza
             em vez de encolher a ponto de ficar ilegível. */}
         <div className="mt-2 overflow-x-auto overflow-y-hidden rounded-2xl border border-border-subtle bg-surface shadow-card">
-          <div className="grid min-w-[700px]" style={{ gridTemplateColumns: GRID_COLUNAS }}>
+          <div className="campos-densos grid min-w-[700px]" style={{ gridTemplateColumns: GRID_COLUNAS }}>
             {CABECALHOS_GRID.map((h, i) => (
               <span
                 key={i}

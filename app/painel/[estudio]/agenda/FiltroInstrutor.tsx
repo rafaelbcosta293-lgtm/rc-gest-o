@@ -15,7 +15,7 @@ export default function FiltroInstrutor({
   const router = useRouter()
   const ativo = valor !== ''
   return (
-    <label className="flex shrink-0 items-center text-xs text-muted">
+    <label className="flex min-w-0 shrink-0 items-center text-xs text-muted max-sm:w-full max-sm:shrink">
       <select
         value={valor}
         aria-label="Filtrar por instrutor"
@@ -23,7 +23,7 @@ export default function FiltroInstrutor({
           const o = opcoes.find((x) => x.id === e.target.value)
           if (o) router.push(o.href, { scroll: false })
         }}
-        className={`rounded-full border py-1 pl-2.5 pr-7 text-xs font-medium outline-none ${
+        className={`rounded-full border py-1 pl-2.5 pr-7 text-xs font-medium outline-none max-sm:w-full max-sm:py-1.5 ${
           ativo ? 'border-brand bg-brand text-black' : 'border-border-subtle bg-surface text-foreground'
         }`}
       >

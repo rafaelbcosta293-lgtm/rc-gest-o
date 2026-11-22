@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import PillNavLink, { estaAtivoPill } from '@/components/PillNavLink'
 import BarraAjustavel, { formaPilula, useModoBarra } from '@/components/BarraAjustavel'
+import MenuTelemovel, { type GrupoMenu } from '@/components/MenuTelemovel'
 
 // Os ícones têm de ser resolvidos aqui dentro (componente cliente),
 // nunca recebidos como prop vindos do layout (componente servidor) —
@@ -241,13 +242,38 @@ export default function AdminNav({
     '/painel/admin/horas': horasPorAprovar,
   }
 
+  // Telemóvel: a lista completa, com nomes, numa folha ao fundo do ecrã.
+  const gruposTelemovel: GrupoMenu[] = [
+    {
+      itens: [
+        { href: '/painel/admin', label: 'Resumo', icone: Home, exato: true },
+        { href: '/painel/admin/calendario', label: 'Calendário', icone: CalendarDays, aviso: lembretesPorTratar },
+      ],
+    },
+    ...GRUPOS.map((g) => ({
+      label: g.label,
+      itens: g.pastas.map((p) => ({
+        href: p.href,
+        label: p.label,
+        icone: p.icone,
+        aviso: avisos[p.href] ?? 0,
+        atalhos: p.filtravel ? ESTUDIOS.map((e) => ({ href: `${p.href}?estudio=${e.slug}`, label: e.nome })) : undefined,
+      })),
+    })),
+  ]
+
   return (
-    <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
-      <PillNavLink href="/painel/admin" label="Resumo" icone={Home} exato />
-      <PillNavLink href="/painel/admin/calendario" label="Calendário" icone={CalendarDays} aviso={lembretesPorTratar} />
-      {GRUPOS.map((g) => (
-        <GrupoPill key={g.id} grupo={g} avisos={avisos} />
-      ))}
-    </BarraAjustavel>
+    <>
+      <div className="hidden min-w-0 flex-1 md:flex">
+        <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
+          <PillNavLink href="/painel/admin" label="Resumo" icone={Home} exato />
+          <PillNavLink href="/painel/admin/calendario" label="Calendário" icone={CalendarDays} aviso={lembretesPorTratar} />
+          {GRUPOS.map((g) => (
+            <GrupoPill key={g.id} grupo={g} avisos={avisos} />
+          ))}
+        </BarraAjustavel>
+      </div>
+      <MenuTelemovel titulo="Administração" grupos={gruposTelemovel} escuro className="flex md:hidden" />
+    </>
   )
 }

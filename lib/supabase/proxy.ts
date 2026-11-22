@@ -27,6 +27,7 @@ const PUBLIC_API_PATHS = [
   '/api/cron/aniversarios-sms',
   '/api/cron/backup',
   '/api/cron/registos-instrutores',
+  '/api/cron/app-clientes',
   '/api/leads/google-forms',
   '/api/webhooks/leads',
   '/api/webhooks/facebook',

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // App do cliente: projeto à parte, com a sua própria configuração.
+    "app-clientes/**",
   ]),
 ]);
 

@@ -17,6 +17,7 @@ import AvisosFerias from './ferias/AvisosFerias'
 import AvisosHorario from '@/components/AvisosHorario'
 import AvisoAcessos from '@/components/AvisoAcessos'
 import AvisoCheckinSemMensalidade from '@/components/AvisoCheckinSemMensalidade'
+import AvisoPedidosApp from '@/components/AvisoPedidosApp'
 import { contarTarefasUrgentes } from '@/lib/data/tarefas'
 import { contarAlertasAbertos } from '@/lib/data/alertasAbertos'
 import { contarLeadsParaHoje, contarPagamentosEmAtraso } from '@/lib/data/contagensMenu'
@@ -114,6 +115,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
         <Suspense fallback={null}>
           <AvisoAcessos supabase={supabase} />
           {estudio && <AvisoCheckinSemMensalidade supabase={supabase} estudioId={estudio.id} slug={slug} />}
+          {estudio && <AvisoPedidosApp supabase={supabase} estudioId={estudio.id} slug={slug} />}
           <AvisosHorario supabase={supabase} userId={sessao.userId} email={sessao.email} />
           {estudio && (
             <AvisosFerias

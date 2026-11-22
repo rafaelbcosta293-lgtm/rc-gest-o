@@ -13,6 +13,7 @@ import { mesesAtivo } from '@/lib/data/clientes'
 import { proximoAniversario, idadeEm, fmtDiaMes } from '@/lib/data/aniversarios'
 import { fmt, intervaloMes, MESES } from '@/lib/data/presencas'
 import ApagarClienteModal from './ApagarClienteModal'
+import CartaoAppCliente from './CartaoAppCliente'
 import type { Cliente, EstadoPagamento } from '@/lib/supabase/database.types'
 import { ArrowLeft } from 'lucide-react'
 
@@ -38,10 +39,10 @@ export default async function FichaCompletaClientePage({
   searchParams,
 }: {
   params: Promise<{ estudio: string; clienteId: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; app?: string; link?: string; motivo?: string }>
 }) {
   const { estudio: slug, clienteId } = await params
-  const { error } = await searchParams
+  const { error, app: avisoApp, link: linkApp, motivo: motivoApp } = await searchParams
   const agora = new Date()
   const { ano, mes } = { ano: agora.getFullYear(), mes: agora.getMonth() + 1 }
   const { inicio, fimExclusivo } = intervaloMes(ano, mes)
@@ -330,6 +331,8 @@ export default async function FichaCompletaClientePage({
           <p className="mt-2 text-sm text-muted">Sem pagamentos registados.</p>
         )}
       </section>
+
+      <CartaoAppCliente slug={slug} clienteId={clienteId} podeGerir={ehGestao} aviso={{ app: avisoApp, link: linkApp, motivo: motivoApp }} />
     </div>
     </JanelaClientes>
   )

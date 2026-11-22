@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { hojeEmLisboa } from './hoje'
 
-// Clientes que hoje fizeram check-in no tablet sem a mensalidade em dia
-// (a presença ficou registada na mesma) e que ainda não regularizaram:
+// Clientes que hoje tentaram fazer check-in no tablet sem a mensalidade em
+// dia (a presença não ficou registada) e que ainda não regularizaram:
 // desaparecem da lista assim que houver um pagamento de mensalidade válido
 // para hoje nesse serviço.
 

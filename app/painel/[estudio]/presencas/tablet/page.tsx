@@ -125,13 +125,14 @@ export default async function TabletCheckinPage({
           <section className="mt-8 rounded-xl border border-border-subtle bg-surface p-4 text-sm text-foreground shadow-card">
             <h2 className="font-semibold">Meios de pagamento mostrados no tablet</h2>
             <p className="mt-1 text-muted">
-              Quando alguém faz check-in sem a mensalidade em dia, a presença fica registada e o tablet mostra uma mensagem simpática e, a
-              seguir, estes dados durante 20 segundos. Deixe em branco o que não quiser mostrar.
+              Quando alguém faz check-in sem a mensalidade em dia, a presença não fica registada: o tablet diz, com simpatia, que a
+              mensalidade expirou, mostra o valor e, no mesmo ecrã, estes meios de pagamento durante 30 segundos. O link de pagamento
+              aparece como QR code, para pagar ali mesmo com o telemóvel. Deixe em branco o que não quiser mostrar.
             </p>
             <form action={guardarMeiosPagamento} className="mt-3 grid gap-3 sm:grid-cols-2">
               <input type="hidden" name="estudio_slug" value={slug} />
               {CAMPOS_PAGAMENTO.map((c) => (
-                <label key={c.campo} className={`flex flex-col gap-1 ${c.campo === 'nota' ? 'sm:col-span-2' : ''}`}>
+                <label key={c.campo} className={`flex flex-col gap-1 ${c.campo === 'nota' || c.campo === 'link' ? 'sm:col-span-2' : ''}`}>
                   <span className="text-xs font-semibold text-muted">{c.rotulo}</span>
                   {c.campo === 'nota' ? (
                     <textarea name={c.campo} defaultValue={valorPagamento(c.campo)} rows={2} placeholder={c.exemplo} className="rounded-lg border border-border-strong bg-background px-3 py-2" />
@@ -172,8 +173,9 @@ export default async function TabletCheckinPage({
               </li>
               <li>A página mostra só um teclado numérico — nunca nomes nem dados de clientes.</li>
               <li>
-                Se a mensalidade não estiver em dia, a presença fica registada na mesma; o tablet mostra uma mensagem simpática e os meios de
-                pagamento acima, e aparece um aviso no topo da app do estúdio até o pagamento ser registado.
+                Se a mensalidade não estiver em dia, a presença não fica registada; o tablet mostra uma mensagem simpática com o valor e os
+                meios de pagamento acima, e aparece um aviso no topo da app do estúdio até o pagamento ser registado. Depois de registado o
+                pagamento, o cliente volta a fazer o check-in e já fica registado.
               </li>
               <li>
                 Aceita o número de quem tem um treino ou aula marcados <strong className="text-foreground">de 30 min antes do início até 30 min depois do fim</strong>

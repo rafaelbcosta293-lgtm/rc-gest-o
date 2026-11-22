@@ -2,19 +2,18 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { CheckCircle2, Delete, AlertTriangle, HeartHandshake, Smartphone, Landmark } from 'lucide-react'
+import QRCode from 'qrcode'
 import { registarPresenca } from './actions'
-import { limparNumero, mensagemCheckin, temDadosPagamento, type DadosPagamento, type ResultadoCheckin } from '@/lib/data/checkin'
+import { formatarEuros, limparNumero, mensagemCheckin, temDadosPagamento, type DadosPagamento, type ResultadoCheckin } from '@/lib/data/checkin'
 
 const SEGUNDOS_RESULTADO = 4
-// Mensalidade por regularizar: a mensagem fica uns segundos e a seguir
-// mostram-se os meios de pagamento durante 20 s.
-const SEGUNDOS_MENSAGEM_MENSALIDADE = 6
-const SEGUNDOS_PAGAMENTO = 20
+// Mensalidade por regularizar: o aviso e os meios de pagamento ficam no
+// ecrã mais tempo (dá para pagar ali mesmo, pelo QR code ou MB Way).
+const SEGUNDOS_PAGAMENTO = 30
 
 export default function TecladoCheckin({ token }: { token: string }) {
   const [numero, setNumero] = useState('')
   const [resultado, setResultado] = useState<ResultadoCheckin | null>(null)
-  const [pagamento, setPagamento] = useState<DadosPagamento | null>(null)
   const [pendente, iniciar] = useTransition()
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -43,10 +42,10 @@ export default function TecladoCheckin({ token }: { token: string }) {
   }, [])
 
   const carregar = (d: string) => {
-    if (resultado || pagamento || pendente) return
+    if (resultado || pendente) return
     setNumero((n) => limparNumero(n + d))
   }
-  const apagar = () => !resultado && !pagamento && !pendente && setNumero((n) => n.slice(0, -1))
+  const apagar = () => !resultado && !pendente && setNumero((n) => n.slice(0, -1))
 
   const registar = () => {
     if (!numero || pendente) return
@@ -62,29 +61,14 @@ export default function TecladoCheckin({ token }: { token: string }) {
       setNumero('')
       setResultado(r)
       if (temporizador.current) clearTimeout(temporizador.current)
-      if (r.estado === 'ok' && r.mensalidadeEmFalta) {
-        const dados = temDadosPagamento(r.pagamento) ? r.pagamento : null
-        temporizador.current = setTimeout(
-          () => (dados ? mostrarPagamento(dados) : limpar()),
-          (dados ? SEGUNDOS_MENSAGEM_MENSALIDADE : SEGUNDOS_RESULTADO * 2) * 1000
-        )
-      } else {
-        temporizador.current = setTimeout(limpar, SEGUNDOS_RESULTADO * 1000)
-      }
+      const segundos = r.estado === 'sem_mensalidade' ? (temDadosPagamento(r.pagamento) ? SEGUNDOS_PAGAMENTO : SEGUNDOS_RESULTADO * 2) : SEGUNDOS_RESULTADO
+      temporizador.current = setTimeout(limpar, segundos * 1000)
     })
   }
 
   function limpar() {
     if (temporizador.current) clearTimeout(temporizador.current)
     setResultado(null)
-    setPagamento(null)
-  }
-
-  function mostrarPagamento(dados: DadosPagamento) {
-    if (temporizador.current) clearTimeout(temporizador.current)
-    setResultado(null)
-    setPagamento(dados)
-    temporizador.current = setTimeout(limpar, SEGUNDOS_PAGAMENTO * 1000)
   }
 
   // Teclado físico (se o tablet tiver um).
@@ -105,17 +89,13 @@ export default function TecladoCheckin({ token }: { token: string }) {
       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">RC Private Fitness Studio</p>
       <h1 className="mt-2 text-center text-3xl font-bold tracking-tight sm:text-4xl">Registar presença</h1>
 
-      {pagamento ? (
-        <MeiosPagamento dados={pagamento} onFechar={limpar} />
+      {resultado?.estado === 'sem_mensalidade' ? (
+        <MensalidadeEmFalta resultado={resultado} onFechar={limpar} />
       ) : msg ? (
         <div
           role="status"
           aria-live="polite"
-          onClick={() => {
-            const r = resultado
-            if (r?.estado === 'ok' && r.mensalidadeEmFalta && temDadosPagamento(r.pagamento)) mostrarPagamento(r.pagamento)
-            else limpar()
-          }}
+          onClick={limpar}
           className={`mt-10 flex w-full max-w-md flex-col items-center rounded-3xl px-6 py-12 text-center shadow-lg ${
             msg.tom === 'ok'
               ? 'bg-emerald-600 text-white'
@@ -186,38 +166,79 @@ function Tecla({ children, onClick, ...resto }: { children: React.ReactNode; onC
   )
 }
 
-// Meios de pagamento do estúdio (dados do negócio, definidos pela gestão
-// na página do tablet). Desaparece sozinho ao fim de 20 s.
-function MeiosPagamento({ dados, onFechar }: { dados: DadosPagamento; onFechar: () => void }) {
+// Presença não registada por falta de mensalidade em dia: aviso simpático
+// e, no mesmo ecrã, como pagar já (QR code do link de pagamento, MB Way,
+// IBAN). Desaparece sozinho ao fim de 30 s.
+function MensalidadeEmFalta({
+  resultado,
+  onFechar,
+}: {
+  resultado: Extract<ResultadoCheckin, { estado: 'sem_mensalidade' }>
+  onFechar: () => void
+}) {
+  const msg = mensagemCheckin(resultado)
+  const dados = temDadosPagamento(resultado.pagamento) ? resultado.pagamento : null
   return (
-    <div role="status" aria-live="polite" className="mt-8 w-full max-w-md rounded-3xl bg-white px-6 py-8 text-center shadow-lg ring-1 ring-zinc-200">
-      <p className="text-2xl font-bold">Formas de pagamento</p>
-      <p className="mt-1 text-base text-zinc-600">Na descrição, indique o seu nº de cliente. Obrigado!</p>
-      <div className="mt-6 space-y-4 text-left">
-        {dados.mbway && (
-          <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-4">
-            <Smartphone className="h-8 w-8 shrink-0 text-zinc-700" />
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">MB Way</p>
-              <p className="text-3xl font-bold tabular-nums">{dados.mbway}</p>
-            </div>
-          </div>
-        )}
-        {dados.iban && (
-          <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-4">
-            <Landmark className="h-8 w-8 shrink-0 text-zinc-700" />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">Transferência bancária</p>
-              <p className="break-all text-xl font-bold tabular-nums">{dados.iban}</p>
-              {dados.titular && <p className="text-sm text-zinc-600">Titular: {dados.titular}</p>}
-            </div>
-          </div>
-        )}
-        {dados.nota && <p className="whitespace-pre-line text-center text-base text-zinc-700">{dados.nota}</p>}
-      </div>
+    <div role="status" aria-live="polite" className="mt-6 w-full max-w-lg rounded-3xl bg-white px-6 py-7 text-center shadow-lg ring-1 ring-sky-200">
+      <HeartHandshake className="mx-auto h-12 w-12 text-sky-600" />
+      <p className="mt-3 text-2xl font-bold">{msg.titulo}</p>
+      <p className="mt-2 text-lg text-zinc-700">{msg.texto}</p>
+      {resultado.valor != null && (
+        <p className="mt-4 text-base text-zinc-600">
+          Valor da mensalidade: <span className="text-2xl font-bold text-zinc-900">{formatarEuros(resultado.valor)}</span>
+        </p>
+      )}
+      {dados && <MeiosPagamento dados={dados} />}
       <button type="button" onClick={onFechar} className="mt-6 h-14 w-full rounded-2xl bg-zinc-900 text-lg font-bold text-white active:scale-[.98]">
         Concluir
       </button>
+    </div>
+  )
+}
+
+function MeiosPagamento({ dados }: { dados: DadosPagamento }) {
+  const [qr, setQr] = useState<string | null>(null)
+  useEffect(() => {
+    if (!dados.link) return
+    let ativo = true
+    QRCode.toDataURL(dados.link, { margin: 1, width: 360, errorCorrectionLevel: 'M' })
+      .then((url) => ativo && setQr(url))
+      .catch(() => {})
+    return () => {
+      ativo = false
+    }
+  }, [dados.link])
+  return (
+    <div className="mt-5 space-y-3 text-left">
+      <p className="text-center text-sm font-semibold uppercase tracking-wider text-zinc-500">Formas de pagamento</p>
+      {dados.link && qr && (
+        <div className="flex flex-col items-center rounded-2xl bg-zinc-50 p-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={qr} alt="QR code para pagar a mensalidade" className="h-48 w-48" />
+          <p className="mt-2 text-base font-semibold">Aponte a câmara do telemóvel para pagar já</p>
+        </div>
+      )}
+      {dados.mbway && (
+        <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-4">
+          <Smartphone className="h-8 w-8 shrink-0 text-zinc-700" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">MB Way</p>
+            <p className="text-3xl font-bold tabular-nums">{dados.mbway}</p>
+          </div>
+        </div>
+      )}
+      {dados.iban && (
+        <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-4">
+          <Landmark className="h-8 w-8 shrink-0 text-zinc-700" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">Transferência bancária</p>
+            <p className="break-all text-xl font-bold tabular-nums">{dados.iban}</p>
+            {dados.titular && <p className="text-sm text-zinc-600">Titular: {dados.titular}</p>}
+          </div>
+        </div>
+      )}
+      {(dados.mbway || dados.iban) && <p className="text-center text-sm text-zinc-600">Na descrição do pagamento, indique o seu nº de cliente.</p>}
+      {dados.nota && <p className="whitespace-pre-line text-center text-base text-zinc-700">{dados.nota}</p>}
     </div>
   )
 }

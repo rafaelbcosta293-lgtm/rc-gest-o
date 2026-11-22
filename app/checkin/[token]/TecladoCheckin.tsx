@@ -1,15 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { CheckCircle2, Delete, AlertTriangle, HeartHandshake, Smartphone, Landmark } from 'lucide-react'
-import QRCode from 'qrcode'
+import { CheckCircle2, Delete, AlertTriangle, HeartHandshake } from 'lucide-react'
 import { registarPresenca } from './actions'
-import { limparNumero, mensagemCheckin, temDadosPagamento, type DadosPagamento, type ResultadoCheckin } from '@/lib/data/checkin'
+import { limparNumero, mensagemCheckin, type ResultadoCheckin } from '@/lib/data/checkin'
 
 const SEGUNDOS_RESULTADO = 4
-// Mensalidade por regularizar: o aviso e os meios de pagamento ficam no
-// ecrã mais tempo (dá para pagar ali mesmo, pelo QR code ou MB Way).
-const SEGUNDOS_PAGAMENTO = 30
+// Mensalidade por regularizar: o aviso fica mais tempo no ecrã.
+const SEGUNDOS_SEM_MENSALIDADE = 10
 
 export default function TecladoCheckin({ token }: { token: string }) {
   const [numero, setNumero] = useState('')
@@ -61,7 +59,7 @@ export default function TecladoCheckin({ token }: { token: string }) {
       setNumero('')
       setResultado(r)
       if (temporizador.current) clearTimeout(temporizador.current)
-      const segundos = r.estado === 'sem_mensalidade' ? (temDadosPagamento(r.pagamento) ? SEGUNDOS_PAGAMENTO : 10) : SEGUNDOS_RESULTADO
+      const segundos = r.estado === 'sem_mensalidade' ? SEGUNDOS_SEM_MENSALIDADE : SEGUNDOS_RESULTADO
       temporizador.current = setTimeout(limpar, segundos * 1000)
     })
   }
@@ -167,8 +165,8 @@ function Tecla({ children, onClick, ...resto }: { children: React.ReactNode; onC
 }
 
 // Presença não registada por falta de mensalidade em dia: aviso simpático
-// e, no mesmo ecrã, como pagar já (QR code do link de pagamento, MB Way,
-// IBAN). Desaparece sozinho ao fim de 30 s.
+// com a data em que expirou; o instrutor trata do pagamento. Desaparece
+// sozinho ao fim de 10 s.
 function MensalidadeEmFalta({
   resultado,
   onFechar,
@@ -177,63 +175,14 @@ function MensalidadeEmFalta({
   onFechar: () => void
 }) {
   const msg = mensagemCheckin(resultado)
-  const dados = temDadosPagamento(resultado.pagamento) ? resultado.pagamento : null
   return (
-    <div role="status" aria-live="polite" className="mt-6 w-full max-w-lg rounded-3xl bg-white px-6 py-7 text-center shadow-lg ring-1 ring-sky-200">
-      <HeartHandshake className="mx-auto h-12 w-12 text-sky-600" />
-      <p className="mt-3 text-2xl font-bold">{msg.titulo}</p>
-      <p className="mt-2 text-lg text-zinc-700">{msg.texto}</p>
-      {dados && <MeiosPagamento dados={dados} />}
-      <button type="button" onClick={onFechar} className="mt-6 h-14 w-full rounded-2xl bg-zinc-900 text-lg font-bold text-white active:scale-[.98]">
+    <div role="status" aria-live="polite" className="mt-8 w-full max-w-md rounded-3xl bg-white px-6 py-10 text-center shadow-lg ring-1 ring-sky-200">
+      <HeartHandshake className="mx-auto h-14 w-14 text-sky-600" />
+      <p className="mt-4 text-2xl font-bold">{msg.titulo}</p>
+      <p className="mt-3 text-lg text-zinc-700">{msg.texto}</p>
+      <button type="button" onClick={onFechar} className="mt-8 h-14 w-full rounded-2xl bg-zinc-900 text-lg font-bold text-white active:scale-[.98]">
         Concluir
       </button>
-    </div>
-  )
-}
-
-function MeiosPagamento({ dados }: { dados: DadosPagamento }) {
-  const [qr, setQr] = useState<string | null>(null)
-  useEffect(() => {
-    if (!dados.link) return
-    let ativo = true
-    QRCode.toDataURL(dados.link, { margin: 1, width: 360, errorCorrectionLevel: 'M' })
-      .then((url) => ativo && setQr(url))
-      .catch(() => {})
-    return () => {
-      ativo = false
-    }
-  }, [dados.link])
-  return (
-    <div className="mt-5 space-y-3 text-left">
-      <p className="text-center text-sm font-semibold uppercase tracking-wider text-zinc-500">Formas de pagamento</p>
-      {dados.link && qr && (
-        <div className="flex flex-col items-center rounded-2xl bg-zinc-50 p-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qr} alt="QR code para pagar a mensalidade" className="h-48 w-48" />
-          <p className="mt-2 text-base font-semibold">Aponte a câmara do telemóvel para pagar já</p>
-        </div>
-      )}
-      {dados.mbway && (
-        <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-4">
-          <Smartphone className="h-8 w-8 shrink-0 text-zinc-700" />
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">MB Way</p>
-            <p className="text-3xl font-bold tabular-nums">{dados.mbway}</p>
-          </div>
-        </div>
-      )}
-      {dados.iban && (
-        <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-4">
-          <Landmark className="h-8 w-8 shrink-0 text-zinc-700" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">Transferência bancária</p>
-            <p className="break-all text-xl font-bold tabular-nums">{dados.iban}</p>
-            {dados.titular && <p className="text-sm text-zinc-600">Titular: {dados.titular}</p>}
-          </div>
-        </div>
-      )}
-      {(dados.mbway || dados.iban) && <p className="text-center text-sm text-zinc-600">Na descrição do pagamento, indique o seu nº de cliente.</p>}
-      {dados.nota && <p className="whitespace-pre-line text-center text-base text-zinc-700">{dados.nota}</p>}
     </div>
   )
 }

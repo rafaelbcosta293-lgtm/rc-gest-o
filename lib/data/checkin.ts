@@ -2,37 +2,19 @@
 // e 20261121010000_checkin_sem_mensalidade.sql). A resposta da base de
 // dados nunca traz nomes nem outros dados de clientes — só o resultado, a
 // hora do treino/aula e, se a mensalidade não estiver em dia, a data em que
-// expirou, o valor e os meios de pagamento do estúdio (dados do negócio).
-
-export type DadosPagamento = {
-  mbway: string | null
-  iban: string | null
-  titular: string | null
-  // Link de pagamento (ex.: o do banco ou de um serviço de pagamentos) —
-  // o tablet mostra-o como QR code.
-  link: string | null
-  nota: string | null
-}
+// expirou.
 
 export type ResultadoCheckin =
   | { estado: 'ok'; tipo: 'treino' | 'aula'; hora: string; repetido: boolean }
   // Tem treino/aula agora, mas a mensalidade desse serviço não está em dia:
-  // a presença NÃO fica registada e o tablet leva logo ao pagamento.
+  // a presença NÃO fica registada e pede-se para aguardar pelo instrutor.
   | {
       estado: 'sem_mensalidade'
       tipo: 'treino' | 'aula'
       hora: string
       expirouEm: string | null // DD/MM/AAAA
-      valor: number | null
-      pagamento: DadosPagamento | null
     }
   | { estado: 'recusado' | 'bloqueado' | 'posto_invalido' | 'erro' }
-
-export const temDadosPagamento = (p: DadosPagamento | null | undefined): p is DadosPagamento =>
-  !!p && !!(p.mbway || p.iban || p.link || p.nota)
-
-export const formatarEuros = (v: number) =>
-  v.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR', minimumFractionDigits: Number.isInteger(v) ? 0 : 2 })
 
 // Mensagem a mostrar no ecrã do tablet. A recusa é sempre a mesma,
 // exista ou não o número — quem experimente números ao calhas não fica
@@ -71,11 +53,6 @@ export function limparNumero(texto: string): string {
 }
 
 const texto = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
-// Só links https (o QR code nunca aponta para outra coisa).
-const linkSeguro = (v: unknown) => {
-  const t = texto(v)
-  return t && /^https:\/\/\S+$/i.test(t) ? t : null
-}
 
 export function lerResultado(dados: unknown): ResultadoCheckin {
   const d = dados as Partial<{
@@ -84,24 +61,13 @@ export function lerResultado(dados: unknown): ResultadoCheckin {
     hora: string
     repetido: boolean
     expirou_em: string | null
-    valor: number | string | null
-    pagamento: Record<string, unknown> | null
   }> | null
   const tipo = d?.tipo === 'aula' ? 'aula' : 'treino'
   if (d?.estado === 'ok' && typeof d.hora === 'string') {
     return { estado: 'ok', tipo, hora: d.hora, repetido: !!d.repetido }
   }
   if (d?.estado === 'sem_mensalidade' && typeof d.hora === 'string') {
-    const p = d.pagamento
-    const valor = d.valor == null ? null : Number(d.valor)
-    return {
-      estado: 'sem_mensalidade',
-      tipo,
-      hora: d.hora,
-      expirouEm: texto(d.expirou_em),
-      valor: valor != null && Number.isFinite(valor) && valor > 0 ? valor : null,
-      pagamento: p ? { mbway: texto(p.mbway), iban: texto(p.iban), titular: texto(p.titular), link: linkSeguro(p.link), nota: texto(p.nota) } : null,
-    }
+    return { estado: 'sem_mensalidade', tipo, hora: d.hora, expirouEm: texto(d.expirou_em) }
   }
   if (d?.estado === 'recusado' || d?.estado === 'bloqueado' || d?.estado === 'posto_invalido') return { estado: d.estado }
   return { estado: 'erro' }

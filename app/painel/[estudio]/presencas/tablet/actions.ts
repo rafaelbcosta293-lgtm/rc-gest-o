@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
-import { CAMPOS_PAGAMENTO, validarLinkPagamento } from '@/lib/data/meiosPagamento'
 
 const caminho = (slug: string) => `/painel/${slug}/presencas/tablet`
 
@@ -32,19 +31,3 @@ export async function desativarPostoCheckin(formData: FormData) {
   redirect(caminho(slug))
 }
 
-// Meios de pagamento mostrados no tablet (só a gestão — a RLS de config
-// também o garante).
-export async function guardarMeiosPagamento(formData: FormData) {
-  const slug = String(formData.get('estudio_slug'))
-  const erroLink = validarLinkPagamento(String(formData.get('link') ?? ''))
-  if (erroLink) redirect(`${caminho(slug)}?error=${encodeURIComponent(erroLink)}`)
-  const supabase = await createClient()
-  const linhas = CAMPOS_PAGAMENTO.map((c) => ({
-    chave: `pagamento_${c.campo}_${slug}`,
-    valor: String(formData.get(c.campo) ?? '').trim().slice(0, 300) || null,
-  }))
-  const { error } = await supabase.from('config').upsert(linhas, { onConflict: 'chave' })
-  if (error) redirect(`${caminho(slug)}?error=${encodeURIComponent(error.message)}`)
-  revalidatePath(caminho(slug))
-  redirect(`${caminho(slug)}?guardado=1`)
-}

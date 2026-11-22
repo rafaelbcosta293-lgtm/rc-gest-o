@@ -105,8 +105,8 @@ export default async function ProgressoPage() {
             <li key={m.mes} className="flex items-center justify-between px-4 py-3 text-sm">
               <span className="font-semibold capitalize">{nomeMes(m.mes)}</span>
               <span className="tabular-nums">
-                <span className="font-bold text-emerald-700">{m.presentes}</span> treinos
-                {m.faltas > 0 && <span className="text-muted"> · {m.faltas} faltas</span>}
+                <span className="font-bold text-emerald-700">{m.presentes}</span> {m.presentes === 1 ? 'treino' : 'treinos'}
+                {m.faltas > 0 && <span className="text-muted"> · {m.faltas === 1 ? '1 falta' : `${m.faltas} faltas`}</span>}
               </span>
             </li>
           ))}

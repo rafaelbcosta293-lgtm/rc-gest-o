@@ -125,6 +125,7 @@ begin
   return v_id;
 end $$;
 revoke all on function public.inscrever_em_aula_app(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.inscrever_em_aula_app(uuid, uuid) to service_role;
 
 -- Cancelar a inscrição pela app: até 2 horas antes da aula (depois disso,
 -- fala-se com a equipa).
@@ -145,6 +146,7 @@ begin
   if v_n = 0 then raise exception 'Não está inscrito nesta aula.'; end if;
 end $$;
 revoke all on function public.cancelar_inscricao_app(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.cancelar_inscricao_app(uuid, uuid) to service_role;
 
 -- Uma sincronização de cada vez (o pg_cron chama de 20 em 20 s; se uma
 -- demorar mais, a seguinte não começa por cima dela).
@@ -170,3 +172,4 @@ begin
   return v_n = 1;
 end $$;
 revoke all on function public.app_clientes_reclamar_sync(int) from public, anon, authenticated;
+grant execute on function public.app_clientes_reclamar_sync(int) to service_role;

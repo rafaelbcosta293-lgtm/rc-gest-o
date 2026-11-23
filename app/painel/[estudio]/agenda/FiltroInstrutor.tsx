@@ -23,7 +23,7 @@ export default function FiltroInstrutor({
           const o = opcoes.find((x) => x.id === e.target.value)
           if (o) router.push(o.href, { scroll: false })
         }}
-        className={`rounded-full border py-1 pl-2.5 pr-7 text-xs font-medium outline-none max-sm:w-full max-sm:py-1.5 ${
+        className={`rounded-full border py-1 pl-2.5 pr-7 text-xs font-medium outline-none max-sm:w-full max-sm:py-1.5 pointer-coarse:py-2 pointer-coarse:pl-3.5 pointer-coarse:text-base ${
           ativo ? 'border-brand bg-brand text-black' : 'border-border-subtle bg-surface text-foreground'
         }`}
       >

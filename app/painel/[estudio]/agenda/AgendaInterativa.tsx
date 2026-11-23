@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import { Minus, Plus, HelpCircle, StickyNote, TriangleAlert } from 'lucide-react'
+import FolhaInferior from '@/components/FolhaInferior'
 import type { ClienteOpcao } from '@/components/ClienteCombobox'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { rotuloTipoEvento, type LimiteRepeticao, type Repeticao } from '@/lib/data/agenda'
@@ -649,7 +650,19 @@ type Arrasto =
   // rato agarrou (ex.: evento às 17h00, clicado a meio, às 17h20 → 20)
   // para o bloco se deslocar mantendo esse ponto fixo sob o rato, em
   // vez de "saltar" para o início do evento ficar sempre sob o rato.
-  | { tipo: 'mover'; evento: EventoComNomes; offsetMin: number }
+  // "toque": movimento iniciado com o dedo (manter e arrastar), tratado
+  // pelos eventos de toque em vez dos do rato.
+  | { tipo: 'mover'; evento: EventoComNomes; offsetMin: number; toque?: boolean }
+
+// Gestos de toque (tablet/telemóvel) num evento ou num espaço vazio.
+type GestosToque = {
+  onTouchStart: (e: React.TouchEvent) => void
+  onTouchMove: (e: React.TouchEvent) => void
+  onTouchEnd: (e: React.TouchEvent) => void
+  onTouchCancel: () => void
+}
+const TOQUE_LONGO_MS = 350
+const TOQUE_FOLGA_PX = 10
 
 function GrelhaInterativa({
   dias,
@@ -701,6 +714,15 @@ function GrelhaInterativa({
 
   const [previa, setPrevia] = useState<{ dia: string; inicioMin: number; fimMin: number } | null>(null)
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
+  // Toque em curso (tablet/telemóvel): onde começou, se já se mexeu (é
+  // um deslizar da página, não um toque) e o temporizador do "manter".
+  const toqueRef = useRef<{ x: number; y: number; mexeu: boolean; temporizador: ReturnType<typeof setTimeout> | null } | null>(null)
+  // Quando foi o último toque — os browsers simulam eventos de rato a
+  // seguir a um toque; com isto ignoram-se (a hora ao lado do "cursor" e
+  // o menu do botão direito que o Android abre ao manter o dedo).
+  const ultimoToqueRef = useRef(0)
+  // (compara-se a hora do próprio evento, a mesma "régua" nos de toque e nos de rato)
+  const foiToque = (quando: number) => quando - ultimoToqueRef.current < 1200
   // Um evento só fica com as pegas de redimensionar ativas depois de um
   // clique a selecioná-lo — sem isto, a pega (que é maior do que a
   // risca visível, de propósito) ficava sempre pronta a agarrar, e
@@ -755,10 +777,16 @@ function GrelhaInterativa({
 
   useEffect(() => {
     function mover(e: MouseEvent) {
-      const loc = localizar(e.clientX, e.clientY)
+      atualizar(e.clientX, e.clientY, e.target, !foiToque(e.timeStamp))
+    }
+
+    function atualizar(clientX: number, clientY: number, alvo: EventTarget | null, comCursor: boolean) {
+      const loc = localizar(clientX, clientY)
       const arrasto = arrastoRef.current
-      if (loc) {
-        setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto, cruz: mostraCruz(e.target, arrasto?.tipo === 'criar') })
+      if (!comCursor) {
+        // toque: não há cursor para acompanhar
+      } else if (loc) {
+        setCursor({ x: clientX, y: clientY, minuto: loc.minuto, cruz: mostraCruz(alvo, arrasto?.tipo === 'criar') })
       } else if (!arrasto) {
         // Fora da grelha e sem nenhum arrasto em curso — a hora some,
         // em vez de ficar presa no sítio onde o rato saiu (ex.: por
@@ -803,12 +831,16 @@ function GrelhaInterativa({
     }
 
     function soltar(e: MouseEvent) {
+      soltarEm(e.clientX, e.clientY)
+    }
+
+    function soltarEm(clientX: number, clientY: number) {
       const arrasto = arrastoRef.current
       if (!arrasto) return
       arrastoRef.current = null
       setPrevia(null)
       setArrastandoId(null)
-      const loc = localizar(e.clientX, e.clientY)
+      const loc = localizar(clientX, clientY)
       if (!loc) return
 
       if (arrasto.tipo === 'criar') {
@@ -843,18 +875,57 @@ function GrelhaInterativa({
       if (e.key === 'Escape' && arrastoRef.current) cancelarArrasto()
     }
 
+    // Toque: depois de "manter" o dedo num evento (ver gestosEvento), o
+    // arrasto segue o dedo. Só com preventDefault é que a página deixa
+    // de deslizar por baixo — por isso estes ouvintes não são "passive".
+    const arrastoPorToque = () => {
+      const a = arrastoRef.current
+      return a?.tipo === 'mover' && a.toque ? a : null
+    }
+    function toqueMover(e: TouchEvent) {
+      if (!arrastoPorToque()) return
+      e.preventDefault()
+      const t = e.touches[0]
+      if (!t) return
+      // Perto do topo/fundo da grelha, ela desliza sozinha para se poder
+      // largar o evento numa hora que não estava à vista.
+      const caixa = scrollRef.current
+      if (caixa) {
+        const r = caixa.getBoundingClientRect()
+        if (t.clientY < r.top + 48) caixa.scrollTop -= 14
+        else if (t.clientY > r.bottom - 48) caixa.scrollTop += 14
+      }
+      atualizar(t.clientX, t.clientY, e.target, false)
+    }
+    function toqueSoltar(e: TouchEvent) {
+      if (!arrastoPorToque()) return
+      e.preventDefault()
+      const t = e.changedTouches[0]
+      if (t) soltarEm(t.clientX, t.clientY)
+      else cancelarArrasto()
+    }
+    function toqueCancelado() {
+      if (arrastoPorToque()) cancelarArrasto()
+    }
+
     window.addEventListener('mousemove', mover)
     window.addEventListener('mouseup', soltar)
     window.addEventListener('keydown', aoPressionarTecla)
+    window.addEventListener('touchmove', toqueMover, { passive: false })
+    window.addEventListener('touchend', toqueSoltar, { passive: false })
+    window.addEventListener('touchcancel', toqueCancelado)
     return () => {
       window.removeEventListener('mousemove', mover)
       window.removeEventListener('mouseup', soltar)
       window.removeEventListener('keydown', aoPressionarTecla)
+      window.removeEventListener('touchmove', toqueMover)
+      window.removeEventListener('touchend', toqueSoltar)
+      window.removeEventListener('touchcancel', toqueCancelado)
     }
   }, [localizar, onClickVazio, onRedimensionar, onMover, mostraCruz])
 
   function aoMoverRatoEmRepouso(e: React.MouseEvent) {
-    if (arrastoRef.current) return
+    if (arrastoRef.current || foiToque(e.timeStamp)) return
     const loc = localizar(e.clientX, e.clientY)
     if (loc) setCursor({ x: e.clientX, y: e.clientY, minuto: loc.minuto, cruz: mostraCruz(e.target, false) })
   }
@@ -926,42 +997,168 @@ function GrelhaInterativa({
     return (e: React.MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
+      // Com o dedo, "manter" serve para arrastar; editar é só tocar.
+      if (e.type === 'contextmenu' && foiToque(e.timeStamp)) return
       onAbrirEvento(evento)
+    }
+  }
+
+  // ── Toque (tablet/telemóvel) ────────────────────────────────────────
+  // Tocar num evento abre-o para editar; manter o dedo (um instante) e
+  // arrastar move-o; tocar num espaço vazio cria um evento de 40 min.
+  // Deslizar o dedo continua a deslizar a grelha, como sempre.
+  function limparToque() {
+    if (toqueRef.current?.temporizador) clearTimeout(toqueRef.current.temporizador)
+    toqueRef.current = null
+  }
+
+  function comecarToque(e: React.TouchEvent, aoManter?: (x: number, y: number) => void) {
+    ultimoToqueRef.current = e.timeStamp
+    if (e.touches.length !== 1) {
+      limparToque()
+      return
+    }
+    const { clientX: x, clientY: y } = e.touches[0]
+    if (toqueRef.current?.temporizador) clearTimeout(toqueRef.current.temporizador)
+    toqueRef.current = { x, y, mexeu: false, temporizador: aoManter ? setTimeout(() => aoManter(x, y), TOQUE_LONGO_MS) : null }
+  }
+
+  function seguirToque(e: React.TouchEvent) {
+    const t = toqueRef.current
+    const dedo = e.touches[0]
+    if (!t || !dedo || t.mexeu) return
+    if (Math.abs(dedo.clientX - t.x) > TOQUE_FOLGA_PX || Math.abs(dedo.clientY - t.y) > TOQUE_FOLGA_PX) {
+      // Mexeu antes do tempo de "manter": é um deslizar da página.
+      t.mexeu = true
+      if (t.temporizador) clearTimeout(t.temporizador)
+      t.temporizador = null
+    }
+  }
+
+  function gestosEvento(evento: EventoComNomes, podeMover: boolean): GestosToque {
+    return {
+      // (Sem stopPropagation: os ouvintes da janela que seguem o arrasto
+      // precisam de receber estes eventos. A coluna ignora toques que
+      // começam dentro de um evento — ver gestosColuna.)
+      onTouchStart: (e) => {
+        comecarToque(
+          e,
+          podeMover
+            ? (x, y) => {
+                const inicioOriginal = minutosDoDia(evento.hora_inicio)
+                const loc = localizar(x, y)
+                arrastoRef.current = { tipo: 'mover', evento, offsetMin: loc ? loc.minuto - inicioOriginal : 0, toque: true }
+                setSelecionadoId(evento.id)
+                setArrastandoId(evento.id)
+                setPrevia({ dia: evento.data, inicioMin: inicioOriginal, fimMin: inicioOriginal + evento.duracao_min })
+                if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(12)
+              }
+            : undefined
+        )
+      },
+      onTouchMove: seguirToque,
+      onTouchEnd: (e) => {
+        ultimoToqueRef.current = e.timeStamp
+        const t = toqueRef.current
+        const emArrasto = arrastoRef.current?.tipo === 'mover' && arrastoRef.current.toque
+        limparToque()
+        // A arrastar: quem larga é o ouvinte da janela (toqueSoltar).
+        if (emArrasto || !t || t.mexeu) return
+        // Toque simples: abre o evento. preventDefault evita o clique
+        // simulado que viria a seguir.
+        e.preventDefault()
+        onAbrirEvento(evento)
+      },
+      onTouchCancel: limparToque,
+    }
+  }
+
+  function gestosColuna(dia: string): GestosToque {
+    const noVazio = (alvo: EventTarget | null) => !(alvo instanceof Element && alvo.closest('button, a, [data-fechado], [data-aula]'))
+    return {
+      onTouchStart: (e) => {
+        if (noVazio(e.target)) comecarToque(e)
+        else ultimoToqueRef.current = e.timeStamp
+      },
+      onTouchMove: seguirToque,
+      onTouchEnd: (e) => {
+        ultimoToqueRef.current = e.timeStamp
+        const t = toqueRef.current
+        limparToque()
+        if (!t || t.mexeu || !noVazio(e.target)) return
+        const loc = localizar(t.x, t.y)
+        if (!loc) return
+        e.preventDefault()
+        setSelecionadoId(null)
+        onClickVazio(dia, minutosParaHora(loc.minuto), 40)
+      },
+      onTouchCancel: limparToque,
     }
   }
 
   // O sítio na barra de cima da Agenda onde ficam a ajuda e o zoom.
   const [alvoFerramentas, setAlvoFerramentas] = useState<HTMLElement | null>(null)
+  const [ajudaAberta, setAjudaAberta] = useState(false)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAlvoFerramentas(document.getElementById('agenda-ferramentas'))
   }, [])
   const ferramentas = (
     <>
-        {/* Instruções de uso — texto igual ao de antes, só que agora
-          num ícone com dica ao passar o rato, em vez de um parágrafo
-          sempre visível, para a grelha começar mais perto do topo. */}
-      <span
+        {/* Instruções de uso: dica ao passar o rato; com o dedo (onde as
+          dicas não aparecem) tocar abre a mesma explicação numa folha. */}
+      <button
+        type="button"
+        onClick={() => setAjudaAberta(true)}
+        aria-label="Como usar a Agenda"
         title={
           somenteLeitura
-            ? 'A tua conta só pode ver a Agenda — botão direito num evento para ver os detalhes.'
-            : 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio.'
+            ? 'A tua conta só pode ver a Agenda.'
+            : 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio. No tablet: toca para abrir, mantém o dedo e arrasta para mover.'
         }
-        className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground"
+        className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground pointer-coarse:h-9 pointer-coarse:w-9"
       >
-        <HelpCircle className="h-3.5 w-3.5" />
-      </span>
+        <HelpCircle className="h-3.5 w-3.5 pointer-coarse:h-5 pointer-coarse:w-5" />
+      </button>
+      <FolhaInferior aberta={ajudaAberta} aoFechar={() => setAjudaAberta(false)} titulo="Como usar a Agenda">
+        <div className="space-y-4 px-2 pb-2 text-[15px] leading-snug">
+          {somenteLeitura ? (
+            <p className="text-muted">A tua conta só pode ver a Agenda.</p>
+          ) : (
+            <>
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">No tablet ou telemóvel</p>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                  <li><strong>Tocar num evento</strong> abre-o para editar ou desmarcar.</li>
+                  <li><strong>Manter o dedo e arrastar</strong> muda-o de hora ou de dia.</li>
+                  <li><strong>Tocar num espaço vazio</strong> cria um evento de 40 minutos a essa hora.</li>
+                  <li>Deslizar o dedo percorre a grelha, como sempre.</li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">No computador</p>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                  <li><strong>Botão direito</strong> num evento para o editar.</li>
+                  <li><strong>Arrastar</strong> o meio de um evento para o mover; clicar uma vez e puxar o topo ou o fundo para o encurtar ou alongar.</li>
+                  <li><strong>Clicar e arrastar</strong> num espaço vazio cria com essa duração (um clique simples usa 40 minutos).</li>
+                  <li><strong>Esc</strong> cancela um arrasto a meio.</li>
+                </ul>
+              </div>
+            </>
+          )}
+        </div>
+      </FolhaInferior>
       <div className="flex shrink-0 items-center gap-0.5 rounded-full border border-border-subtle bg-surface px-0.5 py-0.5 shadow-pop">
         <button
           type="button"
           onClick={() => onZoomIndiceChange(Math.max(0, zoomIndice - 1))}
           disabled={zoomIndice === 0}
           title="Diminuir zoom"
-          className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
+          className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30 pointer-coarse:h-9 pointer-coarse:w-9"
         >
-          <Minus className="h-3 w-3" />
+          <Minus className="h-3 w-3 pointer-coarse:h-4 pointer-coarse:w-4" />
         </button>
-        <span className="w-8 text-center text-[10px] font-semibold text-muted">
+        <span className="w-8 text-center text-[10px] font-semibold text-muted pointer-coarse:w-10 pointer-coarse:text-xs">
           {Math.round((pxPorMinuto / NIVEIS_ZOOM[ZOOM_OMISSAO]) * 100)}%
         </span>
         <button
@@ -969,9 +1166,9 @@ function GrelhaInterativa({
           onClick={() => onZoomIndiceChange(Math.min(NIVEIS_ZOOM.length - 1, zoomIndice + 1))}
           disabled={zoomIndice === NIVEIS_ZOOM.length - 1}
           title="Aumentar zoom"
-          className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30"
+          className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30 pointer-coarse:h-9 pointer-coarse:w-9"
         >
-          <Plus className="h-3 w-3" />
+          <Plus className="h-3 w-3 pointer-coarse:h-4 pointer-coarse:w-4" />
         </button>
       </div>
     </>
@@ -1039,6 +1236,8 @@ function GrelhaInterativa({
                 onIniciarRedimensionamento={iniciarRedimensionamento}
                 onIniciarMovimento={iniciarMovimento}
                 onAbrirContexto={aoAbrirContexto}
+                gestosEvento={gestosEvento}
+                gestosColuna={somenteLeitura || diasFechados[dia] ? undefined : gestosColuna(dia)}
                 arrastandoId={arrastandoId}
                 selecionadoId={selecionadoId}
                 previa={previa?.dia === dia ? previa : null}
@@ -1097,6 +1296,8 @@ function ColunaDia({
   onIniciarRedimensionamento,
   onIniciarMovimento,
   onAbrirContexto,
+  gestosEvento,
+  gestosColuna,
   arrastandoId,
   selecionadoId,
   previa,
@@ -1116,6 +1317,8 @@ function ColunaDia({
   onIniciarRedimensionamento: (evento: EventoComNomes, pega: 'topo' | 'fundo') => (e: React.MouseEvent) => void
   onIniciarMovimento: (evento: EventoComNomes) => (e: React.MouseEvent) => void
   onAbrirContexto: (evento: EventoComNomes) => (e: React.MouseEvent) => void
+  gestosEvento: (evento: EventoComNomes, podeMover: boolean) => GestosToque
+  gestosColuna?: GestosToque
   arrastandoId: string | null
   selecionadoId: string | null
   previa: { inicioMin: number; fimMin: number } | null
@@ -1138,6 +1341,7 @@ function ColunaDia({
     <div
       ref={registarRef}
       onMouseDown={somenteLeitura || fechado ? undefined : onIniciarCriacao}
+      {...gestosColuna}
       data-fechado={fechado ? '' : undefined}
       className="relative border-l border-border-subtle bg-surface transition-colors select-none"
       // Sem cursor do sistema na grelha vazia: a cruz é desenhada pela
@@ -1279,6 +1483,7 @@ function ColunaDia({
             }
             onClick={somenteLeitura ? undefined : cancelado ? onAbrirContexto(evento) : undefined}
             onContextMenu={somenteLeitura ? undefined : onAbrirContexto(evento)}
+            {...(somenteLeitura ? {} : gestosEvento(evento, !cancelado))}
             className={`group absolute rounded-md text-left transition-opacity select-none ${
               somenteLeitura
                 ? '!cursor-default'
@@ -1291,6 +1496,8 @@ function ColunaDia({
               cancelado ? 'hover:!z-30 hover:!text-[#8A4A45] hover:shadow-lg' : ''
             }`}
             style={{
+              // iPad: manter o dedo não abre o menu/lupa do sistema.
+              WebkitTouchCallout: 'none',
               // Pequeno espaço (calc) entre blocos vizinhos — horizontal
               // (colunas lado a lado) e vertical (altura 2px mais curta
               // do que o espaço disponível) — para nunca ficarem

@@ -1,7 +1,7 @@
 'use client'
 
-import { Fragment, useRef, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ArrowDown, ArrowUp, Copy, Ellipsis, Trash2 } from 'lucide-react'
 import { BLOCOS, BLOCO_COR, CORREU, estiloDaNota, TIPOS_NOTA } from '@/lib/data/constantes'
 import type { BlocoTipo } from '@/lib/data/constantes'
 import type { CatalogoExercicios, ItemCatalogo } from '@/lib/data/catalogo'
@@ -10,6 +10,7 @@ import ExercicioPicker from './ExercicioPicker'
 // existe um ficheiro actions.ts, partilhado por todos os clientes.
 import { guardarLinhaExercicio, apagarLinhaExercicio } from './[clienteId]/treino/actions'
 import SubmitButton from '@/components/SubmitButton'
+import FolhaInferior from '@/components/FolhaInferior'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 export type LinhaExercicio = {
@@ -67,41 +68,76 @@ const TITULO_ESTADO: Record<EstadoLinha, string> = {
   erro: 'Não guardou — tenta outra vez',
 }
 
-// Uma linha por exercício, tudo lado a lado (bloco, exercício, séries,
-// reps, carga, descanso, nota) em vez de empilhado por baixo do nome —
-// a legenda de cada coluna aparece uma só vez, no cabeçalho da grelha,
-// em vez de repetida exercício a exercício. gap-x/gap-y ficam a 0: o
-// espaço entre colunas/linhas vem do padding de cada CelulaGrid, não
-// de um gap da grelha — assim a risca de cada linha (border-b) fica
-// contínua de ponta a ponta, sem um "buraco" transparente a cortá-la.
-const GRID_COLUNAS = '92px minmax(160px,1.4fr) 56px 56px 64px 72px minmax(120px,1fr) 28px'
+// Computador e tablet (≥768px): uma linha por exercício, tudo lado a
+// lado (bloco, exercício, séries, reps, carga, descanso, nota) — a
+// legenda de cada coluna aparece uma só vez, no cabeçalho da grelha.
+// Em ecrãs de toque as colunas e os campos são maiores (dedos, não
+// rato). Telemóvel (<768px): cada exercício é um cartão, com os quatro
+// números lado a lado e a legenda por cima de cada um — a grelha larga
+// obrigava a deslizar de lado para chegar à carga e à nota.
+// gap a 0 na grelha: o espaço entre colunas/linhas vem do padding de
+// cada célula, para a risca de cada linha (border-b) ficar contínua.
+const GRELHA_CLS =
+  'flex flex-col gap-3 md:grid md:min-w-[756px] md:gap-0 ' +
+  'md:grid-cols-[118px_minmax(160px,1.4fr)_56px_56px_64px_72px_minmax(120px,1fr)_64px] ' +
+  'pointer-coarse:md:min-w-[748px] ' +
+  'pointer-coarse:md:grid-cols-[126px_minmax(180px,2fr)_60px_68px_72px_80px_minmax(88px,1fr)_92px]'
 const CABECALHOS_GRID = ['Bloco', 'Exercício', 'Séries', 'Reps', 'Carga', 'Descanso', 'Nota', '']
 
-// Uma célula da grelha: só esta tem a risca horizontal (border-b) e o
-// respiro entre colunas (padding) — o controlo lá dentro (select,
-// input, botão) preenche-a toda, sem bordas próprias, só com um fundo
-// preenchido (estilo Apple: caixa de texto cheia, não emoldurada).
+// Uma célula: no computador/tablet tem a risca horizontal (border-b) e
+// o respiro entre colunas; no telemóvel é só uma peça do cartão (a
+// posição dentro do cartão vem em `className`).
 function CelulaGrid({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`flex min-w-0 items-center border-b border-border-subtle/70 px-1 py-1 ${className}`}>
+    <div className={`flex min-w-0 items-center md:border-b md:border-border-subtle/70 md:px-1 md:py-1 ${className}`}>
       {children}
     </div>
   )
 }
 
 const campoPreenchidoCls =
-  'w-full min-w-0 rounded-md bg-zinc-100 px-2 py-1.5 text-xs outline-none focus:bg-white focus:ring-2 focus:ring-brand/50 dark:bg-zinc-800 dark:focus:bg-zinc-900'
+  'w-full min-w-0 rounded-md bg-zinc-100 px-2 py-1.5 text-xs outline-none focus:bg-white focus:ring-2 focus:ring-brand/50 dark:bg-zinc-800 dark:focus:bg-zinc-900 ' +
+  'max-md:rounded-lg max-md:py-2.5 pointer-coarse:rounded-lg pointer-coarse:py-2.5 pointer-coarse:text-base'
 
+// Campo de uma célula. No telemóvel leva a legenda por cima (no
+// computador/tablet a legenda está no cabeçalho da grelha). Enter passa
+// ao campo seguinte, para se preencher uma linha de seguida.
 function CampoGrid({
   value,
   onChange,
+  rotulo,
+  teclado,
   className = '',
 }: {
   value: string
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  rotulo: string
+  teclado?: 'numeric' | 'decimal'
   className?: string
 }) {
-  return <input value={value} onChange={onChange} className={`${campoPreenchidoCls} ${className}`} />
+  return (
+    <label className="flex w-full min-w-0 flex-col gap-1">
+      <span className="text-[10px] font-bold tracking-wide text-muted uppercase md:hidden">{rotulo}</span>
+      <input
+        value={value}
+        onChange={onChange}
+        aria-label={rotulo}
+        data-campo-plano
+        inputMode={teclado}
+        enterKeyHint="next"
+        autoComplete="off"
+        autoCapitalize="off"
+        autoCorrect="off"
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter') return
+          e.preventDefault()
+          const campos = Array.from(document.querySelectorAll<HTMLInputElement>('input[data-campo-plano]'))
+          campos[campos.indexOf(e.currentTarget) + 1]?.focus()
+        }}
+        className={`${campoPreenchidoCls} ${className}`}
+      />
+    </label>
+  )
 }
 
 type ValoresSugeridos = { series: string; reps: string; carga: string; descanso: string }
@@ -148,6 +184,8 @@ export default function TreinoForm({
   )
   const [estados, setEstados] = useState<Record<string, EstadoLinha>>({})
   const [seletorPara, setSeletorPara] = useState<string | null>(null)
+  // Linha cujo menu (subir, descer, duplicar, remover) está aberto.
+  const [menuPara, setMenuPara] = useState<string | null>(null)
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const { marcarSujo, limparSujo } = useAvisoSairSemGuardar()
   const registado = !!inicial.correu
@@ -225,9 +263,22 @@ export default function TreinoForm({
     guardarLinha(atualizada, indice)
   }
 
+  // A ordem de cada exercício é a posição na lista. Sempre que a
+  // posição de várias linhas muda (remover, duplicar, mover), regravam-se
+  // as afetadas — senão ficavam duas com a mesma ordem e, ao reabrir o
+  // plano, podiam aparecer trocadas.
+  const regravarOrdem = (linhas: LinhaExercicio[], desde: number, ate = linhas.length - 1) => {
+    for (let k = Math.max(0, desde); k <= ate && k < linhas.length; k++) {
+      clearTimeout(timers.current[linhas[k].key])
+      void guardarLinha(linhas[k], k)
+    }
+  }
+
   const removerLinha = async (linha: LinhaExercicio) => {
     clearTimeout(timers.current[linha.key])
-    setExercicios((linhas) => linhas.filter((l) => l.key !== linha.key))
+    const indice = exercicios.findIndex((l) => l.key === linha.key)
+    const restantes = exercicios.filter((l) => l.key !== linha.key)
+    setExercicios(restantes)
     if (linha.id) {
       const resultado = await apagarLinhaExercicio(linha.id)
       if ('error' in resultado) {
@@ -235,12 +286,37 @@ export default function TreinoForm({
         // perder silenciosamente o exercício da vista.
         setExercicios((linhas) => [...linhas, linha])
         setEstados((s) => ({ ...s, [linha.key]: 'erro' }))
+        return
       }
     }
+    if (indice >= 0) regravarOrdem(restantes, indice)
   }
 
+  // Acrescenta uma linha desse bloco e abre logo a escolha do exercício
+  // (um toque a menos).
   const adicionarLinha = (bloco: BlocoTipo) => {
-    setExercicios((linhas) => [...linhas, linhaVazia(bloco)])
+    const nova = linhaVazia(bloco)
+    setExercicios((linhas) => [...linhas, nova])
+    setSeletorPara(nova.key)
+  }
+
+  const moverLinha = (key: string, delta: -1 | 1) => {
+    const i = exercicios.findIndex((l) => l.key === key)
+    const j = i + delta
+    if (i < 0 || j < 0 || j >= exercicios.length) return
+    const nova = [...exercicios]
+    ;[nova[i], nova[j]] = [nova[j], nova[i]]
+    setExercicios(nova)
+    regravarOrdem(nova, Math.min(i, j), Math.max(i, j))
+  }
+
+  const duplicarLinha = (key: string) => {
+    const i = exercicios.findIndex((l) => l.key === key)
+    if (i < 0) return
+    const copia = { ...exercicios[i], key: crypto.randomUUID(), id: null }
+    const nova = [...exercicios.slice(0, i + 1), copia, ...exercicios.slice(i + 1)]
+    setExercicios(nova)
+    regravarOrdem(nova, i + 1)
   }
 
   const aoCriarExercicio = (item: ItemCatalogo, categoriaId: string | null) => {
@@ -292,7 +368,7 @@ export default function TreinoForm({
   }
 
   const inputCls =
-    'rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-brand'
+    'rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-brand pointer-coarse:py-2.5 pointer-coarse:text-base'
   const labelCompactoCls = 'text-[11px] font-semibold uppercase tracking-wide text-muted'
 
   return (
@@ -309,19 +385,15 @@ export default function TreinoForm({
           <span className="text-[11px] text-zinc-400">guarda-se sozinho, exercício a exercício</span>
         </div>
 
-        {/* Uma grelha só, com o cabeçalho das colunas uma única vez —
-            cada exercício ocupa uma linha (bloco, exercício, séries,
-            reps, carga, descanso, nota lado a lado), em vez de um
-            cartão alto por exercício com os campos empilhados por
-            baixo do nome. overflow-x-auto + min-w garantem que as
-            colunas nunca ficam espremidas num ecrã estreito — desliza
-            em vez de encolher a ponto de ficar ilegível. */}
-        <div className="mt-2 overflow-x-auto overflow-y-hidden rounded-2xl border border-border-subtle bg-surface shadow-card">
-          <div className="campos-densos grid min-w-[700px]" style={{ gridTemplateColumns: GRID_COLUNAS }}>
+        {/* Computador/tablet: uma grelha só, com o cabeçalho das colunas
+            uma única vez (desliza de lado se a janela for estreita).
+            Telemóvel: um cartão por exercício. Ver GRELHA_CLS. */}
+        <div className="mt-2 md:overflow-x-auto md:overflow-y-hidden md:rounded-2xl md:border md:border-border-subtle md:bg-surface md:shadow-card">
+          <div className={GRELHA_CLS}>
             {CABECALHOS_GRID.map((h, i) => (
               <span
                 key={i}
-                className="border-b-2 border-border-strong bg-zinc-50 px-1 py-2 text-center text-[10px] font-bold tracking-wide text-muted uppercase dark:bg-white/[.03]"
+                className="hidden border-b-2 border-border-strong bg-zinc-50 px-1 py-2 text-center text-[10px] font-bold tracking-wide text-muted uppercase md:block pointer-coarse:py-2.5 pointer-coarse:text-[11px] dark:bg-white/[.03]"
               >
                 {h}
               </span>
@@ -330,13 +402,17 @@ export default function TreinoForm({
             {exercicios.map((linha, indice) => {
               const estado = estados[linha.key]
               return (
-                <Fragment key={linha.key}>
-                  <CelulaGrid>
+                <div
+                  key={linha.key}
+                  className="grid grid-cols-4 gap-x-2 gap-y-2.5 rounded-2xl border border-border-subtle bg-surface p-3 shadow-card md:contents"
+                >
+                  <CelulaGrid className="order-1 col-span-3 md:order-none md:col-span-1">
                     <select
                       value={linha.bloco}
                       onChange={(e) => aoMudarBloco(linha, indice, e.target.value as BlocoTipo)}
+                      aria-label="Bloco"
                       style={{ color: BLOCO_COR[linha.bloco], boxShadow: `inset 3px 0 0 0 ${BLOCO_COR[linha.bloco]}` }}
-                      className="w-full min-w-0 rounded-md bg-zinc-100 px-1.5 py-1.5 text-center text-xs font-medium dark:bg-zinc-800"
+                      className="w-full min-w-0 rounded-md bg-zinc-100 px-1.5 py-1.5 text-xs font-medium max-md:w-auto max-md:rounded-lg max-md:py-2 max-md:pr-8 max-md:pl-3 max-md:text-sm md:text-center pointer-coarse:rounded-lg pointer-coarse:py-2.5 pointer-coarse:text-sm dark:bg-zinc-800"
                     >
                       {BLOCOS.map((b) => (
                         <option key={b} value={b} style={{ color: BLOCO_COR[b] }}>
@@ -346,70 +422,70 @@ export default function TreinoForm({
                     </select>
                   </CelulaGrid>
 
-                  <CelulaGrid>
+                  <CelulaGrid className="order-3 col-span-4 md:order-none md:col-span-1">
                     <button
                       type="button"
                       onClick={() => setSeletorPara(linha.key)}
                       title={estado ? TITULO_ESTADO[estado] : undefined}
-                      className={`relative w-full min-w-0 rounded-md px-2 py-1.5 text-left text-xs ${
+                      className={`relative w-full min-w-0 rounded-md px-2 py-1.5 text-left text-xs max-md:rounded-lg max-md:px-3 max-md:py-2.5 max-md:text-[15px] max-md:font-semibold pointer-coarse:rounded-lg pointer-coarse:py-2.5 pointer-coarse:text-[15px] ${
                         linha.exercicio_nome
                           ? 'bg-zinc-100 text-foreground dark:bg-zinc-800'
                           : 'bg-amber-50 text-amber-700 italic dark:bg-amber-950/40 dark:text-amber-300'
                       }`}
                     >
-                      <span className="block truncate pr-3">{linha.exercicio_nome || '+ Escolher exercício…'}</span>
+                      <span className="block pr-3 md:truncate pointer-coarse:md:line-clamp-2 pointer-coarse:md:leading-tight pointer-coarse:md:whitespace-normal">
+                        {linha.exercicio_nome || '+ Escolher exercício…'}
+                      </span>
                       {/* Estado a guardar — um pontinho discreto no
                           canto, não uma linha de texto à parte por
                           exercício. */}
                       {estado && (
                         <span
                           title={TITULO_ESTADO[estado]}
-                          className="absolute top-1/2 right-1.5 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
+                          className="absolute top-1/2 right-1.5 h-1.5 w-1.5 -translate-y-1/2 rounded-full pointer-coarse:h-2 pointer-coarse:w-2"
                           style={{ background: COR_ESTADO[estado] }}
                         />
                       )}
                     </button>
                   </CelulaGrid>
 
-                  <CelulaGrid>
-                    <CampoGrid
-                      value={linha.series}
-                      onChange={aoMudarCampo(linha, indice, 'series')}
-                      className="text-center"
-                    />
+                  <CelulaGrid className="order-4 md:order-none">
+                    <CampoGrid rotulo="Séries" teclado="numeric" value={linha.series} onChange={aoMudarCampo(linha, indice, 'series')} className="text-center" />
                   </CelulaGrid>
-                  <CelulaGrid>
-                    <CampoGrid value={linha.reps} onChange={aoMudarCampo(linha, indice, 'reps')} className="text-center" />
+                  <CelulaGrid className="order-4 md:order-none">
+                    <CampoGrid rotulo="Reps" value={linha.reps} onChange={aoMudarCampo(linha, indice, 'reps')} className="text-center" />
                   </CelulaGrid>
-                  <CelulaGrid>
-                    <CampoGrid
-                      value={linha.carga}
-                      onChange={aoMudarCampo(linha, indice, 'carga')}
-                      className="text-center"
-                    />
+                  <CelulaGrid className="order-4 md:order-none">
+                    <CampoGrid rotulo="Carga" teclado="decimal" value={linha.carga} onChange={aoMudarCampo(linha, indice, 'carga')} className="text-center" />
                   </CelulaGrid>
-                  <CelulaGrid>
-                    <CampoGrid
-                      value={linha.descanso}
-                      onChange={aoMudarCampo(linha, indice, 'descanso')}
-                      className="text-center"
-                    />
+                  <CelulaGrid className="order-4 md:order-none">
+                    <CampoGrid rotulo="Descanso" value={linha.descanso} onChange={aoMudarCampo(linha, indice, 'descanso')} className="text-center" />
                   </CelulaGrid>
-                  <CelulaGrid>
-                    <CampoGrid value={linha.nota} onChange={aoMudarCampo(linha, indice, 'nota')} />
+                  <CelulaGrid className="order-5 col-span-4 md:order-none md:col-span-1">
+                    <CampoGrid rotulo="Nota" value={linha.nota} onChange={aoMudarCampo(linha, indice, 'nota')} />
                   </CelulaGrid>
 
-                  <CelulaGrid className="justify-center">
+                  <CelulaGrid className="order-2 col-span-1 justify-end gap-0.5 md:order-none md:justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setMenuPara(linha.key)}
+                      aria-label="Mover ou duplicar este exercício"
+                      title="Mover ou duplicar"
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:bg-foreground/[.06] hover:text-foreground max-md:h-10 max-md:w-10 pointer-coarse:h-10 pointer-coarse:w-10"
+                    >
+                      <Ellipsis className="h-4 w-4 pointer-coarse:h-5 pointer-coarse:w-5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => removerLinha(linha)}
                       aria-label="Remover linha"
-                      className="flex items-center justify-center rounded-md p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                      title="Remover"
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:bg-red-50 hover:text-red-600 max-md:h-10 max-md:w-10 pointer-coarse:h-10 pointer-coarse:w-10 dark:hover:bg-red-950/40"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3.5 w-3.5 pointer-coarse:h-[18px] pointer-coarse:w-[18px]" />
                     </button>
                   </CelulaGrid>
-                </Fragment>
+                </div>
               )
             })}
           </div>
@@ -422,13 +498,56 @@ export default function TreinoForm({
               type="button"
               onClick={() => adicionarLinha(b)}
               style={{ color: BLOCO_COR[b] }}
-              className="rounded-md border border-dashed border-border-strong px-3 py-1.5 text-xs font-semibold"
+              className="rounded-md border border-dashed border-border-strong px-3 py-1.5 text-xs font-semibold max-md:flex-1 max-md:rounded-xl max-md:py-2.5 max-md:text-sm pointer-coarse:rounded-xl pointer-coarse:px-4 pointer-coarse:py-2.5 pointer-coarse:text-sm"
             >
               + {b}
             </button>
           ))}
         </div>
       </div>
+
+      {/* Menu de uma linha: mover, duplicar, remover. */}
+      {(() => {
+        const i = exercicios.findIndex((l) => l.key === menuPara)
+        const linha = i >= 0 ? exercicios[i] : null
+        const opcaoCls =
+          'flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium active:bg-foreground/[.06] hover:bg-foreground/[.04] disabled:opacity-35'
+        return (
+          <FolhaInferior aberta={!!linha} aoFechar={() => setMenuPara(null)} titulo={linha?.exercicio_nome || 'Exercício'}>
+            {linha && (
+              <div className="flex flex-col">
+                <button type="button" className={opcaoCls} disabled={i === 0} onClick={() => moverLinha(linha.key, -1)}>
+                  <ArrowUp className="h-5 w-5 text-muted" /> Mover para cima
+                </button>
+                <button type="button" className={opcaoCls} disabled={i === exercicios.length - 1} onClick={() => moverLinha(linha.key, 1)}>
+                  <ArrowDown className="h-5 w-5 text-muted" /> Mover para baixo
+                </button>
+                <button
+                  type="button"
+                  className={opcaoCls}
+                  disabled={!linha.exercicio_nome}
+                  onClick={() => {
+                    duplicarLinha(linha.key)
+                    setMenuPara(null)
+                  }}
+                >
+                  <Copy className="h-5 w-5 text-muted" /> Duplicar
+                </button>
+                <button
+                  type="button"
+                  className={`${opcaoCls} text-red-700 dark:text-red-400`}
+                  onClick={() => {
+                    setMenuPara(null)
+                    void removerLinha(linha)
+                  }}
+                >
+                  <Trash2 className="h-5 w-5" /> Remover
+                </button>
+              </div>
+            )}
+          </FolhaInferior>
+        )
+      })()}
 
       <ExercicioPicker
         aberto={seletorPara !== null}
@@ -480,7 +599,7 @@ export default function TreinoForm({
           </div>
           <SubmitButton
             pendingText="A guardar…"
-            className="rounded-full border border-border-strong px-5 py-2 text-sm font-bold hover:bg-foreground/[.08]"
+            className="rounded-full border border-border-strong px-5 py-2 text-sm font-bold hover:bg-foreground/[.08] pointer-coarse:py-2.5"
           >
             Guardar plano
           </SubmitButton>
@@ -549,7 +668,7 @@ export default function TreinoForm({
                       setTipoNota(k)
                       marcarSujo()
                     }}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors pointer-coarse:px-4 pointer-coarse:py-2 pointer-coarse:text-sm ${
                       tipoNota === k ? estiloDaNota(k).botao : 'border-border-subtle text-muted hover:text-foreground'
                     }`}
                   >
@@ -569,7 +688,7 @@ export default function TreinoForm({
                 rows={3}
                 value={notaProxima}
                 onChange={(e) => setNotaProxima(e.target.value)}
-                className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm dark:bg-zinc-900"
+                className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm pointer-coarse:text-base dark:bg-zinc-900"
               />
             </div>
 

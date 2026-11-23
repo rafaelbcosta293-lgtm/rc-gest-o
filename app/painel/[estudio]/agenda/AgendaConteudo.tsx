@@ -323,7 +323,7 @@ export default async function AgendaConteudo({
             <Link
               key={v}
               href={`${basePath}${construirQuery({ pt: ptFiltro }, { vista: v })}`}
-              className={`rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-all ${
+              className={`rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-all pointer-coarse:px-4 pointer-coarse:py-2 pointer-coarse:text-sm ${
                 vista === v ? 'bg-surface text-foreground shadow-pop' : 'text-muted hover:text-foreground'
               }`}
             >
@@ -340,7 +340,7 @@ export default async function AgendaConteudo({
           <div className="flex items-center gap-2 max-sm:order-3 max-sm:w-full">
           <Link
             href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: anterior })}`}
-            className="rounded-full border border-border-strong px-2 py-1 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+            className="rounded-full border border-border-strong px-2 py-1 text-sm font-semibold text-foreground hover:bg-brand/[.08] pointer-coarse:px-3 pointer-coarse:py-2"
             aria-label="Anterior"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -348,7 +348,7 @@ export default async function AgendaConteudo({
           <span className="text-sm font-semibold whitespace-nowrap text-foreground">{tituloPeriodo}</span>
           <Link
             href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: seguinte })}`}
-            className="rounded-full border border-border-strong px-2 py-1 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
+            className="rounded-full border border-border-strong px-2 py-1 text-sm font-semibold text-foreground hover:bg-brand/[.08] pointer-coarse:px-3 pointer-coarse:py-2"
             aria-label="Seguinte"
           >
             <ChevronRight className="h-4 w-4" />
@@ -360,7 +360,7 @@ export default async function AgendaConteudo({
             href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, {})}`}
             aria-current={periodoTemHoje ? 'date' : undefined}
             title={periodoTemHoje ? 'Já estás no período de hoje' : 'Voltar a hoje'}
-            className={`rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+            className={`rounded-full px-3 py-1 text-xs font-bold transition-colors pointer-coarse:px-4 pointer-coarse:py-2 pointer-coarse:text-sm ${
               periodoTemHoje ? 'border border-border-subtle text-muted hover:bg-brand/[.08]' : 'bg-brand text-black hover:bg-brand-strong'
             }`}
           >
@@ -396,7 +396,7 @@ export default async function AgendaConteudo({
           {!somenteLeitura && (
             <Link
               href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover max-sm:order-6 max-sm:px-4 max-sm:py-2 max-sm:text-sm"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover max-sm:order-6 max-sm:px-4 max-sm:py-2 max-sm:text-sm pointer-coarse:px-4 pointer-coarse:py-2 pointer-coarse:text-sm"
             >
               <Plus className="h-3.5 w-3.5" /> Evento
             </Link>

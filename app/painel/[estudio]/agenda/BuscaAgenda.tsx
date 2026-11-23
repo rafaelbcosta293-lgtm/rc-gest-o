@@ -55,7 +55,7 @@ export default function BuscaAgenda({ estudioId, basePath }: { estudioId: number
   }, [])
 
   return (
-    <div ref={caixaRef} className="relative w-full min-w-[140px] sm:w-40">
+    <div ref={caixaRef} className="relative w-full min-w-[140px] sm:w-40 pointer-coarse:sm:w-56">
       <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
         <Search className="h-3.5 w-3.5" />
       </span>
@@ -75,7 +75,7 @@ export default function BuscaAgenda({ estudioId, basePath }: { estudioId: number
         }}
         placeholder="Pesquisar…"
         aria-label="Pesquisar na agenda"
-        className="w-full rounded-full border border-border-subtle bg-surface py-1.5 pl-8 pr-7 text-xs outline-none transition-colors focus:border-brand/60"
+        className="w-full rounded-full border border-border-subtle bg-surface py-1.5 pl-8 pr-7 text-xs outline-none transition-colors focus:border-brand/60 pointer-coarse:py-2 pointer-coarse:text-base"
       />
       {texto && (
         <button

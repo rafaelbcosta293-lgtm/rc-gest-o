@@ -20,7 +20,7 @@ export default function BotaoAulasAgenda({ ativo }: { ativo: boolean }) {
         document.cookie = `${COOKIE_AULAS_AGENDA}=${ativo ? '0' : '1'}; path=/; max-age=31536000; samesite=lax`
         iniciar(() => router.refresh())
       }}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-60 ${
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-60 pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm ${
         ativo ? 'bg-sky-600 text-white hover:bg-sky-700' : 'border border-border-subtle text-muted hover:bg-brand/[.08]'
       }`}
     >

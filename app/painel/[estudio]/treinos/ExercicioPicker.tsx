@@ -82,6 +82,12 @@ export default function ExercicioPicker({
 
   if (!aberto) return null
 
+  // Ecrãs de toque: a pesquisa não fica logo com o cursor — o teclado
+  // abria por cima dos "mais usados" e das categorias, que é por onde
+  // quase sempre se escolhe. (Só corre no browser: a janela só abre
+  // depois de um toque.)
+  const ecraDeToque = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
   const jaExiste = (nome: string) =>
     catalogo.todos.some((e) => e.nome.toLowerCase() === nome.trim().toLowerCase())
 
@@ -115,7 +121,7 @@ export default function ExercicioPicker({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={fechar}>
       <div
-        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-zinc-50 p-4 dark:bg-zinc-900"
+        className="max-h-[85dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-2xl bg-zinc-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -123,7 +129,7 @@ export default function ExercicioPicker({
           <button
             type="button"
             onClick={fechar}
-            className="rounded-full p-1 text-muted hover:bg-black/[.06] dark:hover:bg-white/[.08]"
+            className="rounded-full p-1 text-muted hover:bg-black/[.06] dark:hover:bg-white/[.08] pointer-coarse:p-2.5"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -131,14 +137,14 @@ export default function ExercicioPicker({
         </div>
 
         <input
-          autoFocus
+          autoFocus={!ecraDeToque}
           value={q}
           onChange={(e) => {
             setQ(e.target.value)
             setErroNovo(null)
           }}
           placeholder="Pesquisar, ou escrever o nome de um exercício novo…"
-          className="mt-4 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+          className="mt-4 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand pointer-coarse:py-3 pointer-coarse:text-base"
         />
 
         {!emPesquisa && (
@@ -148,7 +154,7 @@ export default function ExercicioPicker({
                 <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-muted">
                   Mais usados com este cliente
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 pointer-coarse:gap-2">
                   {maisUsados.map((e) => (
                     <button
                       key={e.id}
@@ -157,7 +163,7 @@ export default function ExercicioPicker({
                         escolher(e)
                         fechar()
                       }}
-                      className="truncate rounded-md border border-teal-300 bg-teal-50 px-2.5 py-1.5 text-left text-xs font-medium text-teal-800 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-200"
+                      className="truncate rounded-md border border-teal-300 bg-teal-50 px-2.5 py-1.5 text-left text-xs font-medium pointer-coarse:rounded-lg pointer-coarse:py-2.5 pointer-coarse:text-sm text-teal-800 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-200"
                     >
                       {e.nome}
                     </button>
@@ -175,7 +181,7 @@ export default function ExercicioPicker({
                     setGrupo(parte)
                     setCatId(null)
                   }}
-                  className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors ${
+                  className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors pointer-coarse:py-2.5 pointer-coarse:text-sm ${
                     grupo === parte
                       ? 'bg-white text-foreground shadow-sm dark:bg-zinc-900'
                       : 'text-muted'
@@ -185,7 +191,7 @@ export default function ExercicioPicker({
                 </button>
               ))}
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+            <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 pointer-coarse:gap-2">
               {catalogo.categorias
                 .filter((c) => c.parte === grupo)
                 .map((c) => (
@@ -193,7 +199,7 @@ export default function ExercicioPicker({
                     key={c.id}
                     type="button"
                     onClick={() => setCatId(catId === c.id ? null : c.id)}
-                    className={`truncate rounded-md border px-2.5 py-1.5 text-left text-xs ${
+                    className={`truncate rounded-md border px-2.5 py-1.5 text-left text-xs pointer-coarse:rounded-lg pointer-coarse:py-2.5 pointer-coarse:text-sm pointer-coarse:leading-tight pointer-coarse:whitespace-normal ${
                       catId === c.id
                         ? 'border-brand bg-brand text-black'
                         : 'border-border-subtle bg-white dark:bg-zinc-800'
@@ -260,7 +266,7 @@ export default function ExercicioPicker({
                     escolher(e)
                     fechar()
                   }}
-                  className="min-w-0 flex-1 truncate px-3 py-2.5 text-left text-sm"
+                  className="min-w-0 flex-1 truncate px-3 py-2.5 text-left text-sm pointer-coarse:py-3 pointer-coarse:text-base"
                 >
                   {e.nome}
                 </button>
@@ -268,7 +274,7 @@ export default function ExercicioPicker({
                   type="button"
                   onClick={() => iniciarEdicao(e)}
                   aria-label={`Editar ${e.nome}`}
-                  className="rounded p-1.5 text-zinc-400 hover:text-foreground"
+                  className="rounded p-1.5 text-zinc-400 hover:text-foreground pointer-coarse:p-3"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
@@ -277,7 +283,7 @@ export default function ExercicioPicker({
                   onClick={() => confirmarEliminacao(e)}
                   disabled={aEliminar && idAEliminar === e.id}
                   aria-label={`Eliminar ${e.nome}`}
-                  className="mr-1 rounded p-1.5 text-zinc-400 hover:text-red-600 disabled:opacity-50"
+                  className="mr-1 rounded p-1.5 text-zinc-400 hover:text-red-600 disabled:opacity-50 pointer-coarse:p-3"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

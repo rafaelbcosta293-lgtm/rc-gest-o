@@ -129,10 +129,10 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           )}
         </Suspense>
 
-        {/* Telemóvel (<768px): mini-barra no topo, só para trocar de
+        {/* Telemóvel e tablet ao alto (<1024px): mini-barra no topo, só para trocar de
             estúdio — os módulos ficam na barra de separadores do fundo,
             sempre ao alcance do polegar, ao estilo iOS. */}
-        <div className="shadow-deep flex items-center justify-end gap-1 border-b border-border-subtle bg-background/90 px-4 py-2 backdrop-blur-xl md:hidden">
+        <div className="shadow-deep flex items-center justify-end gap-1 border-b border-border-subtle bg-background/90 px-4 py-2 backdrop-blur-xl lg:hidden">
           {/* Sempre à vista: volta ao menu inicial deste estúdio. */}
           <span className="mr-auto">
             <NavLinkInicio slug={slug} comTexto />
@@ -157,13 +157,13 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
           </Link>
         </div>
 
-        {/* Computador/tablet (≥768px): barra superior fixa, com o
+        {/* Computador e tablet deitado (≥1024px): barra superior fixa, com o
             logótipo, os módulos (pílulas, numa linha com scroll
             horizontal se não couberem) e as ações à direita. Só esta
             faixa fica com o tema escuro ("dark tema-proprio") — o resto
             da página continua no modelo claro, ao contrário da
             Administração, onde o escuro é a área toda. */}
-        <header className="dark tema-proprio shadow-deep hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl md:flex">
+        <header className="dark tema-proprio shadow-deep hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl lg:flex">
           {/* O logótipo volta ao quadro inicial (estúdios, Coordenação,
               Administração); o botão "Início" volta ao início deste estúdio. */}
           <Link href="/painel" title="Quadro inicial — estúdios, Coordenação e Administração" className="flex shrink-0 items-center">
@@ -223,7 +223,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
 
       {/* O conteúdo ganha espaço extra no fundo, no telemóvel, para a
           barra de separadores fixa não tapar o fim da página. */}
-      <div className="min-w-0 flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+      <div className="min-w-0 flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
 
       {/* Telemóvel: barra de separadores fixa no fundo (os módulos mais
           usados + "Mais", que abre a lista completa). */}

@@ -11,7 +11,7 @@ import type { EscopoApagar, EscopoEditar } from './actions'
 import type { EstadoModal, PtOpcao, EstudioOpcao } from './AgendaInterativa'
 
 const inputCls =
-  'w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand'
+  'w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand pointer-coarse:py-2.5 pointer-coarse:text-base'
 
 const DURACOES_COMUNS = [30, 40, 45, 60, 90, 120]
 
@@ -105,10 +105,14 @@ export default function EventoModalOverlay({
   // NovoEventoForm para a explicação completa) — desligada por omissão.
   const [clienteDeFora, setClienteDeFora] = useState(false)
 
+  // Duração controlada, para os botões rápidos (30, 40, 45… min) a
+  // poderem mudar com um toque, sem abrir o teclado.
+  const [duracao, setDuracao] = useState(String(duracaoDefault))
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onFechar}>
       <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border-subtle bg-surface p-5 shadow-pop"
+        className="max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl border border-border-subtle bg-surface p-5 shadow-pop pointer-coarse:max-w-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -118,9 +122,10 @@ export default function EventoModalOverlay({
           <button
             type="button"
             onClick={onFechar}
-            className="rounded-full p-1 text-muted hover:bg-brand/[.06] hover:text-foreground"
+            aria-label="Fechar"
+            className="rounded-full p-1 text-muted hover:bg-brand/[.06] hover:text-foreground pointer-coarse:p-2.5"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 pointer-coarse:h-5 pointer-coarse:w-5" />
           </button>
         </div>
 
@@ -136,7 +141,7 @@ export default function EventoModalOverlay({
                 type="button"
                 onClick={onPararSerie}
                 disabled={aPendente}
-                className="shrink-0 rounded-full border border-border-strong px-2.5 py-1 text-xs font-bold hover:bg-foreground/[.08] disabled:opacity-60"
+                className="shrink-0 rounded-full border border-border-strong px-2.5 py-1 text-xs font-bold pointer-coarse:px-4 pointer-coarse:py-2.5 pointer-coarse:text-sm hover:bg-foreground/[.08] disabled:opacity-60"
               >
                 Parar repetição
               </button>
@@ -185,7 +190,7 @@ export default function EventoModalOverlay({
                   onChange={() => setTipo(t)}
                   className="peer sr-only"
                 />
-                <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[9px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
+                <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[9px] font-semibold pointer-coarse:py-2 pointer-coarse:text-xs text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
                   {t}
                 </span>
               </label>
@@ -296,34 +301,60 @@ export default function EventoModalOverlay({
           )}
 
           <div className="grid grid-cols-3 gap-2">
-            <input
-              type="date"
-              name="data"
-              defaultValue={dataDefault}
-              required
-              readOnly={escopoEditar !== 'um'}
-              title={escopoEditar !== 'um' ? 'A data de cada ocorrência mantém-se — escolhe "Só este" para a mudar.' : undefined}
-              className={`${inputCls} ${escopoEditar !== 'um' ? 'opacity-50' : ''}`}
-            />
-            <input type="time" name="hora_inicio" defaultValue={horaDefault} required className={inputCls} />
-            <input
-              type="number"
-              name="duracao_min"
-              min={5}
-              max={1440}
-              step={1}
-              list="duracoes-comuns-modal"
-              defaultValue={duracaoDefault}
-              required
-              className={inputCls}
-              title="Duração em minutos — qualquer valor, não só os sugeridos"
-            />
-            <datalist id="duracoes-comuns-modal">
-              {DURACOES_COMUNS.map((min) => (
-                <option key={min} value={min} />
-              ))}
-            </datalist>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-[11px] font-semibold text-muted">Dia</span>
+              <input
+                type="date"
+                name="data"
+                defaultValue={dataDefault}
+                required
+                readOnly={escopoEditar !== 'um'}
+                title={escopoEditar !== 'um' ? 'A data de cada ocorrência mantém-se — escolhe "Só este" para a mudar.' : undefined}
+                className={`${inputCls} ${escopoEditar !== 'um' ? 'opacity-50' : ''}`}
+              />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-[11px] font-semibold text-muted">Hora</span>
+              <input type="time" name="hora_inicio" defaultValue={horaDefault} required className={inputCls} />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-[11px] font-semibold text-muted">Duração (min)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                name="duracao_min"
+                min={5}
+                max={1440}
+                step={1}
+                value={duracao}
+                onChange={(e) => setDuracao(e.target.value)}
+                required
+                className={inputCls}
+                title="Duração em minutos — qualquer valor, não só os sugeridos"
+              />
+            </label>
           </div>
+          {/* Durações mais usadas, a um toque (qualquer outro valor escreve-se no campo). */}
+          {!somenteLeitura && (
+            <div className="-mt-1 flex flex-wrap gap-1.5" role="group" aria-label="Durações mais usadas">
+              {DURACOES_COMUNS.map((min) => {
+                const ativa = Number(duracao) === min
+                return (
+                  <button
+                    key={min}
+                    type="button"
+                    onClick={() => setDuracao(String(min))}
+                    aria-pressed={ativa}
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm ${
+                      ativa ? 'border-brand bg-brand text-black' : 'border-border-subtle text-muted hover:border-border-strong hover:text-foreground'
+                    }`}
+                  >
+                    {min >= 60 && min % 60 === 0 ? `${min / 60} h` : `${min} min`}
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           {editar && evento?.serie_id && participantes.length <= 1 && (
             <fieldset className="flex flex-col gap-1.5">
@@ -345,7 +376,7 @@ export default function EventoModalOverlay({
                       onChange={() => setEscopoEditar(o.valor)}
                       className="peer sr-only"
                     />
-                    <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[10px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
+                    <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[10px] font-semibold pointer-coarse:py-2 pointer-coarse:text-[13px] text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
                       {o.label}
                     </span>
                   </label>
@@ -393,7 +424,7 @@ export default function EventoModalOverlay({
                           onChange={() => setLimiteModo(o.valor)}
                           className="peer sr-only"
                         />
-                        <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[10px] font-semibold text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
+                        <span className="block cursor-pointer rounded-full px-1 py-1 text-center text-[10px] font-semibold pointer-coarse:py-2 pointer-coarse:text-[13px] text-muted transition-all peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-pop">
                           {o.label}
                         </span>
                       </label>
@@ -507,7 +538,7 @@ export default function EventoModalOverlay({
               </legend>
               <div className="flex gap-1">
                 <label
-                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-colors ${
+                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium pointer-coarse:py-2.5 pointer-coarse:text-sm transition-colors ${
                     contarComoRealizado === true
                       ? 'border-accent bg-accent-soft'
                       : 'border-border-subtle bg-surface'
@@ -523,7 +554,7 @@ export default function EventoModalOverlay({
                   Sim, conta como realizado
                 </label>
                 <label
-                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-colors ${
+                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium pointer-coarse:py-2.5 pointer-coarse:text-sm transition-colors ${
                     contarComoRealizado === false
                       ? 'border-accent bg-accent-soft'
                       : 'border-border-subtle bg-surface'
@@ -546,7 +577,7 @@ export default function EventoModalOverlay({
               </legend>
               <div className="flex gap-1">
                 <label
-                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-colors ${
+                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium pointer-coarse:py-2.5 pointer-coarse:text-sm transition-colors ${
                     foiRemarcado === true ? 'border-accent bg-accent-soft' : 'border-border-subtle bg-surface'
                   }`}
                 >
@@ -560,7 +591,7 @@ export default function EventoModalOverlay({
                   Sim, já remarcou
                 </label>
                 <label
-                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-colors ${
+                  className={`flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-center text-xs font-medium pointer-coarse:py-2.5 pointer-coarse:text-sm transition-colors ${
                     foiRemarcado === false ? 'border-accent bg-accent-soft' : 'border-border-subtle bg-surface'
                   }`}
                 >
@@ -583,7 +614,7 @@ export default function EventoModalOverlay({
                   if (contarComoRealizado === null || foiRemarcado === null) return
                   onDesmarcar(contarComoRealizado, foiRemarcado)
                 }}
-                className="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-50"
+                className="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-bold pointer-coarse:px-4 pointer-coarse:py-2.5 pointer-coarse:text-sm text-white hover:bg-amber-700 disabled:opacity-50"
               >
                 {aPendente ? 'A desmarcar…' : 'Confirmar'}
               </button>
@@ -591,7 +622,7 @@ export default function EventoModalOverlay({
                 type="button"
                 disabled={aPendente}
                 onClick={() => setAConfirmarDesmarcar(false)}
-                className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
+                className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold pointer-coarse:px-4 pointer-coarse:py-2.5 pointer-coarse:text-sm hover:bg-foreground/[.06]"
               >
                 Cancelar
               </button>
@@ -618,7 +649,7 @@ export default function EventoModalOverlay({
               ).map((o) => (
                 <label
                   key={o.valor}
-                  className={`cursor-pointer rounded-md border px-2 py-1.5 text-xs font-medium transition-colors ${
+                  className={`cursor-pointer rounded-md border px-2 py-1.5 text-xs font-medium pointer-coarse:py-2.5 pointer-coarse:text-sm transition-colors ${
                     escopoApagar === o.valor
                       ? 'border-red-400 bg-red-100 dark:bg-red-900/40'
                       : 'border-border-subtle bg-surface'
@@ -651,7 +682,7 @@ export default function EventoModalOverlay({
                   }
                   if (window.confirm(avisos[escopoApagar])) onApagar(escopoApagar)
                 }}
-                className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold pointer-coarse:px-4 pointer-coarse:py-2.5 pointer-coarse:text-sm text-white hover:bg-red-700 disabled:opacity-50"
               >
                 {aPendente ? 'A apagar…' : 'Confirmar'}
               </button>
@@ -659,7 +690,7 @@ export default function EventoModalOverlay({
                 type="button"
                 disabled={aPendente}
                 onClick={() => setAConfirmarApagar(false)}
-                className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[.06]"
+                className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold pointer-coarse:px-4 pointer-coarse:py-2.5 pointer-coarse:text-sm hover:bg-foreground/[.06]"
               >
                 Cancelar
               </button>

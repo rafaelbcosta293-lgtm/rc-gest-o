@@ -340,10 +340,12 @@ export function NavLinkPhone({ href, id, aviso = 0 }: { href: string; id: string
   )
 }
 
-// Telemóvel: barra de separadores com os quatro módulos mais usados a
-// que a conta tem acesso e um botão "Mais", que abre a lista completa
-// (com nomes) numa folha ao fundo do ecrã — em vez de uma tira com todos
-// os módulos, que obrigava a deslizar de lado às cegas.
+// Telemóvel e tablet ao alto (<1024px): barra de separadores com os
+// módulos mais usados a que a conta tem acesso — quatro no telemóvel,
+// seis no tablet — e um botão "Mais", que abre a lista completa (com
+// nomes) numa folha ao fundo do ecrã. Antes era uma tira com todos os
+// módulos, que obrigava a deslizar de lado às cegas; e no tablet ao alto
+// a barra de cima ficava só com ícones, sem nomes.
 const PRIORIDADE_TELEMOVEL = ['agenda', 'clientes', 'pagamentos', 'tarefas', 'treinos', 'aulas', 'leads', 'presencas']
 
 export type ItemNavTelemovel = { id: string; acessivel: boolean; aviso: number; motivo?: string }
@@ -355,21 +357,30 @@ export function NavTelemovel({ slug, itens }: { slug: string; itens: ItemNavTele
   const principais = [
     ...PRIORIDADE_TELEMOVEL.map((id) => acessiveis.find((i) => i.id === id)).filter((i): i is ItemNavTelemovel => !!i),
     ...acessiveis.filter((i) => !PRIORIDADE_TELEMOVEL.includes(i.id)),
-  ].slice(0, 4)
+  ].slice(0, 6)
   const idsPrincipais = new Set(principais.map((i) => i.id))
   const resto = itens.filter((i) => !idsPrincipais.has(i.id))
-  const avisosNoResto = resto.reduce((s, i) => s + (i.acessivel ? i.aviso : 0), 0)
-  const ativoNoResto = resto.some((i) => i.acessivel && estaAtivo(pathname, `/painel/${slug}/${i.id}`))
+  const avisosDe = (lista: ItemNavTelemovel[]) => lista.reduce((s, i) => s + (i.acessivel ? i.aviso : 0), 0)
+  const ativoEm = (lista: ItemNavTelemovel[]) => lista.some((i) => i.acessivel && estaAtivo(pathname, `/painel/${slug}/${i.id}`))
+  // No telemóvel o 5º e o 6º não aparecem na barra: os avisos e o "estás
+  // aqui" deles contam para o botão "Mais" (versões à parte por tamanho).
+  const soNoTablet = principais.slice(4)
+  const avisosNoResto = avisosDe(resto)
+  const avisosNoRestoTelemovel = avisosNoResto + avisosDe(soNoTablet)
+  const ativoNoResto = ativoEm(resto)
+  const ativoNoRestoTelemovel = ativoNoResto || ativoEm(soNoTablet)
 
   return (
     <>
       <nav
         aria-label="Módulos"
-        className="fixed inset-x-0 bottom-0 z-10 grid border-t border-border-subtle bg-background/90 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-[0_-2px_2px_rgba(24,24,27,0.05),0_-16px_32px_-8px_rgba(24,24,27,0.16)] backdrop-blur-xl md:hidden"
-        style={{ gridTemplateColumns: `repeat(${principais.length + (resto.length > 0 ? 1 : 0)}, minmax(0, 1fr))` }}
+        className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border-subtle bg-background/90 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-[0_-2px_2px_rgba(24,24,27,0.05),0_-16px_32px_-8px_rgba(24,24,27,0.16)] backdrop-blur-xl sm:px-6 lg:hidden"
       >
-        {principais.map((i) => (
-          <NavLinkPhone key={i.id} href={`/painel/${slug}/${i.id}`} id={i.id} aviso={i.aviso} />
+        {principais.map((i, n) => (
+          // O 5º e o 6º só cabem a partir do tablet.
+          <div key={i.id} className={`min-w-0 flex-1 ${n >= 4 ? 'hidden sm:block' : ''}`}>
+            <NavLinkPhone href={`/painel/${slug}/${i.id}`} id={i.id} aviso={i.aviso} />
+          </div>
         ))}
         {resto.length > 0 && (
           <button
@@ -377,14 +388,22 @@ export function NavTelemovel({ slug, itens }: { slug: string; itens: ItemNavTele
             onClick={() => setAberto(true)}
             aria-haspopup="dialog"
             aria-expanded={aberto}
-            className="relative flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5"
-            style={{ color: ativoNoResto ? 'var(--foreground)' : 'var(--muted)' }}
+            className="relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 sm:py-2"
           >
-            <LayoutGrid className="h-[22px] w-[22px]" strokeWidth={ativoNoResto ? 2.75 : 2.25} />
-            {avisosNoResto > 0 && (
-              <span className="absolute top-0 left-1/2 ml-1.5 rounded-full bg-brand px-1.5 text-[10px] leading-4 font-bold text-black">{avisosNoResto}</span>
-            )}
-            <span className={`text-[11px] ${ativoNoResto ? 'font-semibold' : 'font-medium'}`}>Mais</span>
+            {(
+              [
+                { ativo: ativoNoRestoTelemovel, avisos: avisosNoRestoTelemovel, cls: 'sm:hidden' },
+                { ativo: ativoNoResto, avisos: avisosNoResto, cls: 'hidden sm:flex' },
+              ] as const
+            ).map((v) => (
+              <span key={v.cls} className={`relative flex flex-col items-center gap-0.5 ${v.cls}`} style={{ color: v.ativo ? 'var(--foreground)' : 'var(--muted)' }}>
+                <LayoutGrid className="h-[22px] w-[22px]" strokeWidth={v.ativo ? 2.75 : 2.25} />
+                {v.avisos > 0 && (
+                  <span className="absolute -top-1.5 left-1/2 ml-1.5 rounded-full bg-brand px-1.5 text-[10px] leading-4 font-bold text-black">{v.avisos}</span>
+                )}
+                <span className={`text-[11px] ${v.ativo ? 'font-semibold' : 'font-medium'}`}>Mais</span>
+              </span>
+            ))}
           </button>
         )}
       </nav>

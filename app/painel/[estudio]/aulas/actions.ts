@@ -137,25 +137,7 @@ export async function mudarAulaRapido(input: {
     p_instrutor: input.instrutorId || null,
     p_muda_instrutor: input.instrutorId !== undefined,
   })
-  if (error && semFuncao(error)) {
-    // A base de dados ainda não tem a atualização "aulas_series": mudar
-    // só esta aula, no mesmo dia, faz-se como sempre se fez.
-    const { data: atual } = await supabase.from('aulas').select('data').eq('id', input.aulaId).maybeSingle()
-    if (input.escopo !== 'um' || !atual || atual.data !== input.data) return { error: FALTA_ATUALIZACAO }
-    const { error: erroDireto } = await supabase
-      .from('aulas')
-      .update({
-        hora_inicio: input.horaInicio.slice(0, 5),
-        duracao_min: input.duracaoMin,
-        ...(input.lotacao != null ? { lotacao: input.lotacao } : {}),
-        ...(input.instrutorId !== undefined ? { instrutor_id: input.instrutorId || null } : {}),
-      })
-      .eq('id', input.aulaId)
-    if (erroDireto) return { error: erroDireto.message }
-    revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
-    return { ok: true, retiradas: 0 }
-  }
-  if (error) return { error: error.message }
+  if (error) return { error: semFuncao(error) ? FALTA_ATUALIZACAO : error.message }
   const r = (data ?? {}) as { estudio_id?: number; retiradas?: number }
   // Um horário novo (ou mudado) abre logo as aulas das semanas seguintes.
   if (input.escopo !== 'um' && r.estudio_id) await gerarAulas(supabase, r.estudio_id, hojeEmLisboa())

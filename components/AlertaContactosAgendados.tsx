@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import Link from '@/components/LinkRapido'
 import { PhoneCall } from 'lucide-react'
 import { marcarContactoFeito } from '@/app/painel/[estudio]/leads/actions'
@@ -9,12 +9,11 @@ import { avaliarContactoAgendado } from '@/lib/data/contactosAgendados'
 // Contacto que a própria lead pediu a uma hora certa (ex.: "liga-me às
 // 15h", guardado em LeadForm.tsx). Fica visível aqui a partir de
 // MINUTOS_ANTECEDENCIA_CONTACTO antes da hora marcada (ver
-// avaliarContactoAgendado), e passa a emitir um sinal sonoro a partir
-// da própria hora, repetido enquanto não for marcado como contactado —
-// para nunca se perder este tipo de compromisso.
+// avaliarContactoAgendado); a partir da própria hora a faixa fica
+// vermelha e mantém-se enquanto não for marcado como contactado — para
+// nunca se perder este tipo de compromisso. Sem som: o aviso é só visual.
 const INTERVALO_VERIFICACAO_MS = 20_000
 const INTERVALO_RELOGIO_MS = 5_000
-const INTERVALO_SOM_MS = 30_000
 
 type ContactoAgendado = {
   id: string
@@ -24,38 +23,6 @@ type ContactoAgendado = {
   estudioNome: string
   data: string
   hora: string
-}
-
-type AudioCtor = typeof AudioContext
-
-function obterAudioCtor(): AudioCtor | null {
-  if (typeof window === 'undefined') return null
-  return window.AudioContext ?? (window as unknown as { webkitAudioContext?: AudioCtor }).webkitAudioContext ?? null
-}
-
-// Dois bips curtos — não depende de nenhum ficheiro de áudio externo.
-// Alguns browsers só deixam tocar som depois de uma primeira interação
-// da pessoa na página (ver desbloquearAudio); nesse caso falha em
-// silêncio, a faixa visual já chega.
-function tocarAlerta(ctx: AudioContext) {
-  try {
-    for (const atraso of [0, 0.3]) {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = 'sine'
-      osc.frequency.value = 880
-      gain.gain.value = 0.0001
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      const inicio = ctx.currentTime + atraso
-      gain.gain.exponentialRampToValueAtTime(0.3, inicio + 0.01)
-      gain.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.18)
-      osc.start(inicio)
-      osc.stop(inicio + 0.2)
-    }
-  } catch {
-    // ignora falhas de áudio — o alerta visual já chega nesse caso
-  }
 }
 
 // Sem "apenasEstudio", mostra qualquer estúdio (usado em
@@ -72,25 +39,6 @@ export default function AlertaContactosAgendados({
   const [agora, setAgora] = useState(() => Date.now())
   const [concluidos, setConcluidos] = useState<Set<string>>(new Set())
   const [aMarcar, iniciarMarcacao] = useTransition()
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const ultimoBipRef = useRef(0)
-
-  useEffect(() => {
-    function desbloquearAudio() {
-      if (!audioCtxRef.current) {
-        const AudioCtor = obterAudioCtor()
-        if (AudioCtor) audioCtxRef.current = new AudioCtor()
-      }
-      audioCtxRef.current?.resume().catch(() => {})
-    }
-    window.addEventListener('pointerdown', desbloquearAudio, { once: true })
-    window.addEventListener('keydown', desbloquearAudio, { once: true })
-    return () => {
-      window.removeEventListener('pointerdown', desbloquearAudio)
-      window.removeEventListener('keydown', desbloquearAudio)
-    }
-  }, [])
-
   useEffect(() => {
     const relogio = setInterval(() => setAgora(Date.now()), INTERVALO_RELOGIO_MS)
     return () => clearInterval(relogio)
@@ -116,15 +64,6 @@ export default function AlertaContactosAgendados({
     .map((c) => ({ ...c, ...avaliarContactoAgendado(c, agora) }))
     .filter((c) => c.estado !== 'oculto')
     .sort((a, b) => a.minutosRestantes - b.minutosRestantes)
-
-  const haAtrasados = visiveis.some((c) => c.estado === 'atrasado')
-
-  useEffect(() => {
-    if (!haAtrasados) return
-    if (agora - ultimoBipRef.current < INTERVALO_SOM_MS) return
-    ultimoBipRef.current = agora
-    if (audioCtxRef.current) tocarAlerta(audioCtxRef.current)
-  }, [haAtrasados, agora])
 
   function marcarContactado(c: ContactoAgendado) {
     setConcluidos((atual) => new Set(atual).add(c.id))

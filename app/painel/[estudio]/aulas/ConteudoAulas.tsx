@@ -82,7 +82,8 @@ export default async function ConteudoAulas({
   const { ehAdmin } = papeisDaSessao(sessao)
 
   // Abre as aulas das próximas semanas a partir do horário (idempotente).
-  if (podeEscrever) await gerarAulas(supabase, estudio.id, hoje)
+  // Se a semana à vista fica para lá disso, abre-as até ela.
+  if (podeEscrever) await gerarAulas(supabase, estudio.id, hoje, fim)
 
   const [servicosTodos, equipa, { data: aulasData }, { data: horariosData }, { data: fechadosData }] = await Promise.all([
     carregarServicos(supabase, { soAtivos: true }),
@@ -370,8 +371,8 @@ export default async function ConteudoAulas({
 
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">Horário semanal das aulas</h2>
       <p className="mt-1 text-xs text-muted">
-        Cada linha abre automaticamente as aulas das próximas {SEMANAS_ABERTAS} semanas (menos nos dias em que o estúdio está fechado). As
-        pessoas inscrevem-se aula a aula. Para mudar um horário, arrasta uma das aulas dele no mapa e escolhe «Esta e as seguintes» ou
+        Cada linha repete-se todas as semanas, sem fim (menos nos dias em que o estúdio está fechado): as aulas ficam já criadas para as
+        próximas {SEMANAS_ABERTAS} semanas e vão sendo acrescentadas todos os dias. As pessoas inscrevem-se aula a aula. Para mudar um horário, arrasta uma das aulas dele no mapa e escolhe «Esta e as seguintes» ou
         «Todas as da série».
       </p>
       <ul className="mt-2 flex flex-col divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface">

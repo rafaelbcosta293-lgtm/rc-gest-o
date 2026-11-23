@@ -54,9 +54,22 @@ export type InscricaoAula = {
   origem: 'equipa' | 'cliente'
 }
 
-// Quantas semanas à frente ficam abertas as aulas (para as pessoas se
-// poderem inscrever com antecedência).
-export const SEMANAS_ABERTAS = 4
+// Quantas semanas à frente ficam criadas as aulas de um horário que se
+// repete (cerca de 90 dias, como as séries dos treinos da Agenda). O
+// horário não tem fim: todos os dias o cron acrescenta as que faltam, e
+// abrir no mapa uma semana mais distante cria-as logo até lá.
+export const SEMANAS_ABERTAS = 13
+// Até onde se criam aulas a pedido, ao abrir uma semana distante.
+const SEMANAS_MAXIMO = 52
+
+// O último dia até onde as aulas devem existir: as SEMANAS_ABERTAS, ou
+// mais (até um ano) se se está a ver uma semana para lá disso.
+export function fimDaJanelaDeAulas(hoje: string, ateVista?: string): string {
+  const normal = somarDias(hoje, SEMANAS_ABERTAS * 7 - 1)
+  if (!ateVista || ateVista <= normal) return normal
+  const maximo = somarDias(hoje, SEMANAS_MAXIMO * 7 - 1)
+  return ateVista < maximo ? ateVista : maximo
+}
 
 export const DIAS_SEMANA_LONGOS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
 
@@ -119,9 +132,10 @@ export function aulasEmFalta(
 }
 
 // Cria as aulas das próximas semanas a partir do horário semanal.
-// Idempotente (nunca duplica). Devolve quantas criou.
-export async function gerarAulas(supabase: SupabaseClient, estudioId: number, hoje: string): Promise<number> {
-  const ate = somarDias(hoje, SEMANAS_ABERTAS * 7 - 1)
+// Idempotente (nunca duplica). Devolve quantas criou. "ateVista": o
+// último dia da semana que se está a ver, para ela nunca aparecer vazia.
+export async function gerarAulas(supabase: SupabaseClient, estudioId: number, hoje: string, ateVista?: string): Promise<number> {
+  const ate = fimDaJanelaDeAulas(hoje, ateVista)
   const [{ data: horarios }, { data: existentes }, { data: fechados }] = await Promise.all([
     supabase.from('aulas_horario').select('*').eq('estudio_id', estudioId).eq('ativo', true),
     supabase.from('aulas').select('horario_id, data').eq('estudio_id', estudioId).gte('data', hoje).lte('data', ate),

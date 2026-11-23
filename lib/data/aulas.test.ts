@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aulasEmFalta, datasDoHorario, diaSemanaISO, ocupadas, type HorarioAula } from './aulas'
+import { aulasEmFalta, datasDoHorario, diaSemanaISO, fimDaJanelaDeAulas, ocupadas, type HorarioAula } from './aulas'
 
 const horario = (o: Partial<HorarioAula> = {}): HorarioAula => ({
   id: 'h1',
@@ -53,5 +53,18 @@ describe('aulasEmFalta', () => {
 describe('ocupadas', () => {
   it('as canceladas libertam o lugar', () => {
     expect(ocupadas([{ estado: 'Inscrito' }, { estado: 'Presente' }, { estado: 'Faltou' }, { estado: 'Cancelada' }])).toBe(3)
+  })
+})
+
+describe('fimDaJanelaDeAulas', () => {
+  it('sem semana à vista (ou com uma próxima), são as 13 semanas', () => {
+    expect(fimDaJanelaDeAulas('2026-11-23')).toBe('2027-02-21')
+    expect(fimDaJanelaDeAulas('2026-11-23', '2026-12-27')).toBe('2027-02-21')
+  })
+  it('a ver uma semana mais distante, vai até ela', () => {
+    expect(fimDaJanelaDeAulas('2026-11-23', '2027-03-21')).toBe('2027-03-21')
+  })
+  it('mas nunca mais de um ano', () => {
+    expect(fimDaJanelaDeAulas('2026-11-23', '2029-01-01')).toBe('2027-11-21')
   })
 })

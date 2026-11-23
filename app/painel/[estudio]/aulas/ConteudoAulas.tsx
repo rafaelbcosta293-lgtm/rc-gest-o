@@ -9,7 +9,18 @@ import { hojeEmLisboa } from '@/lib/data/hoje'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
 import { carregarServicos } from '@/lib/data/servicos'
-import { DIAS_SEMANA_LONGOS, SEMANAS_ABERTAS, gerarAulas, ocupadas, type Aula, type HorarioAula, type InscricaoAula } from '@/lib/data/aulas'
+import {
+  DIAS_SEMANA_LONGOS,
+  DURACAO_AULA_OMISSAO,
+  SEMANAS_ABERTAS,
+  gerarAulas,
+  ocupadas,
+  type Aula,
+  type HorarioAula,
+  type InscricaoAula,
+} from '@/lib/data/aulas'
+import type { AulaNaAgenda } from '../agenda/AgendaInterativa'
+import MapaAulas, { type ServicoDoMapa } from './MapaAulas'
 import { criarAulaAvulsa, guardarHorarioAula, guardarJanelaReserva, terminarHorarioAula } from './actions'
 import JanelaAula, { type ClienteOpcaoAula, type InscritoNaJanela } from './JanelaAula'
 import SubmitButton from '@/components/SubmitButton'
@@ -94,7 +105,39 @@ export default async function ConteudoAulas({
   const porAula = new Map<string, InscricaoAula[]>()
   for (const i of inscricoes) porAula.set(i.aula_id, [...(porAula.get(i.aula_id) ?? []), i])
 
-  const horarios = ((horariosData ?? []) as HorarioAula[]).filter((h) => !servicoFiltro || h.servico_id === servicoFiltro)
+  // Os horários em vigor (os que já acabaram deixam de aparecer).
+  const horariosTodos = ((horariosData ?? []) as HorarioAula[]).filter((h) => !h.ate || h.ate >= hoje)
+  const horarios = horariosTodos.filter((h) => !servicoFiltro || h.servico_id === servicoFiltro)
+
+  const base = { data: sp.data, servico: sp.servico }
+  // As aulas da semana, prontas para o mapa (a mesma grelha da Agenda).
+  const aulasMapa: AulaNaAgenda[] = aulas.map((a) => {
+    const servico = servicoPorId.get(a.servico_id)
+    return {
+      id: a.id,
+      horarioId: a.horario_id,
+      data: a.data,
+      hora_inicio: a.hora_inicio,
+      duracao_min: a.duracao_min,
+      servicoNome: servico?.nome ?? 'Aula',
+      servicoChave: servico?.chave ?? '',
+      instrutorNome: a.instrutor_id ? (nomeEquipa.get(a.instrutor_id) ?? null) : null,
+      inscritos: ocupadas(porAula.get(a.id) ?? []),
+      lotacao: a.lotacao,
+      cancelada: a.estado === 'Cancelada',
+      href: `${basePath}${query(base, { aula: a.id })}`,
+    }
+  })
+  // Serviços que se podem criar no mapa (o filtrado primeiro), com a
+  // duração habitual: a do horário mais recente desse serviço.
+  const servicosMapa: ServicoDoMapa[] = servicosGrupo
+    .map((s) => ({
+      id: s.id,
+      nome: s.nome,
+      lotacao: s.lotacao_omissao ?? null,
+      duracao: horariosTodos.filter((h) => h.servico_id === s.id).at(-1)?.duracao_min ?? DURACAO_AULA_OMISSAO[s.chave] ?? 50,
+    }))
+    .sort((a, b) => Number(b.id === servicoFiltro) - Number(a.id === servicoFiltro))
 
   // A aula aberta na janela (?aula=…), com inscritos e clientes.
   const aberta = sp.aula ? ((aulasData ?? []) as Aula[]).find((a) => a.id === sp.aula) ?? null : null
@@ -137,6 +180,7 @@ export default async function ConteudoAulas({
           servicoNome: servicoPorId.get(aberta.servico_id)?.nome ?? 'Aula',
           data: aberta.data,
           dataLabel: `${DIAS_SEMANA_LONGOS[idx]}, ${fmt(aberta.data)}`,
+          horarioId: aberta.horario_id,
           horaInicio: hhmm(aberta.hora_inicio),
           duracaoMin: aberta.duracao_min,
           instrutorId: aberta.instrutor_id,
@@ -148,15 +192,20 @@ export default async function ConteudoAulas({
         clientes={clientes}
         instrutores={equipa}
         podeEscrever={podeEscrever}
+        ehGestao={ehGestao}
+        basePath={basePath}
+        servicoParam={sp.servico ?? null}
         fecharHref={`${basePath}${query({ data: sp.data, servico: sp.servico }, {})}`}
       />
     )
   }
 
-  const base = { data: sp.data, servico: sp.servico }
   const aqui = `${basePath}${query(base, {})}`
   const mensagemOk: Record<string, string> = {
     'aula-criada': 'Aula criada.',
+    'aulas-apagadas': sp.ficaram
+      ? `Apagado. Ficaram ${sp.ficaram} aula(s) com inscritos — avisa as pessoas e cancela-as aqui.`
+      : 'Apagado.',
     reservas: 'Guardado — as reservas pela app passam a abrir com essa antecedência.',
     'horario-criado': `Horário guardado — as aulas das próximas ${SEMANAS_ABERTAS} semanas já estão abertas.`,
     'horario-terminado': sp.ficaram
@@ -227,9 +276,26 @@ export default async function ConteudoAulas({
 
       {antes}
 
-      {/* A semana: uma coluna por dia, as aulas por hora. */}
-      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted">Aulas da semana</h2>
-      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-7">
+      <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted">Mapa de aulas</h2>
+      {/* Tablet e computador: a semana numa grelha de horas, como a
+          Agenda — arrasta-se, estica-se e cria-se com um clique. */}
+      <div className="mt-2 hidden sm:block">
+        <MapaAulas
+          slug={slug}
+          estudioId={estudio.id}
+          dias={dias}
+          hoje={hoje}
+          aulas={aulasMapa}
+          diasFechados={Object.fromEntries(fechados)}
+          servicos={servicosMapa}
+          equipa={equipa}
+          podeEscrever={podeEscrever}
+          ehGestao={ehGestao}
+        />
+      </div>
+      {/* Telemóvel: a semana em lista; tocar numa aula abre-a (é lá que
+          se muda de dia/hora e se apaga). */}
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:hidden">
         {dias.map((d, i) => {
           const doDia = aulas.filter((a) => a.data === d)
           return (
@@ -307,7 +373,8 @@ export default async function ConteudoAulas({
       <h2 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">Horário semanal das aulas</h2>
       <p className="mt-1 text-xs text-muted">
         Cada linha abre automaticamente as aulas das próximas {SEMANAS_ABERTAS} semanas (menos nos dias em que o estúdio está fechado). As
-        pessoas inscrevem-se aula a aula.
+        pessoas inscrevem-se aula a aula. Para mudar um horário, arrasta uma das aulas dele no mapa e escolhe «Esta e as seguintes» ou
+        «Todas as da série».
       </p>
       <ul className="mt-2 flex flex-col divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface">
         {horarios.map((h) => (
@@ -319,6 +386,8 @@ export default async function ConteudoAulas({
               <span className="text-muted">
                 {' '}
                 · {h.duracao_min} min · {h.lotacao} lugares{h.instrutor_id ? ` · ${nomeEquipa.get(h.instrutor_id) ?? ''}` : ''}
+                {h.desde > hoje ? ` · a partir de ${fmt(h.desde).slice(0, 5)}` : ''}
+                {h.ate ? ` · até ${fmt(h.ate).slice(0, 5)}` : ''}
               </span>
             </span>
             {ehGestao && (

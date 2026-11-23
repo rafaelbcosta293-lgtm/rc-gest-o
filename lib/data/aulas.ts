@@ -20,6 +20,15 @@ export type HorarioAula = {
 }
 
 export type EstadoAula = 'Aberta' | 'Cancelada'
+
+// A que aulas se aplica uma mudança (ou um apagar), como na Agenda dos
+// treinos: só esta, esta e as seguintes, ou todas as do horário semanal.
+export type EscopoAula = 'um' | 'seguintes' | 'serie'
+
+// Duração habitual de cada serviço de grupo (quando não há horário de
+// onde a tirar).
+export const DURACAO_AULA_OMISSAO: Record<string, number> = { acompanhado: 60, pilates: 50 }
+
 export type EstadoInscricao = 'Inscrito' | 'Presente' | 'Faltou' | 'Cancelada'
 
 export type Aula = {
@@ -118,9 +127,15 @@ export async function gerarAulas(supabase: SupabaseClient, estudioId: number, ho
     supabase.from('aulas').select('horario_id, data').eq('estudio_id', estudioId).gte('data', hoje).lte('data', ate),
     supabase.from('dias_fechados').select('data').eq('estudio_id', estudioId).gte('data', hoje).lte('data', ate),
   ])
+  // Datas que um horário deve saltar: a aula desse dia foi apagada ou
+  // passou para outro dia ("só esta") — não se volta a abrir.
+  const idsHorarios = (horarios ?? []).map((h) => h.id as string)
+  const { data: saltos } = idsHorarios.length
+    ? await supabase.from('aulas_horario_saltos').select('horario_id, data').in('horario_id', idsHorarios).gte('data', hoje).lte('data', ate)
+    : { data: [] }
   const novas = aulasEmFalta(
     (horarios ?? []) as HorarioAula[],
-    (existentes ?? []) as { horario_id: string | null; data: string }[],
+    [...(existentes ?? []), ...(saltos ?? [])] as { horario_id: string | null; data: string }[],
     new Set((fechados ?? []).map((f) => f.data as string)),
     hoje,
     ate

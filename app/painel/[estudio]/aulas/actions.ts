@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ehContaFixa } from '@/lib/data/acessos'
 import { hojeEmLisboa } from '@/lib/data/hoje'
-import { gerarAulas, type EstadoInscricao } from '@/lib/data/aulas'
+import { gerarAulas, type EscopoAula, type EstadoInscricao } from '@/lib/data/aulas'
 
 export type ResultadoAula = { ok: true } | { error: string }
 
@@ -92,25 +92,187 @@ export async function reabrirAula(input: { estudioSlug: string; aulaId: string }
   return { ok: true }
 }
 
-// Lotação, instrutor, hora e duração de uma aula concreta (não mexe no
-// horário semanal — só nesta aula).
-export async function editarAula(input: {
+// ── Mexer numa aula como num treino da Agenda ─────────────────────────
+
+const ESCOPOS: EscopoAula[] = ['um', 'seguintes', 'serie']
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/
+const HORA = /^\d{2}:\d{2}/
+
+// A função ainda não existe na base de dados (migração por aplicar).
+const semFuncao = (e: { code?: string }) => e.code === 'PGRST202'
+const FALTA_ATUALIZACAO =
+  'Esta mudança precisa de uma atualização da base de dados (aulas_series) que ainda não foi aplicada.'
+
+// Muda o dia, a hora e a duração de uma aula (e, se vierem, a lotação e
+// o instrutor) — só desta, desta e das seguintes, ou de todas as do
+// horário semanal. O trabalho todo é feito pela base de dados
+// (mudar_aula), numa só transação.
+export async function mudarAulaRapido(input: {
   estudioSlug: string
   aulaId: string
-  lotacao: number
-  instrutorId: string | null
+  escopo: EscopoAula
+  data: string
   horaInicio: string
   duracaoMin: number
+  lotacao?: number | null
+  // undefined = não mexe no instrutor; null = fica sem instrutor.
+  instrutorId?: string | null
+}): Promise<{ ok: true; retiradas: number } | { error: string }> {
+  if (!(await podeEscrever())) return { error: 'A tua conta só pode ver as aulas.' }
+  if (!ESCOPOS.includes(input.escopo)) return { error: 'Opção inválida.' }
+  if (!DATA_ISO.test(input.data)) return { error: 'Dia inválido.' }
+  if (!HORA.test(input.horaInicio)) return { error: 'Hora inválida.' }
+  if (!Number.isInteger(input.duracaoMin) || input.duracaoMin < 10 || input.duracaoMin > 240) {
+    return { error: 'A duração tem de ficar entre 10 e 240 minutos.' }
+  }
+  if (input.lotacao != null && (!Number.isInteger(input.lotacao) || input.lotacao < 1 || input.lotacao > 50)) {
+    return { error: 'Lotação inválida.' }
+  }
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('mudar_aula', {
+    p_aula: input.aulaId,
+    p_escopo: input.escopo,
+    p_data: input.data,
+    p_hora: input.horaInicio.slice(0, 5),
+    p_duracao: input.duracaoMin,
+    p_lotacao: input.lotacao ?? null,
+    p_instrutor: input.instrutorId || null,
+    p_muda_instrutor: input.instrutorId !== undefined,
+  })
+  if (error && semFuncao(error)) {
+    // A base de dados ainda não tem a atualização "aulas_series": mudar
+    // só esta aula, no mesmo dia, faz-se como sempre se fez.
+    const { data: atual } = await supabase.from('aulas').select('data').eq('id', input.aulaId).maybeSingle()
+    if (input.escopo !== 'um' || !atual || atual.data !== input.data) return { error: FALTA_ATUALIZACAO }
+    const { error: erroDireto } = await supabase
+      .from('aulas')
+      .update({
+        hora_inicio: input.horaInicio.slice(0, 5),
+        duracao_min: input.duracaoMin,
+        ...(input.lotacao != null ? { lotacao: input.lotacao } : {}),
+        ...(input.instrutorId !== undefined ? { instrutor_id: input.instrutorId || null } : {}),
+      })
+      .eq('id', input.aulaId)
+    if (erroDireto) return { error: erroDireto.message }
+    revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
+    return { ok: true, retiradas: 0 }
+  }
+  if (error) return { error: error.message }
+  const r = (data ?? {}) as { estudio_id?: number; retiradas?: number }
+  // Um horário novo (ou mudado) abre logo as aulas das semanas seguintes.
+  if (input.escopo !== 'um' && r.estudio_id) await gerarAulas(supabase, r.estudio_id, hojeEmLisboa())
+  revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
+  return { ok: true, retiradas: r.retiradas ?? 0 }
+}
+
+// Apaga uma aula — só esta, esta e as seguintes, ou todas as do horário
+// (que deixa de abrir aulas). As que têm inscritos nunca são apagadas:
+// "ficaram" diz quantas sobraram, para se avisar as pessoas e cancelar.
+export async function apagarAulaRapido(input: {
+  estudioSlug: string
+  aulaId: string
+  escopo: EscopoAula
+}): Promise<{ ok: true; apagadas: number; ficaram: number } | { error: string }> {
+  if (!(await soGestao())) return { error: 'Só a gestão pode apagar aulas. Podes cancelar a aula.' }
+  if (!ESCOPOS.includes(input.escopo)) return { error: 'Opção inválida.' }
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('apagar_aula', { p_aula: input.aulaId, p_escopo: input.escopo })
+  if (error) return { error: semFuncao(error) ? FALTA_ATUALIZACAO : error.message }
+  const r = (data ?? {}) as { apagadas?: number; ficaram?: number }
+  revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
+  return { ok: true, apagadas: r.apagadas ?? 0, ficaram: r.ficaram ?? 0 }
+}
+
+// Cria uma aula a partir do mapa: avulsa (só nesse dia) ou a repetir
+// todas as semanas (entra no horário semanal — só a gestão).
+export async function criarAulaRapida(input: {
+  estudioSlug: string
+  estudioId: number
+  servicoId: number
+  data: string
+  horaInicio: string
+  duracaoMin: number
+  lotacao: number | null
+  instrutorId: string | null
+  repete: boolean
+  // Último dia em que se repete (vazio = sem fim).
+  ate: string | null
 }): Promise<ResultadoAula> {
   if (!(await podeEscrever())) return { error: 'A tua conta só pode ver as aulas.' }
-  if (!Number.isInteger(input.lotacao) || input.lotacao < 1 || input.lotacao > 50) return { error: 'Lotação inválida.' }
-  if (!/^\d{2}:\d{2}/.test(input.horaInicio)) return { error: 'Hora inválida.' }
+  if (!input.estudioId || !input.servicoId) return { error: 'Indica o serviço.' }
+  if (!DATA_ISO.test(input.data)) return { error: 'Dia inválido.' }
+  if (!HORA.test(input.horaInicio)) return { error: 'Hora inválida.' }
+  if (!Number.isInteger(input.duracaoMin) || input.duracaoMin < 10 || input.duracaoMin > 240) {
+    return { error: 'A duração tem de ficar entre 10 e 240 minutos.' }
+  }
+  if (input.repete && !(await soGestao())) return { error: 'Só a gestão pode pôr aulas a repetir todas as semanas.' }
+  if (input.repete && input.ate && (!DATA_ISO.test(input.ate) || input.ate < input.data)) {
+    return { error: 'A data final tem de ser depois da primeira aula.' }
+  }
   const supabase = await createClient()
-  const { error } = await supabase
-    .from('aulas')
-    .update({ lotacao: input.lotacao, instrutor_id: input.instrutorId || null, hora_inicio: input.horaInicio, duracao_min: input.duracaoMin })
-    .eq('id', input.aulaId)
-  if (error) return { error: error.message }
+  let lotacao = input.lotacao
+  if (lotacao == null) {
+    const { data: s } = await supabase.from('servicos').select('lotacao_omissao').eq('id', input.servicoId).maybeSingle()
+    lotacao = (s?.lotacao_omissao as number | null) ?? null
+  }
+  if (!lotacao || !Number.isInteger(lotacao) || lotacao < 1 || lotacao > 50) return { error: 'Indica a lotação.' }
+
+  const { data: fechado } = await supabase
+    .from('dias_fechados')
+    .select('motivo')
+    .eq('estudio_id', input.estudioId)
+    .eq('data', input.data)
+    .maybeSingle()
+  if (fechado) return { error: `O estúdio está fechado nesse dia (${fechado.motivo ?? 'dia fechado'}).` }
+
+  const hoje = hojeEmLisboa()
+  if (input.repete) {
+    const diaSemana = ((new Date(`${input.data}T00:00:00Z`).getUTCDay() + 6) % 7) + 1
+    const { data: horario, error } = await supabase
+      .from('aulas_horario')
+      .insert({
+        estudio_id: input.estudioId,
+        servico_id: input.servicoId,
+        dia_semana: diaSemana,
+        hora_inicio: input.horaInicio.slice(0, 5),
+        duracao_min: input.duracaoMin,
+        instrutor_id: input.instrutorId || null,
+        lotacao,
+        desde: input.data,
+        ate: input.ate || null,
+      })
+      .select('id')
+      .single()
+    if (error || !horario) return { error: error?.message ?? 'Não foi possível criar o horário.' }
+    // A primeira aula nasce já, mesmo que o dia escolhido já tenha
+    // passado ou fique para lá das semanas que o horário abre sozinho.
+    const { error: erroAula } = await supabase.from('aulas').upsert(
+      {
+        estudio_id: input.estudioId,
+        servico_id: input.servicoId,
+        horario_id: horario.id,
+        data: input.data,
+        hora_inicio: input.horaInicio.slice(0, 5),
+        duracao_min: input.duracaoMin,
+        instrutor_id: input.instrutorId || null,
+        lotacao,
+      },
+      { onConflict: 'horario_id,data', ignoreDuplicates: true }
+    )
+    if (erroAula) return { error: erroAula.message }
+    await gerarAulas(supabase, input.estudioId, hoje)
+  } else {
+    const { error } = await supabase.from('aulas').insert({
+      estudio_id: input.estudioId,
+      servico_id: input.servicoId,
+      data: input.data,
+      hora_inicio: input.horaInicio.slice(0, 5),
+      duracao_min: input.duracaoMin,
+      instrutor_id: input.instrutorId || null,
+      lotacao,
+    })
+    if (error) return { error: error.message }
+  }
   revalidatePath(`/painel/${input.estudioSlug}`, 'layout')
   return { ok: true }
 }

@@ -27,6 +27,7 @@ import {
   type EscopoEditar,
 } from './actions'
 import type { EventoAgenda, TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
+import { useEdicaoAulas } from '../aulas/useEdicaoAulas'
 
 // Carregado só quando se abre mesmo o modal (criar/editar) — nunca faz
 // parte do bundle inicial da Agenda, a página mais visitada da app.
@@ -34,9 +35,12 @@ const EventoModalOverlay = dynamic(() => import('./EventoModalOverlay'), { ssr: 
 
 // Uma aula de grupo (Treino Acompanhado, Pilates) mostrada na grelha da
 // Agenda — a sala é a mesma, por isso ocupa espaço ao lado dos treinos.
-// Só para ver: clicar abre a aula (inscritos, presenças) em Aulas.
+// Arrasta-se e estica-se como um treino (ver useEdicaoAulas); abrir a
+// aula mostra os inscritos e as presenças.
 export type AulaNaAgenda = {
   id: string
+  // O horário semanal que a gerou (null = aula avulsa).
+  horarioId: string | null
   data: string
   hora_inicio: string
   duracao_min: number
@@ -167,9 +171,9 @@ export type EstadoModal =
 // (200% = 54px por hora, perto dos 48px do Google Calendar): o dia de
 // trabalho inteiro cabe num ecrã e o texto dos blocos adapta-se à
 // altura (ver BlocoEvento), por isso nunca fica cortado.
-const NIVEIS_ZOOM = [0.225, 0.45, 0.675, 0.9, 1.125, 1.35, 1.575, 1.8, 2.025, 2.25]
+export const NIVEIS_ZOOM = [0.225, 0.45, 0.675, 0.9, 1.125, 1.35, 1.575, 1.8, 2.025, 2.25]
 const ZOOM_OMISSAO = 1
-const ZOOM_INICIAL = 3
+export const ZOOM_INICIAL = 3
 
 // Paleta pedida para os blocos de evento da grelha (dia/semana): fundo
 // bege suave, borda esquerda a ouro fosco (identidade da marca) e
@@ -290,6 +294,7 @@ export default function AgendaInterativa({
   somenteLeitura,
   diasFechados = {},
   aulas = [],
+  ehGestao = true,
 }: {
   slug: string
   estudioId: number
@@ -305,8 +310,12 @@ export default function AgendaInterativa({
   diasFechados?: Record<string, string>
   // Aulas de grupo a mostrar na grelha (vazio = escondidas).
   aulas?: AulaNaAgenda[]
+  // Só a gestão mexe no horário semanal das aulas.
+  ehGestao?: boolean
 }) {
   const router = useRouter()
+  // As aulas de grupo arrastam-se e esticam-se como os treinos.
+  const edicaoAulas = useEdicaoAulas({ slug, aulas, diasFechados, ehGestao })
   const [modal, setModal] = useState<EstadoModal>({ aberto: false })
   const [zoomIndice, setZoomIndice] = useState(ZOOM_INICIAL)
   const [aPendente, iniciarTransicao] = useTransition()
@@ -483,13 +492,20 @@ export default function AgendaInterativa({
   return (
     <>
       {/* Erros de arrastar/mover (com a janela fechada não havia onde os ver). */}
-      {erro && !modal.aberto && (
+      {(erro || edicaoAulas.erro) && !modal.aberto && (
         <div
           role="alert"
           className="mt-1.5 flex items-start justify-between gap-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
         >
-          <span>{erro}</span>
-          <button type="button" onClick={() => setErro(null)} className="shrink-0 text-xs font-semibold underline">
+          <span>{erro || edicaoAulas.erro}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setErro(null)
+              edicaoAulas.limparErro()
+            }}
+            className="shrink-0 text-xs font-semibold underline"
+          >
             Fechar
           </button>
         </div>
@@ -506,11 +522,16 @@ export default function AgendaInterativa({
           setModal({ aberto: true, modo: 'criar', data: dia, horaInicio, duracaoMin })
         }
         onAbrirEvento={abrirParaEditar}
+        onMoverAula={edicaoAulas.moverAula}
+        onRedimensionarAula={edicaoAulas.redimensionarAula}
+        onAbrirAula={(a) => router.push(a.href)}
         pxPorMinuto={pxPorMinuto}
         zoomIndice={zoomIndice}
         onZoomIndiceChange={setZoomIndice}
         somenteLeitura={somenteLeitura}
       />
+
+      {edicaoAulas.dialogo}
 
       {pedidoSerie && (
         <PerguntaSerie
@@ -617,7 +638,9 @@ function disporEventosDoDia(
   ])
   return {
     eventos: posicoes.filter((p) => porId.has(p.id)).map((p) => ({ ...porId.get(p.id)!, ...p })),
-    aulas: posicoes.filter((p) => aulaPorId.has(p.id)).map((p) => ({ ...aulaPorId.get(p.id)!, ...p })),
+    // (A aula por último: o "id" da posição traz o prefixo "aula:", e o
+    // que interessa a quem arrasta e grava é o id verdadeiro da aula.)
+    aulas: posicoes.filter((p) => aulaPorId.has(p.id)).map((p) => ({ ...p, ...aulaPorId.get(p.id)! })),
   }
 }
 
@@ -643,16 +666,21 @@ function limitarInicio(inicioMin: number, duracaoMin: number) {
 // (dias) diferentes, por isso vive aqui, não em cada coluna. Em ref
 // (não state): o mousemove no window tem de ler sempre o valor mais
 // recente sem obrigar a re-subscrever os listeners a cada pixel.
+// O que se arrasta: um evento da Agenda ou uma aula de grupo — para a
+// grelha é só um bloco com dia, hora e duração.
+export type BlocoArrastavel = { id: string; data: string; hora_inicio: string; duracao_min: number; aula?: boolean }
+const blocoDaAula = (a: AulaNaAgenda): BlocoArrastavel => ({ id: a.id, data: a.data, hora_inicio: a.hora_inicio, duracao_min: a.duracao_min, aula: true })
+
 type Arrasto =
   | { tipo: 'criar'; dia: string; inicioMin: number }
-  | { tipo: 'redimensionar'; evento: EventoComNomes; pega: 'topo' | 'fundo' }
+  | { tipo: 'redimensionar'; evento: BlocoArrastavel; pega: 'topo' | 'fundo' }
   // "offsetMin" guarda a quantos minutos do início do evento é que o
   // rato agarrou (ex.: evento às 17h00, clicado a meio, às 17h20 → 20)
   // para o bloco se deslocar mantendo esse ponto fixo sob o rato, em
   // vez de "saltar" para o início do evento ficar sempre sob o rato.
   // "toque": movimento iniciado com o dedo (manter e arrastar), tratado
   // pelos eventos de toque em vez dos do rato.
-  | { tipo: 'mover'; evento: EventoComNomes; offsetMin: number; toque?: boolean }
+  | { tipo: 'mover'; evento: BlocoArrastavel; offsetMin: number; toque?: boolean }
 
 // Gestos de toque (tablet/telemóvel) num evento ou num espaço vazio.
 type GestosToque = {
@@ -664,7 +692,7 @@ type GestosToque = {
 const TOQUE_LONGO_MS = 350
 const TOQUE_FOLGA_PX = 10
 
-function GrelhaInterativa({
+export function GrelhaInterativa({
   dias,
   estudioId,
   porDia,
@@ -678,6 +706,12 @@ function GrelhaInterativa({
   somenteLeitura,
   diasFechados,
   aulas,
+  onMoverAula,
+  onRedimensionarAula,
+  onAbrirAula,
+  duracaoClique = 40,
+  mapaDeAulas = false,
+  classeAltura = 'h-[calc(100vh-200px)] min-h-[360px]',
 }: {
   dias: string[]
   estudioId: number
@@ -692,7 +726,19 @@ function GrelhaInterativa({
   zoomIndice: number
   onZoomIndiceChange: (indice: number) => void
   somenteLeitura: boolean
+  // Aulas de grupo editáveis como os treinos: arrastar para mover, puxar
+  // o topo/fundo para esticar, botão direito (ou tocar) para abrir. Sem
+  // estes três, a aula é só um atalho para a página dela.
+  onMoverAula?: (id: string, dia: string, horaInicio: string) => void
+  onRedimensionarAula?: (id: string, horaInicio: string, duracaoMin: number) => void
+  onAbrirAula?: (aula: AulaNaAgenda) => void
+  // Duração de um clique simples num espaço vazio (40 min nos treinos).
+  duracaoClique?: number
+  // A grelha é o mapa das aulas de grupo (muda só os textos de ajuda).
+  mapaDeAulas?: boolean
+  classeAltura?: string
 }) {
+  const aulasEditaveis = !somenteLeitura && !!onMoverAula && !!onRedimensionarAula && !!onAbrirAula
   // Um só dia (vista Dia) ocupa a largura toda; a semana continua a
   // precisar de largura mínima para as 7 colunas não ficarem espremidas.
   const colunas = `repeat(${dias.length}, 1fr)`
@@ -847,7 +893,7 @@ function GrelhaInterativa({
         const inicio = Math.min(arrasto.inicioMin, loc.minuto)
         const fim = Math.max(arrasto.inicioMin, loc.minuto)
         const duracaoArrastada = fim - inicio
-        onClickVazio(arrasto.dia, minutosParaHora(inicio), duracaoArrastada >= 15 ? duracaoArrastada : 40)
+        onClickVazio(arrasto.dia, minutosParaHora(inicio), duracaoArrastada >= 15 ? duracaoArrastada : duracaoClique)
         return
       }
 
@@ -857,7 +903,8 @@ function GrelhaInterativa({
         const novoInicio = arrasto.pega === 'topo' ? Math.min(loc.minuto, fimOriginal - DURACAO_MIN_MINIMA) : inicioOriginal
         const novoFim = arrasto.pega === 'fundo' ? Math.max(loc.minuto, inicioOriginal + DURACAO_MIN_MINIMA) : fimOriginal
         if (novoInicio !== inicioOriginal || novoFim !== fimOriginal) {
-          onRedimensionar(arrasto.evento.id, minutosParaHora(novoInicio), novoFim - novoInicio)
+          const redimensionar = arrasto.evento.aula ? onRedimensionarAula : onRedimensionar
+          redimensionar?.(arrasto.evento.id, minutosParaHora(novoInicio), novoFim - novoInicio)
         }
         return
       }
@@ -865,7 +912,8 @@ function GrelhaInterativa({
       const inicioOriginal = minutosDoDia(arrasto.evento.hora_inicio)
       const novoInicioMover = limitarInicio(loc.minuto - arrasto.offsetMin, arrasto.evento.duracao_min)
       if (loc.dia !== arrasto.evento.data || novoInicioMover !== inicioOriginal) {
-        onMover(arrasto.evento.id, loc.dia, minutosParaHora(novoInicioMover))
+        const mover = arrasto.evento.aula ? onMoverAula : onMover
+        mover?.(arrasto.evento.id, loc.dia, minutosParaHora(novoInicioMover))
       }
     }
 
@@ -922,7 +970,7 @@ function GrelhaInterativa({
       window.removeEventListener('touchend', toqueSoltar)
       window.removeEventListener('touchcancel', toqueCancelado)
     }
-  }, [localizar, onClickVazio, onRedimensionar, onMover, mostraCruz])
+  }, [localizar, onClickVazio, onRedimensionar, onMover, onRedimensionarAula, onMoverAula, duracaoClique, mostraCruz])
 
   function aoMoverRatoEmRepouso(e: React.MouseEvent) {
     if (arrastoRef.current || foiToque(e.timeStamp)) return
@@ -956,7 +1004,7 @@ function GrelhaInterativa({
     }
   }
 
-  function iniciarRedimensionamento(evento: EventoComNomes, pega: 'topo' | 'fundo') {
+  function iniciarRedimensionamento(evento: BlocoArrastavel, pega: 'topo' | 'fundo') {
     return (e: React.MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
@@ -969,7 +1017,7 @@ function GrelhaInterativa({
     }
   }
 
-  function iniciarMovimento(evento: EventoComNomes) {
+  function iniciarMovimento(evento: BlocoArrastavel) {
     return (e: React.MouseEvent) => {
       if (e.button !== 0) return
       e.stopPropagation()
@@ -1035,7 +1083,17 @@ function GrelhaInterativa({
     }
   }
 
-  function gestosEvento(evento: EventoComNomes, podeMover: boolean): GestosToque {
+  // Botão direito numa aula de grupo: abre-a (com o dedo, é só tocar).
+  function aoAbrirContextoAula(aula: AulaNaAgenda) {
+    return (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.type === 'contextmenu' && foiToque(e.timeStamp)) return
+      onAbrirAula?.(aula)
+    }
+  }
+
+  function gestosEvento(evento: BlocoArrastavel, podeMover: boolean, aoTocar: () => void): GestosToque {
     return {
       // (Sem stopPropagation: os ouvintes da janela que seguem o arrasto
       // precisam de receber estes eventos. A coluna ignora toques que
@@ -1067,7 +1125,7 @@ function GrelhaInterativa({
         // Toque simples: abre o evento. preventDefault evita o clique
         // simulado que viria a seguir.
         e.preventDefault()
-        onAbrirEvento(evento)
+        aoTocar()
       },
       onTouchCancel: limparToque,
     }
@@ -1090,7 +1148,7 @@ function GrelhaInterativa({
         if (!loc) return
         e.preventDefault()
         setSelecionadoId(null)
-        onClickVazio(dia, minutosParaHora(loc.minuto), 40)
+        onClickVazio(dia, minutosParaHora(loc.minuto), duracaoClique)
       },
       onTouchCancel: limparToque,
     }
@@ -1110,20 +1168,47 @@ function GrelhaInterativa({
       <button
         type="button"
         onClick={() => setAjudaAberta(true)}
-        aria-label="Como usar a Agenda"
+        aria-label={mapaDeAulas ? 'Como usar o mapa de aulas' : 'Como usar a Agenda'}
         title={
           somenteLeitura
-            ? 'A tua conta só pode ver a Agenda.'
-            : 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio. No tablet: toca para abrir, mantém o dedo e arrasta para mover.'
+            ? mapaDeAulas ? 'A tua conta só pode ver as aulas.' : 'A tua conta só pode ver a Agenda.'
+            : mapaDeAulas
+              ? 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar uma aula com essa duração (um clique simples usa a duração habitual do serviço); arrasta o meio de uma aula para a mover; clica uma vez numa aula para depois a poder encurtar/alongar pelo topo ou fundo; botão direito ou duplo clique para a abrir; Esc cancela um arrasto a meio. No tablet: toca para abrir, mantém o dedo e arrasta para mover.'
+              : 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio. As aulas de grupo mexem-se da mesma maneira. No tablet: toca para abrir, mantém o dedo e arrasta para mover.'
         }
         className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground pointer-coarse:h-9 pointer-coarse:w-9"
       >
         <HelpCircle className="h-3.5 w-3.5 pointer-coarse:h-5 pointer-coarse:w-5" />
       </button>
-      <FolhaInferior aberta={ajudaAberta} aoFechar={() => setAjudaAberta(false)} titulo="Como usar a Agenda">
+      <FolhaInferior aberta={ajudaAberta} aoFechar={() => setAjudaAberta(false)} titulo={mapaDeAulas ? 'Como usar o mapa de aulas' : 'Como usar a Agenda'}>
         <div className="space-y-4 px-2 pb-2 text-[15px] leading-snug">
           {somenteLeitura ? (
-            <p className="text-muted">A tua conta só pode ver a Agenda.</p>
+            <p className="text-muted">{mapaDeAulas ? 'A tua conta só pode ver as aulas.' : 'A tua conta só pode ver a Agenda.'}</p>
+          ) : mapaDeAulas ? (
+            <>
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">No tablet ou telemóvel</p>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                  <li><strong>Tocar numa aula</strong> abre-a: inscritos, presenças, alterar e apagar.</li>
+                  <li><strong>Manter o dedo e arrastar</strong> muda-a de hora ou de dia.</li>
+                  <li><strong>Tocar num espaço vazio</strong> cria uma aula a essa hora.</li>
+                  <li>Deslizar o dedo percorre a grelha, como sempre.</li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">No computador</p>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                  <li><strong>Botão direito</strong> ou <strong>duplo clique</strong> numa aula para a abrir.</li>
+                  <li><strong>Arrastar</strong> o meio de uma aula para a mover; clicar uma vez e puxar o topo ou o fundo para a encurtar ou alongar.</li>
+                  <li><strong>Clicar e arrastar</strong> num espaço vazio cria uma aula com essa duração.</li>
+                  <li><strong>Esc</strong> cancela um arrasto a meio.</li>
+                </ul>
+              </div>
+              <p className="text-muted">
+                Numa aula que se repete todas as semanas, a mudança pergunta sempre se é só para essa aula, para essa e as seguintes, ou para
+                todas.
+              </p>
+            </>
           ) : (
             <>
               <div>
@@ -1144,6 +1229,7 @@ function GrelhaInterativa({
                   <li><strong>Esc</strong> cancela um arrasto a meio.</li>
                 </ul>
               </div>
+              <p className="text-muted">As aulas de grupo (a azul e a rosa) mexem-se da mesma maneira.</p>
             </>
           )}
         </div>
@@ -1211,7 +1297,7 @@ function GrelhaInterativa({
           ref={scrollRef}
           onMouseMove={aoMoverRatoEmRepouso}
           onScroll={aoRolarGrelha}
-          className="h-[calc(100vh-200px)] min-h-[360px] overflow-y-auto rounded-b-xl border border-border-subtle"
+          className={`${classeAltura} overflow-y-auto rounded-b-xl border border-border-subtle`}
         >
           <div className="grid" style={{ gridTemplateColumns: `48px ${colunas}`, height: alturaGrade }}>
             <div className="relative text-[10px] text-muted">
@@ -1236,6 +1322,9 @@ function GrelhaInterativa({
                 onIniciarRedimensionamento={iniciarRedimensionamento}
                 onIniciarMovimento={iniciarMovimento}
                 onAbrirContexto={aoAbrirContexto}
+                onAbrirEvento={onAbrirEvento}
+                onAbrirContextoAula={aulasEditaveis ? aoAbrirContextoAula : undefined}
+                onAbrirAula={onAbrirAula}
                 gestosEvento={gestosEvento}
                 gestosColuna={somenteLeitura || diasFechados[dia] ? undefined : gestosColuna(dia)}
                 arrastandoId={arrastandoId}
@@ -1296,6 +1385,9 @@ function ColunaDia({
   onIniciarRedimensionamento,
   onIniciarMovimento,
   onAbrirContexto,
+  onAbrirEvento,
+  onAbrirContextoAula,
+  onAbrirAula,
   gestosEvento,
   gestosColuna,
   arrastandoId,
@@ -1314,10 +1406,14 @@ function ColunaDia({
   estudioId: number
   registarRef: (el: HTMLDivElement | null) => void
   onIniciarCriacao: (e: React.MouseEvent) => void
-  onIniciarRedimensionamento: (evento: EventoComNomes, pega: 'topo' | 'fundo') => (e: React.MouseEvent) => void
-  onIniciarMovimento: (evento: EventoComNomes) => (e: React.MouseEvent) => void
+  onIniciarRedimensionamento: (evento: BlocoArrastavel, pega: 'topo' | 'fundo') => (e: React.MouseEvent) => void
+  onIniciarMovimento: (evento: BlocoArrastavel) => (e: React.MouseEvent) => void
   onAbrirContexto: (evento: EventoComNomes) => (e: React.MouseEvent) => void
-  gestosEvento: (evento: EventoComNomes, podeMover: boolean) => GestosToque
+  onAbrirEvento: (evento: EventoComNomes) => void
+  // Só quando as aulas são editáveis (senão a aula é um simples atalho).
+  onAbrirContextoAula?: (aula: AulaNaAgenda) => (e: React.MouseEvent) => void
+  onAbrirAula?: (aula: AulaNaAgenda) => void
+  gestosEvento: (evento: BlocoArrastavel, podeMover: boolean, aoTocar: () => void) => GestosToque
   gestosColuna?: GestosToque
   arrastandoId: string | null
   selecionadoId: string | null
@@ -1385,38 +1481,26 @@ function ColunaDia({
         const util = `(100% - ${a.recuo * ABA_CANCELADO}px)`
         const cheia = a.inscritos >= a.lotacao
         const fimAula = horaFim(a.hora_inicio, a.duracao_min)
-        return (
-          <NextLink
-            key={`aula-${a.id}`}
-            href={a.href}
-            data-aula=""
-            onMouseDown={(e) => e.stopPropagation()}
-            title={`Aula de grupo · ${a.servicoNome} · ${a.hora_inicio.slice(0, 5)}–${fimAula} · ${
-              a.cancelada ? 'cancelada' : `${a.inscritos}/${a.lotacao} inscritos`
-            }${a.instrutorNome ? ` · ${a.instrutorNome}` : ''} · clica para abrir a aula`}
-            className={`absolute overflow-hidden rounded-md border border-l-4 px-1.5 py-0.5 text-left text-[11px] leading-tight shadow-sm transition-colors ${
-              a.servicoChave === 'pilates'
-                ? 'border-fuchsia-300 border-l-fuchsia-500 bg-fuchsia-50 text-fuchsia-950 hover:bg-fuchsia-100 dark:bg-fuchsia-950/60 dark:text-fuchsia-100'
-                : 'border-sky-300 border-l-sky-500 bg-sky-50 text-sky-950 hover:bg-sky-100 dark:bg-sky-950/60 dark:text-sky-100'
-            } ${
-              a.cancelada
-                ? 'opacity-50 line-through'
-                : dia < diaLocal || (dia === diaLocal && minutosDoDia(a.hora_inicio) + a.duracao_min <= minutoAgora)
-                  ? 'opacity-[.72] hover:opacity-100'
-                  : ''
-            }`}
-            style={{
-              top: minutosDoDia(a.hora_inicio) * pxPorMinuto,
-              height: Math.max(a.duracao_min * pxPorMinuto, ALTURA_MIN_BLOCO) - 2,
-              left: `calc(${util} * ${a.coluna / a.colunas} + 1px)`,
-              width: `calc(${util} * ${(a.largura + a.extra) / a.colunas} - 2px)`,
-              zIndex: a.cancelada ? a.nivel : 10 + a.coluna,
-              cursor: 'pointer',
-            }}
-          >
+        const passada = dia < diaLocal || (dia === diaLocal && minutosDoDia(a.hora_inicio) + a.duracao_min <= minutoAgora)
+        const resumo = `Aula de grupo · ${a.servicoNome} · ${a.hora_inicio.slice(0, 5)}–${fimAula} · ${
+          a.cancelada ? 'cancelada' : `${a.inscritos}/${a.lotacao} inscritos`
+        }${a.instrutorNome ? ` · ${a.instrutorNome}` : ''}`
+        const cores =
+          a.servicoChave === 'pilates'
+            ? 'border-fuchsia-300 border-l-fuchsia-500 bg-fuchsia-50 text-fuchsia-950 hover:bg-fuchsia-100 dark:bg-fuchsia-950/60 dark:text-fuchsia-100'
+            : 'border-sky-300 border-l-sky-500 bg-sky-50 text-sky-950 hover:bg-sky-100 dark:bg-sky-950/60 dark:text-sky-100'
+        const estilo = {
+          top: minutosDoDia(a.hora_inicio) * pxPorMinuto,
+          height: Math.max(a.duracao_min * pxPorMinuto, ALTURA_MIN_BLOCO) - 2,
+          left: `calc(${util} * ${a.coluna / a.colunas} + 1px)`,
+          width: `calc(${util} * ${(a.largura + a.extra) / a.colunas} - 2px)`,
+          zIndex: a.cancelada ? a.nivel : 10 + a.coluna,
+        }
+        const conteudo = (
+          <span className="block h-full overflow-hidden px-1.5 py-0.5">
             <span className="flex items-center justify-between gap-1">
               <span className="truncate font-bold">{a.servicoNome}</span>
-              <span className={`shrink-0 rounded-full px-1 font-bold ${cheia ? 'bg-red-200 text-red-800' : 'bg-white/70'}`}>
+              <span className={`shrink-0 rounded-full px-1 font-bold ${cheia ? 'bg-red-200 text-red-800' : 'bg-white/70 dark:bg-black/30'}`}>
                 {a.cancelada ? '—' : `${a.inscritos}/${a.lotacao}`}
               </span>
             </span>
@@ -1424,7 +1508,78 @@ function ColunaDia({
               {a.hora_inicio.slice(0, 5)} – {fimAula}
               {a.instrutorNome ? ` · ${a.instrutorNome}` : ''}
             </span>
-          </NextLink>
+          </span>
+        )
+        // Sem edição (conta só de leitura, ou a grelha não a pediu): a
+        // aula é um simples atalho para a página dela.
+        if (!onAbrirContextoAula || !onAbrirAula) {
+          return (
+            <NextLink
+              key={`aula-${a.id}`}
+              href={a.href}
+              data-aula=""
+              onMouseDown={(e) => e.stopPropagation()}
+              title={`${resumo} · clica para abrir a aula`}
+              className={`absolute overflow-hidden rounded-md border border-l-4 text-left text-[11px] leading-tight shadow-sm transition-colors ${cores} ${
+                a.cancelada ? 'opacity-50 line-through' : passada ? 'opacity-[.72] hover:opacity-100' : ''
+              }`}
+              style={{ ...estilo, cursor: 'pointer' }}
+            >
+              {conteudo}
+            </NextLink>
+          )
+        }
+        // Editável como um treino: arrastar o meio move-a, um clique
+        // seleciona-a (para esticar pelo topo/fundo), botão direito,
+        // duplo clique ou um toque abrem-na.
+        const bloco = blocoDaAula(a)
+        const emArrasto = arrastandoId === a.id
+        const emSelecionado = selecionadoId === a.id
+        return (
+          <button
+            key={`aula-${a.id}`}
+            type="button"
+            data-aula=""
+            draggable={false}
+            title={
+              a.cancelada
+                ? `${resumo} · clica para abrir`
+                : emSelecionado
+                  ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito ou duplo clique para abrir'
+                  : `${resumo} · arrasta para mover · botão direito ou duplo clique para abrir`
+            }
+            onMouseDown={a.cancelada ? (e) => e.stopPropagation() : onIniciarMovimento(bloco)}
+            onClick={a.cancelada ? onAbrirContextoAula(a) : undefined}
+            onDoubleClick={a.cancelada ? undefined : onAbrirContextoAula(a)}
+            onContextMenu={onAbrirContextoAula(a)}
+            {...gestosEvento(bloco, !a.cancelada, () => onAbrirAula(a))}
+            className={`group absolute rounded-md border border-l-4 text-left text-[11px] leading-tight shadow-sm transition-[opacity,background-color] select-none ${cores} ${
+              a.cancelada
+                ? 'cursor-pointer opacity-50 line-through'
+                : emArrasto
+                  ? 'cursor-grabbing opacity-30'
+                  : `cursor-grab ${passada ? 'opacity-[.72] hover:opacity-100' : ''}`
+            } ${emSelecionado ? 'ring-2 ring-brand ring-offset-1' : ''}`}
+            style={{ ...estilo, WebkitTouchCallout: 'none' }}
+          >
+            {conteudo}
+            <span
+              onMouseDown={emSelecionado && !a.cancelada ? onIniciarRedimensionamento(bloco, 'topo') : undefined}
+              className={`absolute inset-x-0 -top-1.5 flex h-3.5 items-start justify-center ${
+                emSelecionado && !a.cancelada ? 'cursor-ns-resize' : 'pointer-events-none'
+              }`}
+            >
+              {!a.cancelada && <span className="mt-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />}
+            </span>
+            <span
+              onMouseDown={emSelecionado && !a.cancelada ? onIniciarRedimensionamento(bloco, 'fundo') : undefined}
+              className={`absolute inset-x-0 -bottom-1.5 flex h-3.5 items-end justify-center ${
+                emSelecionado && !a.cancelada ? 'cursor-ns-resize' : 'pointer-events-none'
+              }`}
+            >
+              {!a.cancelada && <span className="mb-1 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-70" />}
+            </span>
+          </button>
         )
       })}
       {disposicao.eventos.map(({ evento, grupo, coluna, colunas, largura, recuo, nivel, extra, coberto }) => {
@@ -1483,7 +1638,7 @@ function ColunaDia({
             }
             onClick={somenteLeitura ? undefined : cancelado ? onAbrirContexto(evento) : undefined}
             onContextMenu={somenteLeitura ? undefined : onAbrirContexto(evento)}
-            {...(somenteLeitura ? {} : gestosEvento(evento, !cancelado))}
+            {...(somenteLeitura ? {} : gestosEvento(evento, !cancelado, () => onAbrirEvento(evento)))}
             className={`group absolute rounded-md text-left transition-opacity select-none ${
               somenteLeitura
                 ? '!cursor-default'

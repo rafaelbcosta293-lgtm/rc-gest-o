@@ -19,7 +19,7 @@ export async function carregarAulasNaAgenda(
 ): Promise<AulaNaAgenda[]> {
   let q = supabase
     .from('aulas')
-    .select('id, servico_id, data, hora_inicio, duracao_min, instrutor_id, lotacao, estado')
+    .select('id, servico_id, horario_id, data, hora_inicio, duracao_min, instrutor_id, lotacao, estado')
     .eq('estudio_id', estudioId)
     .gte('data', inicio)
     .lt('data', fimExclusivo)
@@ -39,6 +39,7 @@ export async function carregarAulasNaAgenda(
     const s = servico.get(a.servico_id as number)
     return {
       id: a.id as string,
+      horarioId: (a.horario_id as string | null) ?? null,
       data: a.data as string,
       hora_inicio: a.hora_inicio as string,
       duracao_min: a.duracao_min as number,

@@ -453,13 +453,13 @@ export default function TreinoForm({
                     <CampoGrid rotulo="Séries" teclado="numeric" value={linha.series} onChange={aoMudarCampo(linha, indice, 'series')} className="text-center" />
                   </CelulaGrid>
                   <CelulaGrid className="order-4 md:order-none">
-                    <CampoGrid rotulo="Reps" value={linha.reps} onChange={aoMudarCampo(linha, indice, 'reps')} className="text-center" />
+                    <CampoGrid rotulo="Reps" teclado="numeric" value={linha.reps} onChange={aoMudarCampo(linha, indice, 'reps')} className="text-center" />
                   </CelulaGrid>
                   <CelulaGrid className="order-4 md:order-none">
                     <CampoGrid rotulo="Carga" teclado="decimal" value={linha.carga} onChange={aoMudarCampo(linha, indice, 'carga')} className="text-center" />
                   </CelulaGrid>
                   <CelulaGrid className="order-4 md:order-none">
-                    <CampoGrid rotulo="Descanso" value={linha.descanso} onChange={aoMudarCampo(linha, indice, 'descanso')} className="text-center" />
+                    <CampoGrid rotulo="Descanso" teclado="numeric" value={linha.descanso} onChange={aoMudarCampo(linha, indice, 'descanso')} className="text-center" />
                   </CelulaGrid>
                   <CelulaGrid className="order-5 col-span-4 md:order-none md:col-span-1">
                     <CampoGrid rotulo="Nota" value={linha.nota} onChange={aoMudarCampo(linha, indice, 'nota')} />

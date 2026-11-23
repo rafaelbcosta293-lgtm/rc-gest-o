@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import Link from '@/components/LinkRapido'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
@@ -38,6 +39,36 @@ const TODAS_AS_SUBPASTAS = new Set(Object.values(SUBPASTAS).flat())
 // do computador/tablet (ver NavLinkPastaHorarios).
 const SUBPASTAS_HORARIOS = new Set(['assiduidade', 'ferias'])
 
+// A cor de cada estúdio — na etiqueta com o nome e no fio por baixo da
+// barra de cima — para se perceber num relance onde se está (quem anda
+// entre os dois, como a Coordenação, não tinha como distinguir).
+// (O fio vai em "style": a cor das bordas é fixada pelo tema, por cima
+// das classes.)
+const COR_ESTUDIO: Record<string, { etiqueta: string; fio: string }> = {
+  fatima: { etiqueta: 'bg-brand text-black', fio: 'var(--brand)' },
+  leiria: { etiqueta: 'bg-blue-600 text-white', fio: '#2563eb' },
+}
+const COR_OUTRO_ESTUDIO = { etiqueta: 'bg-zinc-600 text-white', fio: '#71717a' }
+
+// O nome do estúdio no separador do browser ("Fátima · RC Gestão"), para
+// se distinguirem dois separadores abertos lado a lado.
+export async function generateMetadata({ params }: LayoutProps<'/painel/[estudio]'>): Promise<Metadata> {
+  const { estudio: slug } = await params
+  const estudio = await getEstudioPorSlug(await createClient(), slug)
+  return estudio ? { title: `${estudio.nome} · RC Gestão` } : {}
+}
+
+function EtiquetaEstudio({ nome, cor }: { nome: string; cor: string }) {
+  return (
+    <span
+      title={`Estás no estúdio de ${nome}`}
+      className={`inline-flex shrink-0 items-center rounded-full px-3 py-1 text-xs font-extrabold tracking-wide uppercase ${cor}`}
+    >
+      {nome}
+    </span>
+  )
+}
+
 export default async function EstudioLayout({ children, params }: LayoutProps<'/painel/[estudio]'>) {
   const { estudio: slug } = await params
 
@@ -75,6 +106,7 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
 
   const { ehAdmin, ehGestao } = papeisDaSessao(sessao)
   const contaIndividual = !ehContaFixa(sessao.email)
+  const corEstudio = COR_ESTUDIO[slug] ?? COR_OUTRO_ESTUDIO
 
   const podeAceder = (m: (typeof MODULOS)[number]) => {
     if (!m.pronto) return false
@@ -132,10 +164,15 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
         {/* Telemóvel e tablet ao alto (<1024px): mini-barra no topo, só para trocar de
             estúdio — os módulos ficam na barra de separadores do fundo,
             sempre ao alcance do polegar, ao estilo iOS. */}
-        <div className="shadow-deep flex items-center justify-end gap-1 border-b border-border-subtle bg-background/90 px-4 py-2 backdrop-blur-xl lg:hidden">
-          {/* Sempre à vista: volta ao menu inicial deste estúdio. */}
-          <span className="mr-auto">
+        <div
+          className="shadow-deep flex items-center justify-end gap-1 border-b-[3px] bg-background/90 px-4 py-2 backdrop-blur-xl lg:hidden"
+          style={{ borderBottomColor: corEstudio.fio }}
+        >
+          {/* Sempre à vista: volta ao menu inicial deste estúdio, e o
+              nome do estúdio onde se está. */}
+          <span className="mr-auto flex min-w-0 items-center gap-2">
             <NavLinkInicio slug={slug} comTexto />
+            {estudio && <EtiquetaEstudio nome={estudio.nome} cor={corEstudio.etiqueta} />}
           </span>
           {!contaIndividual && (
             <Link
@@ -163,12 +200,16 @@ export default async function EstudioLayout({ children, params }: LayoutProps<'/
             faixa fica com o tema escuro ("dark tema-proprio") — o resto
             da página continua no modelo claro, ao contrário da
             Administração, onde o escuro é a área toda. */}
-        <header className="dark tema-proprio shadow-deep hidden items-center gap-3 border-b border-border-subtle bg-surface/80 px-4 py-2.5 backdrop-blur-xl lg:flex">
+        <header
+          className="dark tema-proprio shadow-deep hidden items-center gap-3 border-b-[3px] bg-surface/80 px-4 py-2.5 backdrop-blur-xl lg:flex"
+          style={{ borderBottomColor: corEstudio.fio }}
+        >
           {/* O logótipo volta ao quadro inicial (estúdios, Coordenação,
               Administração); o botão "Início" volta ao início deste estúdio. */}
           <Link href="/painel" title="Quadro inicial — estúdios, Coordenação e Administração" className="flex shrink-0 items-center">
             <Image src="/logo.png" alt="RC Private Fitness Studio" width={638} height={257} className="h-8 w-auto" priority />
           </Link>
+          {estudio && <EtiquetaEstudio nome={estudio.nome} cor={corEstudio.etiqueta} />}
           <NavLinkInicio slug={slug} comTexto />
           <BarraAjustavel className="min-w-0 flex-1" navClassName="flex items-center gap-2">
             {MODULOS.filter((m) => !subpastasParaFiltrar.has(m.id) && !SUBPASTAS_HORARIOS.has(m.id)).map((m) =>

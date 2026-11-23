@@ -75,7 +75,6 @@ export default function JanelaAula({
   clientes,
   instrutores,
   podeEscrever,
-  ehGestao,
   basePath,
   servicoParam,
   fecharHref,
@@ -86,8 +85,6 @@ export default function JanelaAula({
   clientes: ClienteOpcaoAula[]
   instrutores: { id: string; nome: string }[]
   podeEscrever: boolean
-  // Só a gestão mexe no horário semanal e apaga aulas.
-  ehGestao: boolean
   basePath: string
   servicoParam: string | null
   fecharHref: string
@@ -390,23 +387,21 @@ export default function JanelaAula({
                   Reabrir a aula
                 </button>
               )}
-              {ehGestao && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setApagar((v) => !v)
-                    setEditar(false)
-                  }}
-                  aria-expanded={apagar}
-                  className={`${botaoCls} ml-auto inline-flex items-center gap-1 text-muted hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Apagar
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setApagar((v) => !v)
+                  setEditar(false)
+                }}
+                aria-expanded={apagar}
+                className={`${botaoCls} ml-auto inline-flex items-center gap-1 text-muted hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950`}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Apagar
+              </button>
             </div>
           )}
 
-          {podeEscrever && ehGestao && apagar && (
+          {podeEscrever && apagar && (
             <div className="mt-2 rounded-xl border border-red-600/30 bg-red-50/60 p-3 dark:bg-red-950/30">
               <p className="text-xs text-muted">
                 {repete
@@ -475,7 +470,6 @@ export default function JanelaAula({
                         key={o.valor}
                         type="button"
                         aria-pressed={escopo === o.valor}
-                        disabled={o.valor !== 'um' && !ehGestao}
                         onClick={() => setEscopo(o.valor)}
                         className={`rounded-full px-2 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:py-2.5 ${
                           escopo === o.valor ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
@@ -486,13 +480,11 @@ export default function JanelaAula({
                     ))}
                   </div>
                   <p className="text-[11px] text-muted">
-                    {!ehGestao
-                      ? 'Só a gestão pode mudar o horário semanal (esta e as seguintes, ou todas).'
-                      : escopo === 'um'
-                        ? 'Muda só esta aula; o horário semanal fica como está.'
-                        : escopo === 'seguintes'
-                          ? 'Muda esta aula, as seguintes e o horário semanal daqui em diante.'
-                          : 'Muda todas as aulas da série ainda por acontecer e o horário semanal.'}
+                    {escopo === 'um'
+                      ? 'Muda só esta aula; o horário semanal fica como está.'
+                      : escopo === 'seguintes'
+                        ? 'Muda esta aula, as seguintes e o horário semanal daqui em diante.'
+                        : 'Muda todas as aulas da série ainda por acontecer e o horário semanal.'}
                   </p>
                 </fieldset>
               )}

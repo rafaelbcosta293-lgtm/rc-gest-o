@@ -459,7 +459,6 @@ export default async function AgendaConteudo({
           somenteLeitura={somenteLeitura}
           diasFechados={diasFechados}
           aulas={aulasNaAgenda}
-          ehGestao={papeisDaSessao(sessao).ehGestao}
         />
       )}
       {vista === 'mes' && (

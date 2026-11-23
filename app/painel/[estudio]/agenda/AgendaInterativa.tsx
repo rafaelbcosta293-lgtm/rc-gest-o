@@ -294,7 +294,6 @@ export default function AgendaInterativa({
   somenteLeitura,
   diasFechados = {},
   aulas = [],
-  ehGestao = true,
 }: {
   slug: string
   estudioId: number
@@ -310,12 +309,10 @@ export default function AgendaInterativa({
   diasFechados?: Record<string, string>
   // Aulas de grupo a mostrar na grelha (vazio = escondidas).
   aulas?: AulaNaAgenda[]
-  // Só a gestão mexe no horário semanal das aulas.
-  ehGestao?: boolean
 }) {
   const router = useRouter()
   // As aulas de grupo arrastam-se e esticam-se como os treinos.
-  const edicaoAulas = useEdicaoAulas({ slug, aulas, diasFechados, ehGestao })
+  const edicaoAulas = useEdicaoAulas({ slug, aulas, diasFechados })
   const [modal, setModal] = useState<EstadoModal>({ aberto: false })
   const [zoomIndice, setZoomIndice] = useState(ZOOM_INICIAL)
   const [aPendente, iniciarTransicao] = useTransition()

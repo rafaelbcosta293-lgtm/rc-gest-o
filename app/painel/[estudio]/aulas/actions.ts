@@ -19,10 +19,6 @@ async function podeEscrever(): Promise<boolean> {
   return ehContaFixa(sessao.email) || !!sessao.agendaEscrita
 }
 
-async function soGestao(): Promise<boolean> {
-  return papeisDaSessao(await getSessaoAtual()).ehGestao
-}
-
 // Inscreve um cliente numa aula. A vaga é garantida pela base de dados
 // (inscrever_em_aula) — é a mesma função que a app dos clientes vai usar.
 export async function inscreverNaAula(input: { estudioSlug: string; aulaId: string; clienteId: string }): Promise<ResultadoAula> {
@@ -100,6 +96,8 @@ const HORA = /^\d{2}:\d{2}/
 
 // A função ainda não existe na base de dados (migração por aplicar).
 const semFuncao = (e: { code?: string }) => e.code === 'PGRST202'
+const SEM_PERMISSAO_HORARIO =
+  'A base de dados ainda não deixa esta conta mexer no horário semanal das aulas — falta aplicar a atualização (aulas_series).'
 const FALTA_ATUALIZACAO =
   'Esta mudança precisa de uma atualização da base de dados (aulas_series) que ainda não foi aplicada.'
 
@@ -173,7 +171,7 @@ export async function apagarAulaRapido(input: {
   aulaId: string
   escopo: EscopoAula
 }): Promise<{ ok: true; apagadas: number; ficaram: number } | { error: string }> {
-  if (!(await soGestao())) return { error: 'Só a gestão pode apagar aulas. Podes cancelar a aula.' }
+  if (!(await podeEscrever())) return { error: 'A tua conta só pode ver as aulas.' }
   if (!ESCOPOS.includes(input.escopo)) return { error: 'Opção inválida.' }
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('apagar_aula', { p_aula: input.aulaId, p_escopo: input.escopo })
@@ -184,7 +182,7 @@ export async function apagarAulaRapido(input: {
 }
 
 // Cria uma aula a partir do mapa: avulsa (só nesse dia) ou a repetir
-// todas as semanas (entra no horário semanal — só a gestão).
+// todas as semanas (entra no horário semanal).
 export async function criarAulaRapida(input: {
   estudioSlug: string
   estudioId: number
@@ -205,7 +203,6 @@ export async function criarAulaRapida(input: {
   if (!Number.isInteger(input.duracaoMin) || input.duracaoMin < 10 || input.duracaoMin > 240) {
     return { error: 'A duração tem de ficar entre 10 e 240 minutos.' }
   }
-  if (input.repete && !(await soGestao())) return { error: 'Só a gestão pode pôr aulas a repetir todas as semanas.' }
   if (input.repete && input.ate && (!DATA_ISO.test(input.ate) || input.ate < input.data)) {
     return { error: 'A data final tem de ser depois da primeira aula.' }
   }
@@ -243,7 +240,7 @@ export async function criarAulaRapida(input: {
       })
       .select('id')
       .single()
-    if (error || !horario) return { error: error?.message ?? 'Não foi possível criar o horário.' }
+    if (error || !horario) return { error: error?.code === '42501' ? SEM_PERMISSAO_HORARIO : (error?.message ?? 'Não foi possível criar o horário.') }
     // A primeira aula nasce já, mesmo que o dia escolhido já tenha
     // passado ou fique para lá das semanas que o horário abre sozinho.
     const { error: erroAula } = await supabase.from('aulas').upsert(
@@ -323,10 +320,10 @@ export async function criarAulaAvulsa(formData: FormData) {
   voltar(formData, { ok: 'aula-criada' })
 }
 
-// Horário semanal (só a gestão): cria o modelo e abre logo as aulas das
-// próximas semanas.
+// Horário semanal: cria o modelo e abre logo as aulas das próximas
+// semanas. (Como na Agenda dos treinos: quem pode escrever, pode.)
 export async function guardarHorarioAula(formData: FormData) {
-  if (!(await soGestao())) voltar(formData, { error: 'Só a gestão pode mudar o horário das aulas.' })
+  if (!(await podeEscrever())) voltar(formData, { error: 'A tua conta só pode ver as aulas.' })
   const estudioId = Number(formData.get('estudio_id'))
   const servicoId = Number(formData.get('servico_id'))
   const dia = Number(formData.get('dia_semana'))
@@ -344,7 +341,7 @@ export async function guardarHorarioAula(formData: FormData) {
     lotacao,
     desde: texto(formData, 'desde') ?? hojeEmLisboa(),
   })
-  if (error) voltar(formData, { error: error.message })
+  if (error) voltar(formData, { error: error.code === '42501' ? SEM_PERMISSAO_HORARIO : error.message })
   await gerarAulas(supabase, estudioId, hojeEmLisboa())
   revalidatePath(`/painel/${String(formData.get('estudio_slug'))}`, 'layout')
   voltar(formData, { ok: 'horario-criado' })
@@ -354,7 +351,7 @@ export async function guardarHorarioAula(formData: FormData) {
 // futuras dele ainda sem ninguém inscrito (as que têm inscritos ficam,
 // para se avisar as pessoas e cancelar à mão).
 export async function terminarHorarioAula(formData: FormData) {
-  if (!(await soGestao())) voltar(formData, { error: 'Só a gestão pode mudar o horário das aulas.' })
+  if (!(await podeEscrever())) voltar(formData, { error: 'A tua conta só pode ver as aulas.' })
   const id = texto(formData, 'id')
   if (!id) voltar(formData, {})
   const supabase = await createClient()

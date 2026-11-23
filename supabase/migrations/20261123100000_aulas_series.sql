@@ -9,8 +9,17 @@
 -- * apagar_aula: apaga com os mesmos três alcances. Aulas com inscritos
 --   nunca são apagadas (ficam, para se avisar as pessoas e cancelar).
 --
--- As duas funções correm com as permissões de quem chama (RLS): mexer no
--- horário semanal e apagar aulas continua a ser só da gestão.
+-- Quem pode: a mesma regra da Agenda dos treinos. Na base de dados,
+-- qualquer conta do estúdio (RLS por estúdio); na aplicação, só as contas
+-- que podem escrever na Agenda (contas do estúdio e quem a Administração
+-- autorizou). Por isso o horário semanal e o apagar de aulas deixam de
+-- ser exclusivos da gestão — as duas funções correm com as permissões de
+-- quem chama.
+
+alter policy gerir_aulas_horario on public.aulas_horario
+  using (tenho_estudio(estudio_id)) with check (tenho_estudio(estudio_id));
+alter policy apagar_aulas on public.aulas
+  using (tenho_estudio(estudio_id));
 
 create table public.aulas_horario_saltos (
   horario_id uuid not null references public.aulas_horario(id) on delete cascade,
@@ -28,7 +37,7 @@ create policy ver_saltos on public.aulas_horario_saltos for select
 create policy criar_saltos on public.aulas_horario_saltos for insert
   with check (exists (select 1 from public.aulas_horario h where h.id = horario_id and tenho_estudio(h.estudio_id)));
 create policy apagar_saltos on public.aulas_horario_saltos for delete
-  using (e_gestao() and exists (select 1 from public.aulas_horario h where h.id = horario_id and tenho_estudio(h.estudio_id)));
+  using (exists (select 1 from public.aulas_horario h where h.id = horario_id and tenho_estudio(h.estudio_id)));
 
 create or replace function public.mudar_aula(
   p_aula uuid,
@@ -92,9 +101,6 @@ begin
   end if;
 
   -- ── Esta e as seguintes / toda a série ──────────────────────────────
-  if not e_gestao() then
-    raise exception 'Só a gestão pode mudar o horário semanal — escolhe "Só esta".';
-  end if;
   select * into h from public.aulas_horario where id = a.horario_id for update;
   if not found then raise exception 'O horário desta aula já não existe.'; end if;
 
@@ -207,9 +213,6 @@ declare
   v_ficaram integer;
 begin
   if p_escopo not in ('um', 'seguintes', 'serie') then raise exception 'Opção inválida.'; end if;
-  if not e_gestao() then
-    raise exception 'Só a gestão pode apagar aulas. Podes cancelar a aula.';
-  end if;
   select * into a from public.aulas where id = p_aula for update;
   if not found then raise exception 'Aula não encontrada.'; end if;
   if a.horario_id is null then p_escopo := 'um'; end if;

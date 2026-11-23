@@ -79,7 +79,7 @@ export default async function ConteudoAulas({
 
   const sessao = await getSessaoAtual()
   const podeEscrever = ehContaFixa(sessao.email) || !!sessao.agendaEscrita
-  const { ehGestao, ehAdmin } = papeisDaSessao(sessao)
+  const { ehAdmin } = papeisDaSessao(sessao)
 
   // Abre as aulas das próximas semanas a partir do horário (idempotente).
   if (podeEscrever) await gerarAulas(supabase, estudio.id, hoje)
@@ -192,7 +192,6 @@ export default async function ConteudoAulas({
         clientes={clientes}
         instrutores={equipa}
         podeEscrever={podeEscrever}
-        ehGestao={ehGestao}
         basePath={basePath}
         servicoParam={sp.servico ?? null}
         fecharHref={`${basePath}${query({ data: sp.data, servico: sp.servico }, {})}`}
@@ -290,7 +289,6 @@ export default async function ConteudoAulas({
           servicos={servicosMapa}
           equipa={equipa}
           podeEscrever={podeEscrever}
-          ehGestao={ehGestao}
         />
       </div>
       {/* Telemóvel: a semana em lista; tocar numa aula abre-a (é lá que
@@ -390,7 +388,7 @@ export default async function ConteudoAulas({
                 {h.ate ? ` · até ${fmt(h.ate).slice(0, 5)}` : ''}
               </span>
             </span>
-            {ehGestao && (
+            {podeEscrever && (
               <form action={terminarHorarioAula}>
                 <input type="hidden" name="estudio_slug" value={slug} />
                 <input type="hidden" name="id" value={h.id} />
@@ -405,7 +403,7 @@ export default async function ConteudoAulas({
         {horarios.length === 0 && <li className="px-3 py-3 text-sm text-muted">Ainda não há aulas no horário semanal.</li>}
       </ul>
 
-      {ehGestao && (
+      {podeEscrever && (
         <form action={guardarHorarioAula} className="mt-2 grid grid-cols-2 gap-2 rounded-xl border border-dashed border-border-strong p-3 sm:grid-cols-6">
           <input type="hidden" name="estudio_slug" value={slug} />
           <input type="hidden" name="estudio_id" value={estudio.id} />

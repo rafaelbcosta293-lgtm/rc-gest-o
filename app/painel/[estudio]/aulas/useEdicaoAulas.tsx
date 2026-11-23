@@ -22,13 +22,10 @@ export function useEdicaoAulas({
   slug,
   aulas,
   diasFechados,
-  ehGestao = true,
 }: {
   slug: string
   aulas: AulaNaAgenda[]
   diasFechados: Record<string, string>
-  // Só a gestão mexe no horário semanal ("seguintes" / "todas").
-  ehGestao?: boolean
 }) {
   const router = useRouter()
   const [pedido, setPedido] = useState<PedidoAula | null>(null)
@@ -74,7 +71,7 @@ export function useEdicaoAulas({
   const aulaDoPedido = pedido ? (aulas.find((a) => a.id === pedido.id) ?? null) : null
   const dialogo =
     pedido && aulaDoPedido ? (
-      <PerguntaAula pedido={pedido} aula={aulaDoPedido} ehGestao={ehGestao} onEscolher={(e) => aplicar(pedido, e)} onCancelar={() => setPedido(null)} />
+      <PerguntaAula pedido={pedido} aula={aulaDoPedido} onEscolher={(e) => aplicar(pedido, e)} onCancelar={() => setPedido(null)} />
     ) : null
 
   return { moverAula, redimensionarAula, dialogo, erro, limparErro: () => setErro(null), aGravar }
@@ -84,13 +81,11 @@ export function useEdicaoAulas({
 function PerguntaAula({
   pedido,
   aula,
-  ehGestao,
   onEscolher,
   onCancelar,
 }: {
   pedido: PedidoAula
   aula: AulaNaAgenda
-  ehGestao: boolean
   onEscolher: (escopo: EscopoAula) => void
   onCancelar: () => void
 }) {
@@ -137,10 +132,10 @@ function PerguntaAula({
               <button type="button" autoFocus onClick={() => onEscolher('um')} className={botao}>
                 <span className="font-semibold text-foreground">Só esta</span>
               </button>
-              <button type="button" disabled={!ehGestao} onClick={() => onEscolher('seguintes')} className={botao}>
+              <button type="button" onClick={() => onEscolher('seguintes')} className={botao}>
                 <span className="font-semibold text-foreground">Esta e as seguintes</span>
               </button>
-              <button type="button" disabled={!ehGestao} onClick={() => onEscolher('serie')} className={botao}>
+              <button type="button" onClick={() => onEscolher('serie')} className={botao}>
                 <span className="font-semibold text-foreground">Todas as da série</span>
               </button>
             </>
@@ -152,9 +147,8 @@ function PerguntaAula({
         </div>
         {repete && (
           <p className="mt-3 text-xs text-muted">
-            {!ehGestao
-              ? 'Só a gestão pode mudar o horário semanal (esta e as seguintes, ou todas).'
-              : `${mudaDia ? 'As outras aulas mudam o mesmo número de dias, e o horário semanal fica no dia novo. ' : 'O horário semanal fica com a hora nova. '}As que já aconteceram ou foram canceladas ficam como estão.`}
+            {mudaDia ? 'As outras aulas mudam o mesmo número de dias, e o horário semanal fica no dia novo. ' : 'O horário semanal fica com a hora nova. '}
+            As que já aconteceram ou foram canceladas ficam como estão.
           </p>
         )}
         <button type="button" onClick={onCancelar} className="mt-3 w-full text-center text-xs font-semibold text-muted underline hover:text-foreground">

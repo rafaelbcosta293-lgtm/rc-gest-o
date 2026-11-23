@@ -28,7 +28,6 @@ export default function MapaAulas({
   servicos,
   equipa,
   podeEscrever,
-  ehGestao,
 }: {
   slug: string
   estudioId: number
@@ -39,12 +38,11 @@ export default function MapaAulas({
   servicos: ServicoDoMapa[]
   equipa: { id: string; nome: string }[]
   podeEscrever: boolean
-  ehGestao: boolean
 }) {
   const router = useRouter()
   const [zoomIndice, setZoomIndice] = useState(ZOOM_INICIAL)
   const [nova, setNova] = useState<{ data: string; horaInicio: string; duracaoMin: number } | null>(null)
-  const edicao = useEdicaoAulas({ slug, aulas, diasFechados, ehGestao })
+  const edicao = useEdicaoAulas({ slug, aulas, diasFechados })
 
   const diaOmissao = hoje >= dias[0] && hoje <= dias[dias.length - 1] ? hoje : dias[0]
 
@@ -119,7 +117,6 @@ export default function MapaAulas({
           inicial={nova}
           servicos={servicos}
           equipa={equipa}
-          ehGestao={ehGestao}
           onFechar={() => setNova(null)}
           onCriada={() => {
             setNova(null)
@@ -144,7 +141,6 @@ function NovaAula({
   inicial,
   servicos,
   equipa,
-  ehGestao,
   onFechar,
   onCriada,
 }: {
@@ -153,7 +149,6 @@ function NovaAula({
   inicial: { data: string; horaInicio: string; duracaoMin: number }
   servicos: ServicoDoMapa[]
   equipa: { id: string; nome: string }[]
-  ehGestao: boolean
   onFechar: () => void
   onCriada: () => void
 }) {
@@ -166,7 +161,7 @@ function NovaAula({
   // mexer nela à mão.
   const [duracao, setDuracao] = useState(inicial.duracaoMin > 0 ? String(inicial.duracaoMin) : '')
   const duracaoEfetiva = duracao === '' ? servico.duracao : Number(duracao)
-  const [repete, setRepete] = useState(ehGestao)
+  const [repete, setRepete] = useState(true)
 
   useEffect(() => {
     function tecla(e: KeyboardEvent) {
@@ -317,11 +312,10 @@ function NovaAula({
                 <button type="button" aria-pressed={!repete} onClick={() => setRepete(false)} className={segmento(!repete)}>
                   Só neste dia
                 </button>
-                <button type="button" aria-pressed={repete} disabled={!ehGestao} onClick={() => setRepete(true)} className={segmento(repete)}>
+                <button type="button" aria-pressed={repete} onClick={() => setRepete(true)} className={segmento(repete)}>
                   Todas as semanas
                 </button>
               </div>
-              {!ehGestao && <p className="text-xs text-muted">Só a gestão pode pôr aulas a repetir todas as semanas.</p>}
             </div>
 
             {repete && (

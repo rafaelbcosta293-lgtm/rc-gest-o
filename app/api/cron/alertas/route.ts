@@ -7,6 +7,7 @@ import {
   avaliarLeads,
   avaliarClientes,
   reconciliarAlertas,
+  semanasDeTreino,
   LIMITES_OMISSAO,
   type LeadParaAlertas,
   type ClienteParaAlertas,
@@ -53,7 +54,8 @@ export async function GET(request: Request) {
     console.error('Despesas recorrentes não geradas:', e)
   }
   const agoraISO = new Date().toISOString()
-  const hojeISO = agoraISO.slice(0, 10)
+  // O dia em Lisboa (as semanas dos treinos contam-se pelo calendário de cá).
+  const hojeISO = hojeEmLisboa()
   const limiteDesmarcacoes = somarDias(hojeISO, -JANELA_DESMARCACOES_DIAS)
 
   const estudios = await getEstudios(admin)
@@ -116,7 +118,7 @@ export async function GET(request: Request) {
     ),
     admin.from('alert_rules').select('chave, ativo'),
     todasAsLinhas((de, ate) =>
-      admin.from('alerts').select('id, regra_chave, lead_id, cliente_id, estado, adiado_ate').order('id').range(de, ate)
+      admin.from('alerts').select('id, regra_chave, lead_id, cliente_id, estado, adiado_ate, titulo').order('id').range(de, ate)
     ),
   ])
 
@@ -161,11 +163,17 @@ export async function GET(request: Request) {
   })
 
   // --- Preparar dados dos clientes ---
-  const clientesComTreinoFuturo = new Set(
-    (eventosData ?? [])
-      .filter((e) => e.estado === 'Agendado' && e.data >= hojeISO && e.cliente_id)
-      .map((e) => e.cliente_id as string)
-  )
+  // Quem tem treinos (feitos ou marcados — os desmarcados não contam) na
+  // semana em curso e na semana seguinte.
+  const { estaSemana, semanaSeguinte } = semanasDeTreino(hojeISO)
+  const comTreinoEntre = ([de, ate]: [string, string]) =>
+    new Set(
+      (eventosData ?? [])
+        .filter((e) => e.estado !== 'Cancelado' && e.data >= de && e.data <= ate && e.cliente_id)
+        .map((e) => e.cliente_id as string)
+    )
+  const comTreinoEstaSemana = comTreinoEntre(estaSemana)
+  const comTreinoSemanaSeguinte = comTreinoEntre(semanaSeguinte)
 
   const presencasPorCliente = new Map<string, { data: string; estado: string }[]>()
   for (const p of presencasData ?? []) {
@@ -209,7 +217,8 @@ export async function GET(request: Request) {
       estado: c.estado === 'Pendente' ? 'Pendente' : 'Ativo',
       nascimento: c.nascimento,
       fim_experiencia: c.fim_experiencia,
-      tem_treino_agendado: clientesComTreinoFuturo.has(c.id),
+      treinos_esta_semana: comTreinoEstaSemana.has(c.id),
+      treinos_semana_seguinte: comTreinoSemanaSeguinte.has(c.id),
       desmarcacoes_consecutivas: consecutivas,
       desmarcacoes_acumuladas: acumuladas,
       proxima_reavaliacao: reavaliacaoPorCliente.get(c.id) ?? null,
@@ -233,8 +242,9 @@ export async function GET(request: Request) {
     clienteId: a.cliente_id,
     estado: a.estado,
     adiadoAte: a.adiado_ate,
+    titulo: a.titulo,
   }))
-  const { paraCriar, paraResolver, paraReabrir } = reconciliarAlertas(existentes, candidatos, hojeISO)
+  const { paraCriar, paraResolver, paraReabrir, paraRetitular } = reconciliarAlertas(existentes, candidatos, hojeISO)
 
   if (paraCriar.length > 0) {
     const linhas = paraCriar.map((c: AlertaCandidato) => ({
@@ -266,8 +276,16 @@ export async function GET(request: Request) {
     if (error) return Response.json({ error: `reabrir: ${error.message}` }, { status: 500 })
   }
 
+  // O texto de um alerta que continua aberto acompanha a situação (ex.:
+  // de "para a semana que vem" a "nesta semana").
+  for (const r of paraRetitular) {
+    const { error } = await admin.from('alerts').update({ titulo: r.titulo, atualizado_em: agoraISO }).eq('id', r.id)
+    if (error) return Response.json({ error: `retitular: ${error.message}` }, { status: 500 })
+  }
+
   return Response.json({
     ok: true,
+    retitulados: paraRetitular.length,
     criados: paraCriar.length,
     resolvidos: paraResolver.length,
     reabertos: paraReabrir.length,

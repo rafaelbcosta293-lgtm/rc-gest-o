@@ -3,6 +3,7 @@ import {
   avaliarLeads,
   avaliarClientes,
   reconciliarAlertas,
+  semanasDeTreino,
   type LeadParaAlertas,
   type ClienteParaAlertas,
   type AlertaExistente,
@@ -30,7 +31,8 @@ function cliente(partial: Partial<ClienteParaAlertas>): ClienteParaAlertas {
     nome: 'Bruno',
     nascimento: null,
     fim_experiencia: null,
-    tem_treino_agendado: true,
+    treinos_esta_semana: true,
+    treinos_semana_seguinte: true,
     desmarcacoes_consecutivas: 0,
     desmarcacoes_acumuladas: 0,
     proxima_reavaliacao: null,
@@ -99,9 +101,40 @@ describe('avaliarLeads', () => {
 })
 
 describe('avaliarClientes', () => {
-  it('cliente sem treino agendado dispara cliente_sem_treino_agendado (Crítico)', () => {
-    const c = avaliarClientes([cliente({ tem_treino_agendado: false })], '2026-03-05')
-    expect(c.find((a) => a.regraChave === 'cliente_sem_treino_agendado')?.severidade).toBe('Crítico')
+  // 2026-03-02 é segunda-feira; 2026-03-05 é quinta; 2026-03-08 é domingo.
+  const semTreinos = (c: Partial<ClienteParaAlertas>, hoje: string) =>
+    avaliarClientes([cliente(c)], hoje).find((a) => a.regraChave === 'cliente_sem_treino_agendado')
+
+  it('sem treinos nesta semana: alerta Crítico em qualquer dia', () => {
+    for (const hoje of ['2026-03-02', '2026-03-04', '2026-03-05', '2026-03-08']) {
+      const a = semTreinos({ treinos_esta_semana: false }, hoje)
+      expect(a?.severidade).toBe('Crítico')
+      expect(a?.titulo).toBe('Bruno: ativo sem treinos nesta semana')
+    }
+  })
+
+  it('sem treinos na semana seguinte: só avisa de quinta a domingo', () => {
+    for (const hoje of ['2026-03-02', '2026-03-03', '2026-03-04']) {
+      expect(semTreinos({ treinos_semana_seguinte: false }, hoje)).toBeUndefined()
+    }
+    for (const hoje of ['2026-03-05', '2026-03-06', '2026-03-07', '2026-03-08']) {
+      expect(semTreinos({ treinos_semana_seguinte: false }, hoje)?.titulo).toBe('Bruno: ativo sem treinos marcados para a semana que vem')
+    }
+  })
+
+  it('de quinta a domingo sem nada nas duas semanas: um só alerta, com as duas', () => {
+    const a = semTreinos({ treinos_esta_semana: false, treinos_semana_seguinte: false }, '2026-03-06')
+    expect(a?.titulo).toBe('Bruno: ativo sem treinos nesta semana nem na próxima')
+    // À segunda, o que era "a semana que vem" passou a ser "esta semana".
+    expect(semTreinos({ treinos_esta_semana: false, treinos_semana_seguinte: false }, '2026-03-09')?.titulo).toBe(
+      'Bruno: ativo sem treinos nesta semana'
+    )
+  })
+
+  it('semanasDeTreino: de segunda a domingo, e a semana seguinte', () => {
+    expect(semanasDeTreino('2026-03-05')).toEqual({ estaSemana: ['2026-03-02', '2026-03-08'], semanaSeguinte: ['2026-03-09', '2026-03-15'], diaSemana: 4 })
+    expect(semanasDeTreino('2026-03-08').estaSemana).toEqual(['2026-03-02', '2026-03-08'])
+    expect(semanasDeTreino('2026-03-09').estaSemana).toEqual(['2026-03-09', '2026-03-15'])
   })
 
   it('pendente sem treino agendado dispara o mesmo alerta — e só esse', () => {
@@ -109,7 +142,7 @@ describe('avaliarClientes', () => {
       [
         cliente({
           estado: 'Pendente',
-          tem_treino_agendado: false,
+          treinos_esta_semana: false,
           em_dia: false,
           desmarcacoes_consecutivas: 3,
           proxima_reavaliacao: '2026-03-01',
@@ -118,12 +151,12 @@ describe('avaliarClientes', () => {
       '2026-03-20'
     )
     expect(c.map((a) => a.regraChave)).toEqual(['cliente_sem_treino_agendado'])
-    expect(c[0].titulo).toContain('pendente sem treino agendado')
+    expect(c[0].titulo).toContain('pendente sem treinos nesta semana')
     expect(c[0].severidade).toBe('Crítico')
   })
 
   it('pendente com treino marcado não tem alerta', () => {
-    expect(avaliarClientes([cliente({ estado: 'Pendente', tem_treino_agendado: true, em_dia: false })], '2026-03-20')).toEqual([])
+    expect(avaliarClientes([cliente({ estado: 'Pendente', em_dia: false })], '2026-03-20')).toEqual([])
   })
 
   it('2 desmarcações consecutivas ou 5 acumuladas disparam cliente_limite_desmarcacoes', () => {
@@ -235,6 +268,17 @@ describe('reconciliarAlertas', () => {
     )
     expect(r.paraReabrir).toEqual(['a1'])
     expect(r.paraCriar).toHaveLength(0)
+  })
+
+  it('muda o texto de um alerta aberto quando a situação muda, sem o duplicar', () => {
+    const aberto = existente({ regraChave: 'cliente_sem_treino_agendado', leadId: null, clienteId: 'c1', estado: 'Visto', titulo: 'Bruno: ativo sem treinos marcados para a semana que vem' })
+    const candidato = { regraChave: 'cliente_sem_treino_agendado', severidade: 'Crítico' as const, titulo: 'Bruno: ativo sem treinos nesta semana', estudioId: 1, clienteId: 'c1' }
+    const r = reconciliarAlertas([aberto], [candidato], '2026-03-09')
+    expect(r.paraCriar).toHaveLength(0)
+    expect(r.paraResolver).toHaveLength(0)
+    expect(r.paraRetitular).toEqual([{ id: 'a1', titulo: 'Bruno: ativo sem treinos nesta semana' }])
+    // Mesmo texto: não mexe.
+    expect(reconciliarAlertas([{ ...aberto, titulo: candidato.titulo }], [candidato], '2026-03-09').paraRetitular).toEqual([])
   })
 
   it('cria um novo alerta quando a mesma regra+entidade já tinha sido resolvida antes', () => {

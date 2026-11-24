@@ -165,12 +165,44 @@ export type ClienteParaAlertas = {
   estado?: 'Ativo' | 'Pendente'
   nascimento: string | null
   fim_experiencia: string | null
-  tem_treino_agendado: boolean
+  // Tem treinos (feitos ou marcados, não desmarcados) na semana em curso
+  // (de segunda a domingo) e na semana seguinte — ver semanasDeTreino.
+  treinos_esta_semana: boolean
+  treinos_semana_seguinte: boolean
   desmarcacoes_consecutivas: number
   desmarcacoes_acumuladas: number
   proxima_reavaliacao: string | null
   em_dia: boolean
   valido_ate: string | null
+}
+
+// A semana em curso (segunda a domingo) e a seguinte, a partir de hoje.
+export function semanasDeTreino(hojeISO: string): { estaSemana: [string, string]; semanaSeguinte: [string, string]; diaSemana: number } {
+  const hoje = new Date(`${hojeISO}T00:00:00Z`)
+  const diaSemana = hoje.getUTCDay() === 0 ? 7 : hoje.getUTCDay() // 1 = segunda … 7 = domingo
+  const dia = (n: number) => new Date(hoje.getTime() + n * 86_400_000).toISOString().slice(0, 10)
+  const segunda = 1 - diaSemana
+  return { estaSemana: [dia(segunda), dia(segunda + 6)], semanaSeguinte: [dia(segunda + 7), dia(segunda + 13)], diaSemana }
+}
+
+// O que falta marcar a um cliente, para o alerta "sem treinos":
+// - em qualquer dia, não ter treinos na semana em curso;
+// - de quinta a domingo, não ter treinos marcados para a semana seguinte
+//   (é a altura de os marcar; à segunda esse aviso passa a ser o de
+//   "nesta semana", se continuar sem nada).
+export function treinosEmFalta(
+  c: Pick<ClienteParaAlertas, 'treinos_esta_semana' | 'treinos_semana_seguinte'>,
+  hojeISO: string
+): 'esta' | 'seguinte' | 'ambas' | null {
+  const avisaDaSeguinte = semanasDeTreino(hojeISO).diaSemana >= 4 && !c.treinos_semana_seguinte
+  if (!c.treinos_esta_semana) return avisaDaSeguinte ? 'ambas' : 'esta'
+  return avisaDaSeguinte ? 'seguinte' : null
+}
+
+const TEXTO_TREINOS_EM_FALTA = {
+  esta: 'sem treinos nesta semana',
+  seguinte: 'sem treinos marcados para a semana que vem',
+  ambas: 'sem treinos nesta semana nem na próxima',
 }
 
 function ehAniversarioHoje(nascimentoISO: string, hojeISO: string): boolean {
@@ -186,13 +218,14 @@ export function avaliarClientes(
 
   for (const c of clientes) {
     const pendente = c.estado === 'Pendente'
-    if (!c.tem_treino_agendado) {
-      // Um pendente sem treino marcado é um cliente que se pode perder sem
-      // ninguém dar por isso — o mesmo alerta dos ativos, para lhe ligar.
+    const emFalta = treinosEmFalta(c, hojeISO)
+    if (emFalta) {
+      // Um pendente sem treinos marcados é um cliente que se pode perder
+      // sem ninguém dar por isso — o mesmo alerta dos ativos, para lhe ligar.
       candidatos.push({
         regraChave: 'cliente_sem_treino_agendado',
         severidade: 'Crítico',
-        titulo: `${c.nome}: ${pendente ? 'pendente' : 'ativo'} sem treino agendado`,
+        titulo: `${c.nome}: ${pendente ? 'pendente' : 'ativo'} ${TEXTO_TREINOS_EM_FALTA[emFalta]}`,
         estudioId: c.estudio_id,
         clienteId: c.id,
       })
@@ -290,12 +323,16 @@ export type AlertaExistente = {
   clienteId: string | null
   estado: 'Novo' | 'Visto' | 'Resolvido' | 'Adiado'
   adiadoAte: string | null
+  titulo?: string | null
 }
 
 export type ReconciliacaoAlertas = {
   paraCriar: AlertaCandidato[]
   paraResolver: string[]
   paraReabrir: string[]
+  // Alertas que continuam abertos mas cujo texto mudou (ex.: "sem treinos
+  // marcados para a semana que vem" passa a "sem treinos nesta semana").
+  paraRetitular: { id: string; titulo: string }[]
 }
 
 function chaveAlerta(a: { regraChave: string | null; leadId?: string | null; clienteId?: string | null }) {
@@ -327,5 +364,10 @@ export function reconciliarAlertas(
     .filter((e) => e.estado === 'Adiado' && candidatosPorChave.has(chaveAlerta(e)))
     .map((e) => e.id)
 
-  return { paraCriar, paraResolver, paraReabrir }
+  const paraRetitular = ativos.flatMap((e) => {
+    const candidato = candidatosPorChave.get(chaveAlerta(e))
+    return candidato && e.titulo != null && e.titulo !== candidato.titulo ? [{ id: e.id, titulo: candidato.titulo }] : []
+  })
+
+  return { paraCriar, paraResolver, paraReabrir, paraRetitular }
 }

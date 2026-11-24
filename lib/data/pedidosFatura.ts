@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { montarRascunho, chaveProduto, type TipoLinhaFatura } from './faturas'
+import { ruaComNumero } from './fichaCliente'
 
 const TIPOS_LINHA: TipoLinhaFatura[] = ['mensalidade', 'inscricao', 'seguro', 'reativacao', 'outro']
 
@@ -28,7 +29,7 @@ export async function criarPedidoFatura(
   const { data: pagamento, error: erroPag } = await supabase
     .from('pagamentos')
     .select(
-      'id, cliente_id, valor, desconto, metodo, data_pagamento, valido_ate, inclui_inscricao, inclui_seguro, inclui_reativacao, nota, anulado_em, plano:planos(nome, valor, servico:servicos(chave)), cliente:clientes(id, nome, nif, morada, codigo_postal, cidade, email, estudio_id)'
+      'id, cliente_id, valor, desconto, metodo, data_pagamento, valido_ate, inclui_inscricao, inclui_seguro, inclui_reativacao, nota, anulado_em, plano:planos(nome, valor, servico:servicos(chave)), cliente:clientes(id, nome, nif, morada, morada_numero, codigo_postal, cidade, email, estudio_id)'
     )
     .eq('id', pagamentoId)
     .maybeSingle()
@@ -42,6 +43,7 @@ export async function criarPedidoFatura(
     nome: string
     nif: string | null
     morada: string | null
+    morada_numero: string | null
     codigo_postal: string | null
     cidade: string | null
     email: string | null
@@ -68,7 +70,8 @@ export async function criarPedidoFatura(
       const sv = Array.isArray(pl.servico) ? pl.servico[0] : pl.servico
       return { nome: pl.nome, valor: pl.valor, servicoChave: sv?.chave ?? null }
     })(),
-    cliente,
+    // Na fatura a morada é uma linha só: a rua com o número.
+    cliente: { ...cliente, morada: ruaComNumero(cliente.morada, cliente.morada_numero) },
     config,
   })
 

@@ -82,9 +82,15 @@ export type Cliente = {
   telefone: string | null
   email: string | null
   nif: string | null
+  // "morada" é a rua; o número fica à parte (para estatística).
   morada: string | null
+  morada_numero: string | null
   codigo_postal: string | null
   cidade: string | null
+  pais: string | null
+  nacionalidade: string | null
+  cartao_cidadao: string | null
+  profissao: string | null
   nascimento: string | null
   objetivo: string | null
   frequencia_semanal: number | null

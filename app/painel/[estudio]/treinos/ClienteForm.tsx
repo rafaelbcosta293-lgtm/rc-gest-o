@@ -9,6 +9,11 @@ const inputCls =
   'rounded-md border border-black bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand/50 dark:border-white/30 dark:bg-zinc-900'
 const labelCls = 'text-sm font-medium text-foreground/80'
 
+// Sugestões (pode escrever-se outra coisa): escolher da lista mantém os
+// nomes sempre escritos da mesma maneira, para a estatística bater certo.
+const PAISES = ['Portugal', 'Espanha', 'França', 'Suíça', 'Alemanha', 'Luxemburgo', 'Reino Unido', 'Brasil', 'Angola', 'Cabo Verde', 'Moçambique', 'Estados Unidos']
+const NACIONALIDADES = ['Portuguesa', 'Espanhola', 'Francesa', 'Suíça', 'Alemã', 'Luxemburguesa', 'Britânica', 'Brasileira', 'Angolana', 'Cabo-verdiana', 'Moçambicana', 'Americana']
+
 export default function ClienteForm({
   estudioSlug,
   estudioId,
@@ -282,6 +287,75 @@ export default function ClienteForm({
             </select>
           </div>
         )}
+      </div>
+
+      {/* Morada em campos separados (rua, nº, código postal, cidade,
+          país) — para depois se poder fazer estatística por zona. */}
+      <fieldset className="rounded-lg border border-border-subtle px-3 pt-2 pb-3">
+        <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-muted">Morada</legend>
+        <div className="grid grid-cols-6 gap-x-4 gap-y-3">
+          <div className="col-span-6 flex flex-col gap-1.5 sm:col-span-4">
+            <label htmlFor="morada" className={labelCls}>
+              Rua
+            </label>
+            <input id="morada" name="morada" autoComplete="off" defaultValue={cliente?.morada ?? ''} placeholder="ex.: Rua da Sobreira" className={inputCls} />
+          </div>
+          <div className="col-span-3 flex flex-col gap-1.5 sm:col-span-2">
+            <label htmlFor="morada_numero" className={labelCls}>
+              Nº / andar
+            </label>
+            <input id="morada_numero" name="morada_numero" autoComplete="off" defaultValue={cliente?.morada_numero ?? ''} placeholder="ex.: 14, 2.º Esq." className={inputCls} />
+          </div>
+          <div className="col-span-3 flex flex-col gap-1.5 sm:col-span-2">
+            <label htmlFor="codigo_postal" className={labelCls}>
+              Código postal
+            </label>
+            <input id="codigo_postal" name="codigo_postal" autoComplete="off" defaultValue={cliente?.codigo_postal ?? ''} placeholder="0000-000" className={inputCls} />
+          </div>
+          <div className="col-span-3 flex flex-col gap-1.5 sm:col-span-2">
+            <label htmlFor="cidade" className={labelCls}>
+              Cidade
+            </label>
+            <input id="cidade" name="cidade" autoComplete="off" defaultValue={cliente?.cidade ?? ''} placeholder="ex.: Fátima" className={inputCls} />
+          </div>
+          <div className="col-span-3 flex flex-col gap-1.5 sm:col-span-2">
+            <label htmlFor="pais" className={labelCls}>
+              País
+            </label>
+            <input id="pais" name="pais" list="lista-paises" autoComplete="off" defaultValue={cliente?.pais ?? ''} placeholder="ex.: Portugal" className={inputCls} />
+            <datalist id="lista-paises">
+              {PAISES.map((p) => (
+                <option key={p} value={p} />
+              ))}
+            </datalist>
+          </div>
+        </div>
+      </fieldset>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="nacionalidade" className={labelCls}>
+            Nacionalidade
+          </label>
+          <input id="nacionalidade" name="nacionalidade" list="lista-nacionalidades" autoComplete="off" defaultValue={cliente?.nacionalidade ?? ''} placeholder="ex.: Portuguesa" className={inputCls} />
+          <datalist id="lista-nacionalidades">
+            {NACIONALIDADES.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="cartao_cidadao" className={labelCls}>
+            Cartão de cidadão
+          </label>
+          <input id="cartao_cidadao" name="cartao_cidadao" autoComplete="off" maxLength={20} defaultValue={cliente?.cartao_cidadao ?? ''} placeholder="ex.: 12345678 9 ZZ0" className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="profissao" className={labelCls}>
+            Profissão
+          </label>
+          <input id="profissao" name="profissao" autoComplete="off" defaultValue={cliente?.profissao ?? ''} placeholder="ex.: Professora" className={inputCls} />
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">

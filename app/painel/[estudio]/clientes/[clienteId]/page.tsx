@@ -16,6 +16,7 @@ import ApagarClienteModal from './ApagarClienteModal'
 import CartaoAppCliente from './CartaoAppCliente'
 import type { Cliente, EstadoPagamento } from '@/lib/supabase/database.types'
 import { ArrowLeft } from 'lucide-react'
+import { moradaCompleta } from '@/lib/data/fichaCliente'
 
 type ClienteCompleto = Cliente & { pt_principal: { nome: string } | null }
 type AvaliacaoResumo = {
@@ -229,6 +230,18 @@ export default async function FichaCompletaClientePage({
         {c.telefone && <p>📞 {c.telefone}</p>}
         {c.email && <p>✉️ {c.email}</p>}
         {c.nif && <p>🆔 NIF {c.nif}</p>}
+        {moradaCompleta(c) && <p>🏠 {moradaCompleta(c)}</p>}
+        {(c.nacionalidade || c.cartao_cidadao || c.profissao) && (
+          <p>
+            {[
+              c.nacionalidade ? `Nacionalidade: ${c.nacionalidade}` : null,
+              c.cartao_cidadao ? `Cartão de cidadão: ${c.cartao_cidadao}` : null,
+              c.profissao ? `Profissão: ${c.profissao}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
         {c.notas && <p className="mt-1 italic">“{c.notas}”</p>}
       </div>
 

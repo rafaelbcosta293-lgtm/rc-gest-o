@@ -47,6 +47,26 @@ export type DadosFicha = {
 
 const vazio = (v: string | null | undefined) => !v || !v.trim()
 
+// A rua com o número ("Rua da Sobreira, 14") — a morada guarda-se em
+// campos separados (rua, nº, código postal, cidade, país).
+export function ruaComNumero(rua: string | null | undefined, numero: string | null | undefined): string | null {
+  const partes = [rua?.trim(), numero?.trim()].filter((p): p is string => !!p)
+  return partes.length > 0 ? partes.join(', ') : null
+}
+
+// A morada inteira numa linha, para mostrar na ficha.
+export function moradaCompleta(c: {
+  morada?: string | null
+  morada_numero?: string | null
+  codigo_postal?: string | null
+  cidade?: string | null
+  pais?: string | null
+}): string | null {
+  const localidade = [c.codigo_postal?.trim(), c.cidade?.trim()].filter((p): p is string => !!p).join(' ')
+  const partes = [ruaComNumero(c.morada, c.morada_numero), localidade, c.pais?.trim()].filter((p): p is string => !!p)
+  return partes.length > 0 ? partes.join(' · ') : null
+}
+
 // Os campos em falta, pela ordem de CAMPOS_FICHA. A morada conta como
 // incompleta se faltar a rua, o código postal ou a localidade.
 export function camposEmFalta(c: DadosFicha): CampoFicha[] {

@@ -24,6 +24,14 @@ function camposComuns(formData: FormData) {
     telefone: campoOuNull(formData, 'telefone'),
     email: campoOuNull(formData, 'email'),
     nif: normalizarNif(campoOuNull(formData, 'nif')),
+    morada: campoOuNull(formData, 'morada'),
+    morada_numero: campoOuNull(formData, 'morada_numero'),
+    codigo_postal: campoOuNull(formData, 'codigo_postal'),
+    cidade: campoOuNull(formData, 'cidade'),
+    pais: campoOuNull(formData, 'pais'),
+    nacionalidade: campoOuNull(formData, 'nacionalidade'),
+    cartao_cidadao: campoOuNull(formData, 'cartao_cidadao'),
+    profissao: campoOuNull(formData, 'profissao'),
     objetivo: campoOuNull(formData, 'objetivo'),
     frequencia_semanal: formData.get('frequencia_semanal')
       ? Number(formData.get('frequencia_semanal'))

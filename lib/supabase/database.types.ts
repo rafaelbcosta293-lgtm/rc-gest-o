@@ -87,6 +87,9 @@ export type Cliente = {
   morada_numero: string | null
   codigo_postal: string | null
   cidade: string | null
+  // Preenchidos quando a localidade foi escolhida da lista do país.
+  concelho: string | null
+  distrito: string | null
   pais: string | null
   nacionalidade: string | null
   cartao_cidadao: string | null

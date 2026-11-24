@@ -28,6 +28,9 @@ function camposComuns(formData: FormData) {
     morada_numero: campoOuNull(formData, 'morada_numero'),
     codigo_postal: campoOuNull(formData, 'codigo_postal'),
     cidade: campoOuNull(formData, 'cidade'),
+    // Só vêm preenchidos quando a localidade foi escolhida da lista.
+    concelho: campoOuNull(formData, 'concelho'),
+    distrito: campoOuNull(formData, 'distrito'),
     pais: campoOuNull(formData, 'pais'),
     nacionalidade: campoOuNull(formData, 'nacionalidade'),
     cartao_cidadao: campoOuNull(formData, 'cartao_cidadao'),

@@ -3,6 +3,7 @@
 import { ALERTAS } from '@/lib/data/constantes'
 import type { Cliente, Perfil } from '@/lib/supabase/database.types'
 import SubmitButton from '@/components/SubmitButton'
+import CampoLocalidade from '@/components/CampoLocalidade'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
 
 const inputCls =
@@ -312,11 +313,11 @@ export default function ClienteForm({
             </label>
             <input id="codigo_postal" name="codigo_postal" autoComplete="off" defaultValue={cliente?.codigo_postal ?? ''} placeholder="0000-000" className={inputCls} />
           </div>
-          <div className="col-span-3 flex flex-col gap-1.5 sm:col-span-2">
+          <div className="col-span-6 flex flex-col gap-1.5 sm:col-span-4">
             <label htmlFor="cidade" className={labelCls}>
-              Cidade
+              Cidade / localidade
             </label>
-            <input id="cidade" name="cidade" autoComplete="off" defaultValue={cliente?.cidade ?? ''} placeholder="ex.: Fátima" className={inputCls} />
+            <CampoLocalidade cidade={cliente?.cidade ?? null} concelho={cliente?.concelho ?? null} distrito={cliente?.distrito ?? null} className={inputCls} />
           </div>
           <div className="col-span-3 flex flex-col gap-1.5 sm:col-span-2">
             <label htmlFor="pais" className={labelCls}>

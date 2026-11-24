@@ -60,9 +60,14 @@ export function moradaCompleta(c: {
   morada_numero?: string | null
   codigo_postal?: string | null
   cidade?: string | null
+  concelho?: string | null
   pais?: string | null
 }): string | null {
-  const localidade = [c.codigo_postal?.trim(), c.cidade?.trim()].filter((p): p is string => !!p).join(' ')
+  // O concelho só aparece quando não é o próprio nome da terra.
+  const cidade = c.cidade?.trim()
+  const concelho = c.concelho?.trim()
+  const terra = cidade && concelho && concelho !== cidade ? `${cidade} (${concelho})` : cidade
+  const localidade = [c.codigo_postal?.trim(), terra].filter((p): p is string => !!p).join(' ')
   const partes = [ruaComNumero(c.morada, c.morada_numero), localidade, c.pais?.trim()].filter((p): p is string => !!p)
   return partes.length > 0 ? partes.join(' · ') : null
 }

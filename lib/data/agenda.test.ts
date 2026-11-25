@@ -9,6 +9,8 @@ import {
   correspondePalavras,
   ocorrenciasAMover,
   diasEntre,
+  limparMotivoDesmarcacao,
+  MAX_MOTIVO_DESMARCACAO,
 } from './agenda'
 
 describe('gerarOcorrencias', () => {
@@ -207,5 +209,17 @@ describe('arrastar um evento de uma série', () => {
     const ids = ocorrenciasAMover(serie, 'serie', '2026-11-17', '2026-11-17', jaPassou).map((x) => x.id)
     expect(ids).not.toContain('a')
     expect(ids).not.toContain('d')
+  })
+})
+
+describe('limparMotivoDesmarcacao', () => {
+  it('tira espaços a mais e trata o vazio como "sem motivo"', () => {
+    expect(limparMotivoDesmarcacao('  Doença   (gripe) ')).toBe('Doença (gripe)')
+    expect(limparMotivoDesmarcacao('   ')).toBeNull()
+    expect(limparMotivoDesmarcacao(null)).toBeNull()
+    expect(limparMotivoDesmarcacao(undefined)).toBeNull()
+  })
+  it('limita o tamanho', () => {
+    expect(limparMotivoDesmarcacao('a'.repeat(500))).toHaveLength(MAX_MOTIVO_DESMARCACAO)
   })
 })

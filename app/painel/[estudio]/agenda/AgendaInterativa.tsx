@@ -20,6 +20,7 @@ import {
   moverEventoRapido,
   redimensionarEventoRapido,
   desmarcarEventoRapido,
+  guardarMotivoDesmarcacaoRapido,
   reativarEventoRapido,
   apagarEventoRapido,
   pararSerieRapido,
@@ -428,7 +429,17 @@ export default function AgendaInterativa({
     })
   }
 
-  function desmarcar(contarComoRealizado: boolean, foiRemarcado: boolean) {
+  function guardarMotivo(motivo: string) {
+    if (!(modal.aberto && modal.modo === 'editar')) return
+    const { id, grupo_id } = modal.evento
+    iniciarTransicao(async () => {
+      const resultado = await guardarMotivoDesmarcacaoRapido({ estudioSlug: slug, id, grupoId: grupo_id, motivo })
+      if ('error' in resultado) setErro(resultado.error)
+      else aposSucesso()
+    })
+  }
+
+  function desmarcar(contarComoRealizado: boolean, foiRemarcado: boolean, motivo: string) {
     if (!(modal.aberto && modal.modo === 'editar')) return
     const { id, grupo_id } = modal.evento
     iniciarTransicao(async () => {
@@ -436,7 +447,7 @@ export default function AgendaInterativa({
         estudioSlug: slug,
         id,
         grupoId: grupo_id,
-        motivo: null,
+        motivo,
         contarComoRealizado,
         foiRemarcado,
       })
@@ -554,6 +565,7 @@ export default function AgendaInterativa({
           onFechar={fechar}
           onSubmeter={aoSubmeter}
           onDesmarcar={desmarcar}
+          onGuardarMotivo={guardarMotivo}
           onReativar={reativar}
           onApagar={apagar}
           onPararSerie={pararSerie}
@@ -1602,6 +1614,8 @@ function ColunaDia({
         const altura = Math.max(evento.duracao_min * pxPorMinuto, ALTURA_MIN_BLOCO) - 2
         const fim = horaFim(evento.hora_inicio, evento.duracao_min)
         const rotulo = rotuloEvento(grupo, estudioId)
+        // Porque foi desmarcado — lê-se ao passar o rato por cima.
+        const motivo = cancelado ? ` · Motivo: ${evento.motivo_cancelamento?.trim() || 'não registado'}` : ''
         // Espaço útil à esquerda das abas dos desmarcados que ficam por
         // trás deste bloco.
         const util = `(100% - ${recuo * ABA_CANCELADO}px)`
@@ -1612,9 +1626,9 @@ function ColunaDia({
             draggable={false}
             title={
               somenteLeitura
-                ? `${cancelado ? 'Desmarcado · ' : ''}${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}`
+                ? `${cancelado ? 'Desmarcado · ' : ''}${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${motivo}`
                 : cancelado
-                  ? `Desmarcado · ${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim} · clica para ver`
+                  ? `Desmarcado · ${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${motivo} · clica para ver`
                   : emSelecionado
                     ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar'
                     : `${chegadas.length ? `✓ ${chegadas.join(', ')} (check-in) · ` : ''}${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${numerosSocio ? ` · sócio ${numerosSocio}` : ''} · arrasta para mover · botão direito para editar`

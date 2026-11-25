@@ -5,7 +5,7 @@ import Link from '@/components/LinkRapido'
 import { X, Trash2, Ban, RotateCcw } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
-import { TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
+import { MAX_MOTIVO_DESMARCACAO, MOTIVOS_DESMARCACAO, TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
 import type { TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
 import type { EscopoApagar, EscopoEditar } from './actions'
 import type { EstadoModal, PtOpcao, EstudioOpcao } from './AgendaInterativa'
@@ -32,6 +32,7 @@ export default function EventoModalOverlay({
   onFechar,
   onSubmeter,
   onDesmarcar,
+  onGuardarMotivo,
   onReativar,
   onApagar,
   onPararSerie,
@@ -49,7 +50,9 @@ export default function EventoModalOverlay({
   slug: string
   onFechar: () => void
   onSubmeter: (formData: FormData, clienteIds: string[]) => void
-  onDesmarcar: (contarComoRealizado: boolean, foiRemarcado: boolean) => void
+  onDesmarcar: (contarComoRealizado: boolean, foiRemarcado: boolean, motivo: string) => void
+  // Acrescentar ou corrigir o motivo de um evento já desmarcado.
+  onGuardarMotivo: (motivo: string) => void
   onReativar: () => void
   onApagar: (escopo: EscopoApagar) => void
   onPararSerie: () => void
@@ -70,6 +73,10 @@ export default function EventoModalOverlay({
   const [aConfirmarDesmarcar, setAConfirmarDesmarcar] = useState(false)
   const [contarComoRealizado, setContarComoRealizado] = useState<boolean | null>(null)
   const [foiRemarcado, setFoiRemarcado] = useState<boolean | null>(null)
+  // O motivo também é obrigatório: fica com o evento e lê-se depois ao
+  // passar o rato por cima do desmarcado (ou ao abri-lo). Num evento já
+  // desmarcado começa com o que lá está, para se poder corrigir.
+  const [motivo, setMotivo] = useState(evento?.estado === 'Cancelado' ? (evento.motivo_cancelamento ?? '') : '')
 
   // Apagar também não é imediato quando o evento é parte de uma série
   // — pede sempre primeiro qual o âmbito (só este, os seguintes, os
@@ -160,6 +167,35 @@ export default function EventoModalOverlay({
             Treino em simultâneo — guardar, mover, desmarcar ou apagar aplica-se a todas as
             pessoas.
           </p>
+        )}
+
+        {editar && evento?.estado === 'Cancelado' && (
+          <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/40">
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-300">Evento desmarcado</p>
+            {somenteLeitura ? (
+              <p className="mt-0.5 text-sm text-foreground">{evento.motivo_cancelamento ? `Motivo: ${evento.motivo_cancelamento}` : 'Sem motivo registado.'}</p>
+            ) : (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  maxLength={MAX_MOTIVO_DESMARCACAO}
+                  placeholder="Motivo da desmarcação (ainda por escrever)"
+                  aria-label="Motivo da desmarcação"
+                  className={`${inputCls} min-w-0 flex-1`}
+                />
+                <button
+                  type="button"
+                  disabled={aPendente || !motivo.trim() || motivo.trim() === (evento.motivo_cancelamento ?? '')}
+                  onClick={() => onGuardarMotivo(motivo)}
+                  className="shrink-0 rounded-full bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-40 pointer-coarse:px-4 pointer-coarse:py-2.5 pointer-coarse:text-sm"
+                >
+                  Guardar motivo
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {erro && (
@@ -533,6 +569,33 @@ export default function EventoModalOverlay({
           <div className="mt-3 flex flex-col gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
             <p className="text-xs font-bold text-amber-800 dark:text-amber-300">Desmarcar este evento</p>
             <fieldset className="flex flex-col gap-1">
+              <legend className="text-[11px] font-semibold text-muted">Motivo da desmarcação (obrigatório)</legend>
+              <div className="flex flex-wrap gap-1">
+                {MOTIVOS_DESMARCACAO.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    aria-pressed={motivo === m}
+                    onClick={() => setMotivo(m)}
+                    className={`rounded-md border px-2 py-1.5 text-xs font-medium transition-colors pointer-coarse:px-3 pointer-coarse:py-2.5 pointer-coarse:text-sm ${
+                      motivo === m ? 'border-accent bg-accent-soft' : 'border-border-subtle bg-surface'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                maxLength={MAX_MOTIVO_DESMARCACAO}
+                placeholder="Escolhe em cima ou escreve o motivo (podes acrescentar pormenores)"
+                aria-label="Motivo da desmarcação"
+                className={`${inputCls} mt-0.5`}
+              />
+            </fieldset>
+            <fieldset className="flex flex-col gap-1">
               <legend className="text-[11px] font-semibold text-muted">
                 O treino foi realizado, mesmo assim? (obrigatório)
               </legend>
@@ -609,10 +672,10 @@ export default function EventoModalOverlay({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                disabled={aPendente || contarComoRealizado === null || foiRemarcado === null}
+                disabled={aPendente || contarComoRealizado === null || foiRemarcado === null || !motivo.trim()}
                 onClick={() => {
-                  if (contarComoRealizado === null || foiRemarcado === null) return
-                  onDesmarcar(contarComoRealizado, foiRemarcado)
+                  if (contarComoRealizado === null || foiRemarcado === null || !motivo.trim()) return
+                  onDesmarcar(contarComoRealizado, foiRemarcado, motivo)
                 }}
                 className="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-bold pointer-coarse:px-4 pointer-coarse:py-2.5 pointer-coarse:text-sm text-white hover:bg-amber-700 disabled:opacity-50"
               >

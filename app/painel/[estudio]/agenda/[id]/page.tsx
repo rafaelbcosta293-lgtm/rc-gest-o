@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio, obterOutroEstudioEClientes } from '@/lib/data/estudios'
-import { corTipoEvento } from '@/lib/data/agenda'
+import { corTipoEvento, MAX_MOTIVO_DESMARCACAO, MOTIVOS_DESMARCACAO } from '@/lib/data/agenda'
 import {
   atualizarEvento,
   desmarcarEvento,
@@ -204,8 +204,13 @@ export default async function EventoAgendaPage({
             <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Desmarcar este evento</p>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-muted">Motivo (opcional)</label>
-              <input name="motivo_cancelamento" className={`${inputCls} w-full`} />
+              <label htmlFor="motivo_cancelamento" className="text-xs font-semibold text-muted">Motivo (obrigatório)</label>
+              <input id="motivo_cancelamento" name="motivo_cancelamento" required maxLength={MAX_MOTIVO_DESMARCACAO} list="motivos-desmarcacao" className={`${inputCls} w-full`} />
+              <datalist id="motivos-desmarcacao">
+                {MOTIVOS_DESMARCACAO.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
             </div>
 
             <fieldset className="flex flex-col gap-1.5">

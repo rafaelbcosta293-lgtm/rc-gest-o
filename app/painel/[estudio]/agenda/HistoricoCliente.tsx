@@ -161,6 +161,9 @@ export default function HistoricoCliente({ clienteId, basePath, onFechar }: { cl
                                 {rotuloTipoEvento(e.tipo, e.titulo)}
                                 {e.nomePt && <span className="text-muted"> · {e.nomePt.split(' ')[0]}</span>}
                                 {e.nota && <span className="text-muted" title={e.nota}> · {e.nota}</span>}
+                                {cancelado && e.motivoCancelamento && (
+                                  <span className="inline-block text-muted no-underline" title={`Motivo: ${e.motivoCancelamento}`}> · motivo: {e.motivoCancelamento}</span>
+                                )}
                               </span>
                               <span
                                 className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${

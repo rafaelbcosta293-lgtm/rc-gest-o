@@ -189,3 +189,18 @@ export function ocorrenciasAMover(
     .filter((o) => (escopo === 'serie' || o.data >= dataArrastada) && o.estado !== 'Cancelado' && !terminou(o))
     .map((o) => ({ id: o.id, dataNova: somarDias(o.data, deslocacao) }))
 }
+
+// Motivos de desmarcação mais comuns, para escolher com um toque na
+// janela de desmarcar (pode-se sempre escrever outro, ou acrescentar um
+// pormenor). O motivo fica guardado com o evento e aparece ao passar o
+// rato por cima do desmarcado na Agenda.
+export const MOTIVOS_DESMARCACAO = ['Doença', 'Trabalho', 'Imprevisto pessoal', 'Viagem / férias', 'Não avisou', 'Pedido do estúdio'] as const
+
+export const MAX_MOTIVO_DESMARCACAO = 200
+
+// O motivo como fica guardado: sem espaços a mais, com tamanho limitado;
+// vazio conta como "sem motivo" (null).
+export function limparMotivoDesmarcacao(texto: string | null | undefined): string | null {
+  const limpo = (texto ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_MOTIVO_DESMARCACAO)
+  return limpo || null
+}

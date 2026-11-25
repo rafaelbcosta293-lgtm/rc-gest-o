@@ -18,8 +18,7 @@ import {
   type EventoPesquisavel,
   type OcorrenciaDaSerie,
   type LimiteRepeticao,
-  type Repeticao,
-} from '@/lib/data/agenda'
+  type Repeticao, limparMotivoDesmarcacao } from '@/lib/data/agenda'
 import type { EstadoEventoAgenda, TipoEventoAgenda } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { registarContactoExperimental } from '@/lib/data/contactoExperimental'
@@ -109,7 +108,7 @@ export async function pesquisarAgenda(
 
 export type HistoricoAgendaCliente = {
   cliente: { id: string; nome: string; numeroSocio: string | null; estado: string; estudioSlug: string | null }
-  eventos: (ResultadoPesquisaAgenda & { nota: string | null; estudioSlug: string | null })[]
+  eventos: (ResultadoPesquisaAgenda & { nota: string | null; motivoCancelamento: string | null; estudioSlug: string | null })[]
 }
 
 // Tudo o que um cliente tem (e teve) na agenda — treinos, avaliações,
@@ -123,7 +122,7 @@ export async function historicoAgendaCliente(clienteId: string): Promise<Histori
     todasAsLinhas((de, ate) =>
       supabase
         .from('agenda_eventos')
-        .select('id, data, hora_inicio, duracao_min, tipo, titulo, estado, nota, pt:perfis!pt_id(nome), estudio:estudios(slug)')
+        .select('id, data, hora_inicio, duracao_min, tipo, titulo, estado, nota, motivo_cancelamento, pt:perfis!pt_id(nome), estudio:estudios(slug)')
         .eq('cliente_id', clienteId)
         .order('data')
         .order('hora_inicio')
@@ -142,6 +141,7 @@ export async function historicoAgendaCliente(clienteId: string): Promise<Histori
     titulo: string | null
     estado: EstadoEventoAgenda
     nota: string | null
+    motivo_cancelamento: string | null
     pt: { nome: string } | null
     estudio: { slug: string } | null
   }
@@ -159,6 +159,7 @@ export async function historicoAgendaCliente(clienteId: string): Promise<Histori
       nomeCliente: c.nome,
       nomePt: e.pt?.nome ?? null,
       nota: e.nota,
+      motivoCancelamento: e.motivo_cancelamento,
       estudioSlug: e.estudio?.slug ?? null,
     })),
   }
@@ -653,7 +654,7 @@ export async function pararSerie(formData: FormData) {
 export async function desmarcarEvento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const id = formData.get('id') as string
-  const motivo = campoOuNull(formData, 'motivo_cancelamento')
+  const motivo = limparMotivoDesmarcacao(campoOuNull(formData, 'motivo_cancelamento'))
   const contarComoRealizado = formData.get('conta_como_realizado') === 'sim'
   const foiRemarcado = formData.get('foi_remarcado') === 'sim'
   const supabase = await createClient()
@@ -661,6 +662,9 @@ export async function desmarcarEvento(formData: FormData) {
   const bloqueio = await bloquearEscritaNaAgenda()
   if (bloqueio) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(bloqueio)}`)
+  }
+  if (!motivo) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent('Indica o motivo da desmarcação.')}`)
   }
 
   const { data: linhaData, error: erroLinha } = await supabase
@@ -1279,6 +1283,10 @@ export async function desmarcarEventoRapido(input: {
 }): Promise<ResultadoAcaoRapida> {
   const bloqueio = await bloquearEscritaNaAgenda()
   if (bloqueio) return { error: bloqueio }
+  // O motivo é obrigatório: fica com o evento e é o que se lê depois, ao
+  // passar o rato por cima do desmarcado.
+  const motivo = limparMotivoDesmarcacao(input.motivo)
+  if (!motivo) return { error: 'Indica o motivo da desmarcação.' }
 
   const supabase = await createClient()
 
@@ -1291,7 +1299,7 @@ export async function desmarcarEventoRapido(input: {
 
   const query = supabase
     .from('agenda_eventos')
-    .update({ estado: 'Cancelado', motivo_cancelamento: input.motivo, foi_remarcado: input.foiRemarcado })
+    .update({ estado: 'Cancelado', motivo_cancelamento: motivo, foi_remarcado: input.foiRemarcado })
   const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
   if (error) return { error: error.message }
 
@@ -1302,6 +1310,28 @@ export async function desmarcarEventoRapido(input: {
 
   revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   revalidatePath(`/painel/${input.estudioSlug}/leads`)
+  return { ok: true }
+}
+
+// Acrescentar ou corrigir o motivo de um evento já desmarcado (ex.: só
+// se soube depois, ou foi desmarcado antes de o motivo ser pedido).
+export async function guardarMotivoDesmarcacaoRapido(input: {
+  estudioSlug: string
+  id: string
+  grupoId: string | null
+  motivo: string | null
+}): Promise<ResultadoAcaoRapida> {
+  const bloqueio = await bloquearEscritaNaAgenda()
+  if (bloqueio) return { error: bloqueio }
+  const motivo = limparMotivoDesmarcacao(input.motivo)
+  if (!motivo) return { error: 'Escreve o motivo da desmarcação.' }
+
+  const supabase = await createClient()
+  const query = supabase.from('agenda_eventos').update({ motivo_cancelamento: motivo }).eq('estado', 'Cancelado')
+  const { error } = input.grupoId ? await query.eq('grupo_id', input.grupoId) : await query.eq('id', input.id)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/painel/${input.estudioSlug}/agenda`)
   return { ok: true }
 }
 

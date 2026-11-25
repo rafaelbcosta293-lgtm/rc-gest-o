@@ -111,7 +111,7 @@ async function EsteMesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
   const supabase = await createClient()
 
   const [{ data: clientesData, error: erroClientes }, { data: leadsData, error: erroLeads }] = await Promise.all([
-    supabase.from('clientes').select('id, estado, inicio_contrato').eq('estudio_id', estudio.id).eq('cliente_pt', true),
+    supabase.from('clientes').select('id, estado, inicio_contrato').eq('estudio_id', estudio.id).eq('cliente_pt', true).eq('teste', false),
     supabase.from('leads').select('estado, entrada, fecho_em').eq('estudio_id', estudio.id),
   ])
   if (erroClientes || erroLeads) {

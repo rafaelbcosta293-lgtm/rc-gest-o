@@ -51,6 +51,7 @@ async function processarAniversariosDoEstudio(
       .from('clientes')
       .select('id, nome, telefone, estado, genero, nascimento, nome_preferido')
       .eq('estudio_id', estudio.id)
+      .eq('teste', false)
       .not('nascimento', 'is', null),
     obterEstadoGateway(admin, estudio.id),
   ])

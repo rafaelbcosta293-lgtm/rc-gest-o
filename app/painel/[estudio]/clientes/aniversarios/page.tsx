@@ -162,6 +162,7 @@ export default async function AniversariosPage({
       .from('clientes')
       .select('id, nome, nascimento, estado, genero')
       .eq('estudio_id', estudio.id)
+      .eq('teste', false)
       .not('nascimento', 'is', null),
     supabase.from('config').select('*').in('chave', ['msg_aniversario', 'msg_aniversario_ex']),
     supabase

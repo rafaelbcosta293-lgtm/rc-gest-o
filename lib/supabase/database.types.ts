@@ -104,6 +104,9 @@ export type Cliente = {
   // false = só faz outros serviços (aulas de grupo, nutrição): fica fora
   // de todas as métricas de PT.
   cliente_pt: boolean
+  // Cliente fictício para testar a app do cliente: fica fora de todas as
+  // estatísticas, contagens, alertas e SMS automáticos.
+  teste?: boolean
   alerta: string
   alerta_detalhe: string | null
   evento: string | null

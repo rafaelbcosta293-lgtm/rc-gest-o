@@ -175,7 +175,7 @@ export default async function ClientesPage({
   ] = await Promise.all([
     query,
     ePt
-      ? supabase.from('clientes').select('estado').eq('estudio_id', estudio.id).eq('cliente_pt', true)
+      ? supabase.from('clientes').select('estado').eq('estudio_id', estudio.id).eq('cliente_pt', true).eq('teste', false)
       : Promise.resolve({ data: [...inscricaoPorCliente.values()].map((i) => ({ estado: i.estado })), error: null }),
     ePt
       ? supabase.from('v_estado_pagamento').select('cliente_id, valido_ate, em_dia').eq('estudio_id', estudio.id)
@@ -258,6 +258,7 @@ export default async function ClientesPage({
           .select('id', { count: 'exact', head: true })
           .eq('estudio_id', estudio.id)
           .eq('cliente_pt', true)
+          .eq('teste', false)
           .eq('estado', 'Ativo')
       ).count ?? 0
   const contagens: Record<EstadoCliente | 'Todos', number> = {

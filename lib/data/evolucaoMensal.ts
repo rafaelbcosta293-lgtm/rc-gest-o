@@ -50,7 +50,8 @@ export async function getEvolucaoMensal(
       .from('clientes')
       .select('estudio_id, inicio_contrato, estado')
       .in('estudio_id', idsEstudios)
-      .eq('cliente_pt', true),
+      .eq('cliente_pt', true)
+      .eq('teste', false),
     // O filtro por estúdio é feito em JS, a partir do join (estudioIdDoJoin)
     // — mais seguro do que confiar em ".in()" sobre uma coluna de um
     // recurso embutido, que não é um caminho tão bem testado nesta app

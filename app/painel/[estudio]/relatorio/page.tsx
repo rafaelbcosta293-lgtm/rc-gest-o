@@ -49,7 +49,7 @@ export default async function RelatorioMensalPage({
     { data: goalsData, error: erroGoals },
   ] = await Promise.all([
     supabase.from('leads').select('estado, entrada, fecho_em').eq('estudio_id', estudio.id),
-    supabase.from('clientes').select('id, estado').eq('estudio_id', estudio.id).eq('cliente_pt', true),
+    supabase.from('clientes').select('id, estado').eq('estudio_id', estudio.id).eq('cliente_pt', true).eq('teste', false),
     supabase
       .from('activities')
       .select('tipo, criado_em')

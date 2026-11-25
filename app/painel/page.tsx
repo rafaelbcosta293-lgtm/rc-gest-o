@@ -36,7 +36,7 @@ export default async function PainelPage({
   const [sessao, estudios, { data: clientes }, { data: acessosAprovados }] = await Promise.all([
     getSessaoAtual(),
     getEstudios(supabase),
-    supabase.from('clientes').select('estudio_id, estado').eq('cliente_pt', true),
+    supabase.from('clientes').select('estudio_id, estado').eq('cliente_pt', true).eq('teste', false),
     supabase.from('perfis_estudios').select('perfil_id, estudio_id'),
   ])
 

@@ -110,7 +110,8 @@ async function PendenciasEstudio({ estudio }: { estudio: Pick<Estudio, 'id' | 's
       .select('id, nome, inicio_contrato')
       .eq('estudio_id', estudio.id)
       .eq('estado', 'Ativo')
-      .eq('cliente_pt', true),
+      .eq('cliente_pt', true)
+      .eq('teste', false),
   ])
 
   const leadsParadas = (leadsParadasData ?? []) as LeadParada[]

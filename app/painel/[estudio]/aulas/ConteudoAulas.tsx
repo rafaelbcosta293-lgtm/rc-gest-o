@@ -1,13 +1,14 @@
 import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, CalendarOff, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, CalendarOff } from 'lucide-react'
+import { Barra, BarraOpcoes, BarraPeriodo, BarraSeparador } from '@/components/Barra'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ehContaFixa } from '@/lib/data/acessos'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
-import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
+import { fmt, DIAS_SEMANA, intervaloCurto } from '@/lib/data/presencas'
 import { carregarServicos } from '@/lib/data/servicos'
 import {
   DIAS_SEMANA_LONGOS,
@@ -215,57 +216,37 @@ export default async function ConteudoAulas({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
-      <Link href={`/painel/${slug}`} className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Voltar
-      </Link>
-      <div className="mt-2 flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {titulo} <span className="font-normal text-muted">· {estudio.nome}</span>
+      {/* Tudo numa barra, como na Agenda: voltar, título, semana e serviços. */}
+      <Barra rotulo="Comandos das aulas">
+        <Link href={`/painel/${slug}`} aria-label="Voltar" title="Voltar" className="barra-item barra-icone">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <h1 className="barra-titulo">
+          {titulo} <span className="font-normal text-muted max-sm:hidden">· {estudio.nome}</span>
         </h1>
-        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
-          <Link
-            href={`${basePath}${query(base, { data: somarDias(inicio, -7) })}`}
-            aria-label="Semana anterior"
-            className="rounded-full border border-border-strong px-2 py-1 hover:bg-brand/[.08]"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <span className="text-sm font-semibold whitespace-nowrap text-foreground">
-            {fmt(dias[0])} – {fmt(dias[6])}
-          </span>
-          <Link
-            href={`${basePath}${query(base, { data: somarDias(inicio, 7) })}`}
-            aria-label="Semana seguinte"
-            className="rounded-full border border-border-strong px-2 py-1 hover:bg-brand/[.08]"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-          <Link
-            href={`${basePath}${query({ servico: sp.servico }, {})}`}
-            className={`rounded-full px-3 py-1 text-xs font-bold ${
-              hoje >= dias[0] && hoje <= dias[6] ? 'border border-border-subtle text-muted' : 'bg-brand text-black hover:bg-brand-strong'
-            }`}
-          >
-            Hoje
-          </Link>
-        </div>
-        <div className={`flex flex-wrap gap-1.5 text-xs ${servicoFixo ? 'hidden' : ''}`}>
-          {[{ id: 0, nome: 'Todas' }, ...servicosGrupo].map((s) => {
-            const ativo = (servicoFiltro ?? 0) === s.id
-            return (
-              <Link
-                key={s.id}
-                href={`${basePath}${query({ data: sp.data }, { servico: s.id ? String(s.id) : undefined })}`}
-                className={`rounded-full border px-3 py-1.5 font-semibold ${
-                  ativo ? 'border-brand bg-brand text-black' : 'border-border-subtle text-muted hover:border-border-strong'
-                }`}
-              >
-                {s.nome}
-              </Link>
-            )
-          })}
-        </div>
-      </div>
+        <BarraSeparador />
+        <BarraPeriodo
+          className="max-sm:w-full"
+          anterior={`${basePath}${query(base, { data: somarDias(inicio, -7) })}`}
+          seguinte={`${basePath}${query(base, { data: somarDias(inicio, 7) })}`}
+          titulo={intervaloCurto(dias[0], dias[6])}
+          hoje={`${basePath}${query({ servico: sp.servico }, {})}`}
+          noPeriodoDeHoje={hoje >= dias[0] && hoje <= dias[6]}
+        />
+        {!servicoFixo && (
+          <>
+            <BarraSeparador />
+            <BarraOpcoes
+              className="flex-wrap"
+              opcoes={[{ id: 0, nome: 'Todas' }, ...servicosGrupo].map((s) => ({
+                href: `${basePath}${query({ data: sp.data }, { servico: s.id ? String(s.id) : undefined })}`,
+                rotulo: s.nome,
+                ativo: (servicoFiltro ?? 0) === s.id,
+              }))}
+            />
+          </>
+        )}
+      </Barra>
 
       {sp.error && (
         <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{sp.error}</p>

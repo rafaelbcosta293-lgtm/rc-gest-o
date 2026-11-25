@@ -15,7 +15,7 @@ import { fmt, intervaloMes, MESES } from '@/lib/data/presencas'
 import ApagarClienteModal from './ApagarClienteModal'
 import CartaoAppCliente from './CartaoAppCliente'
 import type { Cliente, EstadoPagamento } from '@/lib/supabase/database.types'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { moradaCompleta } from '@/lib/data/fichaCliente'
 
 type ClienteCompleto = Cliente & { pt_principal: { nome: string } | null }
@@ -160,9 +160,9 @@ export default async function FichaCompletaClientePage({
             <p className="mt-1 text-sm text-muted">{c.objetivo}</p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <BotaoAbrirJanela alvo={clienteId} className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]">
-            Editar ficha
+        <div className="barra shrink-0">
+          <BotaoAbrirJanela alvo={clienteId} className="barra-item">
+            <Pencil className="h-4 w-4" /> Editar ficha
           </BotaoAbrirJanela>
           {ehGestao && (
             <ApagarClienteModal

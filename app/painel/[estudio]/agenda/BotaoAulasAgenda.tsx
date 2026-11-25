@@ -20,11 +20,9 @@ export default function BotaoAulasAgenda({ ativo }: { ativo: boolean }) {
         document.cookie = `${COOKIE_AULAS_AGENDA}=${ativo ? '0' : '1'}; path=/; max-age=31536000; samesite=lax`
         iniciar(() => router.refresh())
       }}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-60 pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm ${
-        ativo ? 'bg-sky-600 text-white hover:bg-sky-700' : 'border border-border-subtle text-muted hover:bg-brand/[.08]'
-      }`}
+      className="barra-item"
     >
-      <Users className="h-3.5 w-3.5" /> Aulas
+      <Users className={`h-4 w-4 ${ativo ? 'text-sky-600 dark:text-sky-400' : ''}`} /> Aulas
     </button>
   )
 }

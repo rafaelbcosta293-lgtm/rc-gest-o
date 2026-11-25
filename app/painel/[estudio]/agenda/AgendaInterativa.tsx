@@ -1173,9 +1173,9 @@ export function GrelhaInterativa({
               ? 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar uma aula com essa duração (um clique simples usa a duração habitual do serviço); arrasta o meio de uma aula para a mover; clica uma vez numa aula para depois a poder encurtar/alongar pelo topo ou fundo; botão direito ou duplo clique para a abrir; Esc cancela um arrasto a meio. No tablet: toca para abrir, mantém o dedo e arrasta para mover.'
               : 'A hora acompanha sempre o rato (de 10 em 10 min); clica e arrasta num espaço vazio para criar com essa duração (um clique simples usa 40 min); arrasta o meio de um evento para o mover; clica uma vez num evento para depois poder encurtar/alongar pelo topo ou fundo; botão direito num evento para o editar; Esc cancela um arrasto a meio. As aulas de grupo mexem-se da mesma maneira. No tablet: toca para abrir, mantém o dedo e arrasta para mover.'
         }
-        className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground pointer-coarse:h-9 pointer-coarse:w-9"
+        className="barra-item barra-icone cursor-help"
       >
-        <HelpCircle className="h-3.5 w-3.5 pointer-coarse:h-5 pointer-coarse:w-5" />
+        <HelpCircle className="h-4 w-4" />
       </button>
       <FolhaInferior aberta={ajudaAberta} aoFechar={() => setAjudaAberta(false)} titulo={mapaDeAulas ? 'Como usar o mapa de aulas' : 'Como usar a Agenda'}>
         <div className="space-y-4 px-2 pb-2 text-[15px] leading-snug">
@@ -1231,17 +1231,12 @@ export function GrelhaInterativa({
           )}
         </div>
       </FolhaInferior>
-      <div className="flex shrink-0 items-center gap-0.5 rounded-full border border-border-subtle bg-surface px-0.5 py-0.5 shadow-pop">
-        <button
-          type="button"
-          onClick={() => onZoomIndiceChange(Math.max(0, zoomIndice - 1))}
-          disabled={zoomIndice === 0}
-          title="Diminuir zoom"
-          className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30 pointer-coarse:h-9 pointer-coarse:w-9"
-        >
-          <Minus className="h-3 w-3 pointer-coarse:h-4 pointer-coarse:w-4" />
+      {/* Zoom da grelha: − 100% + */}
+      <div className="flex shrink-0 items-center">
+        <button type="button" onClick={() => onZoomIndiceChange(Math.max(0, zoomIndice - 1))} disabled={zoomIndice === 0} title="Diminuir zoom" aria-label="Diminuir zoom" className="barra-item barra-icone">
+          <Minus className="h-3.5 w-3.5" />
         </button>
-        <span className="w-8 text-center text-[10px] font-semibold text-muted pointer-coarse:w-10 pointer-coarse:text-xs">
+        <span className="w-9 text-center text-[11px] font-semibold text-muted tabular-nums max-sm:hidden pointer-coarse:w-11 pointer-coarse:text-xs">
           {Math.round((pxPorMinuto / NIVEIS_ZOOM[ZOOM_OMISSAO]) * 100)}%
         </span>
         <button
@@ -1249,9 +1244,10 @@ export function GrelhaInterativa({
           onClick={() => onZoomIndiceChange(Math.min(NIVEIS_ZOOM.length - 1, zoomIndice + 1))}
           disabled={zoomIndice === NIVEIS_ZOOM.length - 1}
           title="Aumentar zoom"
-          className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-brand/[.08] hover:text-foreground disabled:opacity-30 pointer-coarse:h-9 pointer-coarse:w-9"
+          aria-label="Aumentar zoom"
+          className="barra-item barra-icone"
         >
-          <Plus className="h-3 w-3 pointer-coarse:h-4 pointer-coarse:w-4" />
+          <Plus className="h-3.5 w-3.5" />
         </button>
       </div>
     </>

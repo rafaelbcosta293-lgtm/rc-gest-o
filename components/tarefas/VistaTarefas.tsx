@@ -229,10 +229,7 @@ export default async function VistaTarefas({
   const vistas = VISTAS.filter((v) => v.id !== 'pessoas' || haResponsaveis || vista === 'pessoas')
   const estudiosDoFormulario = estudioDaqui ? [estudioDaqui] : estudios
 
-  const chip = (ativo: boolean) =>
-    `rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-      ativo ? 'bg-brand text-black' : 'border border-border-subtle bg-surface text-foreground hover:bg-brand/[.08]'
-    }`
+  const chip = (ativo: boolean) => `barra-item ${ativo ? 'ativo' : ''}`
 
   return (
     <ProvedorTarefas
@@ -262,22 +259,6 @@ export default async function VistaTarefas({
               {MAX_FOCO_POR_PESSOA} de cada vez).
             </p>
           </div>
-          <div className="flex items-center gap-1 rounded-full border border-border-subtle bg-surface p-1">
-            {vistas.map((v) => (
-              <Link
-                key={v.id}
-                href={link({
-                  vista: v.id === VISTA_OMISSAO ? undefined : v.id,
-                  editar: undefined,
-                })}
-                className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                  v.id === vista ? 'bg-brand text-black' : 'text-muted hover:text-foreground'
-                }`}
-              >
-                {v.rotulo}
-              </Link>
-            ))}
-          </div>
         </div>
 
         {sp.error && <p className="mt-4 rounded-md bg-red-500/15 px-3 py-2 text-sm text-red-700 dark:text-red-300">{sp.error}</p>}
@@ -285,11 +266,29 @@ export default async function VistaTarefas({
           <p className="mt-4 rounded-md bg-emerald-500/15 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300">{MENSAGENS_OK[sp.ok]}</p>
         )}
 
-        {/* Filtros */}
-        <div className="mt-5 flex flex-col gap-2">
+        {/* Vistas, filtros e "Nova tarefa" numa só barra: em cima como se
+            quer ver, em baixo o que se quer ver. */}
+        <div role="toolbar" aria-label="Vistas e filtros" className="barra em-linhas mt-5">
+          <div className="barra-linha">
+            {vistas.map((v) => (
+              <Link
+                key={v.id}
+                href={link({ vista: v.id === VISTA_OMISSAO ? undefined : v.id, editar: undefined })}
+                aria-current={v.id === vista ? 'page' : undefined}
+                className="barra-item"
+              >
+                {v.rotulo}
+              </Link>
+            ))}
+            <span aria-hidden className="min-w-0 flex-1" />
+            {/* Nova tarefa — abre a janela pequena, tal como editar. */}
+            <BotaoNovaTarefa className="barra-item barra-primario">
+              <Plus className="h-4 w-4" strokeWidth={2.5} /> Nova tarefa
+            </BotaoNovaTarefa>
+          </div>
           {vista !== 'pessoas' && vista !== 'painel' && (haResponsaveis || pessoa) && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="w-16 text-xs font-semibold uppercase tracking-wider text-muted">Quem</span>
+            <div className="barra-linha desliza">
+              <span className="barra-etiqueta w-[4.5rem]">Quem</span>
               <Link href={link({ pessoa: undefined, editar: undefined })} className={chip(!pessoa)}>
                 Todos
               </Link>
@@ -304,8 +303,8 @@ export default async function VistaTarefas({
             </div>
           )}
           {!estudioDaqui && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="w-16 text-xs font-semibold uppercase tracking-wider text-muted">Estúdio</span>
+            <div className="barra-linha desliza">
+              <span className="barra-etiqueta w-[4.5rem]">Estúdio</span>
               <Link href={link({ estudio: undefined, editar: undefined })} className={chip(!sp.estudio)}>
                 Todos
               </Link>
@@ -320,8 +319,8 @@ export default async function VistaTarefas({
             </div>
           )}
           {listas.length > 1 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="w-16 text-xs font-semibold uppercase tracking-wider text-muted">Lista</span>
+            <div className="barra-linha desliza">
+              <span className="barra-etiqueta w-[4.5rem]">Lista</span>
               <Link href={link({ lista: undefined, editar: undefined })} className={chip(!sp.lista)}>
                 Todas
               </Link>
@@ -333,11 +332,6 @@ export default async function VistaTarefas({
             </div>
           )}
         </div>
-
-        {/* Nova tarefa — abre a janela pequena, tal como editar. */}
-        <BotaoNovaTarefa className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-bold text-black hover:bg-brand-strong">
-          <Plus className="h-4 w-4" strokeWidth={3} /> Nova tarefa
-        </BotaoNovaTarefa>
 
         {/* Lista */}
         {vista === 'lista' && (

@@ -1,11 +1,12 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight, MessageSquareWarning } from 'lucide-react'
+import { Barra, BarraPeriodo } from '@/components/Barra'
+import { ArrowLeft, MessageSquareWarning } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
 import { areaBloqueada } from '@/lib/data/gate'
 import { somarDias } from '@/lib/data/horarios'
-import { fmt } from '@/lib/data/presencas'
+import { diaCurto } from '@/lib/data/presencas'
 import { desbloquearCoordenacao } from '../actions'
 import { corEstudio, PALETA } from '@/lib/data/constantes'
 import PortaSenha from '@/components/PortaSenha'
@@ -42,7 +43,6 @@ export default async function CoordenacaoChecklistPage({
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
   const data = /^\d{4}-\d{2}-\d{2}$/.test(sp.data ?? '') && sp.data! <= hoje ? sp.data! : hoje
   const estudios = await getEstudios(supabase)
-  const botao = 'rounded-full border border-border-subtle bg-surface p-1.5 text-muted shadow-card hover:text-foreground'
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -57,21 +57,15 @@ export default async function CoordenacaoChecklistPage({
             Abertura e fecho de cada estúdio: o que ficou por fazer e as notas de turno, sem sair da Coordenação.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
-          <Link href={`${ROTA}?data=${somarDias(data, -1)}`} aria-label="Dia anterior" className={botao}>
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <span className="min-w-28 text-center text-sm font-semibold text-foreground">{data === hoje ? 'Hoje' : fmt(data)}</span>
-          {data < hoje ? (
-            <Link href={`${ROTA}?data=${somarDias(data, 1)}`} aria-label="Dia seguinte" className={botao}>
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          ) : (
-            <span className={`${botao} opacity-30`}>
-              <ChevronRight className="h-4 w-4" />
-            </span>
-          )}
-        </div>
+        <Barra rotulo="Dia">
+          <BarraPeriodo
+            anterior={`${ROTA}?data=${somarDias(data, -1)}`}
+            seguinte={data < hoje ? `${ROTA}?data=${somarDias(data, 1)}` : null}
+            titulo={<span className="inline-block min-w-32 text-center">{diaCurto(data)}</span>}
+            hoje={ROTA}
+            noPeriodoDeHoje={data === hoje}
+          />
+        </Barra>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">

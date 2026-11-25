@@ -1,6 +1,7 @@
 import { carregarCustoPorLead, custoPorLeadDoMes, explicarCustoPorLead } from '@/lib/data/custoPorLead'
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, TrendingUp, Clock3, UserCheck, Phone, Handshake } from 'lucide-react'
+import { ArrowLeft, TrendingUp, Clock3, UserCheck, Phone, Handshake, BarChart3, Upload, Plus } from 'lucide-react'
+import { Barra } from '@/components/Barra'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
@@ -115,8 +116,9 @@ export default async function LeadsPage({
             {estudio.nome} · {leads.length} {leads.length === 1 ? 'lead' : 'leads'}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
+        <Barra rotulo="Ações" className="max-sm:w-full max-sm:justify-between">
           <ExportarCsvButton
+            className="barra-item max-sm:hidden"
             colunas={[
               { chave: 'nome', label: 'Nome' },
               { chave: 'telefone', label: 'Telefone' },
@@ -131,22 +133,16 @@ export default async function LeadsPage({
             linhas={leadsParaCsv}
             nomeFicheiro={`leads-${slug}`}
           />
-          <Link
-            href={`/painel/${slug}/leads/comercial`}
-            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
-          >
-            Painel comercial
+          <Link href={`/painel/${slug}/leads/comercial`} className="barra-item">
+            <BarChart3 className="h-4 w-4" /> Painel comercial
           </Link>
-          <Link
-            href={`/painel/${slug}/leads/importar`}
-            className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]"
-          >
-            Importar CSV
+          <Link href={`/painel/${slug}/leads/importar`} className="barra-item">
+            <Upload className="h-4 w-4" /> Importar
           </Link>
-          <BotaoAbrirJanela className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover">
-            + Lead
+          <BotaoAbrirJanela className="barra-item barra-primario">
+            <Plus className="h-4 w-4" /> Lead
           </BotaoAbrirJanela>
-        </div>
+        </Barra>
       </div>
 
       {quadro && (

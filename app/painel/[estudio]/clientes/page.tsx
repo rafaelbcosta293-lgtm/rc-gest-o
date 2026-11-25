@@ -2,7 +2,9 @@ import JanelaClientes from '@/app/painel/[estudio]/treinos/JanelaClientes'
 import { BotaoAbrirJanela } from '@/components/janela/Janela'
 import Link from '@/components/LinkRapido'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Cake, Plus, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowLeft, Cake, Plus, ArrowUp, ArrowDown, TrendingUp } from 'lucide-react'
+import { Barra, BarraEspaco, BarraSeparador } from '@/components/Barra'
+import BarraEscolha from '@/components/BarraEscolha'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { ESTADOS_CLIENTE, ALERTAS } from '@/lib/data/constantes'
@@ -342,8 +344,9 @@ export default async function ClientesPage({
             a ficha completa de cada um, num só sítio
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
+        <Barra rotulo="Ações" className="max-sm:w-full max-sm:justify-between">
           <ExportarCsvButton
+            className="barra-item max-sm:hidden"
             colunas={[
               { chave: 'numeroSocio', label: 'Nº de cliente' },
               { chave: 'nome', label: 'Nome' },
@@ -360,138 +363,114 @@ export default async function ClientesPage({
             linhas={linhas}
             nomeFicheiro={`clientes-${slug}`}
           />
-          <Link
-            href={`/painel/${slug}/clientes/retencao`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
-          >
-            Retenção
+          <Link href={`/painel/${slug}/clientes/retencao`} className="barra-item">
+            <TrendingUp className="h-4 w-4" /> Retenção
           </Link>
-          <Link
-            href={`/painel/${slug}/clientes/aniversarios`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
-          >
+          <Link href={`/painel/${slug}/clientes/aniversarios`} className="barra-item">
             <Cake className="h-4 w-4" /> Aniversários
           </Link>
-          <BotaoAbrirJanela className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover">
+          <BotaoAbrirJanela className="barra-item barra-primario">
             <Plus className="h-4 w-4" /> Cliente
           </BotaoAbrirJanela>
-        </div>
+        </Barra>
       </div>
 
-      {/* Um separador por serviço: cada um tem a sua lista e os seus
-          números, para não se misturarem (o PT é o de sempre). */}
-      {servicos.length > 1 && (
-        <div className="fila-deslizante mt-6 flex flex-wrap gap-1.5 border-b border-border-subtle">
-          {servicos.map((sv) => {
-            const ativo = sv.id === servicoSel
-            const n = sv.id === SERVICO_PT ? contagemPtAtivos : ativosPorServico.get(sv.id) ?? 0
-            return (
-              <Link
-                key={sv.id}
-                href={`/painel/${slug}/clientes${construirQuery({ ordem: ordemParam, dir: dirParam }, { servico: sv.id === SERVICO_PT ? undefined : String(sv.id) })}`}
-                className={`-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
-                  ativo ? 'border-brand text-foreground' : 'border-transparent text-muted hover:text-foreground'
-                }`}
-              >
-                {sv.nome} <span className="font-normal text-muted">({n})</span>
-              </Link>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Controlo segmentado, ao estilo iOS — uma só faixa, com o filtro
-          ativo a "flutuar" lá dentro, em vez de pílulas soltas. */}
-      <div className="mt-6 flex flex-wrap gap-1 rounded-3xl bg-border-subtle p-1 sm:gap-1.5 sm:rounded-full">
-        {FILTROS.map((f) => {
-          const ativo = estado === f.valor
-          const href = `/painel/${slug}/clientes${construirQuery(
-            { ordem: ordemParam, dir: dirParam, falta: faltaParam, servico: servicoQs },
-            { estado: f.valor }
-          )}`
-          return (
+      {/* A pesquisa (dentro de ListaClientes) e todos os filtros ficam
+          numa só barra: por cima os serviços (cada um tem a sua lista e
+          os seus números), por baixo o estado, a ordem e os dados em
+          falta na ficha — estes dois em menu, para caber numa linha. */}
+      <ListaClientes
+        linhas={linhas}
+        slug={slug}
+        mostrarEmFalta={falta !== null}
+        linhaDeCima={
+          servicos.length > 1 ? (
+            <div className="barra-linha desliza">
+              {servicos.map((sv) => {
+                const n = sv.id === SERVICO_PT ? contagemPtAtivos : ativosPorServico.get(sv.id) ?? 0
+                return (
+                  <Link
+                    key={sv.id}
+                    href={`/painel/${slug}/clientes${construirQuery({ ordem: ordemParam, dir: dirParam }, { servico: sv.id === SERVICO_PT ? undefined : String(sv.id) })}`}
+                    aria-current={sv.id === servicoSel ? 'page' : undefined}
+                    className="barra-item"
+                  >
+                    {sv.nome} <span className="font-normal text-muted">{n}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          ) : null
+        }
+        filtros={
+          <>
+            <BarraSeparador />
+            <div className="flex min-w-0 items-center gap-0.5 max-sm:order-3 max-sm:w-full max-sm:overflow-x-auto max-sm:[scrollbar-width:none]">
+              {FILTROS.map((f) => (
+                <Link
+                  key={f.valor}
+                  href={`/painel/${slug}/clientes${construirQuery(
+                    { ordem: ordemParam, dir: dirParam, falta: faltaParam, servico: servicoQs },
+                    { estado: f.valor }
+                  )}`}
+                  aria-current={estado === f.valor ? 'page' : undefined}
+                  className="barra-item"
+                >
+                  {f.label} <span className="font-normal text-muted">{contagens[f.valor]}</span>
+                </Link>
+              ))}
+            </div>
+            <BarraEspaco className="max-sm:hidden" />
+            <BarraEscolha
+              rotulo="Ordenar por"
+              valor={ordem}
+              className="max-sm:order-4 max-sm:min-w-0 max-sm:flex-1 sm:w-44"
+              opcoes={ORDENS.map((o) => ({
+                id: o.valor,
+                nome: `Por ${o.label.toLowerCase()}`,
+                href: `/painel/${slug}/clientes${construirQuery(
+                  { estado, falta: faltaParam, servico: servicoQs },
+                  { ordem: o.valor === 'nome' ? undefined : o.valor, dir: ordem === o.valor ? direcao : undefined }
+                )}`,
+              }))}
+            />
             <Link
-              key={f.valor}
-              href={href}
-              className={`flex-1 rounded-full px-2.5 py-2 text-center text-xs font-semibold whitespace-nowrap transition-all sm:px-3 sm:py-1.5 ${
-                ativo ? 'bg-surface text-foreground shadow-pop' : 'text-muted hover:text-foreground'
-              }`}
+              href={`/painel/${slug}/clientes${construirQuery(
+                { estado, ordem: ordemParam, falta: faltaParam, servico: servicoQs },
+                { dir: direcao === 'asc' ? 'desc' : 'asc' }
+              )}`}
+              className="barra-item barra-icone max-sm:order-4"
+              aria-label={direcao === 'asc' ? 'Ordem crescente — trocar para decrescente' : 'Ordem decrescente — trocar para crescente'}
+              title={direcao === 'asc' ? 'Ordem crescente — trocar para decrescente' : 'Ordem decrescente — trocar para crescente'}
             >
-              {f.label} ({contagens[f.valor]})
+              {direcao === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
             </Link>
-          )
-        })}
-      </div>
-
-      <div className="fila-deslizante mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-        <span className="font-semibold">Ordenar por:</span>
-        {ORDENS.map((o) => {
-          const ativo = ordem === o.valor
-          const href = `/painel/${slug}/clientes${construirQuery(
-            { estado, falta: faltaParam, servico: servicoQs },
-            { ordem: o.valor === 'nome' ? undefined : o.valor, dir: ativo ? direcao : undefined }
-          )}`
-          return (
-            <Link
-              key={o.valor}
-              href={href}
-              className={`rounded-full border px-3 py-1.5 font-semibold transition-colors ${
-                ativo
-                  ? 'border-brand bg-brand text-black'
-                  : 'border-border-subtle text-muted hover:border-border-strong'
-              }`}
-            >
-              {o.label}
-            </Link>
-          )
-        })}
-        <Link
-          href={`/painel/${slug}/clientes${construirQuery(
-            { estado, ordem: ordemParam, falta: faltaParam, servico: servicoQs },
-            { dir: direcao === 'asc' ? 'desc' : 'asc' }
-          )}`}
-          className="flex items-center rounded-full border border-border-subtle px-2.5 py-1.5 font-semibold text-muted transition-colors hover:border-border-strong"
-          title={direcao === 'asc' ? 'Ordem crescente — trocar para decrescente' : 'Ordem decrescente — trocar para crescente'}
-        >
-          {direcao === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
-        </Link>
-      </div>
-
-      {/* Dados incompletos na ficha: todos os que têm algo em falta, ou
-          só os que não têm um campo em concreto. Junta-se ao filtro de
-          estado acima (ex.: ativos sem NIF). */}
-      <div className="fila-deslizante mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-        <span className="font-semibold">Ficha:</span>
-        {(
-          [
-            { valor: undefined, label: 'Todas' },
-            { valor: 'qualquer', label: `Dados incompletos (${incompletos})` },
-            ...CAMPOS_FICHA.filter((c) => (contagemFalta.get(c.campo) ?? 0) > 0 || falta === c.campo).map((c) => ({
-              valor: c.campo,
-              label: `Sem ${c.rotulo === 'NIF' ? 'NIF' : c.rotulo.toLowerCase()} (${contagemFalta.get(c.campo) ?? 0})`,
-            })),
-          ] as { valor: string | undefined; label: string }[]
-        ).map((f) => {
-          const ativo = (falta ?? undefined) === f.valor
-          return (
-            <Link
-              key={f.valor ?? 'todas'}
-              href={`/painel/${slug}/clientes${construirQuery({ estado, ordem: ordemParam, dir: dirParam, servico: servicoQs }, { falta: f.valor })}`}
-              className={`rounded-full border px-3 py-1.5 font-semibold transition-colors ${
-                ativo
-                  ? f.valor
-                    ? 'border-amber-600 bg-amber-600 text-white'
-                    : 'border-brand bg-brand text-black'
-                  : 'border-border-subtle text-muted hover:border-border-strong'
-              }`}
-            >
-              {f.label}
-            </Link>
-          )
-        })}
-      </div>
-
-      <ListaClientes linhas={linhas} slug={slug} mostrarEmFalta={falta !== null} />
+            {/* Dados incompletos na ficha: todos os que têm algo em falta,
+                ou só os que não têm um campo em concreto. Junta-se ao
+                filtro de estado (ex.: ativos sem NIF). */}
+            <BarraEscolha
+              rotulo="Dados em falta na ficha"
+              valor={falta ?? ''}
+              realce={falta !== null}
+              className="max-sm:order-4 max-sm:min-w-0 max-sm:flex-1 sm:w-44"
+              opcoes={(
+                [
+                  { valor: undefined, label: 'Ficha: todas' },
+                  { valor: 'qualquer', label: `Dados incompletos (${incompletos})` },
+                  ...CAMPOS_FICHA.filter((c) => (contagemFalta.get(c.campo) ?? 0) > 0 || falta === c.campo).map((c) => ({
+                    valor: c.campo,
+                    label: `Sem ${c.rotulo === 'NIF' ? 'NIF' : c.rotulo.toLowerCase()} (${contagemFalta.get(c.campo) ?? 0})`,
+                  })),
+                ] as { valor: string | undefined; label: string }[]
+              ).map((f) => ({
+                id: f.valor ?? '',
+                nome: f.label,
+                href: `/painel/${slug}/clientes${construirQuery({ estado, ordem: ordemParam, dir: dirParam, servico: servicoQs }, { falta: f.valor })}`,
+              }))}
+            />
+          </>
+        }
+      />
     </div>
     </JanelaClientes>
   )

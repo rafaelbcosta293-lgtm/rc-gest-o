@@ -1,7 +1,7 @@
 import Link from '@/components/LinkRapido'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios, getEquipaDoEstudio } from '@/lib/data/estudios'
-import { fmt } from '@/lib/data/presencas'
+import { fmt, intervaloCurto } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot, slotDentroDaGrelha } from '@/lib/data/horarios'
 import { guardarSemana, copiarSemanaAnterior, criarInstrutor, desbloquearCoordenacao } from '../actions'
 import { alternarAcesso } from '../../[estudio]/equipa/actions'
@@ -13,7 +13,8 @@ import TituloSeccao from '@/components/TituloSeccao'
 import PortaSenha from '@/components/PortaSenha'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
 import type { Estudio, Perfil } from '@/lib/supabase/database.types'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Copy } from 'lucide-react'
+import { Barra, BarraEspaco, BarraPeriodo } from '@/components/Barra'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 
 const inputCls =
@@ -177,24 +178,13 @@ async function PainelHorariosEstudio({
       <TituloSeccao cor="azul" id={`planeamento-${slug}`}>
         Semana
       </TituloSeccao>
-      <div className="mt-2 flex flex-wrap items-center gap-3">
-        <Link
-          href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaAnterior, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
-          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          aria-label="Anterior"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm font-medium whitespace-nowrap">
-          {fmt(diasSemana[0])} – {fmt(diasSemana[6])}
-        </span>
-        <Link
-          href={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaSeguinte, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
-          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          aria-label="Seguinte"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+      <Barra rotulo="Semana" className="mt-2">
+        <BarraPeriodo
+          anterior={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaAnterior, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
+          seguinte={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaSeguinte, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
+          titulo={intervaloCurto(diasSemana[0], diasSemana[6])}
+        />
+        <BarraEspaco />
         <ConfirmarAcao
           action={copiarSemanaAnterior}
           confirmacao={
@@ -202,7 +192,7 @@ async function PainelHorariosEstudio({
               ? `Copiar o horário de ${fmt(semanaAnterior)} – ${fmt(somarDias(semanaAnterior, 6))} para esta semana? Substitui o que já está marcado nesta semana.`
               : `Copiar o horário de ${fmt(semanaAnterior)} – ${fmt(somarDias(semanaAnterior, 6))} para esta semana?`
           }
-          className="ml-auto max-sm:ml-0 max-sm:w-full"
+          className="max-sm:w-full"
         >
           <input type="hidden" name="estudio_slug" value={slug} />
           <input type="hidden" name="estudio_id" value={estudio.id} />
@@ -212,14 +202,11 @@ async function PainelHorariosEstudio({
             name="voltar"
             value={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: inicioSemana, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
           />
-          <SubmitButton
-            pendingText="A copiar…"
-            className="rounded-full border border-border-strong px-4 py-1.5 text-sm font-bold hover:bg-brand/[.08] max-sm:w-full max-sm:py-2"
-          >
-            Copiar horário da semana anterior
+          <SubmitButton pendingText="A copiar…" className="barra-item max-sm:w-full">
+            <Copy className="h-4 w-4" /> Copiar a semana anterior
           </SubmitButton>
         </ConfirmarAcao>
-      </div>
+      </Barra>
       {sp[pk('copia')] === 'ok' && (
         <p className="mt-2 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">
           Horário da semana anterior copiado. Faz agora os ajustes que quiseres.

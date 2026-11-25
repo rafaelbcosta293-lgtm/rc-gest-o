@@ -9,7 +9,9 @@ import { desbloquearCoordenacao } from '../actions'
 import { metricasNoIntervalo, METRICAS_MARKETING, type LeadMarketing, type MetricasMarketing } from '@/lib/data/marketing'
 import PortaSenha from '@/components/PortaSenha'
 import type { Estudio } from '@/lib/supabase/database.types'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import { Barra, BarraOpcoes, BarraPeriodo, BarraSeparador } from '@/components/Barra'
+import BarraEscolha from '@/components/BarraEscolha'
 
 const VISTAS = ['dia', 'semana', 'mes', 'ano'] as const
 type Vista = (typeof VISTAS)[number]
@@ -238,22 +240,37 @@ export default async function MarketingPage({
     })
   )
 
+  // Vistas, período e (na vista por dia) o que o calendário mostra: tudo
+  // na mesma barra.
+  const base = '/painel/coordenacao/marketing'
+  const periodoDaVista = {
+    dia: { anterior: `${base}?vista=dia&mes=${mesAnteriorParam}&metrica=${metricaAtual}`, seguinte: `${base}?vista=dia&mes=${mesSeguinteParam}&metrica=${metricaAtual}`, titulo: `${MESES[mesMes - 1]} ${anoMes}` },
+    semana: { anterior: `${base}?vista=semana&mes=${mesAnteriorParam}`, seguinte: `${base}?vista=semana&mes=${mesSeguinteParam}`, titulo: `${MESES[mesMes - 1]} ${anoMes}` },
+    mes: { anterior: `${base}?vista=mes&ano=${anoSelecionado - 1}`, seguinte: `${base}?vista=mes&ano=${anoSelecionado + 1}`, titulo: String(anoSelecionado) },
+    ano: { anterior: `${base}?vista=ano&ano=${anoSelecionado - 1}`, seguinte: `${base}?vista=ano&ano=${anoSelecionado + 1}`, titulo: String(anoSelecionado) },
+  }[vista]
   const toggleVista = (
-    <div className="mt-4 flex flex-wrap gap-1.5">
-      {VISTAS.map((v) => (
-        <Link
-          key={v}
-          href={`/painel/coordenacao/marketing?vista=${v}`}
-          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
-            vista === v
-              ? 'border-brand bg-brand text-black'
-              : 'border-border-subtle text-muted'
-          }`}
-        >
-          {LABEL_VISTA[v]}
-        </Link>
-      ))}
-    </div>
+    <Barra rotulo="Vista e período" className="mt-4 w-fit max-w-full">
+      <BarraOpcoes opcoes={VISTAS.map((v) => ({ href: `${base}?vista=${v}`, rotulo: LABEL_VISTA[v], ativo: vista === v }))} />
+      <BarraSeparador />
+      <BarraPeriodo
+        className="max-sm:w-full"
+        anterior={periodoDaVista.anterior}
+        seguinte={periodoDaVista.seguinte}
+        titulo={<span className="inline-block min-w-28 text-center">{periodoDaVista.titulo}</span>}
+      />
+      {vista === 'dia' && (
+        <>
+          <BarraSeparador />
+          <BarraEscolha
+            rotulo="O que o calendário mostra"
+            valor={metricaAtual}
+            className="max-sm:w-full"
+            opcoes={METRICAS_MARKETING.map((m) => ({ id: m.chave, nome: `Ver: ${m.label.toLowerCase()}`, href: `${base}?vista=dia&mes=${mesAtualParam}&metrica=${m.chave}` }))}
+          />
+        </>
+      )}
+    </Barra>
   )
 
   return (
@@ -271,43 +288,6 @@ export default async function MarketingPage({
 
       {vista === 'dia' && (
         <>
-          <div className="mt-4 flex items-center justify-center gap-3">
-            <Link
-              href={`/painel/coordenacao/marketing?vista=dia&mes=${mesAnteriorParam}&metrica=${metricaAtual}`}
-              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-              aria-label="Anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Link>
-            <span className="text-sm font-medium text-foreground">
-              {MESES[mesMes - 1]} {anoMes}
-            </span>
-            <Link
-              href={`/painel/coordenacao/marketing?vista=dia&mes=${mesSeguinteParam}&metrica=${metricaAtual}`}
-              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-              aria-label="Seguinte"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <p className="mt-3 text-xs text-muted">Ver no calendário:</p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {METRICAS_MARKETING.map((m) => (
-              <Link
-                key={m.chave}
-                href={`/painel/coordenacao/marketing?vista=dia&mes=${mesAtualParam}&metrica=${m.chave}`}
-                className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                  metricaAtual === m.chave
-                    ? 'border-teal-600 bg-teal-600 text-white'
-                    : 'border-border-subtle text-muted'
-                }`}
-              >
-                {m.label}
-              </Link>
-            ))}
-          </div>
-
           <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">
             {leadsPorEstudio.map(({ estudio, leads }) => (
               <div key={estudio.id}>
@@ -321,26 +301,6 @@ export default async function MarketingPage({
 
       {vista === 'semana' && (
         <>
-          <div className="mt-4 flex items-center justify-center gap-3">
-            <Link
-              href={`/painel/coordenacao/marketing?vista=semana&mes=${mesAnteriorParam}`}
-              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-              aria-label="Anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Link>
-            <span className="text-sm font-medium text-foreground">
-              {MESES[mesMes - 1]} {anoMes}
-            </span>
-            <Link
-              href={`/painel/coordenacao/marketing?vista=semana&mes=${mesSeguinteParam}`}
-              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-              aria-label="Seguinte"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
           <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">
             {leadsPorEstudio.map(({ estudio, leads }) => (
               <div key={estudio.id}>
@@ -354,24 +314,6 @@ export default async function MarketingPage({
 
       {vista === 'mes' && (
         <>
-          <div className="mt-4 flex items-center justify-center gap-3">
-            <Link
-              href={`/painel/coordenacao/marketing?vista=mes&ano=${anoSelecionado - 1}`}
-              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-              aria-label="Anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Link>
-            <span className="text-sm font-medium text-foreground">{anoSelecionado}</span>
-            <Link
-              href={`/painel/coordenacao/marketing?vista=mes&ano=${anoSelecionado + 1}`}
-              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-              aria-label="Seguinte"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
           <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">
             {leadsPorEstudio.map(({ estudio, leads }) => (
               <div key={estudio.id}>
@@ -385,24 +327,6 @@ export default async function MarketingPage({
 
       {vista === 'ano' && (
         <>
-          <div className="mt-4 flex items-center justify-center gap-3">
-            <Link
-              href={`/painel/coordenacao/marketing?vista=ano&ano=${anoSelecionado - 1}`}
-              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-              aria-label="Anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Link>
-            <span className="text-sm font-medium text-foreground">{anoSelecionado}</span>
-            <Link
-              href={`/painel/coordenacao/marketing?vista=ano&ano=${anoSelecionado + 1}`}
-              className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-              aria-label="Seguinte"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
           <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-2">
             {leadsPorEstudio.map(({ estudio, leads }) => (
               <div key={estudio.id}>

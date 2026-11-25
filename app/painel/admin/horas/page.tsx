@@ -1,5 +1,6 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight, FileDown } from 'lucide-react'
+import { Barra, BarraEspaco, BarraPeriodo } from '@/components/Barra'
+import { ArrowLeft, FileDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { areaBloqueada } from '@/lib/data/gate'
 import { hojeEmLisboa } from '@/lib/data/hoje'
@@ -81,24 +82,21 @@ export default async function HorasDaEquipaPage({
       {sp.ok && MENSAGENS_OK[sp.ok] && <p className="mt-4 rounded-md bg-teal-950 px-3 py-2 text-sm text-teal-300">{MENSAGENS_OK[sp.ok]}</p>}
       {sp.error && <p className="mt-4 rounded-md bg-red-950 px-3 py-2 text-sm text-red-300">{sp.error}</p>}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link href={`${ROTA}?mes=${somarMesesISO(mesISO, -1)}`} className={botaoSecCls} aria-label="Mês anterior">
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <h2 className="min-w-44 text-center text-lg font-bold text-foreground first-letter:uppercase">{nomeMes(mesISO)}</h2>
-        <Link href={`${ROTA}?mes=${somarMesesISO(mesISO, 1)}`} className={botaoSecCls} aria-label="Mês seguinte">
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-        {mesISO !== hoje.slice(0, 7) && (
-          <Link href={ROTA} className={botaoSecCls}>
-            Este mês
-          </Link>
-        )}
+      <Barra rotulo="Mês" className="mt-6">
+        <BarraPeriodo
+          anterior={`${ROTA}?mes=${somarMesesISO(mesISO, -1)}`}
+          seguinte={`${ROTA}?mes=${somarMesesISO(mesISO, 1)}`}
+          titulo={<span className="inline-block text-center first-letter:uppercase sm:min-w-40">{nomeMes(mesISO)}</span>}
+          hoje={ROTA}
+          noPeriodoDeHoje={mesISO === hoje.slice(0, 7)}
+          rotuloHoje="Este mês"
+        />
+        <BarraEspaco />
         {/* <a> simples (e não Link): é um ficheiro para descarregar, não uma página. */}
-        <a href={`${ROTA}/pdf?mes=${mesISO}`} download className={`${botaoCls} ml-auto inline-flex items-center gap-1.5`}>
-          <FileDown className="h-3.5 w-3.5" /> Descarregar PDF de {nomeMes(mesISO)}
+        <a href={`${ROTA}/pdf?mes=${mesISO}`} download className="barra-item barra-primario">
+          <FileDown className="h-4 w-4" /> PDF de {nomeMes(mesISO)}
         </a>
-      </div>
+      </Barra>
 
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Numero rotulo="Por aprovar" valor={String(porAprovar)} cor={porAprovar ? 'text-amber-300' : undefined} nota={porAprovar ? 'meses submetidos' : 'nada à espera'} />

@@ -1,6 +1,7 @@
 import Link from '@/components/LinkRapido'
+import { Barra, BarraPeriodo } from '@/components/Barra'
 import { notFound } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { MESES } from '@/lib/data/presencas'
 import { getEstudios } from '@/lib/data/estudios'
 import { configPara, obterAcessoHoras } from '@/lib/data/acessoHoras'
@@ -236,33 +237,23 @@ export default async function RegistoHorasPage({
             {modo === 'partilhada' ? ' — escolhe o teu nome para registares as tuas horas.' : '.'}
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-card">
-          <Link href={link({ mes: somarMes(-1), dia: undefined })} aria-label="Mês anterior" className="rounded-full p-1.5 text-muted hover:text-foreground">
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <span className="min-w-36 px-2 text-center text-sm font-semibold text-foreground">
-            {MESES[mes - 1]} {ano}
-          </span>
-          <Link href={link({ mes: somarMes(1), dia: undefined })} aria-label="Mês seguinte" className="rounded-full p-1.5 text-muted hover:text-foreground">
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
+        <Barra rotulo="Mês">
+          <BarraPeriodo
+            anterior={link({ mes: somarMes(-1), dia: undefined })}
+            seguinte={link({ mes: somarMes(1), dia: undefined })}
+            titulo={<span className="inline-block min-w-32 text-center">{MESES[mes - 1]} {ano}</span>}
+          />
+        </Barra>
       </div>
 
       {sp.error && <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{sp.error}</p>}
       {sp.ok && MENSAGENS[sp.ok] && <p className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{MENSAGENS[sp.ok]}</p>}
 
       {modo !== 'pessoal' && (
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted">Quem</span>
+        <div role="toolbar" aria-label="Quem" className="barra desliza mt-5 w-fit max-w-full">
+          <span className="barra-etiqueta">Quem</span>
           {equipa.map((m) => (
-            <Link
-              key={m.id}
-              href={link({ pessoa: m.id, dia: undefined })}
-              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-                m.id === pessoaId ? 'bg-brand text-black' : 'border border-border-subtle bg-surface text-foreground hover:bg-brand/[.08]'
-              }`}
-            >
+            <Link key={m.id} href={link({ pessoa: m.id, dia: undefined })} aria-current={m.id === pessoaId ? 'page' : undefined} className="barra-item">
               {m.nome}
             </Link>
           ))}

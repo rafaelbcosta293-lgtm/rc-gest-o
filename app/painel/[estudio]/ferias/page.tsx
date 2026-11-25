@@ -1,6 +1,6 @@
-import Link from '@/components/LinkRapido'
+import { Barra, BarraPeriodo } from '@/components/Barra'
 import { notFound } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Lock, Trash2 } from 'lucide-react'
+import { Lock, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEstudios } from '@/lib/data/estudios'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
@@ -143,15 +143,9 @@ export default async function FeriasPage({
               : 'Pedidos de férias da equipa, regras e mapa oficial.'}
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-card">
-          <Link href={linkAno(ano - 1)} aria-label="Ano anterior" className="rounded-full p-1.5 text-muted hover:text-foreground">
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <span className="px-2 text-sm font-semibold tabular-nums text-foreground">{ano}</span>
-          <Link href={linkAno(ano + 1)} aria-label="Ano seguinte" className="rounded-full p-1.5 text-muted hover:text-foreground">
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
+        <Barra rotulo="Ano">
+          <BarraPeriodo anterior={linkAno(ano - 1)} seguinte={linkAno(ano + 1)} titulo={ano} />
+        </Barra>
       </div>
 
       {error && (

@@ -8,6 +8,8 @@ import {
   fmt,
   iniciais,
   agruparDesmarcacoesPorCliente,
+  intervaloCurto,
+  diaCurto,
 } from './presencas'
 
 describe('treinosPrevistos', () => {
@@ -108,5 +110,17 @@ describe('agruparDesmarcacoesPorCliente', () => {
 
   it('sem desmarcações devolve lista vazia', () => {
     expect(agruparDesmarcacoesPorCliente([])).toEqual([])
+  })
+})
+
+describe('datas curtas das barras', () => {
+  it('intervalo no mesmo mês, entre meses e entre anos', () => {
+    expect(intervaloCurto('2026-11-23', '2026-11-29')).toBe('23 – 29 nov 2026')
+    expect(intervaloCurto('2026-11-30', '2026-12-06')).toBe('30 nov – 6 dez 2026')
+    expect(intervaloCurto('2026-12-28', '2027-01-03')).toBe('28 dez 2026 – 3 jan 2027')
+  })
+  it('dia com o dia da semana', () => {
+    expect(diaCurto('2026-11-25')).toBe('qua, 25 nov 2026')
+    expect(diaCurto('2027-01-03')).toBe('dom, 3 jan 2027')
   })
 })

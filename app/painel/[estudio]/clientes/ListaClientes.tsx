@@ -38,9 +38,15 @@ export default function ListaClientes({
   linhas,
   slug,
   mostrarEmFalta = false,
+  linhaDeCima,
+  filtros,
 }: {
   linhas: LinhaCliente[]
   slug: string
+  // A barra de cima da lista: uma linha opcional por cima (os serviços)
+  // e, a seguir à pesquisa, os filtros — vêm prontos da página.
+  linhaDeCima?: React.ReactNode
+  filtros?: React.ReactNode
   // Com o filtro "Dados incompletos" ativo, cada linha diz o que falta.
   mostrarEmFalta?: boolean
 }) {
@@ -59,20 +65,27 @@ export default function ListaClientes({
 
   return (
     <>
-      <div className="relative mt-4">
-        <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-muted">
-          <Search className="h-4 w-4" />
-        </span>
-        <input
-          type="text"
-          value={filtro}
-          onChange={(e) => setFiltro(e.target.value)}
-          placeholder="Procurar por nome ou nº de sócio…"
-          className="w-full rounded-2xl border border-border-subtle bg-surface py-3 pl-10 pr-3.5 text-sm outline-none transition-colors focus:border-brand/60"
-        />
+      <div role="toolbar" aria-label="Procurar e filtrar" className="barra em-linhas mt-5">
+        {linhaDeCima}
+        <div className="barra-linha">
+          <div className="relative min-w-[12rem] flex-1 max-sm:w-full max-sm:flex-none sm:max-w-[13rem]">
+            <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-muted">
+              <Search className="h-4 w-4" />
+            </span>
+            <input
+              type="text"
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              placeholder="Procurar por nome ou nº…"
+              aria-label="Procurar por nome ou nº de sócio"
+              className="barra-campo w-full pl-8"
+            />
+          </div>
+          {filtros}
+        </div>
       </div>
 
-      <div className="mt-4 flex flex-col overflow-hidden rounded-2xl border border-border-subtle shadow-card">
+      <div className="mt-3 flex flex-col overflow-hidden rounded-2xl border border-border-subtle shadow-card">
         {linhasFiltradas.map((l, i) => (
           <Link
             key={l.id}

@@ -44,6 +44,26 @@ export function fmt(iso: string | null) {
   return `${d}/${m}/${a}`
 }
 
+const MESES_ABREVIADOS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const DIAS_ABREVIADOS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+
+// Um período escrito de forma curta, para as barras de cada ecrã:
+// "23 – 29 nov 2026" · "30 nov – 6 dez 2026" · "28 dez 2026 – 3 jan 2027".
+export function intervaloCurto(inicio: string, fim: string): string {
+  const [a1, m1, d1] = inicio.split('-').map(Number)
+  const [a2, m2, d2] = fim.split('-').map(Number)
+  if (a1 !== a2) return `${d1} ${MESES_ABREVIADOS[m1 - 1]} ${a1} – ${d2} ${MESES_ABREVIADOS[m2 - 1]} ${a2}`
+  if (m1 !== m2) return `${d1} ${MESES_ABREVIADOS[m1 - 1]} – ${d2} ${MESES_ABREVIADOS[m2 - 1]} ${a2}`
+  return `${d1} – ${d2} ${MESES_ABREVIADOS[m2 - 1]} ${a2}`
+}
+
+// Um dia escrito de forma curta, com o dia da semana: "qua, 25 nov 2026".
+export function diaCurto(iso: string): string {
+  const [a, m, d] = iso.split('-').map(Number)
+  const semana = new Date(Date.UTC(a, m - 1, d)).getUTCDay()
+  return `${DIAS_ABREVIADOS[semana]}, ${d} ${MESES_ABREVIADOS[m - 1]} ${a}`
+}
+
 export function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/)
   const primeiras = partes.length > 1 ? [partes[0], partes[partes.length - 1]] : [partes[0]]

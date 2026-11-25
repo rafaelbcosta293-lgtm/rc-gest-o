@@ -136,22 +136,14 @@ export default async function AdminFaturasPage({
 
       <SincronizarNifs />
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <nav aria-label="Estado das faturas" className="barra desliza mt-5 w-fit max-w-full">
         {SEPARADORES.map((s) => (
-          <Link
-            key={s.chave}
-            href={`/painel/admin/faturas?ver=${s.chave}${qsEstudio}`}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              s.chave === separador.chave
-                ? 'bg-brand text-black'
-                : 'border border-border-subtle text-muted hover:text-foreground'
-            }`}
-          >
+          <Link key={s.chave} href={`/painel/admin/faturas?ver=${s.chave}${qsEstudio}`} aria-current={s.chave === separador.chave ? 'page' : undefined} className="barra-item">
             {s.label}
-            {s.chave === 'pendentes' && nPendentes > 0 ? ` (${nPendentes})` : ''}
+            {s.chave === 'pendentes' && nPendentes > 0 ? <span className="font-normal text-muted">{nPendentes}</span> : null}
           </Link>
         ))}
-      </div>
+      </nav>
 
       {sp.ok && (
         <p className="mt-4 rounded-md bg-teal-950 px-3 py-2 text-sm text-teal-300">{sp.ok}</p>

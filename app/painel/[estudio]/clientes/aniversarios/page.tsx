@@ -1,4 +1,5 @@
 import Link from '@/components/LinkRapido'
+import { Barra, BarraOpcoes, BarraPeriodo } from '@/components/Barra'
 import { emCrise as gatewayEmCrise } from '@/lib/data/smsGateway'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { notFound } from 'next/navigation'
@@ -12,7 +13,7 @@ import SubmitButton from '@/components/SubmitButton'
 import CopiarTexto from '@/components/CopiarTexto'
 import ConfigAniversarioForm from './ConfigAniversarioForm'
 import type { EnvioAniversario, EstadoSmsGateway } from '@/lib/supabase/database.types'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 type ClienteAniversario = {
   id: string
@@ -60,23 +61,16 @@ function Calendario({
 
   return (
     <div className="mt-6">
-      <div className="flex items-center justify-between gap-3">
-        <Link
-          href={`/painel/${slug}/clientes/aniversarios?mes=${anoAnterior}-${String(mesAnteriorNum).padStart(2, '0')}`}
-          className="inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-        >
-          <ChevronLeft className="h-4 w-4" /> {MESES[mesAnteriorNum - 1].slice(0, 3)}
-        </Link>
-        <strong className="text-sm text-foreground">
-          {MESES[mes - 1]} {ano}
-        </strong>
-        <Link
-          href={`/painel/${slug}/clientes/aniversarios?mes=${anoSeguinte}-${String(mesSeguinteNum).padStart(2, '0')}`}
-          className="inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-        >
-          {MESES[mesSeguinteNum - 1].slice(0, 3)} <ChevronRight className="h-4 w-4" />
-        </Link>
-      </div>
+      <Barra rotulo="Mês" className="w-fit max-w-full">
+        <BarraPeriodo
+          anterior={`/painel/${slug}/clientes/aniversarios?mes=${anoAnterior}-${String(mesAnteriorNum).padStart(2, '0')}`}
+          seguinte={`/painel/${slug}/clientes/aniversarios?mes=${anoSeguinte}-${String(mesSeguinteNum).padStart(2, '0')}`}
+          titulo={<span className="inline-block min-w-32 text-center">{MESES[mes - 1]} {ano}</span>}
+          hoje={`/painel/${slug}/clientes/aniversarios`}
+          noPeriodoDeHoje={hoje.getFullYear() === ano && hoje.getMonth() + 1 === mes}
+          rotuloHoje="Este mês"
+        />
+      </Barra>
 
       <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-muted">
         {DIAS_SEMANA_CURTOS.map((d) => (
@@ -228,28 +222,14 @@ export default async function AniversariosPage({
         mensagem também aparece pronta a copiar, para enviares à mão sempre que quiseres.
       </p>
 
-      <div className="mt-4 flex gap-1.5">
-        <Link
-          href={`/painel/${slug}/clientes/aniversarios`}
-          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
-            vistaCalendario
-              ? 'border-brand bg-brand text-black'
-              : 'border-border-subtle text-muted'
-          }`}
-        >
-          Calendário
-        </Link>
-        <Link
-          href={`/painel/${slug}/clientes/aniversarios?vista=lista`}
-          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
-            !vistaCalendario
-              ? 'border-brand bg-brand text-black'
-              : 'border-border-subtle text-muted'
-          }`}
-        >
-          Lista
-        </Link>
-      </div>
+      <Barra rotulo="Vista" className="mt-4 w-fit">
+        <BarraOpcoes
+          opcoes={[
+            { href: `/painel/${slug}/clientes/aniversarios`, rotulo: 'Calendário', ativo: vistaCalendario },
+            { href: `/painel/${slug}/clientes/aniversarios?vista=lista`, rotulo: 'Lista', ativo: !vistaCalendario },
+          ]}
+        />
+      </Barra>
 
       {vistaCalendario && (
         <Calendario slug={slug} ano={anoCal} mes={mesCal} porDia={porDia} hoje={agora} />

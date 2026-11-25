@@ -1,11 +1,12 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Barra, BarraPeriodo } from '@/components/Barra'
+import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEstudios, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { getSessaoAtual } from '@/lib/data/sessao'
 import { podeAcederEstudio } from '@/lib/data/acessos'
-import { fmt } from '@/lib/data/presencas'
+import { intervaloCurto } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias, chaveSlot } from '@/lib/data/horarios'
 import { coresInstrutores, corEstudio } from '@/lib/data/constantes'
 import GrelhaHorarios, { type SlotPt, type CorPt } from '@/components/GrelhaHorarios'
@@ -113,25 +114,15 @@ export default async function HorariosPage({
         </p>
       )}
 
-      <div className="mt-6 flex items-center gap-3">
-        <Link
-          href={`/painel/${slug}/horarios?semana=${semanaAnterior}`}
-          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          aria-label="Anterior"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm font-medium">
-          {fmt(dias[0])} – {fmt(dias[6])}
-        </span>
-        <Link
-          href={`/painel/${slug}/horarios?semana=${semanaSeguinte}`}
-          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          aria-label="Seguinte"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-      </div>
+      <Barra rotulo="Semana" className="mt-5 w-fit max-w-full">
+        <BarraPeriodo
+          anterior={`/painel/${slug}/horarios?semana=${semanaAnterior}`}
+          seguinte={`/painel/${slug}/horarios?semana=${semanaSeguinte}`}
+          titulo={intervaloCurto(dias[0], dias[6])}
+          hoje={`/painel/${slug}/horarios`}
+          noPeriodoDeHoje={hoje >= dias[0] && hoje <= dias[6]}
+        />
+      </Barra>
       <p className="mt-2 text-xs text-muted">
         Só para consulta — a escala é planeada em Coordenação.
       </p>

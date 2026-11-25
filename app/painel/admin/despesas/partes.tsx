@@ -46,15 +46,9 @@ const SEPARADORES = [
 
 export function SeparadoresDespesas({ ativo, qs = '' }: { ativo: string; qs?: string }) {
   return (
-    <nav className="fila-deslizante mt-4 flex flex-wrap gap-2">
+    <nav aria-label="Despesas" className="barra desliza mt-4 w-fit max-w-full">
       {SEPARADORES.map((s) => (
-        <Link
-          key={s.href}
-          href={`${s.href}${qs}`}
-          className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
-            s.href === ativo ? 'bg-brand text-black' : 'border border-border-subtle text-muted hover:text-foreground'
-          }`}
-        >
+        <Link key={s.href} href={`${s.href}${qs}`} aria-current={s.href === ativo ? 'page' : undefined} className="barra-item">
           {s.label}
         </Link>
       ))}

@@ -1,7 +1,7 @@
 import Link from '@/components/LinkRapido'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { notFound } from 'next/navigation'
-import { UsersRound, AlertTriangle, BellRing, Cake, CreditCard, Megaphone } from 'lucide-react'
+import { UsersRound, AlertTriangle, BellRing, Cake, CreditCard, Megaphone, FileText } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
@@ -164,19 +164,15 @@ export default async function EstudioPage({
   return (
     <div className="px-4 py-4 sm:px-6">
       {ehGestao && (
-        <div className="mb-4 flex items-center justify-end gap-2">
-          <Link
-            href={`/painel/${slug}/relatorio`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground/80 shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
-          >
-            Relatório mensal
-          </Link>
-          <Link
-            href={`/painel/${slug}/equipa`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground/80 shadow-pop transition-colors hover:border-border-strong hover:bg-brand/[.06]"
-          >
-            <UsersRound className="h-4 w-4" /> Equipa
-          </Link>
+        <div className="mb-3 flex justify-end">
+          <div className="barra">
+            <Link href={`/painel/${slug}/relatorio`} className="barra-item">
+              <FileText className="h-4 w-4" /> Relatório mensal
+            </Link>
+            <Link href={`/painel/${slug}/equipa`} className="barra-item">
+              <UsersRound className="h-4 w-4" /> Equipa
+            </Link>
+          </div>
         </div>
       )}
 

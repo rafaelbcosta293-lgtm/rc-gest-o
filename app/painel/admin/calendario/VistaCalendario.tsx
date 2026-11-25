@@ -1,5 +1,6 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
+import { Barra, BarraEspaco, BarraPeriodo } from '@/components/Barra'
+import { ArrowLeft, Check, Repeat } from 'lucide-react'
 import { dataNoMes, somarMesesISO, ROTULO_ESTADO } from '@/lib/data/despesas'
 import {
   DIAS_LEMBRETE_ATRASADO,
@@ -219,21 +220,17 @@ export default function VistaCalendario({
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         {/* Mês */}
         <section>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href={link(somarMesesISO(mes, -1))} className={botaoSecCls} aria-label="Mês anterior">
-              <ChevronLeft className="h-4 w-4" />
-            </Link>
-            <h2 className="min-w-44 text-center text-lg font-bold text-foreground first-letter:uppercase">{nomeMes(mes)}</h2>
-            <Link href={link(somarMesesISO(mes, 1))} className={botaoSecCls} aria-label="Mês seguinte">
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-            {mes !== hoje.slice(0, 7) && (
-              <Link href={ROTA} className={botaoSecCls}>
-                Hoje
-              </Link>
-            )}
-            <span className="ml-auto text-xs text-muted">Despesas do mês: {eur(totalMes)}</span>
-          </div>
+          <Barra rotulo="Mês">
+            <BarraPeriodo
+              anterior={link(somarMesesISO(mes, -1))}
+              seguinte={link(somarMesesISO(mes, 1))}
+              titulo={<span className="inline-block text-center first-letter:uppercase sm:min-w-40">{nomeMes(mes)}</span>}
+              hoje={ROTA}
+              noPeriodoDeHoje={mes === hoje.slice(0, 7)}
+            />
+            <BarraEspaco />
+            <span className="px-2 text-xs text-muted">Despesas do mês: <strong className="text-foreground">{eur(totalMes)}</strong></span>
+          </Barra>
 
           <div className="mt-3 overflow-hidden rounded-xl border border-border-subtle bg-surface">
             <div className="grid grid-cols-7 border-b border-border-subtle text-center text-[11px] font-semibold uppercase tracking-wider text-muted">

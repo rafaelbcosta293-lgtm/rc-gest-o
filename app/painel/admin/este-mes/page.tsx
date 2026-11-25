@@ -1,5 +1,6 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight, Dumbbell, Euro, Megaphone, TrendingUp, UserPlus } from 'lucide-react'
+import { Barra, BarraPeriodo } from '@/components/Barra'
+import { ArrowLeft, Dumbbell, Euro, Megaphone, TrendingUp, UserPlus } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
@@ -155,25 +156,13 @@ async function EsteMesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
 
   return (
     <>
-      <div className="mt-2 flex items-center gap-3">
-        <Link
-          href={`/painel/admin/este-mes${comQuery(sp, { [pk('mes')]: mesAnteriorParam })}`}
-          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          aria-label="Anterior"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm font-medium">
-          {MESES[mes - 1]} {ano}
-        </span>
-        <Link
-          href={`/painel/admin/este-mes${comQuery(sp, { [pk('mes')]: mesSeguinteParam })}`}
-          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          aria-label="Seguinte"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-      </div>
+      <Barra rotulo="Mês" className="mt-2 w-fit max-w-full">
+        <BarraPeriodo
+          anterior={`/painel/admin/este-mes${comQuery(sp, { [pk('mes')]: mesAnteriorParam })}`}
+          seguinte={`/painel/admin/este-mes${comQuery(sp, { [pk('mes')]: mesSeguinteParam })}`}
+          titulo={<span className="inline-block min-w-32 text-center">{MESES[mes - 1]} {ano}</span>}
+        />
+      </Barra>
       <div className="bg-tech-grid mt-3 grid grid-cols-2 gap-3 rounded-2xl p-1 sm:grid-cols-3">
         <StatCard icone={Megaphone} cor={PALETA.laranja} label="Leads novas" valor={leadsNovas} />
         <StatCard icone={TrendingUp} cor={PALETA.teal} label="Convertidas" valor={leadsConvertidas} />

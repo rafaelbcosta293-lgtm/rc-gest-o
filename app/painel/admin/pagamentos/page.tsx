@@ -1,6 +1,7 @@
 import ArquivoMensal from '@/components/ArquivoMensal'
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Barra, BarraOpcoes, BarraPeriodo, BarraSeparador } from '@/components/Barra'
+import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
@@ -171,58 +172,34 @@ export default async function AdminPagamentosPage({
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Pagamentos</h1>
           <p className="mt-1 text-sm text-muted">{estudios.map((e) => e.nome).join(' + ')}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-full border border-border-subtle p-0.5">
-            {(
+        <Barra rotulo="Período">
+          <BarraOpcoes
+            opcoes={(
               [
                 ['dia', 'Dia'],
                 ['mes', 'Mês'],
                 ['ano', 'Ano'],
               ] as const
-            ).map(([v, nome]) => (
-              <Link
-                key={v}
-                href={linkVista(v)}
-                className={`rounded-full px-3 py-1 text-sm font-semibold ${
-                  vista === v ? 'bg-brand text-black' : 'text-muted hover:text-foreground'
-                }`}
-              >
-                {nome}
-              </Link>
-            ))}
-          </div>
-          <Link
-            href={linkVista(vista, periodo.anterior.qs)}
-            className="inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          >
-            <ChevronLeft className="h-4 w-4" /> {periodo.anterior.rotulo}
-          </Link>
-          <strong className="text-sm capitalize text-foreground">{periodo.rotulo}</strong>
-          <Link
-            href={linkVista(vista, periodo.seguinte.qs)}
-            className="inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          >
-            {periodo.seguinte.rotulo} <ChevronRight className="h-4 w-4" />
-          </Link>
+            ).map(([v, nome]) => ({ href: linkVista(v), rotulo: nome, ativo: vista === v }))}
+          />
+          <BarraSeparador />
+          <BarraPeriodo
+            className="max-sm:w-full"
+            anterior={linkVista(vista, periodo.anterior.qs)}
+            seguinte={linkVista(vista, periodo.seguinte.qs)}
+            titulo={<span className="inline-block text-center capitalize sm:min-w-32">{periodo.rotulo}</span>}
+          />
           {vista === 'dia' && (
-            <form action="/painel/admin/pagamentos" className="flex items-center gap-1">
+            <form action="/painel/admin/pagamentos" className="flex items-center gap-0.5">
               <input type="hidden" name="vista" value="dia" />
               {sp.estudio && <input type="hidden" name="estudio" value={sp.estudio} />}
-              <input
-                type="date"
-                name="dia"
-                defaultValue={periodo.inicio}
-                className="rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground"
-              />
-              <button
-                type="submit"
-                className="rounded-md border border-border-subtle px-2 py-1 text-sm text-muted hover:text-foreground"
-              >
+              <input type="date" name="dia" defaultValue={periodo.inicio} aria-label="Ir para o dia" className="barra-campo" />
+              <button type="submit" className="barra-item">
                 Ir
               </button>
             </form>
           )}
-        </div>
+        </Barra>
       </div>
 
       <ListaPagamentosMes

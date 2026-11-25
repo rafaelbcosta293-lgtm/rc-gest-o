@@ -1,9 +1,10 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Barra, BarraPeriodo } from '@/components/Barra'
+import { ArrowLeft } from 'lucide-react'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getEstudios } from '@/lib/data/estudios'
-import { fmt } from '@/lib/data/presencas'
+import { diaCurto } from '@/lib/data/presencas'
 import { somarDias } from '@/lib/data/horarios'
 import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearCoordenacao } from '../actions'
@@ -112,31 +113,15 @@ async function SessoesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
 
   return (
     <>
-      <div className="mt-2 flex items-center gap-3">
-        <Link
-          href={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: diaSessoesAnterior })}`}
-          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          aria-label="Anterior"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm font-medium">{diaSessoesEhHoje ? 'Hoje' : fmt(diaSessoes)}</span>
-        <Link
-          href={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: diaSessoesSeguinte })}`}
-          className="rounded-full border border-border-strong px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-brand/[.08]"
-          aria-label="Seguinte"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-        {!diaSessoesEhHoje && (
-          <Link
-            href={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: undefined })}`}
-            className="text-xs text-muted underline"
-          >
-            voltar a hoje
-          </Link>
-        )}
-      </div>
+      <Barra rotulo="Dia" className="mt-2 w-fit max-w-full">
+        <BarraPeriodo
+          anterior={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: diaSessoesAnterior })}`}
+          seguinte={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: diaSessoesSeguinte })}`}
+          titulo={<span className="inline-block min-w-32 text-center">{diaCurto(diaSessoes)}</span>}
+          hoje={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: undefined })}`}
+          noPeriodoDeHoje={diaSessoesEhHoje}
+        />
+      </Barra>
       <div className="mt-2 flex flex-col gap-2">
         {sessoesDoDia.map((l) => {
           const cor = ESTADOS_LEAD[l.estado as keyof typeof ESTADOS_LEAD]

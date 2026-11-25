@@ -54,16 +54,12 @@ export default function MapaAulas({
             ? 'Arrasta uma aula para a mudar de hora ou de dia; clica num espaço vazio para criar uma.'
             : 'A tua conta só pode ver as aulas.'}
         </p>
-        <div className="flex items-center gap-1.5">
+        <div className="barra">
           {/* A ajuda e o zoom da grelha vêm parar aqui. */}
-          <div id="agenda-ferramentas" className="flex items-center gap-1.5" />
+          <div id="agenda-ferramentas" className="flex items-center gap-0.5" />
           {podeEscrever && servicos.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setNova({ data: diaOmissao, horaInicio: '19:00', duracaoMin: 0 })}
-              className="inline-flex items-center gap-1 rounded-full bg-brand px-3 py-1 text-xs font-bold text-black hover:bg-brand-strong pointer-coarse:px-4 pointer-coarse:py-2 pointer-coarse:text-sm"
-            >
-              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Aula
+            <button type="button" onClick={() => setNova({ data: diaOmissao, horaInicio: '19:00', duracaoMin: 0 })} className="barra-item barra-primario">
+              <Plus className="h-4 w-4" strokeWidth={2.5} /> Aula
             </button>
           )}
         </div>

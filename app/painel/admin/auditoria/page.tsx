@@ -61,23 +61,16 @@ export default async function AuditoriaPage({
         Quem alterou pagamentos, planos e preços, e quando — últimos 100 registos.
       </p>
 
-      <div className="mt-4 flex gap-2">
-        <Link
-          href="/painel/admin/auditoria"
-          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${!tabela ? 'border-brand bg-brand/10' : 'border-border-subtle'}`}
-        >
+      <nav aria-label="Filtrar por tabela" className="barra desliza mt-4 w-fit max-w-full">
+        <Link href="/painel/admin/auditoria" aria-current={!tabela ? 'page' : undefined} className="barra-item">
           Todas
         </Link>
         {TABELAS.map((t) => (
-          <Link
-            key={t}
-            href={`/painel/admin/auditoria?tabela=${t}`}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium ${tabela === t ? 'border-brand bg-brand/10' : 'border-border-subtle'}`}
-          >
+          <Link key={t} href={`/painel/admin/auditoria?tabela=${t}`} aria-current={tabela === t ? 'page' : undefined} className="barra-item capitalize">
             {t}
           </Link>
         ))}
-      </div>
+      </nav>
 
       <div className="mt-4 flex flex-col gap-2">
         {registos.length === 0 && <p className="text-sm text-muted">Sem registos.</p>}

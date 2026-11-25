@@ -1,5 +1,6 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Barra, BarraOpcoes, BarraPeriodo, BarraSeparador } from '@/components/Barra'
+import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { areaBloqueada } from '@/lib/data/gate'
 import { getEstudios } from '@/lib/data/estudios'
@@ -7,7 +8,7 @@ import { CATEGORIA_AJUSTE, gerarDespesasRecorrentes, hojeEmLisboa } from '@/lib/
 import { desbloquearAdmin } from '../../actions'
 import PortaSenha from '@/components/PortaSenha'
 import { guardarGrelhaDespesas } from '../actions'
-import { Mensagens, ROTA_DESPESAS, SeparadoresDespesas, botaoSecCls } from '../partes'
+import { Mensagens, ROTA_DESPESAS, SeparadoresDespesas } from '../partes'
 import GrelhaAnual, { type BlocoGrelha, type LinhaGrelha } from './GrelhaAnual'
 
 const ROTA = `${ROTA_DESPESAS}/anual`
@@ -114,30 +115,11 @@ export default async function DespesasAnualPage({
       <SeparadoresDespesas ativo={ROTA} qs={`?estudio=${estudio.slug}`} />
       <Mensagens error={sp.error} ok={sp.ok} />
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
-          <Link href={link(ano - 1)} className={botaoSecCls} aria-label="Ano anterior">
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <span className="min-w-16 text-center text-lg font-bold text-foreground">{ano}</span>
-          <Link href={link(ano + 1)} className={botaoSecCls} aria-label="Ano seguinte">
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
-        <div className="flex items-center gap-2">
-          {estudios.map((e) => (
-            <Link
-              key={e.id}
-              href={link(ano, e.slug)}
-              className={`rounded-full px-4 py-1.5 text-xs font-bold ${
-                e.id === estudio.id ? 'bg-brand text-black' : 'border border-border-subtle text-muted hover:text-foreground'
-              }`}
-            >
-              {e.nome}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <Barra rotulo="Ano e estúdio" className="mt-5 w-fit max-w-full">
+        <BarraPeriodo anterior={link(ano - 1)} seguinte={link(ano + 1)} titulo={ano} />
+        <BarraSeparador className="sempre" />
+        <BarraOpcoes opcoes={estudios.map((e) => ({ href: link(ano, e.slug), rotulo: e.nome, ativo: e.id === estudio.id }))} />
+      </Barra>
 
       <GrelhaAnual
         key={`${estudio.id}-${ano}`}

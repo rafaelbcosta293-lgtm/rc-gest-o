@@ -3,7 +3,8 @@ import CampoServico from '@/components/CampoServico'
 import { carregarServicos } from '@/lib/data/servicos'
 import { IrComBotaoDireito, JanelaServidor } from '@/components/janela/Janela'
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Barra, BarraPeriodo } from '@/components/Barra'
+import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { areaBloqueada } from '@/lib/data/gate'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
@@ -158,20 +159,16 @@ export default async function DespesasPage({
       )}
 
       {/* Mês */}
-      <div className="mt-8 flex items-center gap-3">
-        <Link href={linkMes(somarMesesISO(mes, -1))} className={botaoSecCls} aria-label="Mês anterior">
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <h2 className="min-w-44 text-center text-lg font-bold capitalize text-foreground">{nomeMes(mes)}</h2>
-        <Link href={linkMes(somarMesesISO(mes, 1))} className={botaoSecCls} aria-label="Mês seguinte">
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-        {mes !== hoje.slice(0, 7) && (
-          <Link href={linkMes(hoje.slice(0, 7))} className="text-xs font-semibold text-brand hover:underline">
-            Voltar ao mês atual
-          </Link>
-        )}
-      </div>
+      <Barra rotulo="Mês" className="mt-8 w-fit max-w-full">
+        <BarraPeriodo
+          anterior={linkMes(somarMesesISO(mes, -1))}
+          seguinte={linkMes(somarMesesISO(mes, 1))}
+          titulo={<span className="inline-block text-center first-letter:uppercase sm:min-w-40">{nomeMes(mes)}</span>}
+          hoje={linkMes(hoje.slice(0, 7))}
+          noPeriodoDeHoje={mes === hoje.slice(0, 7)}
+          rotuloHoje="Este mês"
+        />
+      </Barra>
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Numero label="Total do mês" valor={eur(balanco.total)} />

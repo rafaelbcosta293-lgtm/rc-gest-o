@@ -48,7 +48,7 @@ export default function ApagarClienteModal({
       <button
         type="button"
         onClick={() => setPasso('aviso')}
-        className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-4 py-2 text-sm font-bold text-muted hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
+        className="barra-item hover:!bg-red-50 hover:!text-red-700 dark:hover:!bg-red-950 dark:hover:!text-red-300"
       >
         <Trash2 className="h-4 w-4" /> Eliminar cliente
       </button>

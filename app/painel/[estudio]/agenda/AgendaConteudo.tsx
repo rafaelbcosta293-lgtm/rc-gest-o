@@ -1,11 +1,12 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, CalendarOff, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Barra, BarraEspaco, BarraOpcoes, BarraPeriodo, BarraSeparador } from '@/components/Barra'
+import { ArrowLeft, CalendarOff, Plus } from 'lucide-react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ehContaFixa } from '@/lib/data/acessos'
 import { getEquipaDoEstudio, obterOutroEstudioEClientes } from '@/lib/data/estudios'
-import { fmt, MESES, DIAS_SEMANA, diasDoMes, offsetPrimeiroDia } from '@/lib/data/presencas'
+import { fmt, MESES, DIAS_SEMANA, diasDoMes, offsetPrimeiroDia, intervaloCurto, diaCurto } from '@/lib/data/presencas'
 import { diasDaSemana, inicioDaSemana, somarDias } from '@/lib/data/horarios'
 import { corTipoEvento } from '@/lib/data/agenda'
 import { feriadosDoEstudio } from '@/lib/data/assiduidade'
@@ -206,14 +207,14 @@ export default async function AgendaConteudo({
     fimExclusivo = somarDias(dataSel, 1)
     anterior = somarDias(dataSel, -1)
     seguinte = somarDias(dataSel, 1)
-    tituloPeriodo = fmt(dataSel)
+    tituloPeriodo = diaCurto(dataSel)
   } else if (vista === 'semana') {
     inicio = inicioDaSemana(dataSel)
     diasSemana = diasDaSemana(inicio)
     fimExclusivo = somarDias(inicio, 7)
     anterior = somarDias(inicio, -7)
     seguinte = somarDias(inicio, 7)
-    tituloPeriodo = `${fmt(diasSemana[0])} – ${fmt(diasSemana[6])}`
+    tituloPeriodo = intervaloCurto(diasSemana[0], diasSemana[6])
   } else {
     const ano = Number(dataSel.slice(0, 4))
     const mes = Number(dataSel.slice(5, 7))
@@ -298,111 +299,77 @@ export default async function AgendaConteudo({
 
   return (
     <div>
-      {/* Cabeçalho todo numa única linha (quebra só se não couber) —
-          voltar, título, vistas, navegação de período, filtro de
-          instrutor e o botão de criar, lado a lado, para a grelha da
-          agenda começar o mais perto possível do topo (pedido do
-          dono, repetido — cada vez mais compacto). */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex min-w-0 shrink-0 items-center gap-2 max-sm:order-1">
+      {/* Todos os comandos da Agenda numa só barra, com o mesmo formato
+          (pedido do dono: nada de botões soltos, cada um à sua maneira).
+          No computador cabe numa linha; no telemóvel a barra parte-se em
+          linhas arrumadas (a ordem de cada peça está em "max-sm:order-*"):
+          título + vistas · período · Aulas/instrutor/+ Evento · pesquisa
+          + zoom. */}
+      <Barra rotulo="Comandos da Agenda">
+        <div className="flex min-w-0 shrink-0 items-center max-sm:order-1">
           {mostrarVoltar && (
-            <Link
-              href={`/painel/${slug}`}
-              className="inline-flex shrink-0 items-center gap-1 text-sm text-muted hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" /> Voltar
+            <Link href={`/painel/${slug}`} aria-label="Voltar" title="Voltar" className="barra-item barra-icone">
+              <ArrowLeft className="h-4 w-4" />
             </Link>
           )}
-          <h1 className="truncate text-base font-bold tracking-tight text-foreground">
-            Agenda <span className="font-normal text-muted">· {estudio.nome}</span>
+          <h1 className="barra-titulo truncate">
+            Agenda <span className="font-normal text-muted max-sm:hidden">· {estudio.nome}</span>
           </h1>
         </div>
 
-        <div className="flex shrink-0 gap-1.5 rounded-full bg-border-subtle p-1 max-sm:order-2 max-sm:ml-auto">
-          {VISTAS.map((v) => (
-            <Link
-              key={v}
-              href={`${basePath}${construirQuery({ pt: ptFiltro }, { vista: v })}`}
-              className={`rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-all pointer-coarse:px-4 pointer-coarse:py-2 pointer-coarse:text-sm ${
-                vista === v ? 'bg-surface text-foreground shadow-pop' : 'text-muted hover:text-foreground'
-              }`}
-            >
-              {LABEL_VISTA[v]}
-            </Link>
-          ))}
-        </div>
+        <BarraSeparador />
+        <BarraOpcoes
+          className="max-sm:order-2 max-sm:ml-auto"
+          opcoes={VISTAS.map((v) => ({
+            href: `${basePath}${construirQuery({ pt: ptFiltro }, { vista: v })}`,
+            rotulo: LABEL_VISTA[v],
+            ativo: vista === v,
+          }))}
+        />
 
-        {/* No telemóvel os grupos desfazem-se ("contents") e cada peça
-            ganha a sua ordem, para a barra ficar em quatro linhas
-            arrumadas: título + vistas · período · Aulas/instrutor/+ Evento
-            · pesquisa + zoom. No computador fica tudo numa linha. */}
-        <div className="flex items-center gap-2 max-sm:contents sm:shrink-0">
-          <div className="flex items-center gap-2 max-sm:order-3 max-sm:w-full">
-          <Link
-            href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: anterior })}`}
-            className="rounded-full border border-border-strong px-2 py-1 text-sm font-semibold text-foreground hover:bg-brand/[.08] pointer-coarse:px-3 pointer-coarse:py-2"
-            aria-label="Anterior"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <span className="text-sm font-semibold whitespace-nowrap text-foreground">{tituloPeriodo}</span>
-          <Link
-            href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: seguinte })}`}
-            className="rounded-full border border-border-strong px-2 py-1 text-sm font-semibold text-foreground hover:bg-brand/[.08] pointer-coarse:px-3 pointer-coarse:py-2"
-            aria-label="Seguinte"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-          {/* Volta ao período de hoje sem mudar a vista (semana continua
-              semana) nem o filtro de instrutor. Fica em destaque quando se
-              está a ver outro período. */}
-          <Link
-            href={`${basePath}${construirQuery({ vista, pt: ptFiltro }, {})}`}
-            aria-current={periodoTemHoje ? 'date' : undefined}
-            title={periodoTemHoje ? 'Já estás no período de hoje' : 'Voltar a hoje'}
-            className={`rounded-full px-3 py-1 text-xs font-bold transition-colors pointer-coarse:px-4 pointer-coarse:py-2 pointer-coarse:text-sm ${
-              periodoTemHoje ? 'border border-border-subtle text-muted hover:bg-brand/[.08]' : 'bg-brand text-black hover:bg-brand-strong'
-            }`}
-          >
-            Hoje
-          </Link>
-          </div>
-          {vista !== 'mes' && (
-            <span className="flex max-sm:order-4">
-              <BotaoAulasAgenda ativo={verAulas} />
-            </span>
-          )}
-        </div>
+        <BarraSeparador />
+        {/* "Hoje" volta ao período de hoje sem mudar a vista nem o filtro
+            de instrutor; só se destaca quando se está a ver outro período. */}
+        <BarraPeriodo
+          className="max-sm:order-3 max-sm:w-full"
+          anterior={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: anterior })}`}
+          seguinte={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: seguinte })}`}
+          titulo={tituloPeriodo}
+          hoje={`${basePath}${construirQuery({ vista, pt: ptFiltro }, {})}`}
+          noPeriodoDeHoje={periodoTemHoje}
+        />
 
+        {(vista !== 'mes' || pts.length > 0) && <BarraSeparador />}
+        {vista !== 'mes' && (
+          <span className="flex max-sm:order-4">
+            <BotaoAulasAgenda ativo={verAulas} />
+          </span>
+        )}
         {pts.length > 0 && (
           <div className="flex min-w-0 max-sm:order-5 max-sm:min-w-[9rem] max-sm:flex-1">
-          <FiltroInstrutor
-            valor={ptFiltro ?? ''}
-            opcoes={[
-              { id: '', nome: 'Todos', href: `${basePath}${construirQuery({ vista, data: dataParam }, { pt: undefined })}` },
-              ...pts.map((p) => ({ id: p.id, nome: p.nome, href: `${basePath}${construirQuery({ vista, data: dataParam }, { pt: p.id })}` })),
-            ]}
-          />
+            <FiltroInstrutor
+              valor={ptFiltro ?? ''}
+              opcoes={[
+                { id: '', nome: 'Todos', href: `${basePath}${construirQuery({ vista, data: dataParam }, { pt: undefined })}` },
+                ...pts.map((p) => ({ id: p.id, nome: p.nome, href: `${basePath}${construirQuery({ vista, data: dataParam }, { pt: p.id })}` })),
+              ]}
+            />
           </div>
         )}
 
-        {/* Na mesma linha da data e dos instrutores: ajuda e zoom da
-            grelha (vêm de AgendaInterativa), pesquisa e "+ Evento". */}
-        <div className="ml-auto flex items-center gap-2 max-sm:contents sm:shrink-0">
-          <div id="agenda-ferramentas" className="flex items-center gap-1.5 max-sm:order-8" />
-          <div className="flex min-w-0 max-sm:order-7 max-sm:min-w-[12rem] max-sm:flex-1">
-            <BuscaAgenda estudioId={estudio.id} basePath={basePath} />
-          </div>
-          {!somenteLeitura && (
-            <Link
-              href={`/painel/${slug}/agenda/novo?data=${dataSel}`}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover max-sm:order-6 max-sm:px-4 max-sm:py-2 max-sm:text-sm pointer-coarse:px-4 pointer-coarse:py-2 pointer-coarse:text-sm"
-            >
-              <Plus className="h-3.5 w-3.5" /> Evento
-            </Link>
-          )}
+        <BarraEspaco className="max-sm:hidden" />
+        {/* Ajuda e zoom da grelha (vêm de AgendaInterativa), pesquisa e
+            "+ Evento", encostados à direita. */}
+        <div id="agenda-ferramentas" className="flex items-center gap-0.5 max-sm:order-8" />
+        <div className="flex min-w-0 max-sm:order-7 max-sm:min-w-[12rem] max-sm:flex-1">
+          <BuscaAgenda estudioId={estudio.id} basePath={basePath} />
         </div>
-      </div>
+        {!somenteLeitura && (
+          <Link href={`/painel/${slug}/agenda/novo?data=${dataSel}`} className="barra-item barra-primario max-sm:order-6">
+            <Plus className="h-4 w-4" /> Evento
+          </Link>
+        )}
+      </Barra>
 
       {diasAvisados.length > 0 && (
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-amber-700 dark:text-amber-400">

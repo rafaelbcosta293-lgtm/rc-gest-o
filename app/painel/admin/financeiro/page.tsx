@@ -1,5 +1,6 @@
 import Link from '@/components/LinkRapido'
-import { ArrowLeft, ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react'
+import { Barra, BarraOpcoes, BarraPeriodo, BarraSeparador } from '@/components/Barra'
+import { ArrowLeft, Lightbulb } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
@@ -547,59 +548,39 @@ export default async function FinanceiroPage({
           ]}
           linhas={csvMensal}
           nomeFicheiro="analise-financeira-mensal"
-          className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold text-muted hover:text-foreground"
+          className="barra barra-item"
         />
       </div>
 
       {/* Seletor de período */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="flex rounded-full border border-border-subtle bg-surface p-1 shadow-card">
-          {(
-            [
-              ['mes', 'Mês'],
-              ['ano', 'Ano'],
-              ['sempre', 'Desde sempre'],
-            ] as const
-          ).map(([t, nome]) => (
-            <Link
-              key={t}
-              href={href({ periodo: t === 'mes' ? undefined : t })}
-              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-                tipo === t ? 'bg-brand text-black' : 'text-muted hover:text-foreground'
-              }`}
-            >
-              {nome}
-            </Link>
-          ))}
-        </div>
-        {tipo !== 'sempre' && (
-          <div className="flex items-center gap-1 rounded-full border border-border-subtle bg-surface p-1 shadow-card">
-            {podeAnterior ? (
-              <Link href={href({ periodo: tipo === 'mes' ? undefined : tipo, ref: refAnterior! })} aria-label="Anterior" className="rounded-full p-1.5 text-muted hover:text-foreground">
-                <ChevronLeft className="h-4 w-4" />
-              </Link>
-            ) : (
-              <span className="p-1.5 text-muted opacity-30"><ChevronLeft className="h-4 w-4" /></span>
-            )}
-            <span className="min-w-32 px-2 text-center text-sm font-semibold capitalize text-foreground">{periodo.rotulo}</span>
-            {podeSeguinte ? (
-              <Link href={href({ periodo: tipo === 'mes' ? undefined : tipo, ref: refSeguinte! })} aria-label="Seguinte" className="rounded-full p-1.5 text-muted hover:text-foreground">
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            ) : (
-              <span className="p-1.5 text-muted opacity-30"><ChevronRight className="h-4 w-4" /></span>
-            )}
-          </div>
-        )}
-        {tipo === 'ano' && (
-          <div className="flex flex-wrap gap-1">
-            {anos.map((a) => (
-              <Link key={a} href={href({ periodo: 'ano', ref: a })} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${a === periodo.ref ? 'bg-foreground/10 text-foreground' : 'text-muted hover:text-foreground'}`}>
-                {a}
-              </Link>
-            ))}
-          </div>
-        )}
+        <Barra rotulo="Período">
+          <BarraOpcoes
+            opcoes={(
+              [
+                ['mes', 'Mês'],
+                ['ano', 'Ano'],
+                ['sempre', 'Desde sempre'],
+              ] as const
+            ).map(([t, nome]) => ({ href: href({ periodo: t === 'mes' ? undefined : t }), rotulo: nome, ativo: tipo === t }))}
+          />
+          {tipo !== 'sempre' && (
+            <>
+              <BarraSeparador className="sempre" />
+              <BarraPeriodo
+                anterior={podeAnterior ? href({ periodo: tipo === 'mes' ? undefined : tipo, ref: refAnterior! }) : null}
+                seguinte={podeSeguinte ? href({ periodo: tipo === 'mes' ? undefined : tipo, ref: refSeguinte! }) : null}
+                titulo={<span className="inline-block min-w-28 text-center capitalize">{periodo.rotulo}</span>}
+              />
+            </>
+          )}
+          {tipo === 'ano' && (
+            <>
+              <BarraSeparador />
+              <BarraOpcoes className="flex-wrap" opcoes={anos.map((a) => ({ href: href({ periodo: 'ano', ref: a }), rotulo: a, ativo: a === periodo.ref }))} />
+            </>
+          )}
+        </Barra>
         {periodo.parcial && <span className="text-xs text-muted">Período em curso — comparações feitas até ao mesmo dia.</span>}
       </div>
 

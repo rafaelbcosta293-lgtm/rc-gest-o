@@ -37,18 +37,14 @@ export default async function AtalhosDoCliente({
   })
   if (visiveis.length <= 1) return null
   return (
-    <nav aria-label="Outras páginas deste cliente" className={`fila-deslizante flex flex-wrap items-center gap-1.5 ${className}`}>
+    <nav aria-label="Outras páginas deste cliente" className={`barra desliza w-fit max-w-full ${className}`}>
       {visiveis.map((d) =>
         d.id === atual ? (
-          <span key={d.id} aria-current="page" className="rounded-full bg-brand px-3.5 py-1.5 text-xs font-bold text-black">
+          <span key={d.id} aria-current="page" className="barra-item ativo">
             {d.nome}
           </span>
         ) : (
-          <Link
-            key={d.id}
-            href={`/painel/${slug}/${d.id}/${clienteId}`}
-            className="rounded-full border border-border-subtle bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground hover:border-border-strong hover:bg-brand/[.08]"
-          >
+          <Link key={d.id} href={`/painel/${slug}/${d.id}/${clienteId}`} className="barra-item">
             {d.nome}
           </Link>
         )

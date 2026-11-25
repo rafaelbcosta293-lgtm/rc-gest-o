@@ -1,5 +1,6 @@
 import Link from '@/components/LinkRapido'
-import { ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
+import { Barra, BarraEspaco, BarraOpcoes, BarraPeriodo, BarraSeparador } from '@/components/Barra'
+import { Repeat } from 'lucide-react'
 import { inicioDaSemana } from '@/lib/data/horarios'
 import { DIAS_DA_SEMANA, diaDaSemanaISO, itensDoCalendario, type ItemDoDia, type Tarefa } from '@/lib/data/tarefas'
 import ConcluirTarefa from './ConcluirTarefa'
@@ -189,38 +190,24 @@ export default function CalendarioTarefas({
   const semPrazo = tarefas.filter((t) => !t.prazo && t.estado !== 'feito').length
   const ano = Number(data.slice(0, 4))
 
-  const botao = 'rounded-full border border-border-strong px-3 py-1 text-xs font-semibold text-foreground hover:bg-brand/[.08]'
-
   return (
-    <div className="viz-tarefas mt-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 rounded-full border border-border-subtle bg-surface p-1">
-          {ESCALAS.map((e) => (
-            <Link
-              key={e.id}
-              href={link({ cal: e.id === 'semana' ? undefined : e.id })}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${e.id === escala ? 'bg-brand text-black' : 'text-muted hover:text-foreground'}`}
-            >
-              {e.rotulo}
-            </Link>
-          ))}
-        </div>
-        <Link href={link({ data: antes })} className={botao} aria-label="Anterior">
-          <ChevronLeft className="h-4 w-4" />
+    <div className="viz-tarefas mt-4">
+      <Barra rotulo="Calendário">
+        <BarraOpcoes opcoes={ESCALAS.map((e) => ({ href: link({ cal: e.id === 'semana' ? undefined : e.id }), rotulo: e.rotulo, ativo: e.id === escala }))} />
+        <BarraSeparador />
+        <BarraPeriodo
+          className="max-sm:order-last max-sm:w-full"
+          anterior={link({ data: antes })}
+          seguinte={link({ data: depois })}
+          titulo={<span className="inline-block text-center first-letter:uppercase sm:min-w-44">{titulo(escala, data, de, ate)}</span>}
+          hoje={link({ data: undefined })}
+          noPeriodoDeHoje={hoje >= de && hoje <= ate}
+        />
+        <BarraEspaco />
+        <Link href={link({ rotinas: comRotinas ? '0' : undefined })} aria-pressed={comRotinas} title={comRotinas ? 'Esconder as que se repetem' : 'Mostrar as que se repetem'} className="barra-item">
+          <Repeat className="h-4 w-4" /> Repetidas
         </Link>
-        <h2 className="min-w-48 text-center text-base font-bold text-foreground first-letter:uppercase">{titulo(escala, data, de, ate)}</h2>
-        <Link href={link({ data: depois })} className={botao} aria-label="Seguinte">
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-        {(hoje < de || hoje > ate) && (
-          <Link href={link({ data: undefined })} className={botao}>
-            Hoje
-          </Link>
-        )}
-        <Link href={link({ rotinas: comRotinas ? '0' : undefined })} className={`${botao} ml-auto`}>
-          {comRotinas ? 'Esconder as que se repetem' : 'Mostrar as que se repetem'}
-        </Link>
-      </div>
+      </Barra>
       <p className="mt-2 text-xs text-muted">
         Para editar uma tarefa, clica nela com o botão direito do rato (no telemóvel, toca e mantém): abre numa janela, sem sair daqui. As atrasadas aparecem no topo do dia de hoje.
         {semPrazo > 0 &&

@@ -10,6 +10,7 @@ import {
   Megaphone,
   History,
   ListTodo,
+  MonitorPlay,
 } from 'lucide-react'
 import PillNavLink from '@/components/PillNavLink'
 import BarraAjustavel from '@/components/BarraAjustavel'
@@ -27,6 +28,7 @@ const PASTAS = [
   { href: '/painel/coordenacao/horas-equipa', label: 'Horas da equipa', icone: Clock },
   { href: '/painel/coordenacao/pendencias', label: 'Pendências', icone: AlertTriangle },
   { href: '/painel/coordenacao/horarios', label: 'Horários', icone: AlarmClock },
+  { href: '/painel/coordenacao/aulas-virtuais', label: 'Aulas virtuais', icone: MonitorPlay },
   { href: '/painel/coordenacao/marketing', label: 'Marketing', icone: Megaphone },
   { href: '/painel/coordenacao/timeline', label: 'Timeline', icone: History },
 ]

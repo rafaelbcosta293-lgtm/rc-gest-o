@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { ArrowRight, CalendarPlus, ChevronRight, Clock, UserRound } from 'lucide-react'
+import { ArrowRight, CalendarPlus, ChevronRight, Clock, MonitorPlay, UserRound } from 'lucide-react'
 import { BlocoData, Cartao, Etiqueta, Seccao, type Tom } from '@/components/ui'
-import { contaAtual, pedidosEmCurso } from '@/lib/dados'
+import { contaAtual, pedidosEmCurso, totalAulasVirtuais } from '@/lib/dados'
 import { diaLongo, diaPorExtenso, hojeLisboa, instanteAtual, jaPassou } from '@/lib/datas'
 import { criarSupabase } from '@/lib/supabase'
 import { plural } from '@/lib/vistas'
@@ -25,11 +25,12 @@ export default async function InicioPage() {
   const agora = instanteAtual()
   const hoje = hojeLisboa(agora)
   const supabase = await criarSupabase()
-  const [{ data: treinos }, { data: inscricoes }, { count: presencasMes }, pedidos] = await Promise.all([
+  const [{ data: treinos }, { data: inscricoes }, { count: presencasMes }, pedidos, totalVideos] = await Promise.all([
     supabase.from('treinos').select('id, data, hora_inicio, duracao_min, servico, instrutor').gte('data', hoje).eq('estado', 'Agendado').order('data').order('hora_inicio').limit(20),
     supabase.from('inscricoes').select('estado, aula:aulas(id, data, hora_inicio, duracao_min, servico, instrutor, estado)').neq('estado', 'Cancelada'),
     supabase.from('presencas').select('id', { count: 'exact', head: true }).eq('estado', 'Presente').gte('data', `${hoje.slice(0, 7)}-01`),
     pedidosEmCurso(),
+    totalAulasVirtuais(),
   ])
 
   const marcacoes: Marcacao[] = [
@@ -110,6 +111,30 @@ export default async function InicioPage() {
           <p className="mt-1.5 text-sm leading-tight text-muted">{marcacoes.length === 1 ? 'sessão marcada' : 'sessões marcadas'}</p>
         </Link>
       </div>
+
+      {/* Aulas virtuais: atalho para quem tem o serviço; aos outros dá-se a
+          conhecer (só quando já há aulas publicadas). */}
+      {(conta.aulas_virtuais || totalVideos > 0) && (
+        <Link href="/videos" className="mt-3 flex items-center gap-3.5 rounded-2xl bg-surface p-4 shadow-card ring-1 ring-border active:bg-soft">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-brand">
+            <MonitorPlay className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2 font-semibold">
+              Aulas virtuais
+              {!conta.aulas_virtuais && <Etiqueta tom="info">Novo</Etiqueta>}
+            </span>
+            <span className="mt-0.5 block text-sm leading-snug text-muted">
+              {conta.aulas_virtuais
+                ? totalVideos > 0
+                  ? `${plural(totalVideos, 'aula em vídeo', 'aulas em vídeo')} para fazer quando quiser`
+                  : 'Aulas em vídeo para fazer quando quiser'
+                : 'Treine em casa com aulas em vídeo — saiba como aderir'}
+            </span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+        </Link>
+      )}
 
       {aSeguir.length > 0 && (
         <Seccao

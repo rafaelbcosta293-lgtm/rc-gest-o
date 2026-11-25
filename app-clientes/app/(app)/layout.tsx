@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
       <main className="flex-1 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">{children}</main>
-      <Navegacao />
+      <Navegacao comVideos={conta.aulas_virtuais} />
     </div>
   )
 }

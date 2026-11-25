@@ -433,7 +433,8 @@ export type Ausencia = {
 // Serviços do estúdio (Treino Personalizado, Treino Acompanhado, Pilates,
 // Nutrição) — cada plano, pagamento, marcação, lead e despesa diz a qual
 // pertence, para as métricas de cada um não se misturarem.
-export type FormatoServico = 'individual' | 'grupo'
+// 'virtual': aulas em vídeo na app do cliente (sem agenda nem aulas marcadas).
+export type FormatoServico = 'individual' | 'grupo' | 'virtual'
 export type Servico = {
   id: number
   chave: string

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { primeiroNomeExibicao } from '@/lib/data/clientes'
 import { hojeEmLisboa } from '@/lib/data/hoje'
+import { CHAVE_SERVICO_VIRTUAIS, montarAulasVirtuaisApp, type AulaVirtual } from '@/lib/data/aulasVirtuais'
 import { ligarAppClientes } from './ligacao'
 import { somarDiasIso } from './tempo'
 import {
@@ -49,6 +50,7 @@ type Conta = {
 export type RelatorioSync = {
   pedidos: number
   aulas: number
+  aulasVirtuais: number
   contasCopiadas: number
   contasVistas: number
   removidas: number
@@ -59,7 +61,7 @@ const chunks = <T,>(xs: T[], n: number): T[][] => Array.from({ length: Math.ceil
 
 export async function sincronizarAppClientes(admin: SupabaseClient, agora = new Date()): Promise<RelatorioSync> {
   const { app, token } = ligarAppClientes()
-  const rel: RelatorioSync = { pedidos: 0, aulas: 0, contasCopiadas: 0, contasVistas: 0, removidas: 0, erros: [] }
+  const rel: RelatorioSync = { pedidos: 0, aulas: 0, aulasVirtuais: 0, contasCopiadas: 0, contasVistas: 0, removidas: 0, erros: [] }
   const hoje = hojeEmLisboa(agora)
 
   // 1) Contas de clientes apagados na gestão → desligar na app.
@@ -208,6 +210,30 @@ export async function sincronizarAppClientes(admin: SupabaseClient, agora = new 
     })
     if (error) rel.erros.push(`aulas: ${error.message}`)
     else rel.aulas = (data as number) ?? 0
+  }
+
+  // 4b) Aulas virtuais: os vídeos publicados e as contas com acesso (as
+  //     de clientes com o serviço "Aulas Virtuais" em dia). Vai sempre
+  //     tudo — a app só escreve o que mudou.
+  {
+    const { data: servicoVirtuais } = await admin.from('servicos').select('id').eq('chave', CHAVE_SERVICO_VIRTUAIS).maybeSingle()
+    const [{ data: videos, error: erroVideos }, { data: comServico, error: erroServico }] = await Promise.all([
+      admin.from('aulas_virtuais').select('*').eq('publicada', true),
+      servicoVirtuais
+        ? admin.from('clientes_servicos').select('cliente_id').eq('servico_id', servicoVirtuais.id).eq('estado', 'Ativo')
+        : Promise.resolve({ data: [] as { cliente_id: string }[], error: null }),
+    ])
+    if (erroVideos || erroServico) rel.erros.push(`aulas virtuais: ${(erroVideos ?? erroServico)!.message}`)
+    else {
+      const emDia = new Set((comServico ?? []).map((c) => c.cliente_id as string))
+      const { data, error } = await app.rpc('sync_substituir_aulas_virtuais', {
+        p_token: token,
+        p_aulas: montarAulasVirtuaisApp((videos ?? []) as AulaVirtual[]),
+        p_contas: ativas.filter((c) => emDia.has(c.cliente_id)).map((c) => c.conta_id),
+      })
+      if (error) rel.erros.push(`aulas virtuais: ${error.message}`)
+      else rel.aulasVirtuais = (data as number) ?? 0
+    }
   }
 
   // 5) Cópia dos dados de cada conta (as afetadas já, as outras de 5 em 5 min).

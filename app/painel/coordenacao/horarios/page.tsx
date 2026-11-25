@@ -183,6 +183,7 @@ async function PainelHorariosEstudio({
           anterior={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaAnterior, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
           seguinte={`/painel/coordenacao/horarios${comQuery(sp, { [pk('semana')]: semanaSeguinte, [pk('copia')]: undefined, [pk('v')]: undefined })}`}
           titulo={intervaloCurto(diasSemana[0], diasSemana[6])}
+          largura="17ch"
         />
         <BarraEspaco />
         <ConfirmarAcao

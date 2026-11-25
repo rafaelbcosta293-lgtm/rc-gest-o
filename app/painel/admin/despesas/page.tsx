@@ -163,7 +163,8 @@ export default async function DespesasPage({
         <BarraPeriodo
           anterior={linkMes(somarMesesISO(mes, -1))}
           seguinte={linkMes(somarMesesISO(mes, 1))}
-          titulo={<span className="inline-block text-center first-letter:uppercase sm:min-w-40">{nomeMes(mes)}</span>}
+          titulo={<span className="inline-block first-letter:uppercase">{nomeMes(mes)}</span>}
+          largura="18ch"
           hoje={linkMes(hoje.slice(0, 7))}
           noPeriodoDeHoje={mes === hoje.slice(0, 7)}
           rotuloHoje="Este mês"

@@ -144,7 +144,7 @@ export default async function FeriasPage({
           </p>
         </div>
         <Barra rotulo="Ano">
-          <BarraPeriodo anterior={linkAno(ano - 1)} seguinte={linkAno(ano + 1)} titulo={ano} />
+          <BarraPeriodo anterior={linkAno(ano - 1)} seguinte={linkAno(ano + 1)} titulo={ano} largura="6ch" />
         </Barra>
       </div>
 

@@ -48,12 +48,13 @@ const MESES_ABREVIADOS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago'
 const DIAS_ABREVIADOS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
 // Um período escrito de forma curta, para as barras de cada ecrã:
-// "23 – 29 nov 2026" · "30 nov – 6 dez 2026" · "28 dez 2026 – 3 jan 2027".
+// "23 – 29 nov 2026" · "30 nov – 6 dez 2026" · "28 dez – 3 jan 2027".
+// (Entre anos leva só o ano do fim: assim nunca passa de 19 letras e a
+// barra pode reservar-lhe uma largura fixa.)
 export function intervaloCurto(inicio: string, fim: string): string {
   const [a1, m1, d1] = inicio.split('-').map(Number)
   const [a2, m2, d2] = fim.split('-').map(Number)
-  if (a1 !== a2) return `${d1} ${MESES_ABREVIADOS[m1 - 1]} ${a1} – ${d2} ${MESES_ABREVIADOS[m2 - 1]} ${a2}`
-  if (m1 !== m2) return `${d1} ${MESES_ABREVIADOS[m1 - 1]} – ${d2} ${MESES_ABREVIADOS[m2 - 1]} ${a2}`
+  if (a1 !== a2 || m1 !== m2) return `${d1} ${MESES_ABREVIADOS[m1 - 1]} – ${d2} ${MESES_ABREVIADOS[m2 - 1]} ${a2}`
   return `${d1} – ${d2} ${MESES_ABREVIADOS[m2 - 1]} ${a2}`
 }
 

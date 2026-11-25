@@ -117,7 +117,8 @@ async function SessoesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
         <BarraPeriodo
           anterior={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: diaSessoesAnterior })}`}
           seguinte={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: diaSessoesSeguinte })}`}
-          titulo={<span className="inline-block min-w-32 text-center">{diaCurto(diaSessoes)}</span>}
+          titulo={diaCurto(diaSessoes)}
+          largura="17ch"
           hoje={`/painel/coordenacao/sessoes-experimentais${comQuery(sp, { [pk('dia')]: undefined })}`}
           noPeriodoDeHoje={diaSessoesEhHoje}
         />

@@ -65,7 +65,8 @@ function Calendario({
         <BarraPeriodo
           anterior={`/painel/${slug}/clientes/aniversarios?mes=${anoAnterior}-${String(mesAnteriorNum).padStart(2, '0')}`}
           seguinte={`/painel/${slug}/clientes/aniversarios?mes=${anoSeguinte}-${String(mesSeguinteNum).padStart(2, '0')}`}
-          titulo={<span className="inline-block min-w-32 text-center">{MESES[mes - 1]} {ano}</span>}
+          titulo={`${MESES[mes - 1]} ${ano}`}
+          largura="15ch"
           hoje={`/painel/${slug}/clientes/aniversarios`}
           noPeriodoDeHoje={hoje.getFullYear() === ano && hoje.getMonth() + 1 === mes}
           rotuloHoje="Este mês"

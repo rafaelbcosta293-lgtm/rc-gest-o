@@ -570,7 +570,8 @@ export default async function FinanceiroPage({
               <BarraPeriodo
                 anterior={podeAnterior ? href({ periodo: tipo === 'mes' ? undefined : tipo, ref: refAnterior! }) : null}
                 seguinte={podeSeguinte ? href({ periodo: tipo === 'mes' ? undefined : tipo, ref: refSeguinte! }) : null}
-                titulo={<span className="inline-block min-w-28 text-center capitalize">{periodo.rotulo}</span>}
+                titulo={<span className="inline-block first-letter:uppercase">{periodo.rotulo}</span>}
+                largura="15ch"
               />
             </>
           )}

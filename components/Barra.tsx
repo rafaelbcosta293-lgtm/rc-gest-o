@@ -34,6 +34,7 @@ export function BarraPeriodo({
   hoje,
   noPeriodoDeHoje = false,
   rotuloHoje = 'Hoje',
+  largura,
   className = '',
 }: {
   // Sem "anterior" ou "seguinte" (não há mais para mostrar), a seta fica apagada.
@@ -43,6 +44,11 @@ export function BarraPeriodo({
   hoje?: string
   noPeriodoDeHoje?: boolean
   rotuloHoje?: string
+  // Largura fixa do título (ex.: "23ch"), a contar com o texto mais
+  // comprido que lá pode aparecer: assim as setas não mudam de sítio de
+  // uma semana para a outra e pode-se clicar várias vezes seguidas sem
+  // acertar noutro botão.
+  largura: string
   className?: string
 }) {
   return (
@@ -56,7 +62,9 @@ export function BarraPeriodo({
           <ChevronLeft className="h-4 w-4" />
         </span>
       )}
-      <span className="barra-rotulo min-w-0 truncate text-center max-sm:flex-1">{titulo}</span>
+      <span className="barra-rotulo truncate px-0 text-center max-sm:flex-1" style={{ width: largura, minWidth: `min(${largura}, 100%)` }}>
+        {titulo}
+      </span>
       {seguinte ? (
         <Link href={seguinte} scroll={false} aria-label="Seguinte" className="barra-item barra-icone">
           <ChevronRight className="h-4 w-4" />
@@ -72,7 +80,9 @@ export function BarraPeriodo({
           scroll={false}
           aria-current={noPeriodoDeHoje ? 'date' : undefined}
           title={noPeriodoDeHoje ? 'Já estás no período de hoje' : 'Voltar a hoje'}
-          className={`barra-item ${noPeriodoDeHoje ? '' : 'realce'}`}
+          // Mesmo peso de letra nos dois estados: se engrossasse ao destacar,
+          // alargava um pixel e empurrava o que está ao lado.
+          className={`barra-item font-semibold ${noPeriodoDeHoje ? '' : 'realce'}`}
         >
           {rotuloHoje}
         </Link>

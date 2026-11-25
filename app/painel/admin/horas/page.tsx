@@ -86,7 +86,8 @@ export default async function HorasDaEquipaPage({
         <BarraPeriodo
           anterior={`${ROTA}?mes=${somarMesesISO(mesISO, -1)}`}
           seguinte={`${ROTA}?mes=${somarMesesISO(mesISO, 1)}`}
-          titulo={<span className="inline-block text-center first-letter:uppercase sm:min-w-40">{nomeMes(mesISO)}</span>}
+          titulo={<span className="inline-block first-letter:uppercase">{nomeMes(mesISO)}</span>}
+          largura="18ch"
           hoje={ROTA}
           noPeriodoDeHoje={mesISO === hoje.slice(0, 7)}
           rotuloHoje="Este mês"

@@ -224,7 +224,8 @@ export default function VistaCalendario({
             <BarraPeriodo
               anterior={link(somarMesesISO(mes, -1))}
               seguinte={link(somarMesesISO(mes, 1))}
-              titulo={<span className="inline-block text-center first-letter:uppercase sm:min-w-40">{nomeMes(mes)}</span>}
+              titulo={<span className="inline-block first-letter:uppercase">{nomeMes(mes)}</span>}
+              largura="18ch"
               hoje={ROTA}
               noPeriodoDeHoje={mes === hoje.slice(0, 7)}
             />

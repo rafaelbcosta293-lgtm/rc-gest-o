@@ -171,6 +171,7 @@ export default async function PresencasPage({
           anterior={`/painel/${slug}/presencas?ano=${mesAnterior.ano}&mes=${mesAnterior.mes}`}
           seguinte={`/painel/${slug}/presencas?ano=${mesSeguinte.ano}&mes=${mesSeguinte.mes}`}
           titulo={`${MESES[mes - 1]} ${ano}`}
+          largura="15ch"
         />
         <BarraSeparador className="sempre max-sm:hidden" />
         <Link href={`/painel/${slug}/presencas/tablet`} className="barra-item">

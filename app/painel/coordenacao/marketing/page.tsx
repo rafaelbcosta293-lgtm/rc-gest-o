@@ -257,7 +257,8 @@ export default async function MarketingPage({
         className="max-sm:w-full"
         anterior={periodoDaVista.anterior}
         seguinte={periodoDaVista.seguinte}
-        titulo={<span className="inline-block min-w-28 text-center">{periodoDaVista.titulo}</span>}
+        titulo={periodoDaVista.titulo}
+        largura="15ch"
       />
       {vista === 'dia' && (
         <>

@@ -84,6 +84,18 @@ export default async function EstudioPage({
     searchParams: sp,
     basePath: `/painel/${slug}`,
     mostrarVoltar: false,
+    // "Relatório mensal" e "Equipa" (só gestão) vivem na barra da Agenda,
+    // no espaço livre antes do zoom — em ecrãs mais estreitos só o ícone.
+    extras: papeisDaSessao(sessao).ehGestao ? (
+      <>
+        <Link href={`/painel/${slug}/relatorio`} title="Relatório mensal" aria-label="Relatório mensal" className="barra-item">
+          <FileText className="h-4 w-4" /> <span className="max-2xl:hidden">Relatório mensal</span>
+        </Link>
+        <Link href={`/painel/${slug}/equipa`} title="Equipa" aria-label="Equipa" className="barra-item">
+          <UsersRound className="h-4 w-4" /> <span className="max-2xl:hidden">Equipa</span>
+        </Link>
+      </>
+    ) : null,
   })
 
   // Estas cinco só precisam do estúdio, não umas das outras — correm
@@ -163,19 +175,6 @@ export default async function EstudioPage({
 
   return (
     <div className="px-4 py-4 sm:px-6">
-      {ehGestao && (
-        <div className="mb-3 flex justify-end">
-          <div className="barra">
-            <Link href={`/painel/${slug}/relatorio`} className="barra-item">
-              <FileText className="h-4 w-4" /> Relatório mensal
-            </Link>
-            <Link href={`/painel/${slug}/equipa`} className="barra-item">
-              <UsersRound className="h-4 w-4" /> Equipa
-            </Link>
-          </div>
-        </div>
-      )}
-
       {/* Resumo do dia inteiro numa só linha (computador) — cada caixa é
           só o essencial para uma leitura rápida; para mais pormenor
           abre-se a pasta correspondente. Compacto de propósito, para a

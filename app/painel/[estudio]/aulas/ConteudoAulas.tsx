@@ -230,6 +230,7 @@ export default async function ConteudoAulas({
           anterior={`${basePath}${query(base, { data: somarDias(inicio, -7) })}`}
           seguinte={`${basePath}${query(base, { data: somarDias(inicio, 7) })}`}
           titulo={intervaloCurto(dias[0], dias[6])}
+          largura="17ch"
           hoje={`${basePath}${query({ servico: sp.servico }, {})}`}
           noPeriodoDeHoje={hoje >= dias[0] && hoje <= dias[6]}
         />

@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { getEstudios, filtrarPorEstudio } from '@/lib/data/estudios'
-import { intervaloMes, MESES } from '@/lib/data/presencas'
+import { intervaloMes, MESES, diaCurto } from '@/lib/data/presencas'
 import { somarDias } from '@/lib/data/horarios'
 import { areaBloqueada } from '@/lib/data/gate'
 import { desbloquearAdmin } from '../actions'
@@ -36,13 +36,7 @@ function resolverPeriodo(vista: Vista, sp: { dia?: string; mes?: string; ano?: s
     return {
       inicio: dia,
       fimExclusivo: seg,
-      rotulo: new Date(`${dia}T12:00:00Z`).toLocaleDateString('pt-PT', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        timeZone: 'UTC',
-      }),
+      rotulo: diaCurto(dia),
       anterior: { qs: `dia=${ant}`, rotulo: ddmm(ant) },
       seguinte: { qs: `dia=${seg}`, rotulo: ddmm(seg) },
     }
@@ -187,7 +181,8 @@ export default async function AdminPagamentosPage({
             className="max-sm:w-full"
             anterior={linkVista(vista, periodo.anterior.qs)}
             seguinte={linkVista(vista, periodo.seguinte.qs)}
-            titulo={<span className="inline-block text-center capitalize sm:min-w-32">{periodo.rotulo}</span>}
+            titulo={<span className="inline-block first-letter:uppercase">{periodo.rotulo}</span>}
+            largura="17ch"
           />
           {vista === 'dia' && (
             <form action="/painel/admin/pagamentos" className="flex items-center gap-0.5">

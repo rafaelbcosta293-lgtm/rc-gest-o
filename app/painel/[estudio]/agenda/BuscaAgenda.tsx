@@ -55,7 +55,7 @@ export default function BuscaAgenda({ estudioId, basePath }: { estudioId: number
   }, [])
 
   return (
-    <div ref={caixaRef} className="relative w-full min-w-[140px] sm:w-44 pointer-coarse:xl:w-56">
+    <div ref={caixaRef} className="relative w-full min-w-[7rem] sm:w-36 2xl:w-48">
       <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-muted">
         <Search className="h-4 w-4" />
       </span>

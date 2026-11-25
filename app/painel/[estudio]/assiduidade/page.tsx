@@ -241,7 +241,8 @@ export default async function RegistoHorasPage({
           <BarraPeriodo
             anterior={link({ mes: somarMes(-1), dia: undefined })}
             seguinte={link({ mes: somarMes(1), dia: undefined })}
-            titulo={<span className="inline-block min-w-32 text-center">{MESES[mes - 1]} {ano}</span>}
+            titulo={`${MESES[mes - 1]} ${ano}`}
+            largura="15ch"
           />
         </Barra>
       </div>

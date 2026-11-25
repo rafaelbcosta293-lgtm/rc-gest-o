@@ -160,7 +160,8 @@ async function EsteMesEstudio({ estudio, sp }: { estudio: Pick<Estudio, 'id' | '
         <BarraPeriodo
           anterior={`/painel/admin/este-mes${comQuery(sp, { [pk('mes')]: mesAnteriorParam })}`}
           seguinte={`/painel/admin/este-mes${comQuery(sp, { [pk('mes')]: mesSeguinteParam })}`}
-          titulo={<span className="inline-block min-w-32 text-center">{MESES[mes - 1]} {ano}</span>}
+          titulo={`${MESES[mes - 1]} ${ano}`}
+          largura="15ch"
         />
       </Barra>
       <div className="bg-tech-grid mt-3 grid grid-cols-2 gap-3 rounded-2xl p-1 sm:grid-cols-3">

@@ -176,11 +176,16 @@ export default async function AgendaConteudo({
   searchParams,
   basePath,
   mostrarVoltar,
+  extras,
 }: {
   estudio: Pick<Estudio, 'id' | 'slug' | 'nome'>
   searchParams: { vista?: string; data?: string; pt?: string; error?: string }
   basePath: string
   mostrarVoltar: boolean
+  // Botões de quem embute a Agenda (o Início do estúdio põe aqui
+  // "Relatório mensal" e "Equipa"): ficam no espaço livre da barra,
+  // antes do zoom.
+  extras?: React.ReactNode
 }) {
   const slug = estudio.slug
   const { vista: vistaParam, data: dataParam, pt: ptFiltro, error } = searchParams
@@ -313,7 +318,7 @@ export default async function AgendaConteudo({
             </Link>
           )}
           <h1 className="barra-titulo truncate">
-            Agenda <span className="font-normal text-muted max-sm:hidden">· {estudio.nome}</span>
+            Agenda <span className="font-normal text-muted max-2xl:hidden">· {estudio.nome}</span>
           </h1>
         </div>
 
@@ -335,6 +340,7 @@ export default async function AgendaConteudo({
           anterior={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: anterior })}`}
           seguinte={`${basePath}${construirQuery({ vista, pt: ptFiltro }, { data: seguinte })}`}
           titulo={tituloPeriodo}
+          largura="17ch"
           hoje={`${basePath}${construirQuery({ vista, pt: ptFiltro }, {})}`}
           noPeriodoDeHoje={periodoTemHoje}
         />
@@ -360,8 +366,9 @@ export default async function AgendaConteudo({
         <BarraEspaco className="max-sm:hidden" />
         {/* Ajuda e zoom da grelha (vêm de AgendaInterativa), pesquisa e
             "+ Evento", encostados à direita. */}
+        {extras && <div className="flex items-center gap-0.5 max-sm:order-8">{extras}</div>}
         <div id="agenda-ferramentas" className="flex items-center gap-0.5 max-sm:order-8" />
-        <div className="flex min-w-0 max-sm:order-7 max-sm:min-w-[12rem] max-sm:flex-1">
+        <div className="flex min-w-0 max-sm:order-7 max-sm:min-w-[7rem] max-sm:flex-1">
           <BuscaAgenda estudioId={estudio.id} basePath={basePath} />
         </div>
         {!somenteLeitura && (

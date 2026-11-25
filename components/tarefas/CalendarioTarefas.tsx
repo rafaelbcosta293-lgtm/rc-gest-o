@@ -1,4 +1,5 @@
 import Link from '@/components/LinkRapido'
+import { diaCurto, intervaloCurto } from '@/lib/data/presencas'
 import { Barra, BarraEspaco, BarraOpcoes, BarraPeriodo, BarraSeparador } from '@/components/Barra'
 import { Repeat } from 'lucide-react'
 import { inicioDaSemana } from '@/lib/data/horarios'
@@ -27,7 +28,6 @@ export const ESCALAS = [
 export type Escala = (typeof ESCALAS)[number]['id']
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
-const DIAS_LONGOS = ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado', 'domingo']
 const MAX_NO_MES = 4
 
 const UM_DIA = 86_400_000
@@ -81,17 +81,13 @@ function intervalo(escala: Escala, data: string) {
   }
 }
 
+// O período escrito de forma curta, como na Agenda (cabe sempre na
+// mesma largura, para as setas não mudarem de sítio).
 function titulo(escala: Escala, data: string, de: string, ate: string): string {
   const [ano, mes] = data.split('-').map(Number)
-  if (escala === 'dia') return `${DIAS_LONGOS[diaDaSemanaISO(data) - 1]}, ${dia(data)} de ${MESES[mes - 1]} de ${ano}`
-  if (escala === 'semana') {
-    const mesDe = MESES[Number(de.slice(5, 7)) - 1]
-    const mesAte = MESES[Number(ate.slice(5, 7)) - 1]
-    return mesDe === mesAte
-      ? `${dia(de)} a ${dia(ate)} de ${mesAte} de ${ate.slice(0, 4)}`
-      : `${dia(de)} de ${mesDe} a ${dia(ate)} de ${mesAte} de ${ate.slice(0, 4)}`
-  }
-  if (escala === 'mes') return `${MESES[mes - 1]} de ${ano}`
+  if (escala === 'dia') return diaCurto(data)
+  if (escala === 'semana') return intervaloCurto(de, ate)
+  if (escala === 'mes') return `${MESES[mes - 1]} ${ano}`
   return String(ano)
 }
 
@@ -199,7 +195,8 @@ export default function CalendarioTarefas({
           className="max-sm:order-last max-sm:w-full"
           anterior={link({ data: antes })}
           seguinte={link({ data: depois })}
-          titulo={<span className="inline-block text-center first-letter:uppercase sm:min-w-44">{titulo(escala, data, de, ate)}</span>}
+          titulo={<span className="inline-block first-letter:uppercase">{titulo(escala, data, de, ate)}</span>}
+          largura="17ch"
           hoje={link({ data: undefined })}
           noPeriodoDeHoje={hoje >= de && hoje <= ate}
         />

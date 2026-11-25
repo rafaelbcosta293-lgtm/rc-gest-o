@@ -119,6 +119,7 @@ export default async function HorariosPage({
           anterior={`/painel/${slug}/horarios?semana=${semanaAnterior}`}
           seguinte={`/painel/${slug}/horarios?semana=${semanaSeguinte}`}
           titulo={intervaloCurto(dias[0], dias[6])}
+          largura="17ch"
           hoje={`/painel/${slug}/horarios`}
           noPeriodoDeHoje={hoje >= dias[0] && hoje <= dias[6]}
         />

@@ -61,7 +61,8 @@ export default async function CoordenacaoChecklistPage({
           <BarraPeriodo
             anterior={`${ROTA}?data=${somarDias(data, -1)}`}
             seguinte={data < hoje ? `${ROTA}?data=${somarDias(data, 1)}` : null}
-            titulo={<span className="inline-block min-w-32 text-center">{diaCurto(data)}</span>}
+            titulo={diaCurto(data)}
+            largura="17ch"
             hoje={ROTA}
             noPeriodoDeHoje={data === hoje}
           />

@@ -116,7 +116,7 @@ export default async function DespesasAnualPage({
       <Mensagens error={sp.error} ok={sp.ok} />
 
       <Barra rotulo="Ano e estúdio" className="mt-5 w-fit max-w-full">
-        <BarraPeriodo anterior={link(ano - 1)} seguinte={link(ano + 1)} titulo={ano} />
+        <BarraPeriodo anterior={link(ano - 1)} seguinte={link(ano + 1)} titulo={ano} largura="6ch" />
         <BarraSeparador className="sempre" />
         <BarraOpcoes opcoes={estudios.map((e) => ({ href: link(ano, e.slug), rotulo: e.nome, ativo: e.id === estudio.id }))} />
       </Barra>

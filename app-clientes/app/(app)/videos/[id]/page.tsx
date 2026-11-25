@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronLeft, Play } from 'lucide-react'
+import LeitorVideo from '@/components/LeitorVideo'
 import { Cartao, Etiqueta, Seccao } from '@/components/ui'
 import { aulasVirtuais, contaAtual } from '@/lib/dados'
-import { capaDoVideo, leitorDoVideo, resumoDaAula } from '@/lib/videos'
+import { capaDoVideo, resumoDaAula } from '@/lib/videos'
 
 export const metadata = { title: 'Aula virtual' }
 
@@ -25,16 +26,8 @@ export default async function VideoPage({ params }: { params: Promise<{ id: stri
       </Link>
 
       {/* O vídeo ocupa a largura toda do ecrã, sem margens. */}
-      <div className="-mx-4 mt-1 aspect-video bg-black sm:mx-0 sm:overflow-hidden sm:rounded-2xl">
-        <iframe
-          src={leitorDoVideo(aula.youtube_id)}
-          title={aula.titulo}
-          // O YouTube recusa tocar vídeos embutidos sem saber de que site vêm.
-          referrerPolicy="strict-origin-when-cross-origin"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-          allowFullScreen
-          className="h-full w-full border-0"
-        />
+      <div className="-mx-4 mt-1 sm:mx-0 sm:overflow-hidden sm:rounded-2xl">
+        <LeitorVideo key={aula.id} youtubeId={aula.youtube_id} titulo={aula.titulo} capa={capaDoVideo(aula.id, true)} />
       </div>
 
       <div className="mt-4">
@@ -52,8 +45,8 @@ export default async function VideoPage({ params }: { params: Promise<{ id: stri
             {outras.map((a) => (
               <Link key={a.id} href={`/videos/${a.id}`} className="flex items-center gap-3.5 p-3 active:bg-soft">
                 <span className="relative block aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-zinc-200">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- capa servida pelo YouTube */}
-                  <img src={capaDoVideo(a.youtube_id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  {/* eslint-disable-next-line @next/next/no-img-element -- capa servida pela app */}
+                  <img src={capaDoVideo(a.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
                   <span className="absolute inset-0 flex items-center justify-center bg-black/15">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white">
                       <Play className="h-3.5 w-3.5 translate-x-px fill-current" />

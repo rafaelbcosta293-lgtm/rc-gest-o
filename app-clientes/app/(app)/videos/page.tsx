@@ -70,8 +70,8 @@ export default async function VideosPage() {
                 {g.aulas.map((a) => (
                   <Link key={a.id} href={`/videos/${a.id}`} className="flex items-center gap-3.5 p-3 active:bg-soft">
                     <span className="relative block aspect-video w-[7.25rem] shrink-0 overflow-hidden rounded-xl bg-zinc-200">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- capa servida pelo YouTube */}
-                      <img src={capaDoVideo(a.youtube_id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                      {/* eslint-disable-next-line @next/next/no-img-element -- capa servida pela app */}
+                      <img src={capaDoVideo(a.id)} alt="" loading="lazy" className="h-full w-full object-cover" />
                       <span className="absolute inset-0 flex items-center justify-center bg-black/15">
                         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white">
                           <Play className="h-4 w-4 translate-x-px fill-current" />

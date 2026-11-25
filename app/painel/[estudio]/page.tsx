@@ -95,7 +95,7 @@ export default async function EstudioPage({
     { data: alertasData },
     { count: leadsNovasCount },
   ] = await Promise.all([
-    supabase.from('clientes').select('id, nome, nascimento, estado, inicio_contrato, cliente_pt').eq('estudio_id', estudio.id),
+    supabase.from('clientes').select('id, nome, nascimento, estado, inicio_contrato, cliente_pt').eq('estudio_id', estudio.id).eq('teste', false),
     supabase.from('v_estado_pagamento').select('em_dia').eq('estudio_id', estudio.id),
     supabase.from('v_leads_paradas').select('id').eq('estudio_id', estudio.id),
     supabase.from('alerts').select('*').eq('estudio_id', estudio.id).neq('estado', 'Resolvido'),

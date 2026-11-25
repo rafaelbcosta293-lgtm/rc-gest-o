@@ -39,6 +39,7 @@ export async function GET(request: Request) {
       .select('id, estado, estado_automatico')
       .not('estado', 'in', '(Suspenso,Inativo)')
       .eq('cliente_pt', true)
+      .eq('teste', false)
       .in('estudio_id', estudioIds),
     todasAsLinhas<{ cliente_id: string; validade_maxima: string }>((de, ate) =>
       admin
@@ -125,6 +126,7 @@ export async function GET(request: Request) {
     .from('clientes')
     .select('id, estado')
     .eq('cliente_pt', false)
+    .eq('teste', false)
     .in('estudio_id', estudioIds)
   if (erroSoOutros) return Response.json({ error: erroSoOutros.message }, { status: 500 })
   for (const c of (soOutrosData ?? []) as { id: string; estado: EstadoCliente }[]) {

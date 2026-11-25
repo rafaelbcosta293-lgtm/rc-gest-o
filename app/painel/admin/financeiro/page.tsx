@@ -99,7 +99,7 @@ export default async function FinanceiroPage({
     carregarOutrasReceitas(supabase, idsEstudios),
     carregarDespesas(supabase, idsEstudios),
     todasAsLinhas<{ id: string; estudio_id: number; estado: string }>(
-      (de, ate) => supabase.from('clientes').select('id, estudio_id, estado').eq('cliente_pt', true).order('id').range(de, ate),
+      (de, ate) => supabase.from('clientes').select('id, estudio_id, estado').eq('cliente_pt', true).eq('teste', false).order('id').range(de, ate),
       { emParalelo: 2 }
     ),
     supabase.from('planos').select('id, nome'),

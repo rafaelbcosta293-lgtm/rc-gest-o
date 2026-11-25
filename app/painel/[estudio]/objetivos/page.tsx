@@ -81,7 +81,7 @@ export default async function ObjetivosPage({
   ] = await Promise.all([
     supabase.from('goals').select('*').eq('estudio_id', estudio.id).eq('ano', ano).eq('mes', mes),
     supabase.from('leads').select('estado, entrada, fecho_em').eq('estudio_id', estudio.id),
-    supabase.from('clientes').select('id, estado').eq('estudio_id', estudio.id).eq('cliente_pt', true),
+    supabase.from('clientes').select('id, estado').eq('estudio_id', estudio.id).eq('cliente_pt', true).eq('teste', false),
   ])
   if (erroGoals) throw new Error(erroGoals.message)
   const goals = (goalsData ?? []) as Goal[]

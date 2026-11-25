@@ -31,7 +31,8 @@ export async function GET(request: Request) {
           .select('id', { count: 'exact', head: true })
           .eq('estudio_id', estudio.id)
           .eq('estado', 'Ativo')
-          .eq('cliente_pt', true),
+          .eq('cliente_pt', true)
+          .eq('teste', false),
       ])
 
     if (erroQuadro) return Response.json({ error: `${estudio.slug}: ${erroQuadro.message}` }, { status: 500 })

@@ -29,10 +29,8 @@ begin
 end;
 $$;
 
-revoke execute on function public.plano_segue_o_evento() from public, anon, authenticated;
-
-drop trigger if exists agenda_eventos_plano_segue on public.agenda_eventos;
-create trigger agenda_eventos_plano_segue
+-- (Uma função de trigger não se consegue chamar diretamente pela API.)
+create or replace trigger agenda_eventos_plano_segue
   after update of data, cliente_id on public.agenda_eventos
   for each row
   when (old.data is distinct from new.data or old.cliente_id is distinct from new.cliente_id)

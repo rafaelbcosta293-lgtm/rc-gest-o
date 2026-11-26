@@ -316,7 +316,8 @@ export default async function AgendaConteudo({
   }
   // Controlo dos instrutores: treinos do período sem instrutor e sem
   // plano de treino (os mesmos que levam o sinal no evento).
-  const semInstrutor = eventos.filter(faltaInstrutor).length
+  // (um treino em simultâneo conta uma vez; o plano é por cliente)
+  const semInstrutor = new Set(eventos.filter(faltaInstrutor).map((e) => e.grupo_id ?? e.id)).size
   const semPlano = eventos.filter((e) => precisaDePlano(e, amanha) && estadoDoPlano(e.plano) !== 'feito').length
   const clientes = (clientesData ?? []) as { id: string; nome: string }[]
   const leads = (leadsData ?? []) as LeadOpcao[]

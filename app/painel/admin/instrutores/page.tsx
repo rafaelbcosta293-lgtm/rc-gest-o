@@ -180,7 +180,7 @@ export default async function AdminInstrutoresPage({
                   <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                     <strong className="text-foreground">{l.nome}</strong>
                     <span className="text-muted">
-                      {l.clientes.length === 1 ? '1 cliente' : `${l.clientes.length} clientes`} · {l.treinosCliente} treinos
+                      {l.clientes.length === 1 ? '1 cliente' : `${l.clientes.length} clientes`} · {l.treinosCliente === 1 ? '1 treino' : `${l.treinosCliente} treinos`}
                     </span>
                   </summary>
                   <table className="w-full border-t border-border-subtle text-left text-sm">

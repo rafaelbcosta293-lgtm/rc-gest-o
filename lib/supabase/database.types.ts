@@ -560,6 +560,8 @@ export type EventoAgenda = {
   serie_id: string | null
   grupo_id: string | null
   nota: string | null
+  // Só nas sessões experimentais: 'Treino experimental' ou 'Visita de condições'.
+  visita_tipo: string | null
   motivo_cancelamento: string | null
   foi_remarcado: boolean
   lembrete_enviado: boolean

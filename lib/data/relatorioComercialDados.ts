@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { todasAsLinhas } from '@/lib/supabase/todasAsLinhas'
 import { hojeEmLisboa } from './hoje'
 import type { EstadoLead } from '@/lib/supabase/database.types'
-import type { ContactoRelatorio, DadosRelatorioComercial, LeadRelatorio, SessaoRelatorio } from './relatorioComercial'
+import { tipoDeVisita, type ContactoRelatorio, type DadosRelatorioComercial, type LeadRelatorio, type SessaoRelatorio } from './relatorioComercial'
 
 // Estados que só se alcançam depois de a pessoa ter vindo à visita.
 const ESTADOS_DEPOIS_DA_VISITA: EstadoLead[] = ['Experimental realizada', 'Proposta / Em decisão', 'Ganha']
@@ -35,10 +35,10 @@ export async function carregarDadosRelatorioComercial(
         .order('id')
         .range(de, ate)
     ),
-    todasAsLinhas<{ lead_id: string | null; data: string; criado_em: string; estado: string }>((de, ate) =>
+    todasAsLinhas<{ lead_id: string | null; data: string; criado_em: string; estado: string; visita_tipo: string | null }>((de, ate) =>
       supabase
         .from('agenda_eventos')
-        .select('lead_id, data, criado_em, estado')
+        .select('lead_id, data, criado_em, estado, visita_tipo')
         .eq('tipo', 'Sessão experimental')
         .in('estudio_id', estudioIds)
         .or(`data.gte.${desde},criado_em.gte.${desde}`)
@@ -56,6 +56,7 @@ export async function carregarDadosRelatorioComercial(
 
   const sessoes: SessaoRelatorio[] = sessoesR.data.map((e) => ({
     lead_id: e.lead_id,
+    tipo: tipoDeVisita(e.visita_tipo),
     data: e.data,
     // O dia em que a marcação foi feita, na hora de Portugal.
     marcadaEm: hojeEmLisboa(new Date(e.criado_em)),
@@ -67,7 +68,7 @@ export async function carregarDadosRelatorioComercial(
   const comEvento = new Set(sessoes.map((s) => `${s.lead_id}|${s.data}`))
   for (const l of leads) {
     if (!l.visita_data || comEvento.has(`${l.id}|${l.visita_data}`)) continue
-    sessoes.push({ lead_id: l.id, data: l.visita_data, marcadaEm: l.visita_marcada_em ?? l.visita_data, cancelada: false, concluida: false })
+    sessoes.push({ lead_id: l.id, tipo: tipoDeVisita(null), data: l.visita_data, marcadaEm: l.visita_marcada_em ?? l.visita_data, cancelada: false, concluida: false })
   }
 
   const compareceram = new Set<string>(historicoR.data.map((h) => h.lead_id))

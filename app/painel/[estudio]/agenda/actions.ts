@@ -25,6 +25,7 @@ import { registarContactoExperimental } from '@/lib/data/contactoExperimental'
 import { datasFechadas, mensagemDiaFechado } from '@/lib/data/diasFechados'
 import { papeisDaSessao } from '@/lib/data/sessao'
 
+import { tipoDeVisita } from '@/lib/data/relatorioComercial'
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
   if (typeof v !== 'string' || v.trim() === '') return null
@@ -371,6 +372,8 @@ export async function criarEvento(formData: FormData) {
   const ptId = campoOuNull(formData, 'pt_id')
   const titulo = campoOuNull(formData, 'titulo')
   const leadId = campoOuNull(formData, 'lead_id')
+  // Treino experimental ou visita de condições (só nas sessões experimentais).
+  const visitaTipo = tipo === 'Sessão experimental' ? tipoDeVisita(campoOuNull(formData, 'visita_tipo')) : null
   const telefone = campoOuNull(formData, 'telefone')
   const data = formData.get('data') as string
   const horaInicio = formData.get('hora_inicio') as string
@@ -449,6 +452,7 @@ export async function criarEvento(formData: FormData) {
     tipo,
     titulo,
     lead_id: leadId,
+    visita_tipo: visitaTipo,
     telefone,
     data: dataOcorrencia,
     hora_inicio: horaInicio,
@@ -494,6 +498,8 @@ export async function atualizarEvento(formData: FormData) {
   const ptId = campoOuNull(formData, 'pt_id')
   const titulo = campoOuNull(formData, 'titulo')
   const leadId = campoOuNull(formData, 'lead_id')
+  // Treino experimental ou visita de condições (só nas sessões experimentais).
+  const visitaTipo = tipo === 'Sessão experimental' ? tipoDeVisita(campoOuNull(formData, 'visita_tipo')) : null
   const telefone = campoOuNull(formData, 'telefone')
   const data = formData.get('data') as string
   const horaInicio = formData.get('hora_inicio') as string
@@ -540,6 +546,7 @@ export async function atualizarEvento(formData: FormData) {
         pt_id: ptId,
         titulo,
         lead_id: leadId,
+        visita_tipo: visitaTipo,
         telefone,
         data,
         hora_inicio: horaInicio,
@@ -588,6 +595,7 @@ export async function atualizarEvento(formData: FormData) {
         pt_id: ptId,
         titulo,
         lead_id: leadId,
+        visita_tipo: visitaTipo,
         telefone,
         hora_inicio: horaInicio,
         duracao_min: duracaoMin,
@@ -831,12 +839,17 @@ type CamposEvento = {
   titulo: string | null
   // Só para "Sessão experimental" — a pessoa ainda não é cliente.
   leadId: string | null
+  // Só para "Sessão experimental": treino experimental ou visita de condições.
+  visitaTipo?: string | null
   telefone: string | null
   data: string
   horaInicio: string
   duracaoMin: number
   nota: string | null
 }
+
+const visitaTipoDe = (input: { tipo: TipoEventoAgenda; visitaTipo?: string | null }) =>
+  input.tipo === 'Sessão experimental' ? tipoDeVisita(input.visitaTipo) : null
 
 export async function criarEventoRapido(
   input: CamposEvento & { estudioId: number; repeticao: Repeticao; limite: LimiteRepeticao }
@@ -892,6 +905,7 @@ export async function criarEventoRapido(
       tipo: input.tipo,
       titulo: input.titulo,
       lead_id: input.leadId,
+      visita_tipo: visitaTipoDe(input),
       telefone: input.telefone,
       data: dataOcorrencia,
       hora_inicio: input.horaInicio,
@@ -957,6 +971,7 @@ export async function atualizarEventoRapido(
         pt_id: input.ptId,
         titulo: input.titulo,
         lead_id: input.leadId,
+        visita_tipo: visitaTipoDe(input),
         telefone: input.telefone,
         hora_inicio: input.horaInicio,
         duracao_min: input.duracaoMin,
@@ -1020,6 +1035,7 @@ export async function atualizarEventoRapido(
     pt_id: input.ptId,
     titulo: input.titulo,
     lead_id: input.leadId,
+    visita_tipo: visitaTipoDe(input),
     telefone: input.telefone,
     data: input.data,
     hora_inicio: input.horaInicio,

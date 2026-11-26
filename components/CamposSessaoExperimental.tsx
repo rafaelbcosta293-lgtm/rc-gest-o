@@ -26,6 +26,7 @@ export default function CamposSessaoExperimental({
   defaultNome = '',
   defaultTelefone = '',
   defaultLeadId = '',
+  defaultVisitaTipo = null,
 }: {
   leads: LeadOpcao[]
   estudioSlug: string
@@ -33,10 +34,13 @@ export default function CamposSessaoExperimental({
   defaultNome?: string
   defaultTelefone?: string
   defaultLeadId?: string
+  // Treino experimental (por omissão) ou visita para conhecer as condições.
+  defaultVisitaTipo?: string | null
 }) {
   const [nome, setNome] = useState(defaultNome)
   const [telefone, setTelefone] = useState(defaultTelefone)
   const [leadId, setLeadId] = useState(defaultLeadId)
+  const [visitaTipo, setVisitaTipo] = useState<string>(defaultVisitaTipo === 'Visita de condições' ? 'Visita de condições' : 'Treino experimental')
   const [leadsCriadas, setLeadsCriadas] = useState<LeadOpcao[]>([])
   const [aberto, setAberto] = useState(false)
   const [aCriar, iniciarCriacao] = useTransition()
@@ -119,6 +123,32 @@ export default function CamposSessaoExperimental({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Treino experimental ou visita para conhecer as condições — o
+          relatório comercial conta cada um à parte. */}
+      <div className="flex flex-col gap-1.5 sm:col-span-2">
+        <span className="text-xs font-semibold text-muted">Tipo de visita</span>
+        <div className="grid grid-cols-2 gap-1 rounded-full bg-border-subtle p-1">
+          {(
+            [
+              ['Treino experimental', 'Treino experimental'],
+              ['Visita de condições', 'Visita de condições'],
+            ] as const
+          ).map(([valor, rotulo]) => (
+            <button
+              key={valor}
+              type="button"
+              aria-pressed={visitaTipo === valor}
+              onClick={() => setVisitaTipo(valor)}
+              className={`rounded-full px-2 py-1.5 text-center text-xs font-semibold transition-all pointer-coarse:py-2.5 pointer-coarse:text-sm ${
+                visitaTipo === valor ? 'bg-surface text-foreground shadow-pop' : 'text-muted hover:text-foreground'
+              }`}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
+        <input type="hidden" name="visita_tipo" value={visitaTipo} />
+      </div>
       <div ref={containerRef} className="relative flex flex-col gap-1.5">
         <label className="text-xs font-semibold text-muted">Nome</label>
         <input

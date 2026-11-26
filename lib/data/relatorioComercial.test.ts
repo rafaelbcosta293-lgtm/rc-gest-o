@@ -23,7 +23,8 @@ describe('canalDaOrigem', () => {
     expect(canalDaOrigem(' walk-in ')).toBe('Walk-in')
   })
   it('uma origem desconhecida fica com o nome que tem; vazia é "Sem origem"', () => {
-    expect(canalDaOrigem('Google Forms')).toBe('Google Forms')
+    expect(canalDaOrigem('Google Forms')).toBe('Landing page')
+    expect(canalDaOrigem('Feira de Ourém')).toBe('Feira de Ourém')
     expect(canalDaOrigem('  ')).toBe('Sem origem')
     expect(canalDaOrigem(null)).toBe('Sem origem')
   })
@@ -50,10 +51,10 @@ describe('calcularRelatorioComercial', () => {
       { lead_id: 'a', data: '2026-10-31', sucesso: true },
     ],
     sessoes: [
-      { lead_id: 'a', data: '2026-11-14', marcadaEm: '2026-11-12', cancelada: true, concluida: false },
-      { lead_id: 'c', data: '2026-11-15', marcadaEm: '2026-11-11', cancelada: false, concluida: false },
-      { lead_id: 'b', data: '2026-11-16', marcadaEm: '2026-11-13', cancelada: false, concluida: false },
-      { lead_id: 'd', data: '2026-12-02', marcadaEm: '2026-11-20', cancelada: false, concluida: false },
+      { lead_id: 'a', tipo: 'Treino experimental', data: '2026-11-14', marcadaEm: '2026-11-12', cancelada: true, concluida: false },
+      { lead_id: 'c', tipo: 'Visita de condições', data: '2026-11-15', marcadaEm: '2026-11-11', cancelada: false, concluida: false },
+      { lead_id: 'b', tipo: 'Treino experimental', data: '2026-11-16', marcadaEm: '2026-11-13', cancelada: false, concluida: false },
+      { lead_id: 'd', tipo: 'Treino experimental', data: '2026-12-02', marcadaEm: '2026-11-20', cancelada: false, concluida: false },
     ],
     compareceram: new Set(['c']),
   }
@@ -87,6 +88,11 @@ describe('calcularRelatorioComercial', () => {
 
   it('inscrições de visitas, de walk-ins e total', () => {
     expect([m.inscricoesVisitas, m.walkInsFechados, m.totalInscricoes]).toEqual([1, 1, 2])
+    const n = (lista: { nome: string; n: number }[]) => Object.fromEntries(lista.map((c) => [c.nome, c.n]))
+    expect(n(m.marcacoesPorTipo)).toEqual({ 'Treino experimental': 3, 'Visita de condições': 1 })
+    expect(n(m.emAgendaPorTipo)).toEqual({ 'Treino experimental': 2, 'Visita de condições': 1 })
+    expect(n(m.visitasPorTipo)).toEqual({ 'Treino experimental': 0, 'Visita de condições': 1 })
+    expect(n(m.inscricoesPorTipo)).toEqual({ 'Treino experimental': 0, 'Visita de condições': 1, 'Sem visita registada': 0 })
     expect(m.taxaFechoVisitas).toBe(1)
     expect(m.taxaFechoWalkIns).toBe(0.5)
   })

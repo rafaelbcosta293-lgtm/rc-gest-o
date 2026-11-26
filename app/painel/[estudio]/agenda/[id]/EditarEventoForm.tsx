@@ -85,6 +85,7 @@ export default function EditarEventoForm({
           defaultNome={evento.titulo ?? ''}
           defaultTelefone={evento.telefone ?? ''}
           defaultLeadId={evento.lead_id ?? ''}
+          defaultVisitaTipo={evento.visita_tipo ?? null}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

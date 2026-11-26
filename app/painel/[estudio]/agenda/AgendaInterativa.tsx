@@ -82,7 +82,7 @@ const ROTULO_ACOMPANHADO: Record<number, string> = { 2: 'Dual', 3: 'Trio' }
 
 function rotuloEvento(grupo: EventoComNomes[], estudioId: number) {
   const primeiro = grupo[0]
-  if (primeiro.tipo === 'Sessão experimental') return rotuloTipoEvento(primeiro.tipo, primeiro.titulo)
+  if (primeiro.tipo === 'Sessão experimental') return rotuloTipoEvento(primeiro.tipo, primeiro.titulo, primeiro.visita_tipo)
   // Só primeiro + último nome — menos ruído visual do que o nome
   // completo; o nome preferido do cliente (quando existe) sobrepõe-se
   // ao primeiro nome (ver lib/data/clientes.ts: nomeCurto).
@@ -375,6 +375,7 @@ export default function AgendaInterativa({
       ptId: (formData.get('pt_id') as string) || null,
       titulo: (formData.get('titulo') as string)?.trim() || null,
       leadId: (formData.get('lead_id') as string) || null,
+      visitaTipo: (formData.get('visita_tipo') as string) || null,
       telefone: (formData.get('telefone') as string)?.trim() || null,
       data: formData.get('data') as string,
       horaInicio: formData.get('hora_inicio') as string,

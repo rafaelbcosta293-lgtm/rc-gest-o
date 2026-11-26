@@ -24,8 +24,7 @@ const CORES_TEMPERATURA: Record<TemperaturaLead, { bg: string; tx: string }> = {
 // como sempre) ficam todas na mesma cor neutra.
 const CORES_ORIGEM: Record<string, { bg: string; tx: string }> = {
   'Formulário Meta': PALETA.azul,
-  'Google Forms': PALETA.verde,
-  'Landing page': PALETA.ambar,
+  'Landing page': PALETA.verde,
   'Walk-in': PALETA.roxo,
 }
 // A origem como aparece na etiqueta e no filtro: o canal do relatório

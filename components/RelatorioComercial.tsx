@@ -2,13 +2,18 @@ import type { ReactNode } from 'react'
 import { diaCurto, MESES } from '@/lib/data/presencas'
 import {
   ROTULO_TIPO_WALK_IN,
+  SEM_VISITA,
+  TIPOS_VISITA,
   WALK_IN_POR_CLASSIFICAR,
   calcularRelatorioComercial,
   periodosDoRelatorio,
   type DadosRelatorioComercial,
   type MetricasComerciais,
+  type TipoVisita,
   type TipoWalkIn,
 } from '@/lib/data/relatorioComercial'
+
+const ROTULO_VISITA: Record<TipoVisita, string> = { 'Treino experimental': 'Treinos experimentais', 'Visita de condições': 'Visitas de condições' }
 
 // O relatório comercial: o funil do CRM (leads → contactos → marcações →
 // visitas → inscrições, com os walk-ins à parte) em três colunas — o
@@ -56,10 +61,12 @@ export default function RelatorioComercial({ dados, dia, hoje }: { dados: DadosR
 
     { tipo: 'titulo', nome: 'Marcações' },
     { tipo: 'valor', nome: 'Marcações feitas', forte: true, valor: (m) => m.marcacoes },
+    ...TIPOS_VISITA.map((t): Linha => ({ tipo: 'valor', nome: ROTULO_VISITA[t], sub: true, valor: (m) => contagem(m.marcacoesPorTipo, t) })),
     { tipo: 'taxa', nome: 'Taxa de marcação', como: 'marcações ÷ contactos com sucesso', valor: (m) => m.taxaMarcacao, partes: (m) => [m.marcacoes, m.contactosSucesso] },
 
     { tipo: 'titulo', nome: 'Visitas' },
-    { tipo: 'valor', nome: 'Marcações em agenda', valor: (m) => m.emAgenda },
+    { tipo: 'valor', nome: 'Marcações em agenda', forte: true, valor: (m) => m.emAgenda },
+    ...TIPOS_VISITA.map((t): Linha => ({ tipo: 'valor', nome: ROTULO_VISITA[t], sub: true, valor: (m) => contagem(m.emAgendaPorTipo, t) })),
     {
       tipo: 'valor',
       nome: 'Visitas realizadas',
@@ -67,10 +74,14 @@ export default function RelatorioComercial({ dados, dia, hoje }: { dados: DadosR
       valor: (m) => m.visitas,
       nota: (m) => (m.visitasPorRegistar > 0 ? `+ ${m.visitasPorRegistar} por registar` : null),
     },
+    ...TIPOS_VISITA.map((t): Linha => ({ tipo: 'valor', nome: ROTULO_VISITA[t], sub: true, valor: (m) => contagem(m.visitasPorTipo, t) })),
     { tipo: 'taxa', nome: 'Taxa de comparência', como: 'visitas realizadas ÷ marcações em agenda', valor: (m) => m.taxaComparencia, partes: (m) => [m.visitas, m.emAgenda] },
 
     { tipo: 'titulo', nome: 'Inscrições' },
     { tipo: 'valor', nome: 'Inscrições de visitas / treinos experimentais', forte: true, valor: (m) => m.inscricoesVisitas },
+    { tipo: 'valor', nome: 'De treinos experimentais', sub: true, valor: (m) => contagem(m.inscricoesPorTipo, 'Treino experimental') },
+    { tipo: 'valor', nome: 'De visitas de condições', sub: true, valor: (m) => contagem(m.inscricoesPorTipo, 'Visita de condições') },
+    ...(contagem(ano.inscricoesPorTipo, SEM_VISITA) > 0 ? [{ tipo: 'valor', nome: SEM_VISITA, sub: true, valor: (m: MetricasComerciais) => contagem(m.inscricoesPorTipo, SEM_VISITA) } as Linha] : []),
     { tipo: 'taxa', nome: 'Taxa de fecho de visitas', como: 'inscrições de visitas ÷ visitas realizadas', valor: (m) => m.taxaFechoVisitas, partes: (m) => [m.inscricoesVisitas, m.visitas] },
     { tipo: 'valor', nome: 'Walk-ins', valor: (m) => m.walkIns },
     { tipo: 'valor', nome: 'Walk-ins fechados', forte: true, valor: (m) => m.walkInsFechados },

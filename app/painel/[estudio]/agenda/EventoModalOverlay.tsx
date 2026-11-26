@@ -241,6 +241,7 @@ export default function EventoModalOverlay({
               defaultNome={evento?.titulo ?? ''}
               defaultTelefone={evento?.telefone ?? ''}
               defaultLeadId={evento?.lead_id ?? ''}
+              defaultVisitaTipo={evento?.visita_tipo ?? null}
             />
           ) : (
             <div className="flex flex-col gap-1.5">

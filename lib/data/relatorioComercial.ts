@@ -42,6 +42,15 @@ export const ROTULO_TIPO_WALK_IN: Record<TipoWalkIn, string> = {
 }
 export const WALK_IN_POR_CLASSIFICAR = 'Por classificar'
 
+// Uma visita marcada a uma lead é um treino experimental ou uma visita
+// para conhecer as condições (guardado no evento da Agenda; as marcações
+// antigas, sem tipo, contam como treino experimental).
+export const TIPOS_VISITA = ['Treino experimental', 'Visita de condições'] as const
+export type TipoVisita = (typeof TIPOS_VISITA)[number]
+export const tipoDeVisita = (valor: string | null | undefined): TipoVisita =>
+  valor === 'Visita de condições' ? 'Visita de condições' : 'Treino experimental'
+export const SEM_VISITA = 'Sem visita registada'
+
 const semAcentos = (t: string) =>
   t
     .normalize('NFD')
@@ -57,6 +66,9 @@ const SINONIMOS: Record<string, CanalLead | typeof CANAL_WALK_IN> = {
   'landing page': 'Landing page',
   landing: 'Landing page',
   website: 'Landing page',
+  // O formulário da landing page é um Google Forms.
+  'google forms': 'Landing page',
+  'google form': 'Landing page',
   site: 'Landing page',
   'formulario meta': 'Formulário Meta',
   'formulario do meta': 'Formulário Meta',
@@ -115,6 +127,7 @@ export type ContactoRelatorio = { lead_id: string; data: string; sucesso: boolea
 // que lhe aconteceu.
 export type SessaoRelatorio = {
   lead_id: string | null
+  tipo: TipoVisita
   data: string
   marcadaEm: string
   cancelada: boolean
@@ -143,10 +156,15 @@ export type MetricasComerciais = {
   contactosTotal: number
   leadsContactadas: number
   marcacoes: number
+  marcacoesPorTipo: Contagem[]
   emAgenda: number
+  emAgendaPorTipo: Contagem[]
   visitas: number
+  visitasPorTipo: Contagem[]
   visitasPorRegistar: number
   inscricoesVisitas: number
+  // Pelo tipo da última visita (não desmarcada) de cada lead inscrita.
+  inscricoesPorTipo: Contagem[]
   walkInsFechados: number
   totalInscricoes: number
   taxaContacto: number | null
@@ -200,15 +218,28 @@ export function calcularRelatorioComercial(
   const leadsContactadas = new Set(comSucesso.map((c) => c.lead_id)).size
 
   // 3) Marcações feitas no período e 4) visitas marcadas PARA o período.
-  const marcacoes = d.sessoes.filter((s) => dentro(s.marcadaEm)).length
+  const marcadas = d.sessoes.filter((s) => dentro(s.marcadaEm))
+  const marcacoes = marcadas.length
   const paraOPeriodo = d.sessoes.filter((s) => dentro(s.data))
   const veio = (s: SessaoRelatorio) => !s.cancelada && (s.concluida || (!!s.lead_id && d.compareceram.has(s.lead_id)))
-  const visitas = paraOPeriodo.filter(veio).length
+  const realizadas = paraOPeriodo.filter(veio)
+  const visitas = realizadas.length
+  const porTipo = (lista: SessaoRelatorio[]): Contagem[] => TIPOS_VISITA.map((t) => ({ nome: t, n: lista.filter((s) => s.tipo === t).length }))
   const visitasPorRegistar = paraOPeriodo.filter((s) => !s.cancelada && !veio(s) && s.data < hoje).length
 
   // 5) Inscrições (lead ganha, pela data do fecho).
   const ganhas = d.leads.filter((l) => l.estado === 'Ganha' && dentro(l.fecho_em))
-  const inscricoesVisitas = ganhas.filter((l) => !ehWalkIn(l)).length
+  const inscritas = ganhas.filter((l) => !ehWalkIn(l))
+  const inscricoesVisitas = inscritas.length
+  // Cada inscrição fica com o tipo da última visita (não desmarcada) da lead.
+  const ultimaVisita = new Map<string, SessaoRelatorio>()
+  for (const s of d.sessoes) {
+    if (!s.lead_id || s.cancelada) continue
+    const atual = ultimaVisita.get(s.lead_id)
+    if (!atual || s.data > atual.data) ultimaVisita.set(s.lead_id, s)
+  }
+  const tipoDaInscricao = (l: LeadRelatorio) => ultimaVisita.get(l.id)?.tipo ?? SEM_VISITA
+  const inscricoesPorTipo: Contagem[] = [...TIPOS_VISITA, SEM_VISITA].map((t) => ({ nome: t, n: inscritas.filter((l) => tipoDaInscricao(l) === t).length }))
   const walkInsFechados = ganhas.filter(ehWalkIn).length
 
   return {
@@ -222,10 +253,14 @@ export function calcularRelatorioComercial(
     contactosTotal: contactos.length,
     leadsContactadas,
     marcacoes,
+    marcacoesPorTipo: porTipo(marcadas),
     emAgenda: paraOPeriodo.length,
+    emAgendaPorTipo: porTipo(paraOPeriodo),
     visitas,
+    visitasPorTipo: porTipo(realizadas),
     visitasPorRegistar,
     inscricoesVisitas,
+    inscricoesPorTipo,
     walkInsFechados,
     totalInscricoes: inscricoesVisitas + walkInsFechados,
     taxaContacto: taxa(leadsContactadas, leadsNormais.length),

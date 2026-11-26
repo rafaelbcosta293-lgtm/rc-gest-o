@@ -23,10 +23,11 @@ export function corTipoEvento(tipo: TipoEventoAgenda) {
   return PALETA[COR_TIPO_EVENTO[tipo]]
 }
 
-// "SE - Nome" é só a forma de apresentar — o que fica guardado em
+// "SE - Nome" (ou "Visita - Nome", quando a pessoa vem só conhecer as
+// condições) é só a forma de apresentar — o que fica guardado em
 // "titulo" é sempre o nome, nunca o prefixo.
-export function rotuloTipoEvento(tipo: TipoEventoAgenda, titulo: string | null): string {
-  if (tipo === 'Sessão experimental' && titulo) return `SE - ${titulo}`
+export function rotuloTipoEvento(tipo: TipoEventoAgenda, titulo: string | null, visitaTipo?: string | null): string {
+  if (tipo === 'Sessão experimental' && titulo) return `${visitaTipo === 'Visita de condições' ? 'Visita' : 'SE'} - ${titulo}`
   return titulo ?? tipo
 }
 

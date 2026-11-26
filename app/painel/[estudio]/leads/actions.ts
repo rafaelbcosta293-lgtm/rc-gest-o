@@ -13,7 +13,7 @@ import type { EstadoLead } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { registarContactoExperimental } from '@/lib/data/contactoExperimental'
 import { getEquipaDoEstudio, getEstudioPorSlug, getEstudios } from '@/lib/data/estudios'
-import { CANAL_WALK_IN, TIPOS_WALK_IN, canalDaOrigem } from '@/lib/data/relatorioComercial'
+import { CANAL_WALK_IN, TIPOS_WALK_IN, canalDaOrigem, tipoDeVisita } from '@/lib/data/relatorioComercial'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -332,6 +332,7 @@ export async function agendarExperimental(formData: FormData) {
   const { error: erroAgenda } = await supabase.from('agenda_eventos').insert({
     estudio_id: estudioId,
     tipo: 'Sessão experimental',
+    visita_tipo: tipoDeVisita(campoOuNull(formData, 'visita_tipo')),
     titulo: nomeLead,
     lead_id: leadId,
     telefone: telefoneLead,

@@ -26,6 +26,7 @@ import type { Activity, LeadContacto } from '@/lib/supabase/database.types'
 import { ArrowLeft } from 'lucide-react'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 
+import { TIPOS_VISITA } from '@/lib/data/relatorioComercial'
 export default async function LeadPage({
   params,
   searchParams,
@@ -231,7 +232,7 @@ export default async function LeadPage({
       {!lead.cliente_id && lead.estado !== 'Perdida' && (
         <details className="mt-3 rounded-xl border border-[#5B3FA0]/30 bg-[#EBE6F8] p-4 dark:bg-[#2A2240]">
           <summary className="cursor-pointer text-sm font-semibold text-[#5B3FA0] dark:text-[#C9B8F0]">
-            Agendar experimental
+            Agendar visita ou treino experimental
           </summary>
           <form action={agendarExperimental} className="mt-3 flex flex-wrap items-end gap-3">
             <input type="hidden" name="estudio_slug" value={slug} />
@@ -239,6 +240,18 @@ export default async function LeadPage({
             <input type="hidden" name="lead_id" value={lead.id} />
             <input type="hidden" name="nome_lead" value={lead.nome} />
             <input type="hidden" name="telefone_lead" value={lead.telefone ?? ''} />
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="visita_tipo" className="text-xs font-medium text-foreground/80">
+                Tipo de visita
+              </label>
+              <select id="visita_tipo" name="visita_tipo" defaultValue="Treino experimental" className="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand">
+                {TIPOS_VISITA.map((t) => (
+                  <option key={t} value={t}>
+                    {t === 'Visita de condições' ? 'Visita para conhecer as condições' : t}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-foreground/80">Dia</label>
               <input

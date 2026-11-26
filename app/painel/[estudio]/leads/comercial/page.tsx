@@ -16,6 +16,11 @@ import LineChart from '@/components/LineChart'
 import BarMeter from '@/components/BarMeter'
 import Heatmap from '@/components/Heatmap'
 import { hojeEmLisboa } from '@/lib/data/hoje'
+import { somarDias } from '@/lib/data/horarios'
+import { diaCurto } from '@/lib/data/presencas'
+import { carregarDadosRelatorioComercial } from '@/lib/data/relatorioComercialDados'
+import { Barra, BarraPeriodo } from '@/components/Barra'
+import RelatorioComercial from '@/components/RelatorioComercial'
 
 const SEMANAS = 8
 const HORA_INICIO = 7
@@ -23,10 +28,13 @@ const HORA_FIM = 21
 
 export default async function PainelComercialPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ estudio: string }>
+  searchParams: Promise<{ dia?: string }>
 }) {
   const { estudio: slug } = await params
+  const { dia: diaParam } = await searchParams
 
   const supabase = await createClient()
   const estudio = await getEstudioPorSlug(supabase, slug)
@@ -46,6 +54,10 @@ export default async function PainelComercialPage({
   ])
   const { ehAdmin } = papeisDaSessao(sessao)
   const hoje = hojeEmLisboa()
+  // Relatório comercial (o mesmo da Administração, só deste estúdio).
+  const dia = diaParam && /^\d{4}-\d{2}-\d{2}$/.test(diaParam) && diaParam <= hoje ? diaParam : hoje
+  const dadosRelatorio = await carregarDadosRelatorioComercial(supabase, [estudio.id], `${dia.slice(0, 4)}-01-01`)
+  const linkDia = (d: string) => `/painel/${slug}/leads/comercial${d === hoje ? '' : `?dia=${d}`}`
 
   if (erroLeads) {
     throw new Error(erroLeads.message)
@@ -124,6 +136,30 @@ export default async function PainelComercialPage({
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Painel comercial</h1>
       <p className="mt-1 text-sm text-muted">{estudio.nome}</p>
+
+      {/* O funil do trabalho no CRM, ao dia, ao mês e no ano. */}
+      <div className="mt-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Relatório comercial</h2>
+          <Barra rotulo="Dia">
+            <BarraPeriodo
+              anterior={linkDia(somarDias(dia, -1))}
+              seguinte={dia < hoje ? linkDia(somarDias(dia, 1)) : null}
+              titulo={diaCurto(dia)}
+              largura="17ch"
+              hoje={linkDia(hoje)}
+              noPeriodoDeHoje={dia === hoje}
+            />
+          </Barra>
+        </div>
+        <div className="mt-2">
+          <RelatorioComercial dados={dadosRelatorio} dia={dia} hoje={hoje} />
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          O mês e o ano vão até ao dia escolhido. Uma visita conta como realizada quando a lead passa a “Experimental realizada”; os walk-ins contam-se à
+          parte das leads angariadas.
+        </p>
+      </div>
 
       <div className="mt-8">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">

@@ -230,6 +230,8 @@ export type Lead = {
   interesse: string | null
   disponibilidade: string | null
   walk_in: boolean
+  // Só nos walk-ins: Passagem, Member-get-member ou Redes sociais.
+  walk_in_tipo: string | null
   estado: EstadoLead
   temperatura: TemperaturaLead
   responsavel_id: string | null

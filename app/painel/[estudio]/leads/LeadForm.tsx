@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ESTADOS_LEAD, ORIGENS_LEAD, OBJETIVOS_LEAD } from '@/lib/data/constantes'
+import { CANAL_WALK_IN, ROTULO_TIPO_WALK_IN, TIPOS_WALK_IN, canalDaOrigem } from '@/lib/data/relatorioComercial'
 import type { Lead, Perfil, TemperaturaLead } from '@/lib/supabase/database.types'
 import SubmitButton from '@/components/SubmitButton'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
@@ -41,9 +42,15 @@ export default function LeadForm({
   // Origem conhecida fica logo escolhida; uma guardada à mão (ou vinda
   // de antes desta lista existir) cai em "Outra", com o texto original
   // preservado no campo ao lado — nunca se perde o que já lá estava.
-  const origemConhecida = !!lead?.origem && ORIGENS_CONHECIDAS.includes(lead.origem)
-  const [origem, setOrigem] = useState(lead?.origem ? (origemConhecida ? lead.origem : 'Outra') : '')
+  // (As formas antigas de escrever a mesma origem — "Meta Ads",
+  // "instagram"… — caem no canal certo; um walk-in fica em "Walk-in".)
+  const canalInicial = lead?.walk_in ? CANAL_WALK_IN : canalDaOrigem(lead?.origem)
+  const origemConhecida = !!lead && (lead.walk_in || !!lead.origem) && ORIGENS_CONHECIDAS.includes(canalInicial)
+  const [origem, setOrigem] = useState(lead?.origem || lead?.walk_in ? (origemConhecida ? canalInicial : 'Outra') : '')
   const [origemOutra, setOrigemOutra] = useState(lead?.origem && !origemConhecida ? lead.origem : '')
+  // Os walk-ins contam-se à parte no relatório comercial, por tipo.
+  const [walkInTipo, setWalkInTipo] = useState(lead?.walk_in_tipo ?? '')
+  const ehWalkIn = origem === CANAL_WALK_IN
 
   // Mesma lógica da origem — um objetivo conhecido fica logo escolhido;
   // texto livre (de antes desta lista existir) cai em "Outro", com o
@@ -131,6 +138,22 @@ export default function LeadForm({
             />
           )}
           <input type="hidden" name="origem" value={origem === 'Outra' ? origemOutra : origem} />
+          {ehWalkIn && (
+            <>
+              <input type="hidden" name="walk_in" value="on" />
+              <label htmlFor="walk_in_tipo" className={`${labelCls} mt-1`}>
+                Tipo de walk-in
+              </label>
+              <select id="walk_in_tipo" name="walk_in_tipo" value={walkInTipo} onChange={(e) => setWalkInTipo(e.target.value)} required className={inputCls}>
+                <option value="">— Escolhe —</option>
+                {TIPOS_WALK_IN.map((t) => (
+                  <option key={t} value={t}>
+                    {ROTULO_TIPO_WALK_IN[t]}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -183,13 +206,6 @@ export default function LeadForm({
               </label>
             ))}
           </div>
-        </div>
-
-        <div className="flex flex-col justify-end gap-1.5 pb-1.5">
-          <label className="flex items-center gap-2 text-sm text-foreground">
-            <input type="checkbox" name="walk_in" defaultChecked={lead?.walk_in ?? false} />
-            Walk-in (apareceu sem marcação)
-          </label>
         </div>
 
         <div className="flex flex-col gap-1.5">

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { criarLeadRapida } from '@/app/painel/[estudio]/leads/actions'
 import { ORIGENS_LEAD, OBJETIVOS_LEAD } from '@/lib/data/constantes'
+import { CANAL_WALK_IN, ROTULO_TIPO_WALK_IN, TIPOS_WALK_IN } from '@/lib/data/relatorioComercial'
 import type { EstadoLead } from '@/lib/supabase/database.types'
 
 export type LeadOpcao = { id: string; nome: string; telefone: string | null }
@@ -53,6 +54,7 @@ export default function CamposSessaoExperimental({
   // a lead não nascer sem esta informação mínima.
   const [origem, setOrigem] = useState<string>('')
   const [origemOutra, setOrigemOutra] = useState('')
+  const [walkInTipo, setWalkInTipo] = useState('')
   const [estadoLead, setEstadoLead] = useState<EstadoLead>('Experimental agendada')
   const [objetivo, setObjetivo] = useState('')
   const [objetivoOutro, setObjetivoOutro] = useState('')
@@ -81,6 +83,10 @@ export default function CamposSessaoExperimental({
       setErroCriar('Escolhe a origem.')
       return
     }
+    if (origemFinal === CANAL_WALK_IN && !walkInTipo) {
+      setErroCriar('Escolhe o tipo de walk-in.')
+      return
+    }
     const objetivoFinal = objetivo === 'Outro' ? objetivoOutro.trim() : objetivo
     if (!objetivoFinal) {
       setErroCriar('Escolhe o objetivo.')
@@ -94,6 +100,7 @@ export default function CamposSessaoExperimental({
         nome: nome.trim(),
         telefone: telefone.trim(),
         origem: origemFinal,
+        walkInTipo: origemFinal === CANAL_WALK_IN ? walkInTipo : null,
         estado: estadoLead,
         objetivo: objetivoFinal,
       })
@@ -212,6 +219,16 @@ export default function CamposSessaoExperimental({
                   required
                   className={`${inputCls} mt-1`}
                 />
+              )}
+              {origem === CANAL_WALK_IN && (
+                <select value={walkInTipo} onChange={(e) => setWalkInTipo(e.target.value)} required aria-label="Tipo de walk-in" className={`${inputCls} mt-1`}>
+                  <option value="">— Tipo de walk-in —</option>
+                  {TIPOS_WALK_IN.map((t) => (
+                    <option key={t} value={t}>
+                      {ROTULO_TIPO_WALK_IN[t]}
+                    </option>
+                  ))}
+                </select>
               )}
             </div>
 

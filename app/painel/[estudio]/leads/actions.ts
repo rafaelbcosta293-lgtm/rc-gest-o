@@ -13,6 +13,7 @@ import type { EstadoLead } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
 import { registarContactoExperimental } from '@/lib/data/contactoExperimental'
 import { getEquipaDoEstudio, getEstudioPorSlug, getEstudios } from '@/lib/data/estudios'
+import { CANAL_WALK_IN, TIPOS_WALK_IN, canalDaOrigem } from '@/lib/data/relatorioComercial'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -27,16 +28,26 @@ function numeroOuNull(formData: FormData, nome: string) {
   return Number.isFinite(n) ? n : null
 }
 
+// O tipo de walk-in só fica guardado se for um dos três do relatório.
+function tipoDeWalkIn(valor: string | null | undefined): string | null {
+  return valor && (TIPOS_WALK_IN as readonly string[]).includes(valor) ? valor : null
+}
+
 function camposComuns(formData: FormData) {
+  const origem = campoOuNull(formData, 'origem')
+  // Uma lead é walk-in quando a origem é "Walk-in" (ou quando já vinha
+  // marcada assim, das fichas antigas).
+  const walkIn = formData.get('walk_in') === 'on' || canalDaOrigem(origem) === CANAL_WALK_IN
   return {
     nome: formData.get('nome') as string,
     telefone: campoOuNull(formData, 'telefone'),
     email: campoOuNull(formData, 'email'),
-    origem: campoOuNull(formData, 'origem'),
+    origem,
     campanha: campoOuNull(formData, 'campanha'),
     modalidade_interesse: campoOuNull(formData, 'modalidade_interesse'),
     temperatura: campoOuNull(formData, 'temperatura') ?? 'Morna',
-    walk_in: formData.get('walk_in') === 'on',
+    walk_in: walkIn,
+    walk_in_tipo: walkIn ? tipoDeWalkIn(campoOuNull(formData, 'walk_in_tipo')) : null,
     objetivo: campoOuNull(formData, 'objetivo'),
     interesse: campoOuNull(formData, 'interesse'),
     disponibilidade: campoOuNull(formData, 'disponibilidade'),
@@ -82,6 +93,8 @@ export async function criarLeadRapida(input: {
   nome: string
   telefone: string
   origem: string
+  // Só quando a origem é "Walk-in".
+  walkInTipo?: string | null
   estado: EstadoLead
   objetivo: string
 }): Promise<{ ok: true; lead: { id: string; nome: string; telefone: string | null } } | { error: string }> {
@@ -116,6 +129,8 @@ export async function criarLeadRapida(input: {
       nome,
       telefone,
       origem,
+      walk_in: canalDaOrigem(origem) === CANAL_WALK_IN,
+      walk_in_tipo: canalDaOrigem(origem) === CANAL_WALK_IN ? tipoDeWalkIn(input.walkInTipo) : null,
       estado: input.estado,
       objetivo,
     })

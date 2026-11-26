@@ -9,6 +9,7 @@ import { diasDesde } from '@/lib/data/leads'
 import { moverEstadoLeadRapido } from './actions'
 import type { Lead, TemperaturaLead } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
+import { CANAL_WALK_IN, canalDaOrigem } from '@/lib/data/relatorioComercial'
 
 const ORDEM_FUNIL = Object.keys(ESTADOS_LEAD) as (keyof typeof ESTADOS_LEAD)[]
 const TEMPERATURAS: TemperaturaLead[] = ['Fria', 'Morna', 'Quente']
@@ -22,12 +23,16 @@ const CORES_TEMPERATURA: Record<TemperaturaLead, { bg: string; tx: string }> = {
 // própria; origens manuais ("Instagram", "indicação", texto livre tal
 // como sempre) ficam todas na mesma cor neutra.
 const CORES_ORIGEM: Record<string, { bg: string; tx: string }> = {
-  'Meta Ads': PALETA.azul,
+  'Formulário Meta': PALETA.azul,
   'Google Forms': PALETA.verde,
-  Website: PALETA.ambar,
+  'Landing page': PALETA.ambar,
+  'Walk-in': PALETA.roxo,
 }
-function corOrigem(origem: string) {
-  return CORES_ORIGEM[origem] ?? PALETA.neutro
+// A origem como aparece na etiqueta e no filtro: o canal do relatório
+// comercial ("Meta Ads" e "Formulário Meta" são a mesma coisa).
+const canalDaLead = (l: { origem: string | null; walk_in?: boolean }) => (l.walk_in ? CANAL_WALK_IN : l.origem ? canalDaOrigem(l.origem) : null)
+function corOrigem(canal: string) {
+  return CORES_ORIGEM[canal] ?? PALETA.neutro
 }
 
 export type LeadResumo = Pick<
@@ -66,7 +71,7 @@ export default function LeadsKanban({
   const [, iniciarTransicao] = useTransition()
 
   const origens = useMemo(
-    () => Array.from(new Set(leads.map((l) => l.origem).filter((o): o is string => !!o))).sort(),
+    () => Array.from(new Set(leads.map(canalDaLead).filter((o): o is string => !!o))).sort(),
     [leads]
   )
 
@@ -76,7 +81,7 @@ export default function LeadsKanban({
     const termo = busca.trim().toLowerCase()
     return leads.filter((l) => {
       if (filtroResponsavel && l.responsavel_id !== filtroResponsavel) return false
-      if (filtroOrigem && l.origem !== filtroOrigem) return false
+      if (filtroOrigem && canalDaLead(l) !== filtroOrigem) return false
       if (filtroTemperatura && (l.temperatura ?? 'Morna') !== filtroTemperatura) return false
       if (termo) {
         const alvo = `${l.nome} ${l.telefone ?? ''}`.toLowerCase()
@@ -245,12 +250,12 @@ export default function LeadsKanban({
                         {l.responsavel && <span>· {l.responsavel.nome}</span>}
                         {l.valor_potencial != null && <span>· €{l.valor_potencial}</span>}
                       </div>
-                      {l.origem && (
+                      {canalDaLead(l) && (
                         <span
                           className="self-start rounded-full px-2 py-0.5 text-[11px] font-medium"
-                          style={{ background: corOrigem(l.origem).bg, color: corOrigem(l.origem).tx }}
+                          style={{ background: corOrigem(canalDaLead(l)!).bg, color: corOrigem(canalDaLead(l)!).tx }}
                         >
-                          {l.origem}
+                          {canalDaLead(l)}
                         </span>
                       )}
                       {l.proximo_contacto && corUrgencia && (

@@ -23,6 +23,7 @@ import {
   Settings,
   ChevronDown,
   type LucideIcon,
+  Target,
 } from 'lucide-react'
 import PillNavLink, { estaAtivoPill } from '@/components/PillNavLink'
 import BarraAjustavel, { formaPilula, useModoBarra } from '@/components/BarraAjustavel'
@@ -51,6 +52,7 @@ const GRUPOS: Grupo[] = [
       { href: '/painel/admin/este-mes', label: 'Este mês', icone: CalendarRange, filtravel: true },
       { href: '/painel/admin/agora', label: 'Agora', icone: Activity, filtravel: true },
       { href: '/painel/admin/relatorio', label: 'Relatório', icone: FileText, filtravel: true },
+      { href: '/painel/admin/comercial', label: 'Relatório comercial', icone: Target, filtravel: true },
       { href: '/painel/admin/horas', label: 'Horas da equipa', icone: Clock, filtravel: false },
     ],
   },

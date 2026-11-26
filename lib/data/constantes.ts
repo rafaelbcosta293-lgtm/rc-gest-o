@@ -17,6 +17,7 @@ import {
   Users,
 } from 'lucide-react'
 import { IconeGrupo, IconePilates } from '@/components/icones'
+import { CANAIS_LEAD, CANAL_WALK_IN } from './relatorioComercial'
 
 // Paleta única da app: cada família de cor tem sempre o mesmo par
 // fundo/texto, esteja onde estiver (alertas, estados, leads, secções,
@@ -152,11 +153,12 @@ export const ESTADOS_LEAD = {
 
 export const TIPOS_CONTACTO = ['Telefone', 'WhatsApp', 'Email', 'Presencial', 'Mensagem redes'] as const
 
-// Origens conhecidas de uma lead — as 3 automáticas (que já chegam por
-// webhook, ver CORES_ORIGEM em LeadsKanban.tsx) mais as manuais mais
-// comuns num estúdio deste tipo. "Outra" deixa sempre escrever à mão
-// uma origem que não esteja na lista.
-export const ORIGENS_LEAD = ['Meta Ads', 'Google Forms', 'Website', 'Instagram', 'Indicação', 'Walk-in', 'Outra'] as const
+// Origens que se podem escolher numa lead: os canais do relatório
+// comercial (lib/data/relatorioComercial.ts), "Walk-in" (que pede o tipo
+// de walk-in) e "Outra", que deixa escrever à mão. As entradas
+// automáticas continuam a escrever "Meta Ads" e "Website"; canalDaOrigem
+// junta-as ao canal certo ("Formulário Meta", "Landing page").
+export const ORIGENS_LEAD = [...CANAIS_LEAD, CANAL_WALK_IN, 'Outra'] as const
 
 // Objetivo que uma lead indica — só um, tanto ao agendar uma sessão
 // experimental (CamposSessaoExperimental.tsx) como na ficha da lead

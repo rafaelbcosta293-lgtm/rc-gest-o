@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { gerarExtensaoSerie } from '@/lib/data/agenda'
 import { gerarAulas } from '@/lib/data/aulas'
 import type { AgendaSerie } from '@/lib/supabase/database.types'
+import { instrutorHerdado } from '@/lib/data/controloInstrutores'
 
 // Corre uma vez por dia. Mantém a janela de ocorrências já geradas de
 // cada série "indefinida" sempre ~90 dias à frente de hoje — nunca gera
@@ -54,7 +55,8 @@ export async function GET(request: Request) {
       estudio_id: serie.estudio_id,
       servico_id: serie.servico_id ?? 1,
       cliente_id: serie.cliente_id,
-      pt_id: serie.pt_id,
+      // Um treino nasce sempre sem instrutor: atribui-o quem o dá.
+      pt_id: instrutorHerdado(serie.tipo, serie.pt_id),
       tipo: serie.tipo,
       titulo: serie.titulo,
       data,

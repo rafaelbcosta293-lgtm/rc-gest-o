@@ -5,6 +5,7 @@ import {
   exigeInstrutor,
   faltaInstrutor,
   INICIO_CONTROLO,
+  instrutorHerdado,
   instanteEmLisboa,
   periodoDaAvaliacao,
   precisaDePlano,
@@ -20,6 +21,11 @@ describe('sinais na Agenda', () => {
     expect(exigeInstrutor('Treino')).toBe(true)
     expect(exigeInstrutor('Reunião')).toBe(false)
     expect(exigeInstrutor('Sessão experimental')).toBe(false)
+  })
+  it('o instrutor de um treino nunca passa para os outros da série', () => {
+    expect(instrutorHerdado('Treino', 'p1')).toBeNull()
+    expect(instrutorHerdado('Reunião', 'p1')).toBe('p1')
+    expect(instrutorHerdado('Reunião', null)).toBeNull()
   })
   it('falta de instrutor: treino não desmarcado, a partir do início do controlo', () => {
     expect(faltaInstrutor(treino)).toBe(true)

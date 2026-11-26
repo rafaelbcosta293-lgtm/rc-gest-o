@@ -430,8 +430,9 @@ export default function EventoModalOverlay({
               </div>
               {escopoEditar !== 'um' && (
                 <p className="text-[11px] text-muted">
-                  A data de cada ocorrência mantém-se — só a hora, duração, instrutor, cliente,
-                  tipo e nota ficam iguais em todas.
+                  A data de cada ocorrência mantém-se — só a hora, duração, cliente, tipo e nota
+                  ficam iguais em todas.
+                  {exigeInstrutor(tipo) && ' O instrutor fica só neste treino: nos outros escolhe-se um a um.'}
                 </p>
               )}
             </fieldset>
@@ -453,6 +454,11 @@ export default function EventoModalOverlay({
 
               {repete && (
                 <div className="mt-2 flex flex-col gap-2">
+                  {exigeInstrutor(tipo) && (
+                    <p className="text-[11px] text-muted">
+                      O instrutor fica só neste primeiro treino — nos seguintes escolhe-se um a um, por quem os der.
+                    </p>
+                  )}
                   <div className="grid grid-cols-3 gap-1 rounded-full bg-border-subtle p-1">
                     {(
                       [

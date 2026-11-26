@@ -169,8 +169,8 @@ export default function EditarEventoForm({
           </div>
           {escopo !== 'um' && (
             <p className="text-xs text-muted">
-              A data de cada ocorrência mantém-se — só a hora, duração, instrutor, cliente, tipo e
-              nota ficam iguais em todas.
+              A data de cada ocorrência mantém-se — só a hora, duração, cliente, tipo e nota ficam iguais em todas.
+              {exigeInstrutor(tipo) && ' O instrutor fica só neste treino: nos outros escolhe-se um a um.'}
             </p>
           )}
         </fieldset>

@@ -26,7 +26,7 @@ import { datasFechadas, mensagemDiaFechado } from '@/lib/data/diasFechados'
 import { papeisDaSessao } from '@/lib/data/sessao'
 
 import { tipoDeVisita } from '@/lib/data/relatorioComercial'
-import { exigeInstrutor, MENSAGEM_FALTA_INSTRUTOR } from '@/lib/data/controloInstrutores'
+import { exigeInstrutor, instrutorHerdado, MENSAGEM_FALTA_INSTRUTOR } from '@/lib/data/controloInstrutores'
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
   if (typeof v !== 'string' || v.trim() === '') return null
@@ -367,8 +367,8 @@ async function sincronizarVisitasLeadsAposMover(
 
 // Ao editar "este e os seguintes" ou "toda a série", o modelo da série
 // (de onde o cron gera as ocorrências futuras) fica igual ao que se
-// acabou de guardar — senão as próximas a nascer voltavam, por exemplo,
-// a vir sem instrutor.
+// acabou de guardar — senão as próximas a nascer voltavam à hora ou à
+// nota antigas. O instrutor de um treino fica de fora (instrutorHerdado).
 async function atualizarModeloDaSerie(
   supabase: SupabaseClient,
   serieId: string,
@@ -450,7 +450,7 @@ export async function criarEvento(formData: FormData) {
       .insert({
         estudio_id: estudioId,
         cliente_id: clienteId,
-        pt_id: ptId,
+        pt_id: instrutorHerdado(tipo, ptId),
         tipo,
         titulo,
         hora_inicio: horaInicio,
@@ -470,10 +470,12 @@ export async function criarEvento(formData: FormData) {
     serieId = serie.id
   }
 
+  // Num treino que se repete, o instrutor escolhido fica só no primeiro
+  // dia; os seguintes atribuem-se um a um (ver instrutorHerdado).
   const linhas = ocorrencias.map((dataOcorrencia) => ({
     estudio_id: estudioId,
     cliente_id: clienteId,
-    pt_id: ptId,
+    pt_id: dataOcorrencia === data ? ptId : instrutorHerdado(tipo, ptId),
     tipo,
     titulo,
     lead_id: leadId,
@@ -620,7 +622,9 @@ export async function atualizarEvento(formData: FormData) {
       .update({
         tipo,
         cliente_id: clienteId,
-        pt_id: ptId,
+        // Num treino o instrutor não se copia para a série toda: fica só
+        // neste (mais abaixo); os outros mantêm o que cada um tem.
+        ...(exigeInstrutor(tipo) ? {} : { pt_id: ptId }),
         titulo,
         lead_id: leadId,
         visita_tipo: visitaTipo,
@@ -634,6 +638,12 @@ export async function atualizarEvento(formData: FormData) {
 
     if (error) {
       redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(error.message)}`)
+    }
+    if (exigeInstrutor(tipo)) {
+      const { error: erroInstrutor } = await supabase.from('agenda_eventos').update({ pt_id: ptId }).eq('id', id)
+      if (erroInstrutor) {
+        redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroInstrutor.message)}`)
+      }
     }
 
     if (idsReabrir.length > 0) {
@@ -649,7 +659,7 @@ export async function atualizarEvento(formData: FormData) {
     const erroModelo = await atualizarModeloDaSerie(supabase, eventoAtual.serie_id, {
       tipo,
       cliente_id: clienteId,
-      pt_id: ptId,
+      pt_id: instrutorHerdado(tipo, ptId),
       titulo,
       hora_inicio: horaInicio,
       duracao_min: duracaoMin,
@@ -922,7 +932,7 @@ export async function criarEventoRapido(
       .insert({
         estudio_id: input.estudioId,
         cliente_id: idsClientes.length === 1 ? idsClientes[0] : null,
-        pt_id: input.ptId,
+        pt_id: instrutorHerdado(input.tipo, input.ptId),
         tipo: input.tipo,
         titulo: input.titulo,
         hora_inicio: input.horaInicio,
@@ -943,7 +953,8 @@ export async function criarEventoRapido(
     return idsClientes.map((clienteId) => ({
       estudio_id: input.estudioId,
       cliente_id: clienteId,
-      pt_id: input.ptId,
+      // Numa repetição, o instrutor fica só no primeiro treino.
+      pt_id: dataOcorrencia === input.data ? input.ptId : instrutorHerdado(input.tipo, input.ptId),
       tipo: input.tipo,
       titulo: input.titulo,
       lead_id: input.leadId,
@@ -1011,7 +1022,9 @@ export async function atualizarEventoRapido(
       .update({
         tipo: input.tipo,
         cliente_id: clienteUnico,
-        pt_id: input.ptId,
+        // Num treino o instrutor não se copia para a série toda: fica só
+        // neste (a seguir); os outros mantêm o que cada um tem.
+        ...(exigeInstrutor(input.tipo) ? {} : { pt_id: input.ptId }),
         titulo: input.titulo,
         lead_id: input.leadId,
         visita_tipo: visitaTipoDe(input),
@@ -1023,6 +1036,10 @@ export async function atualizarEventoRapido(
       })
       .in('id', idsTodos)
     if (error) return { error: error.message }
+    if (exigeInstrutor(input.tipo)) {
+      const { error: erroInstrutor } = await supabase.from('agenda_eventos').update({ pt_id: input.ptId }).eq('id', input.id)
+      if (erroInstrutor) return { error: erroInstrutor.message }
+    }
 
     if (idsReabrir.length > 0) {
       const { error: erroReabrir } = await supabase
@@ -1035,7 +1052,7 @@ export async function atualizarEventoRapido(
     const erroModelo = await atualizarModeloDaSerie(supabase, input.serieId, {
       tipo: input.tipo,
       cliente_id: clienteUnico,
-      pt_id: input.ptId,
+      pt_id: instrutorHerdado(input.tipo, input.ptId),
       titulo: input.titulo,
       hora_inicio: input.horaInicio,
       duracao_min: input.duracaoMin,

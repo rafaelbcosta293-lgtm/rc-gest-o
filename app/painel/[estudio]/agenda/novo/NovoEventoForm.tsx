@@ -179,6 +179,11 @@ export default function NovoEventoForm({
 
         {repete && (
           <div className="mt-3 flex flex-col gap-2">
+            {exigeInstrutor(tipo) && (
+              <p className="text-xs text-muted">
+                O instrutor fica só neste primeiro treino — nos seguintes escolhe-se um a um, por quem os der.
+              </p>
+            )}
             <label className="text-xs text-muted">Até quando</label>
             <div className="grid grid-cols-3 gap-1.5 rounded-full bg-border-subtle p-1">
               {(

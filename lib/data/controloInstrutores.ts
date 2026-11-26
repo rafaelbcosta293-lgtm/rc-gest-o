@@ -13,6 +13,14 @@ export const exigeInstrutor = (tipo: TipoEventoAgenda | string) => tipo === 'Tre
 
 export const MENSAGEM_FALTA_INSTRUTOR = 'Escolhe o instrutor que dá este treino.'
 
+// O instrutor de um treino atribui-se treino a treino, por quem o dá —
+// nunca passa sozinho para os outros treinos da mesma série (nem ao
+// criar uma repetição, nem ao editar "toda a série", nem nos que o cron
+// vai gerando). Assim cada treino fica com o sinal "sem instrutor" até
+// alguém o assumir, em vez de herdar um nome que pode estar errado.
+// Nos outros tipos de evento (reuniões, etc.) continua a copiar-se.
+export const instrutorHerdado = (tipo: TipoEventoAgenda | string, ptId: string | null) => (exigeInstrutor(tipo) ? null : ptId)
+
 type EventoBase = {
   tipo: TipoEventoAgenda | string
   estado: EstadoEventoAgenda | string

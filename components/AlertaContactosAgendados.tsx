@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { useVerificacaoPeriodica } from '@/components/useVerificacaoPeriodica'
 import Link from '@/components/LinkRapido'
 import { PhoneCall } from 'lucide-react'
 import { marcarContactoFeito } from '@/app/painel/[estudio]/leads/actions'
@@ -12,7 +13,14 @@ import { avaliarContactoAgendado } from '@/lib/data/contactosAgendados'
 // avaliarContactoAgendado); a partir da própria hora a faixa fica
 // vermelha e mantém-se enquanto não for marcado como contactado — para
 // nunca se perder este tipo de compromisso. Sem som: o aviso é só visual.
-const INTERVALO_VERIFICACAO_MS = 20_000
+//
+// A lista vem com a página e a hora de mostrar cada aviso é decidida
+// aqui, no browser (relógio abaixo) — ir ao servidor serve só para
+// apanhar contactos marcados ou alterados entretanto, por isso basta de
+// 2 em 2 minutos e só com o separador à vista (ver
+// useVerificacaoPeriodica: de 20 em 20 segundos, em todos os ecrãs
+// abertos, eram milhares de pedidos por dia ao servidor).
+const INTERVALO_VERIFICACAO_MS = 120_000
 const INTERVALO_RELOGIO_MS = 5_000
 
 type ContactoAgendado = {
@@ -44,19 +52,15 @@ export default function AlertaContactosAgendados({
     return () => clearInterval(relogio)
   }, [])
 
-  useEffect(() => {
-    const verificar = async () => {
-      try {
-        const resposta = await fetch('/api/leads/contactos-agendados', { cache: 'no-store' })
-        if (!resposta.ok) return
-        setContactos(await resposta.json())
-      } catch {
-        // falha a verificar não é motivo para esconder a faixa a meio
-      }
+  useVerificacaoPeriodica(async () => {
+    try {
+      const resposta = await fetch('/api/leads/contactos-agendados', { cache: 'no-store' })
+      if (!resposta.ok) return
+      setContactos(await resposta.json())
+    } catch {
+      // falha a verificar não é motivo para esconder a faixa a meio
     }
-    const intervalo = setInterval(verificar, INTERVALO_VERIFICACAO_MS)
-    return () => clearInterval(intervalo)
-  }, [])
+  }, INTERVALO_VERIFICACAO_MS)
 
   const visiveis = contactos
     .filter((c) => !concluidos.has(c.id))

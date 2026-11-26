@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { criarSupabase } from '@/lib/supabase'
 
 // O cliente só cria PEDIDOS; a gestão valida-os (vagas, janela de reserva,
-// mensalidade, prazos) e responde em poucos segundos.
+// mensalidade, prazos) e responde na volta seguinte (até um minuto depois).
 export type ResultadoPedido = { id: string } | { erro: string }
 export type TipoPedido = 'inscrever_aula' | 'cancelar_aula' | 'desmarcar_treino'
 

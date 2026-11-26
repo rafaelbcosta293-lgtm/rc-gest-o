@@ -15,7 +15,7 @@ const ESTILOS = {
 } as const
 
 // Envia um pedido (reservar, cancelar, desmarcar) e espera pela resposta
-// do estúdio — normalmente uns segundos. Com `confirmar`, pergunta antes
+// do estúdio — no máximo um minuto. Com `confirmar`, pergunta antes
 // numa folha ao fundo do ecrã; com `comNota`, deixa escrever um motivo.
 export default function BotaoPedido({
   tipo,

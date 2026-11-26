@@ -3,7 +3,9 @@ import { appClientesConfigurada } from '@/lib/appClientes/ligacao'
 import { sincronizarAppClientes } from '@/lib/appClientes/sincronizar'
 
 // Sincronização com a app do cliente — chamada pelo pg_cron da base da
-// gestão de 20 em 20 segundos (ver supabase/migrations/*_app_clientes_cron.sql).
+// gestão de minuto a minuto, e só quando há contas na app (ver
+// supabase/migrations/*_app_clientes_cron*.sql; começou de 20 em 20
+// segundos, o que gastava processamento do servidor sem necessidade).
 // Protegida por APP_CLIENTES_CRON_SECRET (ou CRON_SECRET). Não devolve
 // dados nenhuns, só contagens.
 export const dynamic = 'force-dynamic'

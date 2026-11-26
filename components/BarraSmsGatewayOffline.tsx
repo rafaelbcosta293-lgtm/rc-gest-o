@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useVerificacaoPeriodica } from '@/components/useVerificacaoPeriodica'
 
-// Verifica a cada minuto se já recuperou (a faixa desaparece sozinha,
-// sem precisar de navegar) — e recalcula o "há quanto tempo" a cada 30s
-// para o texto não ficar estático enquanto a faixa está visível.
-const INTERVALO_VERIFICACAO_MS = 60_000
+// Verifica de 5 em 5 minutos se o telemóvel dos SMS caiu ou já recuperou
+// (a faixa aparece e desaparece sozinha, sem precisar de navegar) — e só
+// com o separador à vista (ver useVerificacaoPeriodica). O "há quanto
+// tempo" recalcula-se aqui, a cada 30 s, sem ir ao servidor.
+const INTERVALO_VERIFICACAO_MS = 300_000
 const INTERVALO_RELOGIO_MS = 30_000
 
 type EstadoEstudio = { estudioSlug: string; estudioNome: string; offline: boolean; desde: string | null }
@@ -36,19 +38,15 @@ export default function BarraSmsGatewayOffline({
     return () => clearInterval(relogio)
   }, [])
 
-  useEffect(() => {
-    const verificar = async () => {
-      try {
-        const resposta = await fetch('/api/estado-sms-gateway', { cache: 'no-store' })
-        if (!resposta.ok) return
-        setEstados(await resposta.json())
-      } catch {
-        // falha a verificar não é motivo para esconder a faixa a meio
-      }
+  useVerificacaoPeriodica(async () => {
+    try {
+      const resposta = await fetch('/api/estado-sms-gateway', { cache: 'no-store' })
+      if (!resposta.ok) return
+      setEstados(await resposta.json())
+    } catch {
+      // falha a verificar não é motivo para esconder a faixa a meio
     }
-    const intervalo = setInterval(verificar, INTERVALO_VERIFICACAO_MS)
-    return () => clearInterval(intervalo)
-  }, [])
+  }, INTERVALO_VERIFICACAO_MS)
 
   const visiveis = estados.filter((e) => e.offline && e.desde && (!apenasEstudio || e.estudioSlug === apenasEstudio))
   if (visiveis.length === 0) return null

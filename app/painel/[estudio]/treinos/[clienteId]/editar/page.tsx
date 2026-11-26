@@ -3,7 +3,7 @@ import { carregarServicos } from '@/lib/data/servicos'
 import { carregarInscricoes, servicosLigados } from '@/lib/data/clientesServicos'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { atualizarCliente } from '../../actions'
 import ClienteForm from '../../ClienteForm'
 import { ArrowLeft } from 'lucide-react'
@@ -31,8 +31,7 @@ export default async function EditarClientePage({
     notFound()
   }
 
-  const [pts, servicos, inscricoes] = await Promise.all([
-    getEquipaDoEstudio(supabase, estudio.id, cliente.pt_principal_id),
+  const [servicos, inscricoes] = await Promise.all([
     carregarServicos(supabase, { soAtivos: true }),
     carregarInscricoes(supabase, clienteId),
   ])
@@ -54,7 +53,6 @@ export default async function EditarClientePage({
         estudioSlug={slug}
         estudioId={estudio.id}
         cliente={cliente}
-        pts={pts}
         servicos={servicos.map((s) => ({ id: s.id, nome: s.nome }))}
         servicosLigados={servicosLigados(cliente.cliente_pt !== false, inscricoes)}
         action={atualizarCliente}

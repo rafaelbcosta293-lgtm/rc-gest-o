@@ -18,7 +18,6 @@ import type { Cliente, EstadoPagamento } from '@/lib/supabase/database.types'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import { moradaCompleta } from '@/lib/data/fichaCliente'
 
-type ClienteCompleto = Cliente & { pt_principal: { nome: string } | null }
 type AvaliacaoResumo = {
   id: string
   data: string
@@ -54,7 +53,7 @@ export default async function FichaCompletaClientePage({
     getEstudioPorSlug(supabase, slug),
     supabase
       .from('clientes')
-      .select('*, pt_principal:perfis!pt_principal_id(nome)')
+      .select('*')
       .eq('id', clienteId)
       .maybeSingle(),
     getSessaoAtual(),
@@ -63,7 +62,7 @@ export default async function FichaCompletaClientePage({
   if (!estudio || !cliente || cliente.estudio_id !== estudio.id) {
     notFound()
   }
-  const c = cliente as unknown as ClienteCompleto
+  const c = cliente as Cliente
   const { ehGestao } = papeisDaSessao(sessao)
 
   const [
@@ -197,7 +196,7 @@ export default async function FichaCompletaClientePage({
       )}
 
       {/* Dados gerais */}
-      <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-6 grid grid-cols-3 gap-2">
         <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
           <strong className="block text-lg text-foreground">
             {meses !== null ? meses : '—'}
@@ -217,12 +216,6 @@ export default async function FichaCompletaClientePage({
           <span className="text-xs text-muted">
             {idade !== null ? `aniversário · faz ${idade} anos` : 'aniversário'}
           </span>
-        </div>
-        <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-          <strong className="block text-lg text-foreground">
-            {c.pt_principal?.nome ?? '—'}
-          </strong>
-          <span className="text-xs text-muted">PT principal</span>
         </div>
       </div>
 

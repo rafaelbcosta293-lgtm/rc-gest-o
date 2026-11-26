@@ -7,9 +7,9 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { normalizarNif, nifValido } from '@/lib/data/faturas'
-import { getEquipaDoEstudio, getEstudioPorSlug } from '@/lib/data/estudios'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { semSair, type ResultadoSemSair } from '@/lib/acoes/semSair'
-import type { Cliente, Perfil } from '@/lib/supabase/database.types'
+import type { Cliente } from '@/lib/supabase/database.types'
 
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
@@ -39,7 +39,6 @@ function camposComuns(formData: FormData) {
     frequencia_semanal: formData.get('frequencia_semanal')
       ? Number(formData.get('frequencia_semanal'))
       : null,
-    pt_principal_id: campoOuNull(formData, 'pt_principal_id'),
     alerta: (formData.get('alerta') as string) || 'Nenhum',
     alerta_detalhe: campoOuNull(formData, 'alerta_detalhe'),
     evento: campoOuNull(formData, 'evento'),
@@ -230,7 +229,6 @@ export async function guardarClienteNaJanela(formData: FormData): Promise<Result
 
 export type DadosJanelaCliente = {
   estudioId: number
-  pts: Pick<Perfil, 'id' | 'nome'>[]
   cliente: Cliente | null
   servicos: { id: number; nome: string }[]
   servicosLigados: number[]
@@ -245,15 +243,13 @@ export async function dadosDaJanelaCliente(estudioSlug: string, clienteId: strin
   ])
   if (!estudio) return { erro: 'Estúdio não encontrado.' }
   if (clienteId && (!cliente || cliente.estudio_id !== estudio.id)) return { erro: 'Cliente não encontrado.' }
-  const [pts, servicos, inscricoes] = await Promise.all([
-    getEquipaDoEstudio(supabase, estudio.id, (cliente as Cliente | null)?.pt_principal_id ?? undefined),
+  const [servicos, inscricoes] = await Promise.all([
     carregarServicos(supabase, { soAtivos: true }),
     clienteId ? carregarInscricoes(supabase, clienteId) : Promise.resolve([]),
   ])
   const c = (cliente as (Cliente & { cliente_pt?: boolean }) | null) ?? null
   return {
     estudioId: estudio.id,
-    pts,
     cliente: c,
     servicos: servicos.map((s) => ({ id: s.id, nome: s.nome })),
     servicosLigados: c ? servicosLigados(c.cliente_pt !== false, inscricoes) : [SERVICO_PT],

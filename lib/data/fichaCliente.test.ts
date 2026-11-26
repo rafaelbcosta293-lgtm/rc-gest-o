@@ -11,7 +11,6 @@ const completa: DadosFicha = {
   codigo_postal: '2495-000',
   cidade: 'Fátima',
   frequencia_semanal: 2,
-  pt_principal_id: 'x',
   inicio_contrato: '2025-01-01',
   objetivo: 'Força',
 }
@@ -28,9 +27,9 @@ describe('camposEmFalta', () => {
     expect(camposEmFalta({ ...completa, cidade: '' })).toEqual(['morada'])
   })
   it('mantém a ordem dos campos', () => {
-    expect(camposEmFalta({ ...completa, objetivo: null, telefone: null, pt_principal_id: null })).toEqual([
+    expect(camposEmFalta({ ...completa, objetivo: null, telefone: null, inicio_contrato: null })).toEqual([
       'telefone',
-      'instrutor',
+      'inicio',
       'objetivo',
     ])
   })

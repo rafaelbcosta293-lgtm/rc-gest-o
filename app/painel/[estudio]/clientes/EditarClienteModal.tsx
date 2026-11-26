@@ -29,7 +29,7 @@ const labelCls = 'text-sm font-medium text-foreground'
 // Edição rápida, aberta com o botão direito do rato em cima do nome, na
 // lista de Clientes — guarda sem sair da página (ao contrário da "Editar
 // ficha" completa, que continua a existir para os campos mais raros:
-// alerta, PT principal, objetivo, evento, notas).
+// alerta, objetivo, evento, notas).
 export default function EditarClienteModal({
   slug,
   cliente,

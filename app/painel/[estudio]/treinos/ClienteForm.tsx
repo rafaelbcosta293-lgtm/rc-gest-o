@@ -1,7 +1,7 @@
 'use client'
 
 import { ALERTAS } from '@/lib/data/constantes'
-import type { Cliente, Perfil } from '@/lib/supabase/database.types'
+import type { Cliente } from '@/lib/supabase/database.types'
 import SubmitButton from '@/components/SubmitButton'
 import CampoLocalidade from '@/components/CampoLocalidade'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
@@ -19,7 +19,6 @@ export default function ClienteForm({
   estudioSlug,
   estudioId,
   cliente,
-  pts,
   action,
   error,
   voltar,
@@ -29,7 +28,6 @@ export default function ClienteForm({
   estudioSlug: string
   estudioId: number
   cliente?: Cliente
-  pts: Pick<Perfil, 'id' | 'nome'>[]
   action: (formData: FormData) => void
   error?: string
   voltar?: string
@@ -191,25 +189,6 @@ export default function ClienteForm({
             <option value="">—</option>
             <option value="Masculino">Masculino</option>
             <option value="Feminino">Feminino</option>
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="pt_principal_id" className={labelCls}>
-            PT principal
-          </label>
-          <select
-            id="pt_principal_id"
-            name="pt_principal_id"
-            defaultValue={cliente?.pt_principal_id ?? ''}
-            className={inputCls}
-          >
-            <option value="">—</option>
-            {pts.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
           </select>
         </div>
 

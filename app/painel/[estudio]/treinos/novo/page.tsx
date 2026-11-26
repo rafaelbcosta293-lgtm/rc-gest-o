@@ -2,7 +2,7 @@ import Link from '@/components/LinkRapido'
 import { carregarServicos } from '@/lib/data/servicos'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
+import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { criarCliente } from '../actions'
 import ClienteForm from '../ClienteForm'
 import { ArrowLeft } from 'lucide-react'
@@ -22,7 +22,7 @@ export default async function NovoClientePage({
   if (!estudio) {
     notFound()
   }
-  const [pts, servicos] = await Promise.all([getEquipaDoEstudio(supabase, estudio.id), carregarServicos(supabase, { soAtivos: true })])
+  const servicos = await carregarServicos(supabase, { soAtivos: true })
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -40,7 +40,6 @@ export default async function NovoClientePage({
       <ClienteForm
         estudioSlug={slug}
         estudioId={estudio.id}
-        pts={pts}
         servicos={servicos.map((s) => ({ id: s.id, nome: s.nome }))}
         action={criarCliente}
         error={error}

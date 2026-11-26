@@ -9,7 +9,6 @@ export type CampoFicha =
   | 'genero'
   | 'morada'
   | 'frequencia'
-  | 'instrutor'
   | 'inicio'
   | 'objetivo'
 
@@ -21,7 +20,6 @@ export const CAMPOS_FICHA: { campo: CampoFicha; rotulo: string }[] = [
   { campo: 'genero', rotulo: 'Género' },
   { campo: 'morada', rotulo: 'Morada' },
   { campo: 'frequencia', rotulo: 'Treinos por semana' },
-  { campo: 'instrutor', rotulo: 'Instrutor principal' },
   { campo: 'inicio', rotulo: 'Data de início' },
   { campo: 'objetivo', rotulo: 'Objetivo' },
 ]
@@ -40,7 +38,6 @@ export type DadosFicha = {
   codigo_postal: string | null
   cidade: string | null
   frequencia_semanal: number | null
-  pt_principal_id: string | null
   inicio_contrato: string | null
   objetivo: string | null
 }
@@ -83,7 +80,6 @@ export function camposEmFalta(c: DadosFicha): CampoFicha[] {
     genero: !c.genero,
     morada: vazio(c.morada) || vazio(c.codigo_postal) || vazio(c.cidade),
     frequencia: c.frequencia_semanal == null,
-    instrutor: !c.pt_principal_id,
     inicio: !c.inicio_contrato,
     objetivo: vazio(c.objetivo),
   }

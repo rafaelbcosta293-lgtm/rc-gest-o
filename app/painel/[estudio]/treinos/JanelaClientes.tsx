@@ -23,7 +23,6 @@ export default function JanelaClientes({ slug, children }: { slug: string; child
           estudioSlug={slug}
           estudioId={d.estudioId}
           cliente={d.cliente ?? undefined}
-          pts={d.pts}
           servicos={d.servicos}
           servicosLigados={d.servicosLigados}
           action={d.cliente ? atualizarCliente : criarCliente}

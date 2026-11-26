@@ -131,6 +131,8 @@ export type Sessao = {
   tipo_nota: string | null
   validada_por: string | null
   validada_em: string | null
+  // Treino da Agenda a que este plano pertence (null = sem treino associado).
+  agenda_evento_id: string | null
   criado_em: string
 }
 

@@ -24,6 +24,7 @@ import {
   ChevronDown,
   type LucideIcon,
   Target,
+  ClipboardCheck,
 } from 'lucide-react'
 import PillNavLink, { estaAtivoPill } from '@/components/PillNavLink'
 import BarraAjustavel, { formaPilula, useModoBarra } from '@/components/BarraAjustavel'
@@ -53,6 +54,7 @@ const GRUPOS: Grupo[] = [
       { href: '/painel/admin/agora', label: 'Agora', icone: Activity, filtravel: true },
       { href: '/painel/admin/relatorio', label: 'Relatório', icone: FileText, filtravel: true },
       { href: '/painel/admin/comercial', label: 'Relatório comercial', icone: Target, filtravel: true },
+      { href: '/painel/admin/instrutores', label: 'Avaliação de instrutores', icone: ClipboardCheck, filtravel: true },
       { href: '/painel/admin/horas', label: 'Horas da equipa', icone: Clock, filtravel: false },
     ],
   },

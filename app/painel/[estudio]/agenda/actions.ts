@@ -26,6 +26,7 @@ import { datasFechadas, mensagemDiaFechado } from '@/lib/data/diasFechados'
 import { papeisDaSessao } from '@/lib/data/sessao'
 
 import { tipoDeVisita } from '@/lib/data/relatorioComercial'
+import { exigeInstrutor, MENSAGEM_FALTA_INSTRUTOR } from '@/lib/data/controloInstrutores'
 function campoOuNull(formData: FormData, nome: string) {
   const v = formData.get(nome)
   if (typeof v !== 'string' || v.trim() === '') return null
@@ -364,6 +365,27 @@ async function sincronizarVisitasLeadsAposMover(
   return null
 }
 
+// Ao editar "este e os seguintes" ou "toda a série", o modelo da série
+// (de onde o cron gera as ocorrências futuras) fica igual ao que se
+// acabou de guardar — senão as próximas a nascer voltavam, por exemplo,
+// a vir sem instrutor.
+async function atualizarModeloDaSerie(
+  supabase: SupabaseClient,
+  serieId: string,
+  campos: {
+    tipo: TipoEventoAgenda
+    cliente_id: string | null
+    pt_id: string | null
+    titulo: string | null
+    hora_inicio: string
+    duracao_min: number
+    nota: string | null
+  }
+): Promise<string | null> {
+  const { error } = await supabase.from('agenda_series').update(campos).eq('id', serieId)
+  return error?.message ?? null
+}
+
 export async function criarEvento(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
@@ -393,6 +415,9 @@ export async function criarEvento(formData: FormData) {
     redirect(
       `/painel/${estudioSlug}/agenda/novo?error=${encodeURIComponent('Data e hora são obrigatórias.')}`
     )
+  }
+  if (exigeInstrutor(tipo) && !ptId) {
+    redirect(`/painel/${estudioSlug}/agenda/novo?error=${encodeURIComponent(MENSAGEM_FALTA_INSTRUTOR)}`)
   }
 
   const sessao = await getSessaoAtual()
@@ -512,6 +537,9 @@ export async function atualizarEvento(formData: FormData) {
   if (bloqueio) {
     redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(bloqueio)}`)
   }
+  if (exigeInstrutor(tipo) && !ptId) {
+    redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(MENSAGEM_FALTA_INSTRUTOR)}`)
+  }
 
   // Se o dia ou a hora mudarem depois de o lembrete já ter sido
   // enviado, esse SMS ficou a falar de um treino que já não existe
@@ -616,6 +644,19 @@ export async function atualizarEvento(formData: FormData) {
       if (erroReabrir) {
         redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroReabrir.message)}`)
       }
+    }
+
+    const erroModelo = await atualizarModeloDaSerie(supabase, eventoAtual.serie_id, {
+      tipo,
+      cliente_id: clienteId,
+      pt_id: ptId,
+      titulo,
+      hora_inicio: horaInicio,
+      duracao_min: duracaoMin,
+      nota,
+    })
+    if (erroModelo) {
+      redirect(`/painel/${estudioSlug}/agenda/${id}?error=${encodeURIComponent(erroModelo)}`)
     }
   }
 
@@ -856,6 +897,7 @@ export async function criarEventoRapido(
 ): Promise<ResultadoAcaoRapida> {
   const bloqueio = await bloquearEscritaNaAgenda()
   if (bloqueio) return { error: bloqueio }
+  if (exigeInstrutor(input.tipo) && !input.ptId) return { error: MENSAGEM_FALTA_INSTRUTOR }
 
   const sessao = await getSessaoAtual()
   const supabase = await createClient()
@@ -943,6 +985,7 @@ export async function atualizarEventoRapido(
 ): Promise<ResultadoAcaoRapida> {
   const bloqueio = await bloquearEscritaNaAgenda()
   if (bloqueio) return { error: bloqueio }
+  if (exigeInstrutor(input.tipo) && !input.ptId) return { error: MENSAGEM_FALTA_INSTRUTOR }
 
   const supabase = await createClient()
 
@@ -988,6 +1031,17 @@ export async function atualizarEventoRapido(
         .in('id', idsReabrir)
       if (erroReabrir) return { error: erroReabrir.message }
     }
+
+    const erroModelo = await atualizarModeloDaSerie(supabase, input.serieId, {
+      tipo: input.tipo,
+      cliente_id: clienteUnico,
+      pt_id: input.ptId,
+      titulo: input.titulo,
+      hora_inicio: input.horaInicio,
+      duracao_min: input.duracaoMin,
+      nota: input.nota,
+    })
+    if (erroModelo) return { error: erroModelo }
 
     revalidatePath(`/painel/${input.estudioSlug}/agenda`)
     return { ok: true }

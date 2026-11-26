@@ -50,6 +50,8 @@ export type TreinoInicial = {
   tipo_nota: string | null
   nota_proxima: string
   exercicios: LinhaExercicio[]
+  // Plano ligado a um treino da Agenda: a data é a desse treino.
+  dataFixa?: boolean
 }
 
 type EstadoLinha = 'a guardar' | 'guardado' | 'erro'
@@ -174,7 +176,9 @@ export default function TreinoForm({
   const sessaoId = inicial.id
   const [catalogo, setCatalogo] = useState(catalogoInicial)
   const [data, setData] = useState(inicial.data)
-  const [pt, setPt] = useState(inicial.pt_id ?? pts[0]?.id ?? '')
+  // Sem autor escolhido fica vazio (obrigatório escolher) — nunca o
+  // primeiro da lista por omissão, que ficava com planos que não fez.
+  const [pt, setPt] = useState(inicial.pt_id ?? '')
   const [foco, setFoco] = useState(inicial.foco ?? '')
   const [correu, setCorreu] = useState(inicial.correu ?? '')
   const [tipoNota, setTipoNota] = useState(inicial.tipo_nota ?? 'Normal')
@@ -563,6 +567,9 @@ export default function TreinoForm({
         }}
       />
 
+      {ok === 'treino' && (
+        <p className="rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">Plano associado ao treino.</p>
+      )}
       {ok === 'plano' && (
         <p className="rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">Plano guardado.</p>
       )}
@@ -575,11 +582,20 @@ export default function TreinoForm({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[160px_1fr_2fr_auto] sm:items-end">
           <div className="flex flex-col gap-1">
             <label className={labelCompactoCls}>Data do treino</label>
-            <input type="date" name="data" value={data} onChange={(e) => setData(e.target.value)} className={inputCls} />
+            <input
+              type="date"
+              name="data"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              readOnly={inicial.dataFixa}
+              title={inicial.dataFixa ? 'É a data do treino marcado na Agenda — muda-se lá, ou associando o plano a outro treino' : undefined}
+              className={`${inputCls} ${inicial.dataFixa ? 'cursor-not-allowed opacity-70' : ''}`}
+            />
           </div>
           <div className="flex flex-col gap-1">
-            <label className={labelCompactoCls}>PT</label>
-            <select name="pt_id" value={pt} onChange={(e) => setPt(e.target.value)} className={inputCls}>
+            <label className={labelCompactoCls}>Plano feito por</label>
+            <select name="pt_id" value={pt} onChange={(e) => setPt(e.target.value)} required className={inputCls}>
+              <option value="">— Escolher instrutor —</option>
               {pts.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.nome}

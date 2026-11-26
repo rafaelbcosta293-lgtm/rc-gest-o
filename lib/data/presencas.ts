@@ -65,6 +65,13 @@ export function diaCurto(iso: string): string {
   return `${DIAS_ABREVIADOS[semana]}, ${d} ${MESES_ABREVIADOS[m - 1]} ${a}`
 }
 
+// O mesmo, sem o ano ("qui, 27 nov") — para listas de dias próximos.
+export function diaSemAno(iso: string): string {
+  const [a, m, d] = iso.split('-').map(Number)
+  const semana = new Date(Date.UTC(a, m - 1, d)).getUTCDay()
+  return `${DIAS_ABREVIADOS[semana]}, ${d} ${MESES_ABREVIADOS[m - 1]}`
+}
+
 export function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/)
   const primeiras = partes.length > 1 ? [partes[0], partes[partes.length - 1]] : [partes[0]]

@@ -10,14 +10,36 @@ import { createClient } from '@/lib/supabase/server'
 
 const hojeLisboa = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
 
-// "Planear treino": cria a sessão (em branco) e leva logo para o plano.
+// "Planear treino": cria o plano (em branco) e leva logo para ele.
+// Fica ligado ao treino marcado na Agenda que se escolheu (a data do
+// plano é a desse treino) e com quem o fez — os dois obrigatórios para
+// o controlo dos instrutores; "sem treino marcado" é a exceção, e fica
+// assinalada no relatório.
 export async function iniciarTreino(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const estudioId = Number(formData.get('estudio_id'))
   const clienteId = formData.get('cliente_id') as string
   const ptId = (formData.get('pt_id') as string) || null
-  const data = /^\d{4}-\d{2}-\d{2}$/.test(String(formData.get('data') ?? '')) ? String(formData.get('data')) : hojeLisboa()
+  const eventoId = (formData.get('agenda_evento_id') as string) || null
+  const dataLivre = /^\d{4}-\d{2}-\d{2}$/.test(String(formData.get('data') ?? '')) ? String(formData.get('data')) : hojeLisboa()
+  const base = `/painel/${estudioSlug}/treinos/${clienteId}`
+  const voltar = (erro: string): never =>
+    redirect(`${base}/planear?${eventoId ? `evento=${eventoId}&` : ''}error=${encodeURIComponent(erro)}`)
+
+  if (!ptId) voltar('Escolhe quem faz este plano de treino.')
+
   const supabase = await createClient()
+  let data = dataLivre
+  if (eventoId) {
+    const [{ data: evento }, { data: jaExiste }] = await Promise.all([
+      supabase.from('agenda_eventos').select('id, cliente_id, data, tipo').eq('id', eventoId).maybeSingle(),
+      supabase.from('sessoes').select('id').eq('agenda_evento_id', eventoId).maybeSingle(),
+    ])
+    if (!evento || evento.cliente_id !== clienteId || evento.tipo !== 'Treino') voltar('Esse treino já não existe na Agenda — escolhe outro.')
+    // Este treino já tem plano: abre-se esse, em vez de criar outro.
+    if (jaExiste) redirect(`${base}/treino/${jaExiste.id}`)
+    data = evento!.data
+  }
 
   const { data: sessao, error } = await supabase
     .from('sessoes')
@@ -26,44 +48,80 @@ export async function iniciarTreino(formData: FormData) {
       estudio_id: estudioId,
       data,
       pt_id: ptId,
+      agenda_evento_id: eventoId,
       nota_proxima: '',
     })
     .select('id')
     .single()
 
-  if (error || !sessao) {
-    redirect(
-      `/painel/${estudioSlug}/treinos/${clienteId}?error=${encodeURIComponent('Não foi possível iniciar o treino.')}`
-    )
-  }
+  if (error || !sessao) voltar('Não foi possível iniciar o plano de treino.')
 
-  revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
-  redirect(`/painel/${estudioSlug}/treinos/${clienteId}/treino/${sessao.id}`)
+  revalidatePath(base)
+  revalidatePath(`/painel/${estudioSlug}/agenda`)
+  redirect(`${base}/treino/${sessao!.id}`)
 }
 
-// ANTES do treino: data, PT e foco (os exercícios já se guardam um a
-// um, à medida que se escrevem). Não mexe em "como correu".
+// ANTES do treino: data, quem fez o plano e foco (os exercícios já se
+// guardam um a um, à medida que se escrevem). Não mexe em "como correu".
+// Num plano ligado a um treino da Agenda a data é a do treino — não se
+// muda aqui.
 export async function guardarPlano(formData: FormData) {
   const estudioSlug = formData.get('estudio_slug') as string
   const clienteId = formData.get('cliente_id') as string
   const id = formData.get('id') as string
   const dataTreino = formData.get('data') as string
   const ptId = (formData.get('pt_id') as string) || null
+  const destino = `/painel/${estudioSlug}/treinos/${clienteId}/treino/${id}`
+  if (!ptId) redirect(`${destino}?error=${encodeURIComponent('Escolhe quem fez este plano de treino.')}`)
+
   const supabase = await createClient()
+  const { data: atual } = await supabase.from('sessoes').select('agenda_evento_id').eq('id', id).maybeSingle()
 
   const { error } = await supabase
     .from('sessoes')
-    .update({ data: dataTreino, pt_id: ptId, foco: (formData.get('foco') as string) || null })
+    .update({
+      ...(atual?.agenda_evento_id || !dataTreino ? {} : { data: dataTreino }),
+      pt_id: ptId,
+      foco: (formData.get('foco') as string) || null,
+    })
     .eq('id', id)
 
   if (error) {
-    redirect(
-      `/painel/${estudioSlug}/treinos/${clienteId}/treino/${id}?error=${encodeURIComponent('Não foi possível guardar o plano.')}`
-    )
+    redirect(`${destino}?error=${encodeURIComponent('Não foi possível guardar o plano.')}`)
   }
 
   revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
-  redirect(`/painel/${estudioSlug}/treinos/${clienteId}/treino/${id}?ok=plano`)
+  redirect(`${destino}?ok=plano`)
+}
+
+// Liga um plano a (outro) treino da Agenda do mesmo cliente — ou
+// solta-o, com o campo vazio. A data do plano passa a ser a do treino.
+export async function associarTreino(formData: FormData) {
+  const estudioSlug = formData.get('estudio_slug') as string
+  const clienteId = formData.get('cliente_id') as string
+  const id = formData.get('id') as string
+  const eventoId = (formData.get('agenda_evento_id') as string) || null
+  const destino = `/painel/${estudioSlug}/treinos/${clienteId}/treino/${id}`
+  const voltar = (erro: string): never => redirect(`${destino}?error=${encodeURIComponent(erro)}`)
+
+  const supabase = await createClient()
+  let campos: { agenda_evento_id: string | null; data?: string } = { agenda_evento_id: null }
+  if (eventoId) {
+    const [{ data: evento }, { data: outro }] = await Promise.all([
+      supabase.from('agenda_eventos').select('id, cliente_id, data, tipo').eq('id', eventoId).maybeSingle(),
+      supabase.from('sessoes').select('id').eq('agenda_evento_id', eventoId).neq('id', id).maybeSingle(),
+    ])
+    if (!evento || evento.cliente_id !== clienteId || evento.tipo !== 'Treino') voltar('Esse treino já não existe na Agenda — escolhe outro.')
+    if (outro) voltar('Esse treino já tem outro plano associado.')
+    campos = { agenda_evento_id: eventoId, data: evento!.data }
+  }
+
+  const { error } = await supabase.from('sessoes').update(campos).eq('id', id).eq('cliente_id', clienteId)
+  if (error) voltar('Não foi possível associar o plano a esse treino.')
+
+  revalidatePath(`/painel/${estudioSlug}/treinos/${clienteId}`)
+  revalidatePath(`/painel/${estudioSlug}/agenda`)
+  redirect(`${destino}?ok=treino`)
 }
 
 // DEPOIS do treino: como correu, tipo de nota e nota para o próximo.

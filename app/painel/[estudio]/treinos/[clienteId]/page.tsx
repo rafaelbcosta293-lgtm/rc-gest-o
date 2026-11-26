@@ -7,8 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ALERTAS, CORREU, estiloDaNota, tipoDaNota } from '@/lib/data/constantes'
-import { iniciarTreino, apagarSessao } from './treino/actions'
-import SubmitButton from '@/components/SubmitButton'
+import { apagarSessao } from './treino/actions'
+import { INICIO_CONTROLO } from '@/lib/data/controloInstrutores'
 import ApagarSessaoForm from './ApagarSessaoForm'
 import { ArrowLeft } from 'lucide-react'
 
@@ -26,6 +26,7 @@ type SessaoComExtras = {
   nota_proxima: string
   tipo_nota: string | null
   pt: { nome: string } | null
+  agenda_evento_id: string | null
   sessao_exercicios: { count: number }[]
 }
 
@@ -47,7 +48,7 @@ export default async function FichaClientePage({
     supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle(),
     supabase
       .from('sessoes')
-      .select('id, data, foco, correu, nota_proxima, tipo_nota, pt:perfis!pt_id(nome), sessao_exercicios(count)')
+      .select('id, data, foco, correu, nota_proxima, tipo_nota, agenda_evento_id, pt:perfis!pt_id(nome), sessao_exercicios(count)')
       .eq('cliente_id', clienteId)
       .order('data', { ascending: false }),
     getSessaoAtual(),
@@ -93,18 +94,12 @@ export default async function FichaClientePage({
           <BotaoAbrirJanela alvo={clienteId} className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]">
             Editar ficha
           </BotaoAbrirJanela>
-          <form action={iniciarTreino}>
-            <input type="hidden" name="estudio_slug" value={slug} />
-            <input type="hidden" name="estudio_id" value={estudio.id} />
-            <input type="hidden" name="cliente_id" value={clienteId} />
-            <input type="hidden" name="pt_id" value={cliente.pt_principal_id ?? ''} />
-            <SubmitButton
-              pendingText="A iniciar…"
-              className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-            >
-              Planear treino
-            </SubmitButton>
-          </form>
+          <Link
+            href={`/painel/${slug}/treinos/${clienteId}/planear`}
+            className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+          >
+            Planear treino
+          </Link>
         </div>
       </div>
 
@@ -210,6 +205,11 @@ export default async function FichaClientePage({
                       </span>
                     )}
                     <span className="text-xs text-muted">{s.pt?.nome ?? '—'}</span>
+                    {!s.agenda_evento_id && s.data >= INICIO_CONTROLO && (
+                      <span className="rounded-full border border-amber-500 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                        Sem treino da Agenda associado
+                      </span>
+                    )}
                   </div>
                   {s.nota_proxima && (
                     <p className={`mt-1.5 rounded-md px-2.5 py-1.5 text-sm ${estiloDaNota(s.tipo_nota).caixa}`}>

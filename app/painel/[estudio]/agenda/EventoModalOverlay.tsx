@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import Link from '@/components/LinkRapido'
-import { X, Trash2, Ban, RotateCcw } from 'lucide-react'
+import { X, Trash2, Ban, RotateCcw, ClipboardCheck, ClipboardX } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
 import { MAX_MOTIVO_DESMARCACAO, MOTIVOS_DESMARCACAO, TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
 import type { TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.types'
 import type { EscopoApagar, EscopoEditar } from './actions'
 import type { EstadoModal, PtOpcao, EstudioOpcao } from './AgendaInterativa'
+import { estadoDoPlano, exigeInstrutor } from '@/lib/data/controloInstrutores'
 
 const inputCls =
   'w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand pointer-coarse:py-2.5 pointer-coarse:text-base'
@@ -317,8 +318,16 @@ export default function EventoModalOverlay({
             </div>
           )}
 
-          <select name="pt_id" defaultValue={evento?.pt_id ?? ''} className={inputCls}>
-            <option value="">— Sem instrutor —</option>
+          {/* Num treino o instrutor é obrigatório: é por aqui que se sabe
+              quem deu cada treino (avaliação dos instrutores). */}
+          <select
+            name="pt_id"
+            defaultValue={evento?.pt_id ?? ''}
+            required={exigeInstrutor(tipo)}
+            aria-label="Instrutor"
+            className={`${inputCls} ${exigeInstrutor(tipo) ? 'invalid:border-red-500 invalid:text-red-700' : ''}`}
+          >
+            <option value="">{exigeInstrutor(tipo) ? '— Quem dá o treino? (obrigatório) —' : '— Sem instrutor —'}</option>
             {pts.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nome}
@@ -499,6 +508,34 @@ export default function EventoModalOverlay({
             placeholder="Nota (opcional)"
             className={inputCls}
           />
+
+          {/* Plano de treino deste treino (um por cliente): abre o que já
+              existe ou começa um novo, já ligado a este agendamento. */}
+          {modal.modo === 'editar' && modal.evento.tipo === 'Treino' && modal.evento.estado !== 'Cancelado' && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              {modal.grupo
+                .filter((g) => g.cliente && g.cliente.estudio_id === estudioId)
+                .map((g) => {
+                  const estado = estadoDoPlano(g.plano)
+                  const nome = modal.grupo.length > 1 ? ` · ${g.cliente!.nome_preferido || g.cliente!.nome.split(' ')[0]}` : ''
+                  return (
+                    <Link
+                      key={g.id}
+                      href={`/painel/${slug}/treinos/${g.cliente!.id}/planear?evento=${g.id}`}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm ${
+                        estado === 'feito'
+                          ? 'border-border-subtle text-foreground hover:bg-foreground/[.06]'
+                          : 'border-amber-500 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300'
+                      }`}
+                    >
+                      {estado === 'feito' ? <ClipboardCheck className="h-3.5 w-3.5" /> : <ClipboardX className="h-3.5 w-3.5" />}
+                      {estado === 'feito' ? 'Ver plano de treino' : estado === 'vazio' ? 'Plano vazio — preencher' : 'Planear este treino'}
+                      {nome}
+                    </Link>
+                  )
+                })}
+            </div>
+          )}
 
           <div className="mt-1 flex items-center justify-between gap-2">
             <button

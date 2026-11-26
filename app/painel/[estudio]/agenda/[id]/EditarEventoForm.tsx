@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { TIPOS_EVENTO_AGENDA } from '@/lib/data/agenda'
+import { exigeInstrutor } from '@/lib/data/controloInstrutores'
 import SubmitButton from '@/components/SubmitButton'
 import ClienteCombobox from '@/components/ClienteCombobox'
 import CamposSessaoExperimental, { type LeadOpcao } from '@/components/CamposSessaoExperimental'
@@ -109,9 +110,11 @@ export default function EditarEventoForm({
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-muted">Instrutor (opcional)</label>
-            <select name="pt_id" defaultValue={evento.pt_id ?? ''} className={inputCls}>
-              <option value="">— Sem instrutor —</option>
+            <label className="text-xs font-semibold text-muted">
+              {exigeInstrutor(tipo) ? 'Instrutor que dá o treino (obrigatório)' : 'Instrutor (opcional)'}
+            </label>
+            <select name="pt_id" defaultValue={evento.pt_id ?? ''} required={exigeInstrutor(tipo)} className={inputCls}>
+              <option value="">{exigeInstrutor(tipo) ? '— Escolher instrutor —' : '— Sem instrutor —'}</option>
               {pts.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.nome}

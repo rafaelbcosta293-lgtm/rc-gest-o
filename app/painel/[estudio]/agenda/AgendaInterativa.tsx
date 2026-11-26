@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
-import { Minus, Plus, HelpCircle, StickyNote, TriangleAlert } from 'lucide-react'
+import { ClipboardX, Minus, Plus, HelpCircle, StickyNote, TriangleAlert, UserX } from 'lucide-react'
 import FolhaInferior from '@/components/FolhaInferior'
 import type { ClienteOpcao } from '@/components/ClienteCombobox'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
@@ -14,6 +14,7 @@ import NextLink from 'next/link'
 import { nomeCurto } from '@/lib/data/clientes'
 import { ALERTAS } from '@/lib/data/constantes'
 import { fmt, DIAS_SEMANA } from '@/lib/data/presencas'
+import { estadoDoPlano, faltaInstrutor, precisaDePlano } from '@/lib/data/controloInstrutores'
 import {
   criarEventoRapido,
   atualizarEventoRapido,
@@ -67,6 +68,9 @@ export type EventoComNomes = EventoAgenda & {
   pt: { id: string; nome: string } | null
   // Hora em que o cliente fez check-in no tablet (se fez).
   checkin_em?: string | null
+  // Plano de treino ligado a este treino (null = não tem). Só vem
+  // preenchido na parte da Agenda que conta para o controlo.
+  plano?: { id: string; exercicios: number } | null
 }
 
 export type PtOpcao = { id: string; nome: string }
@@ -135,6 +139,21 @@ function avisosEvento(grupo: EventoComNomes[]): string | null {
     })
     .filter((l): l is string => !!l)
   return linhas.length > 0 ? linhas.join('\n') : null
+}
+
+// Controlo dos instrutores (ver lib/data/controloInstrutores.ts): o que
+// falta neste treino — instrutor associado e/ou plano de treino. Num
+// treino em simultâneo, o plano é por cliente; diz-se a quem falta.
+function faltasDeControlo(grupo: EventoComNomes[], amanha: string): { instrutor: string | null; plano: string | null } {
+  const instrutor = grupo.some(faltaInstrutor) ? 'Sem instrutor associado — abre o treino e escolhe quem o dá' : null
+  const semPlano = grupo.filter((e) => precisaDePlano(e, amanha) && estadoDoPlano(e.plano) !== 'feito')
+  if (semPlano.length === 0) return { instrutor, plano: null }
+  const quem =
+    grupo.length > 1
+      ? ` (${semPlano.map((e) => (e.cliente ? nomeCurto(e.cliente.nome, e.cliente.nome_preferido) : 'cliente')).join(', ')})`
+      : ''
+  const soVazios = semPlano.every((e) => estadoDoPlano(e.plano) === 'vazio')
+  return { instrutor, plano: `${soVazios ? 'Plano de treino vazio, sem exercícios' : 'Sem plano de treino'}${quem}` }
 }
 
 // A nota deixada no agendamento (num treino em simultâneo é a mesma em
@@ -1439,6 +1458,9 @@ function ColunaDia({
   const ehHoje = dia === dataAgora.toISOString().slice(0, 10)
   const minutoAgora = dataAgora.getHours() * 60 + dataAgora.getMinutes()
   const diaLocal = `${dataAgora.getFullYear()}-${String(dataAgora.getMonth() + 1).padStart(2, '0')}-${String(dataAgora.getDate()).padStart(2, '0')}`
+  // O plano de treino cobra-se até amanhã (ver controloInstrutores).
+  const dataAmanha = new Date(dataAgora.getFullYear(), dataAgora.getMonth(), dataAgora.getDate() + 1)
+  const amanhaLocal = `${dataAmanha.getFullYear()}-${String(dataAmanha.getMonth() + 1).padStart(2, '0')}-${String(dataAmanha.getDate()).padStart(2, '0')}`
   return (
     <div
       ref={registarRef}
@@ -1595,6 +1617,7 @@ function ColunaDia({
         const numerosSocio = numerosSocioEvento(grupo)
         const avisos = avisosEvento(grupo)
         const nota = notaDoEvento(grupo)
+        const faltas = faltasDeControlo(grupo, amanhaLocal)
         const cancelado = evento.estado === 'Cancelado'
         // Check-in no tablet de algum dos clientes deste bloco.
         const chegadas = grupo
@@ -1632,7 +1655,7 @@ function ColunaDia({
                   ? `Desmarcado · ${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${motivo} · clica para ver`
                   : emSelecionado
                     ? 'Arrasta para mover · puxa o topo/fundo para encurtar/alongar · botão direito para editar'
-                    : `${chegadas.length ? `✓ ${chegadas.join(', ')} (check-in) · ` : ''}${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${numerosSocio ? ` · sócio ${numerosSocio}` : ''} · arrasta para mover · botão direito para editar`
+                    : `${faltas.instrutor ? '⚠ Sem instrutor · ' : ''}${faltas.plano ? `⚠ ${faltas.plano} · ` : ''}${chegadas.length ? `✓ ${chegadas.join(', ')} (check-in) · ` : ''}${rotulo} · ${evento.hora_inicio.slice(0, 5)}–${fim}${numerosSocio ? ` · sócio ${numerosSocio}` : ''} · arrasta para mover · botão direito para editar`
             }
             // Conta só de leitura: o bloco é só para ver — sem clique,
             // sem botão direito, sem arrastar (o nome e as horas aparecem
@@ -1740,26 +1763,42 @@ function ColunaDia({
                 style={{ display: colunas >= 3 ? 'none' : undefined }}
               />
             )}
-            {/* Aviso discreto (canto superior direito) quando algum dos
-                clientes deste evento tem algo a verificar — mensalidade
-                não ativa, suspenso/inativo, ou um alerta (lesão, doença,
-                limitação, prova a chegar). Só avisa que há algo; os
-                detalhes ficam na ficha do cliente. */}
-            {avisos && (
-              <span title={avisos} className="absolute top-0.5 right-0.5 rounded-sm bg-white/90 p-px">
-                <TriangleAlert className="h-3 w-3 text-red-600" strokeWidth={2.5} />
-              </span>
-            )}
-            {/* Há uma nota neste agendamento — o mesmo género de aviso, ao
-                lado do triângulo (ou no lugar dele, se não houver): passa
-                o rato por cima para a ler sem abrir o evento. */}
-            {nota && (
-              <span
-                title={`Nota: ${nota}`}
-                aria-label={`Nota: ${nota}`}
-                className={`absolute top-0.5 rounded-sm bg-white/90 p-px ${avisos ? 'right-[1.15rem]' : 'right-0.5'}`}
-              >
-                <StickyNote className="h-3 w-3 text-blue-600" strokeWidth={2.5} />
+            {/* Sinais no canto superior direito, numa só fila (da direita
+                para a esquerda): aviso do cliente, nota, e os dois do
+                controlo dos instrutores — treino sem instrutor (vermelho)
+                e sem plano de treino (laranja). Num bloco estreito
+                (vários treinos à mesma hora) os do controlo passam a
+                bolinhas, para não taparem o nome. */}
+            {(avisos || nota || faltas.instrutor || faltas.plano) && (
+              <span className="@container pointer-events-none absolute inset-0">
+                <span className="pointer-events-auto absolute top-0.5 right-0.5 flex flex-row-reverse items-center gap-0.5">
+                  {avisos && (
+                    <span title={avisos} className="rounded-sm bg-white/90 p-px">
+                      <TriangleAlert className="h-3 w-3 text-red-600" strokeWidth={2.5} />
+                    </span>
+                  )}
+                  {nota && (
+                    <span title={`Nota: ${nota}`} aria-label={`Nota: ${nota}`} className="rounded-sm bg-white/90 p-px">
+                      <StickyNote className="h-3 w-3 text-blue-600" strokeWidth={2.5} />
+                    </span>
+                  )}
+                  {faltas.plano && (
+                    <span title={faltas.plano} aria-label={faltas.plano} data-sinal="plano">
+                      <span className="block h-2 w-2 rounded-full bg-amber-500 ring-1 ring-white @[96px]:hidden" />
+                      <span className="hidden rounded-sm bg-white/90 p-px @[96px]:block">
+                        <ClipboardX className="h-3 w-3 text-amber-600" strokeWidth={2.5} />
+                      </span>
+                    </span>
+                  )}
+                  {faltas.instrutor && (
+                    <span title={faltas.instrutor} aria-label={faltas.instrutor} data-sinal="instrutor">
+                      <span className="block h-2 w-2 rounded-full bg-red-600 ring-1 ring-white @[96px]:hidden" />
+                      <span className="hidden rounded-sm bg-white/90 p-px @[96px]:block">
+                        <UserX className="h-3 w-3 text-red-600" strokeWidth={2.5} />
+                      </span>
+                    </span>
+                  )}
+                </span>
               </span>
             )}
             {/* Pegas de redimensionar, ao estilo Google Calendar — zona de

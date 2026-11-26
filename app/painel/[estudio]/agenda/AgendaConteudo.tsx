@@ -1,6 +1,6 @@
 import Link from '@/components/LinkRapido'
 import { Barra, BarraEspaco, BarraOpcoes, BarraPeriodo, BarraSeparador } from '@/components/Barra'
-import { ArrowLeft, CalendarOff, Plus } from 'lucide-react'
+import { ArrowLeft, CalendarOff, ClipboardX, Plus, UserX } from 'lucide-react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
@@ -21,6 +21,7 @@ import FiltroInstrutor from './FiltroInstrutor'
 import type { LeadOpcao } from '@/components/CamposSessaoExperimental'
 import type { EventoAgenda, Estudio } from '@/lib/supabase/database.types'
 import { hojeEmLisboa } from '@/lib/data/hoje'
+import { estadoDoPlano, faltaInstrutor, precisaDePlano } from '@/lib/data/controloInstrutores'
 
 const VISTAS = ['dia', 'semana', 'mes'] as const
 type Vista = (typeof VISTAS)[number]
@@ -55,6 +56,7 @@ type EventoComNomes = EventoAgenda & {
   } | null
   pt: { id: string; nome: string } | null
   checkin_em?: string | null
+  plano?: { id: string; exercicios: number } | null
 }
 
 async function buscarEventos(
@@ -62,7 +64,9 @@ async function buscarEventos(
   estudioId: number,
   inicio: string,
   fimExclusivo: string,
-  ptFiltro?: string
+  ptFiltro?: string,
+  // Ir buscar também o plano de treino ligado a cada treino?
+  comPlanos = false
 ) {
   let query = supabase
     .from('agenda_eventos')
@@ -78,7 +82,9 @@ async function buscarEventos(
 
   // Hora do check-in no tablet (presenças com origem "checkin") — mostrada
   // no bloco do treino, para o instrutor ver quem já chegou.
-  const [{ data, error }, { data: checkins }] = await Promise.all([
+  // Planos de treino ligados aos treinos do período: para o sinal "sem
+  // plano" de cada evento e para abrir o plano a partir do treino.
+  const [{ data, error }, { data: checkins }, { data: planos, error: erroPlanos }] = await Promise.all([
     query,
     supabase
       .from('presencas')
@@ -87,12 +93,31 @@ async function buscarEventos(
       .not('agenda_evento_id', 'is', null)
       .gte('data', inicio)
       .lt('data', fimExclusivo),
+    comPlanos
+      ? supabase
+          .from('sessoes')
+          .select('id, agenda_evento_id, sessao_exercicios(count)')
+          .not('agenda_evento_id', 'is', null)
+          .gte('data', inicio)
+          .lt('data', fimExclusivo)
+      : Promise.resolve({ data: [], error: null }),
   ])
   if (error) throw new Error(error.message)
+  if (erroPlanos) throw new Error(erroPlanos.message)
   const horaCheckin = new Map(
     ((checkins ?? []) as { agenda_evento_id: string; checkin_em: string | null }[]).map((c) => [c.agenda_evento_id, c.checkin_em])
   )
-  return ((data ?? []) as unknown as EventoComNomes[]).map((e) => (horaCheckin.has(e.id) ? { ...e, checkin_em: horaCheckin.get(e.id) ?? null } : e))
+  const planoDoEvento = new Map(
+    ((planos ?? []) as unknown as { id: string; agenda_evento_id: string; sessao_exercicios: { count: number }[] }[]).map((p) => [
+      p.agenda_evento_id,
+      { id: p.id, exercicios: p.sessao_exercicios?.[0]?.count ?? 0 },
+    ])
+  )
+  return ((data ?? []) as unknown as EventoComNomes[]).map((e) => ({
+    ...e,
+    ...(horaCheckin.has(e.id) ? { checkin_em: horaCheckin.get(e.id) ?? null } : {}),
+    plano: planoDoEvento.get(e.id) ?? null,
+  }))
 }
 
 function PontosDia({ eventos }: { eventos: EventoComNomes[] }) {
@@ -240,6 +265,9 @@ export default async function AgendaConteudo({
   // num cookie deste browser — por omissão, mostra.)
   const verAulas = (await cookies()).get(COOKIE_AULAS_AGENDA)?.value !== '0'
 
+  // O plano de treino cobra-se até ao dia seguinte (ver controloInstrutores).
+  const amanha = somarDias(hoje, 1)
+
   // O período que se está a ver inclui o dia de hoje?
   const periodoTemHoje = hoje >= inicio && hoje < fimExclusivo
 
@@ -266,7 +294,7 @@ export default async function AgendaConteudo({
       .neq('estado', 'Perdida')
       .order('nome'),
     obterOutroEstudioEClientes(supabase, estudio.id),
-    buscarEventos(supabase, estudio.id, inicio, fimExclusivo, ptFiltro),
+    buscarEventos(supabase, estudio.id, inicio, fimExclusivo, ptFiltro, vista !== 'mes'),
     getSessaoAtual(),
     carregarDiasFechados(supabase, estudio.id, inicio, fimExclusivo),
     // Aulas de grupo na grelha (a sala é a mesma), salvo se escondidas.
@@ -286,6 +314,10 @@ export default async function AgendaConteudo({
   if (erroLeads) {
     throw new Error(erroLeads.message)
   }
+  // Controlo dos instrutores: treinos do período sem instrutor e sem
+  // plano de treino (os mesmos que levam o sinal no evento).
+  const semInstrutor = eventos.filter(faltaInstrutor).length
+  const semPlano = eventos.filter((e) => precisaDePlano(e, amanha) && estadoDoPlano(e.plano) !== 'feito').length
   const clientes = (clientesData ?? []) as { id: string; nome: string }[]
   const leads = (leadsData ?? []) as LeadOpcao[]
   const qsExtra = ptFiltro ? `&pt=${ptFiltro}` : ''
@@ -411,6 +443,23 @@ export default async function AgendaConteudo({
             )
           })}
         </div>
+      )}
+
+      {vista !== 'mes' && (semInstrutor > 0 || semPlano > 0) && (
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-red-700 dark:text-red-300">
+          {semInstrutor > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <UserX className="h-3.5 w-3.5 shrink-0" />
+              {semInstrutor === 1 ? '1 treino sem instrutor' : `${semInstrutor} treinos sem instrutor`}
+            </span>
+          )}
+          {semPlano > 0 && (
+            <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400">
+              <ClipboardX className="h-3.5 w-3.5 shrink-0" />
+              {semPlano === 1 ? '1 treino sem plano de treino' : `${semPlano} treinos sem plano de treino`} (até amanhã)
+            </span>
+          )}
+        </p>
       )}
 
       {error && (

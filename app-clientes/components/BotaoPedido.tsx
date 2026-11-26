@@ -60,9 +60,11 @@ export default function BotaoPedido({
       return
     }
     setFase({ tipo: 'a_confirmar' })
+    // O estúdio responde na volta seguinte da sincronização (até um minuto).
+    // Pergunta-se de 5 em 5 segundos — cada pergunta é um pedido ao servidor.
     const ate = Date.now() + 90_000
     while (vivo.current && Date.now() < ate) {
-      await new Promise((ok) => setTimeout(ok, 2000))
+      await new Promise((ok) => setTimeout(ok, 5000))
       const e = await estadoPedido(r.id)
       if (e && e.estado !== 'pendente') {
         // Recusado: o botão volta, com o motivo por baixo (pode tentar de novo).

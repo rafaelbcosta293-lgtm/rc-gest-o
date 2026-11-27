@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug, getEquipaDoEstudio } from '@/lib/data/estudios'
 import { getCatalogoExercicios } from '@/lib/data/catalogo'
 import type { ItemCatalogo } from '@/lib/data/catalogo'
-import { associarTreino, guardarPlano, registarTreino } from '../actions'
+import { associarTreino, registarTreino } from '../actions'
 import { rotuloTreinoMarcado, treinosMarcadosDoCliente } from '@/lib/data/controloInstrutoresDados'
 import SubmitButton from '@/components/SubmitButton'
 import TreinoForm, { type LinhaExercicio } from '../../../TreinoForm'
@@ -107,6 +107,10 @@ export default async function EditarTreinoPage({
       }
     }
   }
+  // O último plano com exercícios, anterior a este (ou do mesmo dia):
+  // é o que "Copiar plano anterior" vai buscar.
+  const anterior = historico.find((h) => h.data <= sessao.data && (h.sessao_exercicios ?? []).length > 0)
+  const planoAnterior = anterior ? { data: anterior.data } : null
   const maisUsados = [...contagem.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
@@ -195,7 +199,6 @@ export default async function EditarTreinoPage({
 
       <TreinoForm
         estudioSlug={slug}
-        estudioId={estudio.id}
         clienteId={clienteId}
         pts={pts}
         catalogo={catalogo}
@@ -206,6 +209,7 @@ export default async function EditarTreinoPage({
           data: sessao.data,
           pt_id: sessao.pt_id,
           foco: sessao.foco,
+          tipo_treino: sessao.tipo_treino,
           correu: sessao.correu,
           tipo_nota: sessao.tipo_nota,
           nota_proxima: sessao.nota_proxima,
@@ -213,7 +217,7 @@ export default async function EditarTreinoPage({
           dataFixa: !!sessao.agenda_evento_id,
         }}
         hoje={hoje}
-        acaoPlano={guardarPlano}
+        planoAnterior={planoAnterior}
         acaoRegisto={registarTreino}
         error={error}
         ok={ok}

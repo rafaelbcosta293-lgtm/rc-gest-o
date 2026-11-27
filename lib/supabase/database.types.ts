@@ -133,6 +133,8 @@ export type Sessao = {
   validada_em: string | null
   // Treino da Agenda a que este plano pertence (null = sem treino associado).
   agenda_evento_id: string | null
+  // Tipo de treino (ver lib/data/tiposTreino.ts).
+  tipo_treino: string | null
   criado_em: string
 }
 

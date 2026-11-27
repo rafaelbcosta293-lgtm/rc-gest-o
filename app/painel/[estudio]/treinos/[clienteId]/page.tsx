@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getEstudioPorSlug } from '@/lib/data/estudios'
 import { getSessaoAtual, papeisDaSessao } from '@/lib/data/sessao'
 import { ALERTAS, CORREU, estiloDaNota, tipoDaNota } from '@/lib/data/constantes'
-import { apagarSessao } from './treino/actions'
+import { iniciarTreino, apagarSessao } from './treino/actions'
+import SubmitButton from '@/components/SubmitButton'
 import { INICIO_CONTROLO } from '@/lib/data/controloInstrutores'
 import ApagarSessaoForm from './ApagarSessaoForm'
 import { ArrowLeft } from 'lucide-react'
@@ -27,15 +28,19 @@ type SessaoComExtras = {
   tipo_nota: string | null
   pt: { nome: string } | null
   agenda_evento_id: string | null
+  tipo_treino: string | null
   sessao_exercicios: { count: number }[]
 }
 
 export default async function FichaClientePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ estudio: string; clienteId: string }>
+  searchParams: Promise<{ error?: string }>
 }) {
   const { estudio: slug, clienteId } = await params
+  const { error } = await searchParams
 
   const supabase = await createClient()
 
@@ -48,7 +53,7 @@ export default async function FichaClientePage({
     supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle(),
     supabase
       .from('sessoes')
-      .select('id, data, foco, correu, nota_proxima, tipo_nota, agenda_evento_id, pt:perfis!pt_id(nome), sessao_exercicios(count)')
+      .select('id, data, foco, tipo_treino, correu, nota_proxima, tipo_nota, agenda_evento_id, pt:perfis!pt_id(nome), sessao_exercicios(count)')
       .eq('cliente_id', clienteId)
       .order('data', { ascending: false }),
     getSessaoAtual(),
@@ -78,6 +83,9 @@ export default async function FichaClientePage({
         <ArrowLeft className="h-4 w-4" /> Treinos
       </Link>
       <AtalhosDoCliente slug={slug} clienteId={clienteId} atual="treinos" />
+      {error && (
+        <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{decodeURIComponent(error)}</p>
+      )}
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -94,12 +102,19 @@ export default async function FichaClientePage({
           <BotaoAbrirJanela alvo={clienteId} className="rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08]">
             Editar ficha
           </BotaoAbrirJanela>
-          <Link
-            href={`/painel/${slug}/treinos/${clienteId}/planear`}
-            className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
-          >
-            Planear treino
-          </Link>
+          {/* Um toque abre logo o plano: fica ligado ao próximo treino
+              marcado do cliente (troca-se dentro do plano, se for outro). */}
+          <form action={iniciarTreino}>
+            <input type="hidden" name="estudio_slug" value={slug} />
+            <input type="hidden" name="estudio_id" value={estudio.id} />
+            <input type="hidden" name="cliente_id" value={clienteId} />
+            <SubmitButton
+              pendingText="A abrir…"
+              className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-black shadow-pop hover:bg-brand-strong hover:shadow-card-hover"
+            >
+              Planear treino
+            </SubmitButton>
+          </form>
         </div>
       </div>
 
@@ -186,7 +201,7 @@ export default async function FichaClientePage({
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <strong className="text-sm text-foreground">
-                      {s.foco || 'Treino'}
+                      {[s.tipo_treino, s.foco].filter(Boolean).join(' · ') || 'Treino'}
                     </strong>
                     {s.correu ? (
                       <span

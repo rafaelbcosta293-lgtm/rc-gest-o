@@ -1,14 +1,16 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, Copy, Ellipsis, Trash2 } from 'lucide-react'
+import { useRef, useState, useTransition } from 'react'
+import { ArrowDown, ArrowUp, Copy, CopyPlus, Ellipsis, Trash2 } from 'lucide-react'
 import { BLOCOS, BLOCO_COR, CORREU, estiloDaNota, TIPOS_NOTA } from '@/lib/data/constantes'
 import type { BlocoTipo } from '@/lib/data/constantes'
 import type { CatalogoExercicios, ItemCatalogo } from '@/lib/data/catalogo'
 import ExercicioPicker from './ExercicioPicker'
 // "[clienteId]" aqui é o nome literal da pasta (não um id concreto) — só
 // existe um ficheiro actions.ts, partilhado por todos os clientes.
-import { guardarLinhaExercicio, apagarLinhaExercicio } from './[clienteId]/treino/actions'
+import { guardarLinhaExercicio, apagarLinhaExercicio, guardarCabecalhoPlano, copiarPlanoAnterior } from './[clienteId]/treino/actions'
+import { LINHAS_DE_UM_PLANO_NOVO, TIPOS_TREINO } from '@/lib/data/tiposTreino'
+import { diaSemAno } from '@/lib/data/presencas'
 import SubmitButton from '@/components/SubmitButton'
 import FolhaInferior from '@/components/FolhaInferior'
 import { useAvisoSairSemGuardar } from '@/hooks/useAvisoSairSemGuardar'
@@ -46,6 +48,7 @@ export type TreinoInicial = {
   data: string
   pt_id: string | null
   foco: string | null
+  tipo_treino: string | null
   correu: string | null
   tipo_nota: string | null
   nota_proxima: string
@@ -146,7 +149,6 @@ type ValoresSugeridos = { series: string; reps: string; carga: string; descanso:
 
 export default function TreinoForm({
   estudioSlug,
-  estudioId,
   clienteId,
   pts,
   inicial,
@@ -154,13 +156,12 @@ export default function TreinoForm({
   ultimosValores = {},
   maisUsados = [],
   hoje,
-  acaoPlano,
+  planoAnterior = null,
   acaoRegisto,
   error,
   ok,
 }: {
   estudioSlug: string
-  estudioId: number
   clienteId: string
   pts: { id: string; nome: string }[]
   inicial: TreinoInicial
@@ -168,7 +169,9 @@ export default function TreinoForm({
   ultimosValores?: Record<string, ValoresSugeridos>
   maisUsados?: ItemCatalogo[]
   hoje: string
-  acaoPlano: (formData: FormData) => void
+  // O último plano com exercícios deste cliente, anterior a este (para
+  // "Copiar plano anterior"); null = não há nenhum.
+  planoAnterior?: { data: string } | null
   acaoRegisto: (formData: FormData) => void
   error?: string
   ok?: string
@@ -180,11 +183,18 @@ export default function TreinoForm({
   // primeiro da lista por omissão, que ficava com planos que não fez.
   const [pt, setPt] = useState(inicial.pt_id ?? '')
   const [foco, setFoco] = useState(inicial.foco ?? '')
+  const [tipoTreino, setTipoTreino] = useState(inicial.tipo_treino ?? '')
+  // Estado do cabeçalho (tipo, autor, foco, data): guarda-se sozinho.
+  const [estadoCabecalho, setEstadoCabecalho] = useState<EstadoLinha | null>(null)
+  const [erroCopia, setErroCopia] = useState<string | null>(null)
+  const [aCopiar, iniciarCopia] = useTransition()
   const [correu, setCorreu] = useState(inicial.correu ?? '')
   const [tipoNota, setTipoNota] = useState(inicial.tipo_nota ?? 'Normal')
   const [notaProxima, setNotaProxima] = useState(inicial.nota_proxima ?? '')
   const [exercicios, setExercicios] = useState<LinhaExercicio[]>(
-    inicial.exercicios.length ? inicial.exercicios : [linhaVazia()]
+    // Plano novo: já vem com 1 linha de aquecimento e 5 de principal em
+    // branco. Só se guardam as que ficarem com exercício.
+    inicial.exercicios.length ? inicial.exercicios : LINHAS_DE_UM_PLANO_NOVO.map((bloco) => linhaVazia(bloco))
   )
   const [estados, setEstados] = useState<Record<string, EstadoLinha>>({})
   const [seletorPara, setSeletorPara] = useState<string | null>(null)
@@ -195,6 +205,44 @@ export default function TreinoForm({
   const registado = !!inicial.correu
   // O registo de como correu só abre no dia do treino (ou depois).
   const jaAconteceu = data <= hoje
+
+  const guardarCabecalho = async (campos: { tipo_treino?: string | null; pt_id?: string | null; foco?: string | null; data?: string }) => {
+    setEstadoCabecalho('a guardar')
+    const resultado = await guardarCabecalhoPlano({ estudioSlug, clienteId, id: sessaoId, campos })
+    setEstadoCabecalho('error' in resultado ? 'erro' : 'guardado')
+  }
+
+  // "Copiar plano anterior": os exercícios deste plano passam a ser os
+  // do último plano do cliente (pergunta primeiro, se já houver algum).
+  const copiarAnterior = () => {
+    if (exercicios.some((l) => l.exercicio_nome.trim()) && !window.confirm('Substituir os exercícios deste plano pelos do plano anterior?')) return
+    setErroCopia(null)
+    for (const t of Object.values(timers.current)) clearTimeout(t)
+    iniciarCopia(async () => {
+      const resultado = await copiarPlanoAnterior({ clienteId, id: sessaoId })
+      if ('error' in resultado) {
+        setErroCopia(resultado.error)
+        return
+      }
+      setExercicios(
+        resultado.linhas.map((l) => ({
+          key: l.id,
+          id: l.id,
+          bloco: l.bloco as BlocoTipo,
+          exercicio_id: l.exercicio_id,
+          exercicio_nome: l.exercicio_nome,
+          series: l.series ?? '',
+          reps: l.reps ?? '',
+          carga: l.carga ?? '',
+          descanso: l.descanso ?? '',
+          nota: l.nota ?? '',
+        }))
+      )
+      setEstados({})
+      setTipoTreino(resultado.tipoTreino ?? '')
+      setFoco(resultado.foco ?? '')
+    })
+  }
 
   const guardarLinha = async (linha: LinhaExercicio, ordem: number) => {
     if (!linha.exercicio_nome.trim()) return
@@ -386,8 +434,104 @@ export default function TreinoForm({
       <div>
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">1 · Plano (antes do treino)</h2>
-          <span className="text-[11px] text-zinc-400">guarda-se sozinho, exercício a exercício</span>
+          <span className="text-[11px] text-zinc-400">
+            {estadoCabecalho === 'erro' ? <span className="text-red-600">não foi possível guardar</span> : 'guarda-se sozinho'}
+          </span>
         </div>
+
+        {/* O essencial do plano, numa linha: que tipo de treino é (os
+            exercícios desse tipo passam a aparecer primeiro ao escolher),
+            quem o fez, e o atalho para copiar o plano anterior. Cada
+            campo guarda-se ao mudar — não há botão de guardar. */}
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.4fr_auto] lg:items-end">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="tipo_treino" className={labelCompactoCls}>
+              Tipo de treino
+            </label>
+            <select
+              id="tipo_treino"
+              value={tipoTreino}
+              onChange={(e) => {
+                setTipoTreino(e.target.value)
+                void guardarCabecalho({ tipo_treino: e.target.value || null })
+              }}
+              className={inputCls}
+            >
+              <option value="">— Escolher —</option>
+              {TIPOS_TREINO.map((t) => (
+                <option key={t.nome} value={t.nome}>
+                  {t.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="pt_id" className={labelCompactoCls}>
+              Plano feito por
+            </label>
+            <select
+              id="pt_id"
+              value={pt}
+              onChange={(e) => {
+                setPt(e.target.value)
+                void guardarCabecalho({ pt_id: e.target.value || null })
+              }}
+              className={`${inputCls} ${pt ? '' : 'border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}
+            >
+              <option value="">— Quem fez este plano? —</option>
+              {pts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="foco" className={labelCompactoCls}>
+              Foco (opcional)
+            </label>
+            <input
+              id="foco"
+              value={foco}
+              onChange={(e) => setFoco(e.target.value)}
+              onBlur={() => {
+                if (foco !== (inicial.foco ?? '')) void guardarCabecalho({ foco })
+              }}
+              placeholder="ex.: Peito e ombro"
+              className={inputCls}
+            />
+          </div>
+          {!registado && planoAnterior && (
+            <button
+              type="button"
+              onClick={copiarAnterior}
+              disabled={aCopiar}
+              title={`Preenche este plano com os exercícios do plano de ${diaSemAno(planoAnterior.data)}`}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border-strong px-4 py-2 text-sm font-bold hover:bg-foreground/[.08] disabled:opacity-60 pointer-coarse:py-2.5"
+            >
+              <CopyPlus className="h-4 w-4" />
+              <span className="whitespace-nowrap">{aCopiar ? 'A copiar…' : 'Copiar plano anterior'}</span>
+            </button>
+          )}
+        </div>
+        {!inicial.dataFixa && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+            <label htmlFor="data_plano" className={labelCompactoCls}>
+              Data do treino
+            </label>
+            <input
+              id="data_plano"
+              type="date"
+              value={data}
+              onChange={(e) => {
+                setData(e.target.value)
+                if (e.target.value) void guardarCabecalho({ data: e.target.value })
+              }}
+              className={inputCls}
+            />
+          </div>
+        )}
+        {erroCopia && <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{erroCopia}</p>}
 
         {/* Computador/tablet: uma grelha só, com o cabeçalho das colunas
             uma única vez (desliza de lado se a janela for estreita).
@@ -558,6 +702,7 @@ export default function TreinoForm({
         fechar={() => setSeletorPara(null)}
         catalogo={catalogo}
         maisUsados={maisUsados}
+        tipoTreino={tipoTreino || null}
         criado={aoCriarExercicio}
         editado={aoEditarExercicio}
         eliminado={aoEliminarExercicio}
@@ -570,58 +715,6 @@ export default function TreinoForm({
       {ok === 'treino' && (
         <p className="rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">Plano associado ao treino.</p>
       )}
-      {ok === 'plano' && (
-        <p className="rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300">Plano guardado.</p>
-      )}
-
-      <form action={acaoPlano} onChange={marcarSujo} onSubmit={limparSujo} className="flex flex-col gap-3">
-        <input type="hidden" name="estudio_slug" value={estudioSlug} />
-        <input type="hidden" name="estudio_id" value={estudioId} />
-        <input type="hidden" name="cliente_id" value={clienteId} />
-        <input type="hidden" name="id" value={sessaoId} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[160px_1fr_2fr_auto] sm:items-end">
-          <div className="flex flex-col gap-1">
-            <label className={labelCompactoCls}>Data do treino</label>
-            <input
-              type="date"
-              name="data"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              readOnly={inicial.dataFixa}
-              title={inicial.dataFixa ? 'É a data do treino marcado na Agenda — muda-se lá, ou associando o plano a outro treino' : undefined}
-              className={`${inputCls} ${inicial.dataFixa ? 'cursor-not-allowed opacity-70' : ''}`}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className={labelCompactoCls}>Plano feito por</label>
-            <select name="pt_id" value={pt} onChange={(e) => setPt(e.target.value)} required className={inputCls}>
-              <option value="">— Escolher instrutor —</option>
-              {pts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className={labelCompactoCls}>Foco do treino</label>
-            <input
-              name="foco"
-              value={foco}
-              onChange={(e) => setFoco(e.target.value)}
-              placeholder="ex.: Superior · empurrar"
-              className={inputCls}
-            />
-          </div>
-          <SubmitButton
-            pendingText="A guardar…"
-            className="rounded-full border border-border-strong px-5 py-2 text-sm font-bold hover:bg-foreground/[.08] pointer-coarse:py-2.5"
-          >
-            Guardar plano
-          </SubmitButton>
-        </div>
-      </form>
-
       <section
         className={`rounded-2xl border-2 p-4 ${
           jaAconteceu ? 'border-brand/60 bg-surface' : 'border-dashed border-border-subtle bg-surface/60'

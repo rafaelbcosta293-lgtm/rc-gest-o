@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from '@/components/LinkRapido'
 import { X, Trash2, Ban, RotateCcw, ClipboardCheck, ClipboardX } from 'lucide-react'
 import ClienteCombobox, { type ClienteOpcao } from '@/components/ClienteCombobox'
@@ -10,6 +11,7 @@ import type { TipoEventoAgenda as TipoEvento } from '@/lib/supabase/database.typ
 import type { EscopoApagar, EscopoEditar } from './actions'
 import type { EstadoModal, PtOpcao, EstudioOpcao } from './AgendaInterativa'
 import { estadoDoPlano, exigeInstrutor } from '@/lib/data/controloInstrutores'
+import { planearTreinoDoEvento } from '../treinos/[clienteId]/treino/actions'
 
 const inputCls =
   'w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand pointer-coarse:py-2.5 pointer-coarse:text-base'
@@ -66,6 +68,26 @@ export default function EventoModalOverlay({
   const duracaoDefault = modal.modo === 'editar' ? modal.evento.duracao_min : modal.duracaoMin
 
   const [tipo, setTipo] = useState<TipoEvento>(evento?.tipo ?? 'Treino')
+
+  // "Planear este treino": um toque abre o plano deste treino (cria-o se
+  // ainda não existir) — sem passos pelo meio.
+  const router = useRouter()
+  const [aAbrirPlano, iniciarAbrirPlano] = useTransition()
+  const [planoAAbrir, setPlanoAAbrir] = useState<string | null>(null)
+  const [erroPlano, setErroPlano] = useState<string | null>(null)
+  const abrirPlano = (clienteId: string, eventoId: string) => {
+    setErroPlano(null)
+    setPlanoAAbrir(eventoId)
+    iniciarAbrirPlano(async () => {
+      const resultado = await planearTreinoDoEvento({ estudioSlug: slug, estudioId, clienteId, eventoId })
+      if ('error' in resultado) {
+        setErroPlano(resultado.error)
+        setPlanoAAbrir(null)
+        return
+      }
+      router.push(resultado.href)
+    })
+  }
   const experimental = tipo === 'Sessão experimental'
 
   // Desmarcar não é imediato — pede sempre, antes, se o treino foi
@@ -515,31 +537,35 @@ export default function EventoModalOverlay({
             className={inputCls}
           />
 
-          {/* Plano de treino deste treino (um por cliente): abre o que já
-              existe ou começa um novo, já ligado a este agendamento. */}
+          {/* Plano de treino deste treino (um por cliente): um toque abre
+              o que já existe ou começa um novo, já ligado a este treino. */}
           {modal.modo === 'editar' && modal.evento.tipo === 'Treino' && modal.evento.estado !== 'Cancelado' && (
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <div className="flex flex-col gap-1.5">
               {modal.grupo
                 .filter((g) => g.cliente && g.cliente.estudio_id === estudioId)
                 .map((g) => {
                   const estado = estadoDoPlano(g.plano)
                   const nome = modal.grupo.length > 1 ? ` · ${g.cliente!.nome_preferido || g.cliente!.nome.split(' ')[0]}` : ''
+                  const aAbrir = aAbrirPlano && planoAAbrir === g.id
                   return (
-                    <Link
+                    <button
                       key={g.id}
-                      href={`/painel/${slug}/treinos/${g.cliente!.id}/planear?evento=${g.id}`}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm ${
+                      type="button"
+                      disabled={aAbrirPlano}
+                      onClick={() => abrirPlano(g.cliente!.id, g.id)}
+                      className={`inline-flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-bold disabled:opacity-60 pointer-coarse:py-3 ${
                         estado === 'feito'
-                          ? 'border-border-subtle text-foreground hover:bg-foreground/[.06]'
+                          ? 'border-border-strong text-foreground hover:bg-foreground/[.06]'
                           : 'border-amber-500 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300'
                       }`}
                     >
-                      {estado === 'feito' ? <ClipboardCheck className="h-3.5 w-3.5" /> : <ClipboardX className="h-3.5 w-3.5" />}
-                      {estado === 'feito' ? 'Ver plano de treino' : estado === 'vazio' ? 'Plano vazio — preencher' : 'Planear este treino'}
+                      {estado === 'feito' ? <ClipboardCheck className="h-4 w-4" /> : <ClipboardX className="h-4 w-4" />}
+                      {aAbrir ? 'A abrir…' : estado === 'feito' ? 'Ver plano de treino' : estado === 'vazio' ? 'Plano vazio — preencher' : 'Planear treino'}
                       {nome}
-                    </Link>
+                    </button>
                   )
                 })}
+              {erroPlano && <p className="text-xs text-red-600">{erroPlano}</p>}
             </div>
           )}
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { X, Pencil, Trash2, Check } from 'lucide-react'
 import type { CatalogoExercicios, ItemCatalogo } from '@/lib/data/catalogo'
 import { criarExercicioRapido, editarExercicioRapido, eliminarExercicioRapido } from './actions'
+import { categoriasDoTipo, exerciciosDoTipo, primeiroOsDoTipo } from '@/lib/data/tiposTreino'
 
 export default function ExercicioPicker({
   aberto,
@@ -14,6 +15,7 @@ export default function ExercicioPicker({
   eliminado,
   catalogo,
   maisUsados = [],
+  tipoTreino = null,
 }: {
   aberto: boolean
   fechar: () => void
@@ -23,10 +25,16 @@ export default function ExercicioPicker({
   eliminado: (id: string) => void
   catalogo: CatalogoExercicios
   maisUsados?: ItemCatalogo[]
+  // Tipo de treino escolhido no plano: os exercícios desse tipo aparecem
+  // primeiro (na lista inicial, nos mais usados e nas pesquisas).
+  tipoTreino?: string | null
 }) {
   const [catId, setCatId] = useState<string | null>(null)
   const [grupo, setGrupo] = useState<'A' | 'B'>('A')
   const [q, setQ] = useState('')
+  // Com um tipo de treino escolhido, as categorias ficam recolhidas (a
+  // lista abre logo com os exercícios do tipo) até se pedirem.
+  const [verCategorias, setVerCategorias] = useState(false)
   const [erroNovo, setErroNovo] = useState<string | null>(null)
   const [aGuardar, iniciarGuardar] = useTransition()
 
@@ -112,11 +120,22 @@ export default function ExercicioPicker({
   }
 
   const emPesquisa = q.trim() !== ''
+  // Com um tipo de treino escolhido, a lista abre logo com os exercícios
+  // desse tipo (sem ser preciso escolher categoria), e os resultados de
+  // uma pesquisa e os "mais usados" trazem esses à frente.
+  const doTipo = exerciciosDoTipo(catalogo, tipoTreino)
+  const categoriasTipo = new Set(categoriasDoTipo(catalogo, tipoTreino))
+  const aMostrarTipo = !emPesquisa && !catId && doTipo.length > 0
   const lista: ItemCatalogo[] = emPesquisa
-    ? catalogo.todos.filter((e) => e.nome.toLowerCase().includes(q.toLowerCase()))
+    ? primeiroOsDoTipo(
+        catalogo.todos.filter((e) => e.nome.toLowerCase().includes(q.toLowerCase())),
+        doTipo
+      )
     : catId
       ? (catalogo.porCategoria[catId] ?? [])
-      : []
+      : doTipo
+  const usados = primeiroOsDoTipo(maisUsados, doTipo)
+  const mostrarCategorias = doTipo.length === 0 || verCategorias || !!catId
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={fechar}>
@@ -155,7 +174,7 @@ export default function ExercicioPicker({
                   Mais usados com este cliente
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 pointer-coarse:gap-2">
-                  {maisUsados.map((e) => (
+                  {usados.map((e) => (
                     <button
                       key={e.id}
                       type="button"
@@ -172,6 +191,8 @@ export default function ExercicioPicker({
               </>
             )}
 
+            {mostrarCategorias && (
+            <>
             <div className="mt-4 flex items-center gap-1.5 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
               {(['A', 'B'] as const).map((parte) => (
                 <button
@@ -192,8 +213,8 @@ export default function ExercicioPicker({
               ))}
             </div>
             <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 pointer-coarse:gap-2">
-              {catalogo.categorias
-                .filter((c) => c.parte === grupo)
+              {[...catalogo.categorias.filter((c) => c.parte === grupo)]
+                .sort((a, b) => Number(categoriasTipo.has(b.id)) - Number(categoriasTipo.has(a.id)))
                 .map((c) => (
                   <button
                     key={c.id}
@@ -202,17 +223,37 @@ export default function ExercicioPicker({
                     className={`truncate rounded-md border px-2.5 py-1.5 text-left text-xs pointer-coarse:rounded-lg pointer-coarse:py-2.5 pointer-coarse:text-sm pointer-coarse:leading-tight pointer-coarse:whitespace-normal ${
                       catId === c.id
                         ? 'border-brand bg-brand text-black'
-                        : 'border-border-subtle bg-white dark:bg-zinc-800'
+                        : categoriasTipo.has(c.id)
+                          ? 'border-brand/60 bg-brand/[.10] font-semibold'
+                          : 'border-border-subtle bg-white dark:bg-zinc-800'
                     }`}
                   >
                     {c.nome}
                   </button>
                 ))}
             </div>
+            </>
+            )}
           </>
         )}
 
         <div className="mt-4 flex flex-col gap-1">
+          {aMostrarTipo && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                {tipoTreino} · {lista.length} exercícios
+              </span>
+              {!verCategorias && (
+                <button
+                  type="button"
+                  onClick={() => setVerCategorias(true)}
+                  className="rounded-full border border-border-subtle px-3 py-1 text-xs font-semibold text-foreground hover:bg-foreground/[.06] pointer-coarse:py-2 pointer-coarse:text-sm"
+                >
+                  Outras categorias
+                </button>
+              )}
+            </div>
+          )}
           {lista.length === 0 && (
             <p className="py-4 text-center text-sm text-muted">
               {emPesquisa ? 'Nenhum exercício com esse nome.' : 'Escolhe uma categoria acima ou pesquisa pelo nome.'}
